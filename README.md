@@ -26,15 +26,17 @@ The package wraps `python-docx` AST node builders into a clean conversion engine
 
 ```
 py-doc2docx/
-├── pydoc2docx/
-│   ├── __init__.py         # Package initialization
-│   ├── converter.py        # Core DocxConverter engine
-│   ├── cli.py              # CLI Argument Parser & Runner
-│   └── pylogkit/           # Py-LogKit logging framework
+├── src/
+│   └── pydoc2docx/
+│       ├── __init__.py         # Package initialization
+│       ├── converter.py        # Core DocxConverter engine
+│       ├── cli.py              # CLI Argument Parser & Runner
+│       └── pylogkit/           # Py-LogKit logging framework
 ├── tests/
-│   └── test_converter.py   # Unit test suite
-├── setup.py                # Package metadata & entry points
-└── README.md               # Comprehensive documentation
+│   └── test_converter.py       # Unit test suite
+├── .github/workflows/ci.yml    # Lint, test matrix, build and CI gate
+├── pyproject.toml              # Package metadata, entry points, tool config
+└── README.md                   # Comprehensive documentation
 ```
 
 ### Conversion Data Pipeline
@@ -70,6 +72,9 @@ cd py-doc2docx
 
 # Install in editable mode
 pip install -e .
+
+# Install with development tools (pytest, ruff, build, twine)
+pip install -e ".[dev]"
 ```
 
 ---

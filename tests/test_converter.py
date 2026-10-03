@@ -1,5 +1,3 @@
-import pytest
-from pathlib import Path
 from pydoc2docx import DocxConverter
 
 def test_docx_conversion(tmp_path):
