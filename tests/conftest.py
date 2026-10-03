@@ -29,7 +29,7 @@ def convert_text(tmp_path):
 
     def _convert(markdown: str, template: Path | None = None) -> Path:
         src = tmp_path / "doc.md"
-        src.write_text(markdown, encoding="utf-8", newline="")
+        src.write_bytes(markdown.encode("utf-8"))  # bytes keep CRLF intact on every Python version
         return DocxConverter(template_path=template).convert_file(src, tmp_path / "doc.docx")
 
     return _convert
