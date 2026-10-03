@@ -1,0 +1,51 @@
+[
+  {
+    "style": "Heading 1",
+    "text": "Heading One",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Heading 2",
+    "text": "Heading Two",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Heading 3",
+    "text": "Heading Three",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Heading 4",
+    "text": "Heading Four",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Heading 4",
+    "text": "Heading Five",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Heading 4",
+    "text": "Heading Six",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Heading 1",
+    "text": "NoSpace",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  }
+]

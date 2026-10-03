@@ -33,7 +33,12 @@ py-doc2docx/
 │       ├── cli.py              # CLI Argument Parser & Runner
 │       └── pylogkit/           # Py-LogKit logging framework
 ├── tests/
-│   └── test_converter.py       # Unit test suite
+│   ├── fixtures/               # Markdown corpus used by the regression suite
+│   ├── golden/                 # Expected DOCX outlines (change detectors)
+│   ├── test_converter.py       # Semantic tests of the converter
+│   ├── test_cli.py             # CLI integration tests
+│   ├── test_fixtures.py        # Corpus and golden-output tests
+│   └── test_known_defects.py   # Known defects, marked xfail with issue numbers
 ├── .github/workflows/ci.yml    # Lint, test matrix, build and CI gate
 ├── pyproject.toml              # Package metadata, entry points, tool config
 └── README.md                   # Comprehensive documentation

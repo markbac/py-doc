@@ -1,0 +1,79 @@
+[
+  {
+    "style": "Heading 1",
+    "text": "Technical Specification",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Normal",
+    "text": "Introductory paragraph describing the system.",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Heading 2",
+    "text": "Requirements",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "List Bullet",
+    "text": "The system shall convert Markdown.",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "List Bullet",
+    "text": "The system shall preserve headings.",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "List Number",
+    "text": "Install the tool.",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "List Number",
+    "text": "Run the converter.",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Heading 2",
+    "text": "Example",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Normal",
+    "text": "py-doc2docx spec.md -o spec.docx",
+    "font": "Consolas",
+    "size_pt": 9.5,
+    "left_indent_in": 0.4
+  },
+  {
+    "style": "Heading 3",
+    "text": "Notes",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  },
+  {
+    "style": "Normal",
+    "text": "Closing paragraph.",
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
+  }
+]
