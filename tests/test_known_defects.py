@@ -5,8 +5,8 @@ the issue is fixed the test starts passing, strict mode turns that into a
 failure, and the fix PR must remove the marker. This keeps every known defect
 visible and stops fixes landing without a test.
 
-Directory-mode defect #6 is covered in test_cli.py, and the unclosed-fence
-content loss (#49) is also covered by the corpus test in test_fixtures.py.
+Fixed defects move to the regular test modules (for example #6 directory
+mode in test_cli.py and #49, #53 in test_converter.py).
 """
 
 from __future__ import annotations
@@ -31,20 +31,6 @@ def test_missing_template_raises_instead_of_silently_falling_back(tmp_path):
     converter = DocxConverter(template_path=tmp_path / "does-not-exist.docx")
     with pytest.raises(FileNotFoundError):
         converter.convert_file(src, tmp_path / "a.docx")
-
-
-@defect("#49")
-def test_unclosed_code_fence_keeps_its_content(convert_text):
-    out = convert_text("Before\n\n```python\nprint('kept')\n")
-    assert "print('kept')" in " ".join(texts(out))
-
-
-@defect("#53")
-@pytest.mark.parametrize("line", ["#NoSpace", "#123"])
-def test_hash_without_space_is_not_a_heading(convert_text, line):
-    out = convert_text(f"{line}\n")
-    assert styles(out) == ["Normal"]
-    assert texts(out) == [line]
 
 
 @defect("#10")
