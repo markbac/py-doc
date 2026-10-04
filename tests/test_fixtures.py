@@ -12,7 +12,7 @@ FIXTURE_DIR = Path(__file__).parent / "fixtures"
 FIXTURE_NAMES = sorted(p.name for p in FIXTURE_DIR.glob("*.md"))
 
 # Fixtures whose conversion currently loses content, mapped to the tracking issue.
-KNOWN_CONTENT_LOSS = {"unclosed_fence.md": "#49"}
+KNOWN_CONTENT_LOSS: dict[str, str] = {}
 
 WORD = re.compile(r"[^\W\d_]{2,}")
 

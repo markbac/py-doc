@@ -53,6 +53,4 @@ select = ["E4", "E7", "E9", "F"]
 
 [tool.ruff.lint.per-file-ignores]
 # Known defects tracked in open issues. Remove each ignore when its issue is fixed.
-"src/pydoc2docx/cli.py" = ["F821"]        # #6: os is not imported
-"src/pydoc2docx/converter.py" = ["F401"]  # #50: unused imports
 "src/pydoc2docx/pylogkit/log_setup.py" = ["F401"]  # #10: vendored pylogkit is to be replaced

@@ -23,6 +23,17 @@ class TestHeadings:
         assert texts(out) == ["Spaced out"]
 
 
+    @pytest.mark.parametrize("line", ["#NoSpace", "#123", "####### seven"])
+    def test_hash_without_space_or_beyond_six_levels_is_a_paragraph(self, convert_text, line):
+        out = convert_text(f"{line}\n")
+        assert styles(out) == ["Normal"]
+        assert texts(out) == [line]
+
+    def test_empty_heading_is_skipped(self, convert_text):
+        out = convert_text("# Before\n\n##\n\nAfter\n")
+        assert texts(out) == ["Before", "After"]
+
+
 class TestParagraphs:
     def test_blank_lines_are_not_emitted(self, convert_text):
         out = convert_text("One.\n\n\n\nTwo.\n")
@@ -66,6 +77,12 @@ class TestCodeBlocks:
         out = convert_text("```\n# not a heading\n- not a bullet\n```\n")
         assert styles(out) == ["Normal"]
         assert texts(out) == ["# not a heading\n- not a bullet"]
+
+    def test_unclosed_fence_keeps_its_content_and_warns(self, convert_text, caplog):
+        out = convert_text("Before\n\n```python\nprint('kept')\nmore = 1\n")
+        assert texts(out) == ["Before", "print('kept')\nmore = 1"]
+        assert outline(out)[1]["font"] == "Consolas"
+        assert "Unclosed code fence" in caplog.text
 
     def test_text_around_blocks_is_kept_in_order(self, convert_text):
         out = convert_text("Before\n\n```\ncode\n```\n\nAfter\n")

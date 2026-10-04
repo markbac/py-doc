@@ -73,25 +73,18 @@ class TestFileMode:
         assert "Markdown" in result.stdout
 
 
-# Directory mode is documented in the README but currently raises NameError (#6).
-dir_mode_broken = pytest.mark.xfail(raises=NameError, strict=True, reason="#6: cli.py does not import os")
-
-
 class TestDirectoryMode:
-    @dir_mode_broken
     def test_converts_markdown_files_in_place_by_default(self, md_tree, monkeypatch):
         run_cli(monkeypatch, str(md_tree))
         assert texts(md_tree / "index.docx") == ["Index"]
         assert texts(md_tree / "guide" / "setup.docx") == ["Setup", "Step"]
 
-    @dir_mode_broken
     def test_output_directory_mirrors_input_structure(self, md_tree, tmp_path, monkeypatch):
         out = tmp_path / "dist"
         run_cli(monkeypatch, str(md_tree), "-o", str(out))
         assert texts(out / "index.docx") == ["Index"]
         assert texts(out / "guide" / "setup.docx") == ["Setup", "Step"]
 
-    @dir_mode_broken
     def test_non_markdown_files_are_ignored(self, md_tree, tmp_path, monkeypatch):
         out = tmp_path / "dist"
         run_cli(monkeypatch, str(md_tree), "-o", str(out))
