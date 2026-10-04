@@ -51,6 +51,21 @@ class TestFileMode:
         run_cli(monkeypatch, str(src), "-t", str(template))
         assert Document(str(tmp_path / "spec.docx")).core_properties.title == "Corporate template"
 
+    def test_missing_template_exits_with_status_1_and_writes_nothing(self, tmp_path, monkeypatch, capsys):
+        src = tmp_path / "spec.md"
+        src.write_text("# Spec\n", encoding="utf-8")
+        with pytest.raises(SystemExit) as exc:
+            run_cli(monkeypatch, str(src), "-t", str(tmp_path / "missing.docx"))
+        assert exc.value.code == 1
+        assert "template not found" in capsys.readouterr().out.lower()
+        assert not (tmp_path / "spec.docx").exists()
+
+    def test_allow_missing_template_flag_falls_back(self, tmp_path, monkeypatch):
+        src = tmp_path / "spec.md"
+        src.write_text("# Spec\n", encoding="utf-8")
+        run_cli(monkeypatch, str(src), "-t", str(tmp_path / "missing.docx"), "--allow-missing-template")
+        assert texts(tmp_path / "spec.docx") == ["Spec"]
+
     def test_missing_input_exits_with_status_1(self, tmp_path, monkeypatch, capsys):
         with pytest.raises(SystemExit) as exc:
             run_cli(monkeypatch, str(tmp_path / "nope.md"))

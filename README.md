@@ -106,6 +106,7 @@ py-doc2docx docs/ -o dist/docx/
 | `input` | | *Required* | Path to input Markdown (`.md`) file or directory |
 | `--output` | `-o` | Same as input | Output `.docx` file path or destination directory |
 | `--template` | `-t` | `None` | Optional path to reference Word (`.docx`) template |
+| `--allow-missing-template` | | Off | Warn and use a blank document if the template file is missing (default: fail with exit status 1) |
 
 ---
 
@@ -115,7 +116,8 @@ py-doc2docx docs/ -o dist/docx/
 from pathlib import Path
 from pydoc2docx import DocxConverter
 
-# Initialize converter with optional template
+# Initialize converter with optional template.
+# A missing template raises FileNotFoundError unless allow_missing_template=True.
 converter = DocxConverter(template_path=Path("templates/Template.docx"))
 
 # Convert Markdown file
