@@ -17,8 +17,16 @@ class DocxConverter:
     Converts Markdown technical documentation into Word (.docx) documents based on createdocs specification.
     """
 
-    def __init__(self, template_path: Optional[Path] = None):
+    def __init__(self, template_path: Optional[Path] = None, allow_missing_template: bool = False):
+        """
+        Args:
+            template_path: Optional reference Word (.docx) template.
+            allow_missing_template: If False (the default), a template path that is not
+                an existing file raises FileNotFoundError. If True, a warning is logged
+                and a default blank document is used instead.
+        """
         self.template_path = Path(template_path) if template_path else None
+        self.allow_missing_template = allow_missing_template
 
     @staticmethod
     def _add_code_block(doc, code_lines):
@@ -39,9 +47,14 @@ class DocxConverter:
 
         logger.info(f"Converting Markdown '{md_path.name}' -> Word '{output_path.name}'...")
 
-        if self.template_path and self.template_path.exists():
+        if self.template_path and self.template_path.is_file():
             doc = Document(str(self.template_path))
             logger.info(f"Loaded reference Word template: {self.template_path.name}")
+        elif self.template_path:
+            if not self.allow_missing_template:
+                raise FileNotFoundError(f"Word template not found: {self.template_path}")
+            logger.warning(f"Word template not found, using a default blank document: {self.template_path}")
+            doc = Document()
         else:
             doc = Document()
 

@@ -13,9 +13,22 @@ def main():
     parser.add_argument("-o", "--output", type=str, help="Output Word (.docx) file path or directory")
     parser.add_argument("-t", "--template", type=str, help="Optional reference Word (.docx) template")
 
+    parser.add_argument(
+        "--allow-missing-template",
+        action="store_true",
+        help="Use a default blank document with a warning if the template file is not found (default: fail)",
+    )
+
     args = parser.parse_args()
 
-    converter = DocxConverter(template_path=Path(args.template) if args.template else None)
+    if args.template and not args.allow_missing_template and not Path(args.template).is_file():
+        print(f"Error: Word template not found: {args.template}")
+        sys.exit(1)
+
+    converter = DocxConverter(
+        template_path=Path(args.template) if args.template else None,
+        allow_missing_template=args.allow_missing_template,
+    )
     input_path = Path(args.input).resolve()
 
     if input_path.is_file():

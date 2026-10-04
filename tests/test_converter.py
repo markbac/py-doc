@@ -104,6 +104,28 @@ class TestTemplate:
         assert doc.core_properties.title == "From template"
         assert texts(out) == ["Template boilerplate", "Body"]
 
+    def test_missing_template_raises_by_default(self, tmp_path):
+        src = tmp_path / "a.md"
+        src.write_text("# A\n", encoding="utf-8")
+        converter = DocxConverter(template_path=tmp_path / "does-not-exist.docx")
+        with pytest.raises(FileNotFoundError, match="does-not-exist.docx"):
+            converter.convert_file(src, tmp_path / "a.docx")
+        assert not (tmp_path / "a.docx").exists()
+
+    def test_template_path_that_is_a_directory_raises(self, tmp_path):
+        src = tmp_path / "a.md"
+        src.write_text("# A\n", encoding="utf-8")
+        with pytest.raises(FileNotFoundError):
+            DocxConverter(template_path=tmp_path).convert_file(src, tmp_path / "a.docx")
+
+    def test_missing_template_can_fall_back_explicitly_with_a_warning(self, tmp_path, caplog):
+        src = tmp_path / "a.md"
+        src.write_text("# A\n", encoding="utf-8")
+        converter = DocxConverter(template_path=tmp_path / "nope.docx", allow_missing_template=True)
+        out = converter.convert_file(src, tmp_path / "a.docx")
+        assert texts(out) == ["A"]
+        assert "Word template not found" in caplog.text
+
     def test_without_template_document_is_empty_apart_from_content(self, convert_text):
         assert texts(convert_text("# Body\n")) == ["Body"]
 

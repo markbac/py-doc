@@ -9,6 +9,7 @@ description = "Convert Markdown Technical Documentation to Word (.docx) Document
 readme = "README.md"
 requires-python = ">=3.9"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Mark Bacon" }]
 keywords = ["markdown", "docx", "word", "documentation"]
 classifiers = [

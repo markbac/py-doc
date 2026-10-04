@@ -6,7 +6,8 @@ failure, and the fix PR must remove the marker. This keeps every known defect
 visible and stops fixes landing without a test.
 
 Fixed defects move to the regular test modules (for example #6 directory
-mode in test_cli.py and #49, #53 in test_converter.py).
+mode in test_cli.py, #49 and #53 in test_converter.py, #9 in test_converter.py
+and test_cli.py).
 """
 
 from __future__ import annotations
@@ -17,20 +18,10 @@ import sys
 import pytest
 from docx import Document
 from docx_helpers import styles, texts
-from pydoc2docx import DocxConverter
 
 
 def defect(issue: str):
     return pytest.mark.xfail(strict=True, reason=issue)
-
-
-@defect("#9")
-def test_missing_template_raises_instead_of_silently_falling_back(tmp_path):
-    src = tmp_path / "a.md"
-    src.write_text("# A\n", encoding="utf-8")
-    converter = DocxConverter(template_path=tmp_path / "does-not-exist.docx")
-    with pytest.raises(FileNotFoundError):
-        converter.convert_file(src, tmp_path / "a.docx")
 
 
 @defect("#10")
