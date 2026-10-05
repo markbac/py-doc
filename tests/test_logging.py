@@ -29,6 +29,6 @@ def test_cli_writes_progress_to_stderr_without_colour_codes_when_piped(tmp_path)
         [sys.executable, "-m", "py_doc.cli", str(src)], capture_output=True, text=True, check=False
     )
     assert result.returncode == 0
-    assert "INFO: Converting Markdown 'spec.md'" in result.stderr
+    assert "[INFO] Converting Markdown 'spec.md'" in result.stderr
     assert result.stdout == ""
     assert "\x1b" not in result.stderr

@@ -7,14 +7,13 @@ name = "py-doc2docx"
 version = "0.1.0"
 description = "Convert Markdown Technical Documentation to Word (.docx) Documents"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Mark Bacon" }]
 keywords = ["markdown", "docx", "word", "documentation"]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -25,7 +24,7 @@ classifiers = [
 ]
 dependencies = [
     "python-docx>=1.0.0",
-    "colorlog>=6.7.0",
+    "pylogkit @ git+https://github.com/markbac/py-logkit@dd9276285efa8a5e585c9a7be934f73c22a2ef57",
 ]
 
 [project.optional-dependencies]
@@ -47,7 +46,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 src = ["src", "tests"]
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]
