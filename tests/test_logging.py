@@ -8,7 +8,7 @@ import sys
 import pytest
 
 
-@pytest.mark.parametrize("module", ["py_doc", "pydoc2docx"])
+@pytest.mark.parametrize("module", ["py_doc", "py_doc.lint", "pydoc2docx"])
 def test_importing_the_library_does_not_configure_logging(module):
     code = (
         "import logging\n"

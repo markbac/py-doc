@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 import pytest
-from docx_helpers import texts
+from docx_helpers import all_text, texts
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures"
 FIXTURE_NAMES = sorted(p.name for p in FIXTURE_DIR.glob("*.md"))
@@ -17,9 +17,15 @@ KNOWN_CONTENT_LOSS: dict[str, str] = {}
 WORD = re.compile(r"[^\W\d_]{2,}")
 
 
+def _without_front_matter(markdown: str) -> str:
+    """Front matter is metadata, not content, and is not rendered (see #44)."""
+    match = re.match(r"---\n.*?\n---\n", markdown, re.S)
+    return markdown[match.end() :] if match else markdown
+
+
 def _words_outside_fence_markers(markdown: str) -> set[str]:
     words: set[str] = set()
-    for line in markdown.splitlines():
+    for line in _without_front_matter(markdown).splitlines():
         if line.strip().startswith("```"):
             continue  # the fence line and its info string are not content
         words.update(w.lower() for w in WORD.findall(line))
@@ -48,7 +54,7 @@ def test_conversion_preserves_every_word(name, convert_fixture):
     """No fixture may lose words, whatever its constructs are rendered as."""
     out = convert_fixture(name)
     source_words = _words_outside_fence_markers((FIXTURE_DIR / name).read_text(encoding="utf-8"))
-    output_words = {w.lower() for t in texts(out) for w in WORD.findall(t)}
+    output_words = {w.lower() for w in WORD.findall(all_text(out))}
     assert source_words - output_words == set()
 
 

@@ -1,11 +1,13 @@
 """
 py-doc: Markdown technical documentation tools.
 
-Currently provides the Markdown to Word (.docx) converter.
+Provides Markdown to Word (.docx) and PowerPoint (.pptx) conversion and Markdown style linting.
 """
 
 __version__ = "0.1.0"
 
-from .render.docx import ConversionError, DocxConverter
+from .errors import ConversionError
+from .render.docx import DocxConverter
+from .render.pptx import SlidesConverter
 
-__all__ = ["ConversionError", "DocxConverter"]
+__all__ = ["ConversionError", "DocxConverter", "SlidesConverter"]

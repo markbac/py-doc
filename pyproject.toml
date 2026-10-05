@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "py-doc2docx"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Convert Markdown Technical Documentation to Word (.docx) Documents"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,9 +23,11 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: Markdown",
 ]
 dependencies = [
-    "python-docx>=1.0.0",
+    "python-docx>=1.1.0",
     "markdown-it-py>=3.0",
     "mdit-py-plugins>=0.4",
+    "python-pptx>=1.0.0",
+    "PyYAML>=6.0",
     "ctxlogkit @ git+https://github.com/markbac/py-logkit@96453b403015ed762bcc5b3ffd5adbea3ef4fb0c",
 ]
 
@@ -38,7 +40,13 @@ dev = [
 ]
 
 [project.scripts]
+py-doc = "py_doc.app:run"
 py-doc2docx = "py_doc.cli:main"
+py-doc2slides = "py_doc.slides_cli:main"
+py-doclint = "py_doc.lint.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "py_doc.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

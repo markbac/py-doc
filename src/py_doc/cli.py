@@ -1,71 +1,56 @@
+"""The ``py-doc2docx`` command line."""
+
+from __future__ import annotations
+
 import argparse
-import os
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
-from ctxlogkit import setup_logging
+from ._cli import add_common_options, deprecation_notice, run
+from .errors import ConversionError
+from .render.docx import DocxConverter
 
-from .render.docx import ConversionError, DocxConverter
-
-
-def _configure_logging() -> None:
-    """Send progress messages to stderr. Library code never configures logging, only the CLI does."""
-    setup_logging(name="py_doc", level="INFO", mode="compact", console_stream=sys.stderr)
+__all__ = ["ConversionError", "build_parser", "main", "run_docx"]
 
 
-def main():
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="py-doc2docx",
-        description="Convert Markdown technical documentation to Word (.docx) documents"
+        description="Convert Markdown technical documentation to Word (.docx) documents",
     )
-    parser.add_argument("input", type=str, help="Input Markdown (.md) file or directory")
-    parser.add_argument("-o", "--output", type=str, help="Output Word (.docx) file path or directory")
-    parser.add_argument("-t", "--template", type=str, help="Optional reference Word (.docx) template")
-
-    parser.add_argument(
-        "--allow-missing-template",
-        action="store_true",
-        help="Use a default blank document with a warning if the template file is not found (default: fail)",
-    )
-
+    add_common_options(parser, "Word", ".docx")
+    parser.add_argument("-t", "--template", type=str, help="Optional reference Word (.docx or .dotx) template")
     parser.add_argument(
         "--keep-template-body",
         action="store_true",
-        help="Keep the template's own body content (cover page, placeholder text) and append the converted document after it (default: remove it)",
+        help="Keep the template's own body content (cover page, placeholder text) and append the converted "
+        "document after it (default: remove it)",
+    )
+    return parser
+
+
+def run_docx(argv: Sequence[str] | None = None, legacy: bool = False) -> int:
+    """Run the command and return its exit status instead of exiting. ``legacy`` adds the rename notice."""
+    return run(
+        build_parser(),
+        lambda args: DocxConverter(
+            template_path=Path(args.template) if args.template else None,
+            allow_missing_template=args.allow_missing_template,
+            keep_template_body=args.keep_template_body,
+        ),
+        ".docx",
+        "Word",
+        argv,
+        deprecation_notice("py-doc2docx", "py-doc docx") if legacy else None,
     )
 
-    args = parser.parse_args()
-    _configure_logging()
 
-    if args.template and not args.allow_missing_template and not Path(args.template).is_file():
-        print(f"Error: Word template not found: {args.template}")
-        sys.exit(1)
+def main() -> None:
+    code = run_docx(legacy=True)
+    if code:
+        sys.exit(code)
 
-    converter = DocxConverter(
-        template_path=Path(args.template) if args.template else None,
-        allow_missing_template=args.allow_missing_template,
-        keep_template_body=args.keep_template_body,
-    )
-    input_path = Path(args.input).resolve()
-
-    try:
-        if input_path.is_file():
-            out_path = Path(args.output) if args.output else input_path.with_suffix(".docx")
-            converter.convert_file(input_path, out_path)
-        elif input_path.is_dir():
-            out_dir = Path(args.output) if args.output else input_path
-            for root, _, files in os.walk(input_path):
-                for f in files:
-                    if f.endswith(".md"):
-                        src = Path(root) / f
-                        dst = out_dir / src.relative_to(input_path).with_suffix(".docx")
-                        converter.convert_file(src, dst)
-        else:
-            print(f"Error: Path not found: {input_path}")
-            sys.exit(1)
-    except ConversionError as exc:
-        print(f"Error: {exc}")
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()
