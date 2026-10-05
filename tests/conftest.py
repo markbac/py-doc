@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from docx_helpers import outline  # noqa: E402
 from pydoc2docx import DocxConverter  # noqa: E402
+from py_doc.render.pptx import SlidesConverter  # noqa: E402
 
 FIXTURES = Path(__file__).parent / "fixtures"
 GOLDEN = Path(__file__).parent / "golden"
@@ -64,6 +65,18 @@ def convert_fixture(tmp_path):
 
     def _convert(name: str) -> Path:
         return DocxConverter().convert_file(FIXTURES / name, tmp_path / (Path(name).stem + ".docx"))
+
+    return _convert
+
+
+@pytest.fixture
+def convert_slides(tmp_path):
+    """Convert a Markdown string to a deck and return the PPTX path."""
+
+    def _convert(markdown: str | bytes, **options) -> Path:
+        src = tmp_path / "deck.md"
+        src.write_bytes(markdown if isinstance(markdown, bytes) else markdown.encode("utf-8"))
+        return SlidesConverter(**options).convert_file(src, tmp_path / "deck.pptx")
 
     return _convert
 

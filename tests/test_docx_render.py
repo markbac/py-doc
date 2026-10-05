@@ -277,6 +277,34 @@ class TestOtherBlocks:
         out = convert_text("---\ntitle: Notes\n---\n\n# Heading\n")
         assert texts(out) == ["Heading"]
 
+    def test_front_matter_sets_the_document_properties(self, convert_text):
+        out = convert_text(
+            "---\ntitle: Design Notes\nsubtitle: Draft\nauthor: Mark\nversion: 1.2\nstatus: Review\n"
+            "id: DN-7\ntags: [a, b]\n---\n\n# Heading\n"
+        )
+        properties = Document(str(out)).core_properties
+        assert (properties.title, properties.subject, properties.author) == ("Design Notes", "Draft", "Mark")
+        assert (properties.version, properties.content_status, properties.identifier) == ("1.2", "Review", "DN-7")
+        assert properties.keywords == "a, b"
+
+    def test_a_template_property_is_kept_when_the_front_matter_does_not_set_it(self, tmp_path, convert_text):
+        template = tmp_path / "t.docx"
+        doc = Document()
+        doc.core_properties.title = "Template title"
+        doc.core_properties.author = "Template author"
+        doc.save(str(template))
+        out = convert_text("---\nauthor: Mark\n---\n\nText\n", template=template)
+        properties = Document(str(out)).core_properties
+        assert (properties.title, properties.author) == ("Template title", "Mark")
+
+    def test_invalid_front_matter_is_a_conversion_error(self, tmp_path, convert_text):
+        import pytest
+        from py_doc import ConversionError
+
+        with pytest.raises(ConversionError, match=r"Invalid front matter at line 1"):
+            convert_text("---\ntitle: [unclosed\n---\n\n# A\n")
+        assert not (tmp_path / "doc.docx").exists()
+
     def test_unsupported_markdown_raises_a_conversion_error(self, tmp_path, monkeypatch):
         import pytest
         from py_doc import ConversionError, DocxConverter

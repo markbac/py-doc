@@ -26,6 +26,8 @@ dependencies = [
     "python-docx>=1.0.0",
     "markdown-it-py>=3.0",
     "mdit-py-plugins>=0.4",
+    "python-pptx>=1.0.0",
+    "PyYAML>=6.0",
     "ctxlogkit @ git+https://github.com/markbac/py-logkit@96453b403015ed762bcc5b3ffd5adbea3ef4fb0c",
 ]
 

@@ -23,7 +23,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Emu, Inches, Pt, RGBColor
 
-from py_doc.markdown import ParseError, parse
+from py_doc.errors import ConversionError
+from py_doc.markdown import FrontMatterError, Metadata, ParseError, parse, read_metadata
 from py_doc.markdown import nodes as n
 
 logger = logging.getLogger(__name__)
@@ -40,10 +41,6 @@ _ALIGNMENT = {
     "center": WD_ALIGN_PARAGRAPH.CENTER,
     "right": WD_ALIGN_PARAGRAPH.RIGHT,
 }
-
-
-class ConversionError(Exception):
-    """The input cannot be converted (for example, it is not valid UTF-8)."""
 
 
 @dataclass(frozen=True)
@@ -66,9 +63,22 @@ class _Renderer:
         self.restart_warned = False
 
     def render(self, document: n.Document) -> None:
-        if document.front_matter is not None:
-            logger.info(f"Front matter in '{self.name}' is not rendered")
         self.blocks(document.children, quote=0)
+
+    def set_properties(self, metadata: Metadata) -> None:
+        """Copy the front matter into the document properties. Front matter is not part of the body."""
+        properties = self.doc.core_properties
+        for name, value in (
+            ("title", metadata.title),
+            ("subject", metadata.subtitle),
+            ("author", metadata.author),
+            ("keywords", metadata.keywords),
+            ("version", metadata.version),
+            ("content_status", metadata.status),
+            ("identifier", metadata.document_id),
+        ):
+            if value:
+                setattr(properties, name, value)
 
     # --- styles ---------------------------------------------------------------------------------
 
@@ -401,10 +411,13 @@ class DocxConverter:
         text = self._read_markdown(md_path)
         try:
             document = parse(text)
-        except ParseError as exc:
+            metadata = read_metadata(document)
+        except (ParseError, FrontMatterError) as exc:
             raise ConversionError(f"Cannot convert '{md_path}': {exc}") from exc
 
-        _Renderer(doc, md_path.parent, md_path.name).render(document)
+        renderer = _Renderer(doc, md_path.parent, md_path.name)
+        renderer.render(document)
+        renderer.set_properties(metadata)
 
         doc.save(str(output_path))
         logger.info(f"Successfully generated Word document: {output_path}")
