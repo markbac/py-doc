@@ -108,7 +108,23 @@ def convert_all(converter: Converter, args: argparse.Namespace, suffix: str, lab
     return 1 if failed else 0
 
 
-def run(parser: argparse.ArgumentParser, make_converter, suffix: str, label: str, argv: Sequence[str] | None) -> int:
+def deprecation_notice(old: str, new: str) -> str:
+    return (
+        f"{old} is now part of py-doc. `{new}` does the same, and `py-doc build` builds every document "
+        "from py-doc.yml (`py-doc migrate` creates it). This command keeps working"
+    )
+
+
+def run(
+    parser: argparse.ArgumentParser,
+    make_converter,
+    suffix: str,
+    label: str,
+    argv: Sequence[str] | None,
+    notice: str | None = None,
+) -> int:
     args = parser.parse_args(argv)
     configure_logging(quiet=args.quiet, verbose=args.verbose)
+    if notice:
+        logger.info(notice)
     return convert_all(make_converter(args), args, suffix, label)

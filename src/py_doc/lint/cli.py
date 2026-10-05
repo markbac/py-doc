@@ -7,6 +7,7 @@ import logging
 import sys
 from pathlib import Path
 
+from py_doc._cli import deprecation_notice
 from py_doc._logging import configure_logging
 from py_doc.config import ConfigError, find_config, load_config
 
@@ -31,7 +32,7 @@ def _shown(issue: LintIssue) -> LintIssue:
     )
 
 
-def run(argv: list[str] | None = None) -> int:
+def run(argv: list[str] | None = None, legacy: bool = False) -> int:
     """Run the linter and return the exit status: 0 clean, 1 issues found, 2 errors."""
     parser = argparse.ArgumentParser(
         prog="py-doclint", description="Technical writing style and glossary checks for Markdown"
@@ -48,6 +49,8 @@ def run(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", metavar="FILE", help="py-doc.yml to read (default: the nearest one above the target)")
     args = parser.parse_args(argv)
     configure_logging()
+    if legacy:
+        logger.info(deprecation_notice("py-doclint", "py-doc lint"))
 
     try:
         config = _load_config(args)
@@ -98,7 +101,7 @@ def _error(result: FileResult) -> None:
 
 
 def main() -> None:
-    sys.exit(run())
+    sys.exit(run(legacy=True))
 
 
 if __name__ == "__main__":

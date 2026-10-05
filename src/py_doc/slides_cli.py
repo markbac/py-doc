@@ -7,7 +7,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from ._cli import add_common_options, run
+from ._cli import add_common_options, deprecation_notice, run
 from .render.pptx import SlidesConverter
 
 
@@ -44,8 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def run_slides(argv: Sequence[str] | None = None) -> int:
-    """Run the command and return its exit status instead of exiting."""
+def run_slides(argv: Sequence[str] | None = None, legacy: bool = False) -> int:
+    """Run the command and return its exit status instead of exiting. ``legacy`` adds the rename notice."""
     return run(
         build_parser(),
         lambda args: SlidesConverter(
@@ -59,11 +59,12 @@ def run_slides(argv: Sequence[str] | None = None) -> int:
         ".pptx",
         "PowerPoint",
         argv,
+        deprecation_notice("py-doc2slides", "py-doc slides") if legacy else None,
     )
 
 
 def main() -> None:
-    code = run_slides()
+    code = run_slides(legacy=True)
     if code:
         sys.exit(code)
 

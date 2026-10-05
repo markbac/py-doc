@@ -7,7 +7,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from ._cli import add_common_options, run
+from ._cli import add_common_options, deprecation_notice, run
 from .errors import ConversionError
 from .render.docx import DocxConverter
 
@@ -30,8 +30,8 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def run_docx(argv: Sequence[str] | None = None) -> int:
-    """Run the command and return its exit status instead of exiting."""
+def run_docx(argv: Sequence[str] | None = None, legacy: bool = False) -> int:
+    """Run the command and return its exit status instead of exiting. ``legacy`` adds the rename notice."""
     return run(
         build_parser(),
         lambda args: DocxConverter(
@@ -42,11 +42,12 @@ def run_docx(argv: Sequence[str] | None = None) -> int:
         ".docx",
         "Word",
         argv,
+        deprecation_notice("py-doc2docx", "py-doc docx") if legacy else None,
     )
 
 
 def main() -> None:
-    code = run_docx()
+    code = run_docx(legacy=True)
     if code:
         sys.exit(code)
 
