@@ -1,0 +1,30 @@
+Document
+  List tight @1-5
+    ListItem @1-4
+      Paragraph @1
+        Text text="Parent one" @1
+      List tight @2-4
+        ListItem @2
+          Paragraph @2
+            Text text="Child one" @2
+        ListItem @3-4
+          Paragraph @3
+            Text text="Child two" @3
+          List tight @4
+            ListItem @4
+              Paragraph @4
+                Text text="Grandchild" @4
+    ListItem @5
+      Paragraph @5
+        Text text="Parent two" @5
+  List ordered start=1 tight @7-9
+    ListItem @7-8
+      Paragraph @7
+        Text text="Step one" @7
+      List ordered start=1 tight @8
+        ListItem @8
+          Paragraph @8
+            Text text="Sub step" @8
+    ListItem @9
+      Paragraph @9
+        Text text="Step two" @9

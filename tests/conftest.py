@@ -17,6 +17,7 @@ from pydoc2docx import DocxConverter  # noqa: E402
 
 FIXTURES = Path(__file__).parent / "fixtures"
 GOLDEN = Path(__file__).parent / "golden"
+AST_GOLDEN = GOLDEN / "ast"
 
 
 @pytest.fixture(autouse=True)
@@ -81,5 +82,23 @@ def check_golden():
             golden.write_text(json.dumps(actual, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         assert golden.exists(), f"Missing golden file {golden}; run with UPDATE_GOLDEN=1"
         assert actual == json.loads(golden.read_text(encoding="utf-8"))
+
+    return _check
+
+
+@pytest.fixture
+def check_ast_golden():
+    """Compare the outline of a parsed fixture with tests/golden/ast/<name>.txt.
+
+    Set UPDATE_GOLDEN=1 to rewrite the golden files after a deliberate change, then review the diff.
+    """
+
+    def _check(name: str, outline_text: str) -> None:
+        golden = AST_GOLDEN / f"{name}.txt"
+        if os.environ.get("UPDATE_GOLDEN") == "1":
+            AST_GOLDEN.mkdir(exist_ok=True)
+            golden.write_text(outline_text, encoding="utf-8")
+        assert golden.exists(), f"Missing golden file {golden}; run with UPDATE_GOLDEN=1"
+        assert outline_text == golden.read_text(encoding="utf-8")
 
     return _check

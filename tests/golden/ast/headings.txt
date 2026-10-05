@@ -1,0 +1,15 @@
+Document
+  Heading level=1 @1
+    Text text="Heading One" @1
+  Heading level=2 @3
+    Text text="Heading Two" @3
+  Heading level=3 @5
+    Text text="Heading Three" @5
+  Heading level=4 @7
+    Text text="Heading Four" @7
+  Heading level=5 @9
+    Text text="Heading Five" @9
+  Heading level=6 @11
+    Text text="Heading Six" @11
+  Paragraph @13
+    Text text="#NoSpace" @13

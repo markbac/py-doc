@@ -1,0 +1,11 @@
+Document
+  BlockQuote @1-2
+    Paragraph @1-2
+      Text text="A quoted line." @1
+      SoftBreak @1
+      Text text="A second quoted line." @2
+  BlockQuote @4
+    Paragraph @4
+      Strong @4
+        Text text="Note:" @4
+      Text text=" A callout style quote." @4

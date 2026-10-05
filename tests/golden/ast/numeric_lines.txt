@@ -1,0 +1,9 @@
+Document
+  Paragraph @1
+    Text text="10.5 is a number" @1
+  Paragraph @3
+    Text text="2.4.1 fixes the crash" @3
+  Paragraph @5
+    Text text="802.11 is the standard" @5
+  Paragraph @7
+    Text text="1.foo" @7

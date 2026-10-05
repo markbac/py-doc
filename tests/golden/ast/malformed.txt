@@ -1,0 +1,10 @@
+Document
+  Heading level=1 @1
+  List tight @3
+    ListItem @3
+  List ordered start=1 tight @5
+    ListItem @5
+  Paragraph @7-8
+    Text text="Just text after empty markers." @7
+    SoftBreak @7
+    Text text="indented line" @8

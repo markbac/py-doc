@@ -1,0 +1,9 @@
+Document
+  Paragraph @1
+    Text text="Above the break." @1
+  ThematicBreak @3
+  Paragraph @5
+    Text text="Between breaks." @5
+  ThematicBreak @7
+  Paragraph @9
+    Text text="Below the breaks." @9

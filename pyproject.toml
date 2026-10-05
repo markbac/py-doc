@@ -24,6 +24,8 @@ classifiers = [
 ]
 dependencies = [
     "python-docx>=1.0.0",
+    "markdown-it-py>=3.0",
+    "mdit-py-plugins>=0.4",
     "pylogkit @ git+https://github.com/markbac/py-logkit@dd9276285efa8a5e585c9a7be934f73c22a2ef57",
 ]
 

@@ -1,0 +1,24 @@
+Document
+  Heading level=1 @1
+    Text text="Glossary targets" @1
+  Paragraph @3
+    Text text="We use lwm2m over dtls in prose, which a linter should report." @3
+  Paragraph @5
+    Text text="Inline code such as " @5
+    CodeSpan text="api" @5
+    Text text=" and " @5
+    CodeSpan text="json" @5
+    Text text=" must not be reported." @5
+  CodeBlock text="import json\nresp = api.get(\"https://example.com/api/v1\")" language="python" info="python" fenced closed @7-10
+  Paragraph @12
+    Text text="Visit https://example.com/api/v1 or read " @12
+    Link url="https://example.com/json.html" @12
+      Text text="the json guide" @12
+    Text text="." @12
+  HtmlBlock text="<!-- a dtls comment that is not prose -->" @14
+  Paragraph @16
+    Text text="The Pre-Shared Key (PSK) is defined here, and PSK is used afterwards." @16
+  Paragraph @18-19
+    Text text="This is wordy because in order to wrap lines, in order" @18
+    SoftBreak @18
+    Text text="to detect it we need to join them." @19

@@ -1,0 +1,9 @@
+Document
+  Paragraph @1
+    Text text="First paragraph on one line." @1
+  Paragraph @3-4
+    Text text="Second paragraph" @3
+    SoftBreak @3
+    Text text="wrapped over two source lines." @4
+  Paragraph @6
+    Text text="Third paragraph with trailing spaces." @6

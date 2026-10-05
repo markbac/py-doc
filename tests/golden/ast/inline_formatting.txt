@@ -1,0 +1,11 @@
+Document
+  Paragraph @1
+    Text text="This has " @1
+    Strong @1
+      Text text="strong text" @1
+    Text text=", " @1
+    Emphasis @1
+      Text text="emphasised text" @1
+    Text text=" and " @1
+    CodeSpan text="inline code" @1
+    Text text=" in one line." @1
