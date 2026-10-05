@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import pytest
 from docx import Document
+from docx.shared import Inches
 from docx_helpers import outline, styles, texts
 from pydoc2docx import DocxConverter
+from pydoc2docx.converter import ConversionError
 
 
 class TestHeadings:
@@ -55,6 +57,19 @@ class TestLists:
         assert styles(out) == ["List Number"] * 3
         assert texts(out) == ["First", "Second", "Tenth"]
 
+    @pytest.mark.parametrize(
+        "line", ["10.5 is a number", "2.4.1 fixes the crash", "802.11 is the standard", "1.foo", "1234567890. ten digits"]
+    )
+    def test_digits_not_followed_by_a_space_after_the_dot_are_a_paragraph(self, convert_text, line):
+        out = convert_text(f"{line}\n")
+        assert styles(out) == ["Normal"]
+        assert texts(out) == [line]
+
+    def test_extra_space_after_the_marker_is_dropped(self, convert_text):
+        out = convert_text("1.    Spaced\n")
+        assert styles(out) == ["List Number"]
+        assert texts(out) == ["Spaced"]
+
 
 class TestCodeBlocks:
     def test_code_block_is_monospaced_and_indented(self, convert_text):
@@ -89,20 +104,67 @@ class TestCodeBlocks:
         assert texts(out) == ["Before", "code", "After"]
 
 
+class TestInputReading:
+    def test_utf8_byte_order_mark_is_ignored(self, convert_text):
+        out = convert_text(b"\xef\xbb\xbf# Heading\n\nText\n")
+        assert styles(out) == ["Heading 1", "Normal"]
+        assert texts(out) == ["Heading", "Text"]
+
+    def test_invalid_utf8_raises_a_clear_error_and_writes_nothing(self, tmp_path, convert_text):
+        with pytest.raises(ConversionError, match=r"doc\.md.*not valid UTF-8"):
+            convert_text(b"caf\xe9\n")
+        assert not (tmp_path / "doc.docx").exists()
+
+    def test_characters_invalid_in_xml_are_removed_with_a_warning(self, convert_text, caplog):
+        out = convert_text("Null\x00 byte and\x0bvertical tab\x1f\n")
+        assert texts(out) == ["Null byte andvertical tab"]
+        assert "Removed 3 control character(s)" in caplog.text
+
+    def test_clean_input_does_not_warn_about_control_characters(self, convert_text, caplog):
+        convert_text("# Fine\n\ttabbed\n")
+        assert "control character" not in caplog.text
+
+    @pytest.mark.parametrize("separator", ["\u2028", "\u2029", "\u0085"])
+    def test_unicode_line_separators_do_not_split_a_paragraph(self, convert_text, separator):
+        out = convert_text(f"one{separator}two\n")
+        assert texts(out) == [f"one{separator}two"]
+
+    def test_lone_carriage_returns_are_line_breaks(self, convert_text):
+        out = convert_text(b"# Title\r\rText\r")
+        assert texts(out) == ["Title", "Text"]
+
+
 class TestTemplate:
     def _make_template(self, tmp_path):
         template = tmp_path / "template.docx"
         doc = Document()
         doc.core_properties.title = "From template"
+        doc.sections[0].left_margin = Inches(1.7)
+        doc.sections[0].header.is_linked_to_previous = False
+        doc.sections[0].header.paragraphs[0].text = "Corporate header"
+        doc.styles["Heading 1"].font.name = "Georgia"
         doc.add_paragraph("Template boilerplate")
+        doc.add_table(rows=1, cols=1)
         doc.save(str(template))
         return template
 
-    def test_template_content_and_properties_are_kept(self, tmp_path, convert_text):
+    def test_template_body_is_removed_by_default(self, tmp_path, convert_text):
+        out = convert_text("# Body\n", template=self._make_template(tmp_path))
+        assert texts(out) == ["Body"]
+        assert Document(str(out)).tables == []
+
+    def test_template_styles_page_setup_header_and_properties_are_kept(self, tmp_path, convert_text):
         out = convert_text("# Body\n", template=self._make_template(tmp_path))
         doc = Document(str(out))
         assert doc.core_properties.title == "From template"
+        assert doc.sections[0].left_margin == Inches(1.7)
+        assert doc.sections[0].header.paragraphs[0].text == "Corporate header"
+        assert doc.styles["Heading 1"].font.name == "Georgia"
+
+    def test_template_body_is_kept_when_requested(self, tmp_path, convert_text):
+        out = convert_text("# Body\n", template=self._make_template(tmp_path), keep_template_body=True)
         assert texts(out) == ["Template boilerplate", "Body"]
+        assert len(Document(str(out)).tables) == 1
 
     def test_missing_template_raises_by_default(self, tmp_path):
         src = tmp_path / "a.md"

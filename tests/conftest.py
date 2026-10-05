@@ -27,10 +27,12 @@ def fixtures_dir() -> Path:
 def convert_text(tmp_path):
     """Convert a Markdown string and return the DOCX path."""
 
-    def _convert(markdown: str, template: Path | None = None) -> Path:
+    def _convert(markdown: str | bytes, template: Path | None = None, keep_template_body: bool = False) -> Path:
         src = tmp_path / "doc.md"
-        src.write_bytes(markdown.encode("utf-8"))  # bytes keep CRLF intact on every Python version
-        return DocxConverter(template_path=template).convert_file(src, tmp_path / "doc.docx")
+        # bytes keep CRLF intact on every Python version and let tests supply invalid UTF-8
+        src.write_bytes(markdown if isinstance(markdown, bytes) else markdown.encode("utf-8"))
+        converter = DocxConverter(template_path=template, keep_template_body=keep_template_body)
+        return converter.convert_file(src, tmp_path / "doc.docx")
 
     return _convert
 

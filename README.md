@@ -15,7 +15,7 @@
 1. **Hierarchy Preservation**: Translates H1 (`#`), H2 (`##`), H3 (`###`), and H4 (`####`) headings into styled Word heading levels.
 2. **List & Bullet Formatting**: Converts Markdown unordered bullet points (`- `, `* `) and ordered lists (`1. `) into native Word list items.
 3. **Monospaced Code Block Support**: Renders technical code fences (` ``` `) into monospaced code blocks with left indentation and dark slate styling.
-4. **Reference Template Injection**: Option to supply a custom reference Word template (`.docx`) for corporate fonts, margins, headers/footers, and branding.
+4. **Reference Template Injection**: Option to supply a custom reference Word template (`.docx`) for corporate fonts, margins, headers/footers, and branding. The template's styles, page setup, headers, footers and properties are used. Its body content (cover page, placeholder text) is removed unless you pass `--keep-template-body`.
 5. **Py-LogKit Logging**: Color-coded progress output (`pylogkit`).
 
 ---
@@ -107,6 +107,7 @@ py-doc2docx docs/ -o dist/docx/
 | `--output` | `-o` | Same as input | Output `.docx` file path or destination directory |
 | `--template` | `-t` | `None` | Optional path to reference Word (`.docx`) template |
 | `--allow-missing-template` | | Off | Warn and use a blank document if the template file is missing (default: fail with exit status 1) |
+| `--keep-template-body` | | Off | Keep the template's own body content and append the converted document after it (default: remove it) |
 
 ---
 
@@ -118,6 +119,8 @@ from pydoc2docx import DocxConverter
 
 # Initialize converter with optional template.
 # A missing template raises FileNotFoundError unless allow_missing_template=True.
+# The template's body content is removed unless keep_template_body=True.
+# Input that is not valid UTF-8 raises pydoc2docx.converter.ConversionError.
 converter = DocxConverter(template_path=Path("templates/Template.docx"))
 
 # Convert Markdown file

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from docx import Document
+from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
 from .pylogkit import setup_logging
@@ -12,21 +13,72 @@ logger = setup_logging(name="Doc2Docx", to_console=True, to_file=False)
 # CommonMark ATX heading: one to six '#' followed by whitespace or end of line.
 HEADING_RE = re.compile(r"^(#{1,6})(?:\s+(.*))?$")
 
+# CommonMark ordered list item: one to nine digits, '.', then whitespace or end of line.
+ORDERED_ITEM_RE = re.compile(r"^\d{1,9}\.(?:\s+(.*))?$")
+
+# Characters that cannot appear in an XML 1.0 document (python-docx rejects them).
+XML_INVALID_RE = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f￾￿]")
+
+
+class ConversionError(Exception):
+    """The input cannot be converted (for example, it is not valid UTF-8)."""
+
+
 class DocxConverter:
     """
     Converts Markdown technical documentation into Word (.docx) documents based on createdocs specification.
     """
 
-    def __init__(self, template_path: Optional[Path] = None, allow_missing_template: bool = False):
+    def __init__(
+        self,
+        template_path: Optional[Path] = None,
+        allow_missing_template: bool = False,
+        keep_template_body: bool = False,
+    ):
         """
         Args:
             template_path: Optional reference Word (.docx) template.
             allow_missing_template: If False (the default), a template path that is not
                 an existing file raises FileNotFoundError. If True, a warning is logged
                 and a default blank document is used instead.
+            keep_template_body: If False (the default), the template's body content
+                (cover page, placeholder text) is removed and only its styles, page
+                setup of the final section, headers, footers and properties are used.
+                If True, the converted content is appended after the template body.
         """
         self.template_path = Path(template_path) if template_path else None
         self.allow_missing_template = allow_missing_template
+        self.keep_template_body = keep_template_body
+
+    @staticmethod
+    def _clear_body(doc):
+        """Remove all body content except the final section properties."""
+        body = doc.element.body
+        for child in list(body):
+            if child.tag != qn("w:sectPr"):
+                body.remove(child)
+
+    @staticmethod
+    def _read_markdown(md_path: Path) -> list:
+        """Return the source as a list of lines, safe to hand to python-docx."""
+        try:
+            # utf-8-sig drops a byte order mark; universal newlines turn CRLF and CR into LF.
+            content = md_path.read_text(encoding="utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise ConversionError(f"Cannot read '{md_path}': it is not valid UTF-8 ({exc.reason})") from exc
+
+        content, removed = XML_INVALID_RE.subn("", content)
+        if removed:
+            logger.warning(
+                f"Removed {removed} control character(s) that Word documents cannot hold from '{md_path.name}'"
+            )
+
+        # Split on LF only: str.splitlines() also splits on characters such as U+2028 and U+0085,
+        # which are not line breaks in Markdown.
+        lines = content.split("\n")
+        if lines and lines[-1] == "":
+            lines.pop()
+        return lines
 
     @staticmethod
     def _add_code_block(doc, code_lines):
@@ -50,6 +102,8 @@ class DocxConverter:
         if self.template_path and self.template_path.is_file():
             doc = Document(str(self.template_path))
             logger.info(f"Loaded reference Word template: {self.template_path.name}")
+            if not self.keep_template_body:
+                self._clear_body(doc)
         elif self.template_path:
             if not self.allow_missing_template:
                 raise FileNotFoundError(f"Word template not found: {self.template_path}")
@@ -58,8 +112,7 @@ class DocxConverter:
         else:
             doc = Document()
 
-        content = md_path.read_text(encoding="utf-8")
-        lines = content.splitlines()
+        lines = self._read_markdown(md_path)
 
         in_code_block = False
         code_lines = []
@@ -98,9 +151,9 @@ class DocxConverter:
                 continue
 
             # Numbered list
-            num_match = re.match(r"^\d+\.\s*(.*)", stripped)
+            num_match = ORDERED_ITEM_RE.match(stripped)
             if num_match:
-                doc.add_paragraph(num_match.group(1), style='List Number')
+                doc.add_paragraph(num_match.group(1) or "", style='List Number')
                 continue
 
             # Paragraph
