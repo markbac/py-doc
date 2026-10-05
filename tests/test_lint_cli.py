@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 
@@ -107,7 +108,7 @@ class TestCommandLine:
         monkeypatch.chdir(tree.parent)
         assert run(["docs"]) == 0
         out = capsys.readouterr().out
-        assert "docs/guide/setup.md:3: warning DOC001 [Glossary]" in out
+        assert "docs/guide/setup.md:3: warning DOC001 [Glossary]".replace("/", os.sep) in out
 
     def test_files_with_the_same_name_can_be_told_apart(self, tmp_path, monkeypatch, capsys):
         for folder in ("one", "two"):
@@ -116,8 +117,8 @@ class TestCommandLine:
         monkeypatch.chdir(tmp_path)
         run(["."])
         out = capsys.readouterr().out
-        assert "one/README.md:1:" in out
-        assert "two/README.md:1:" in out
+        assert "one/README.md:1:".replace("/", os.sep) in out
+        assert "two/README.md:1:".replace("/", os.sep) in out
 
     def test_the_summary_counts_scanned_files_and_issues(self, tree, capsys):
         run([str(tree)])
@@ -162,7 +163,7 @@ class TestCommandLine:
     def test_default_target_is_the_working_directory(self, tree, monkeypatch, capsys):
         monkeypatch.chdir(tree)
         run([])
-        assert "guide/setup.md:3:" in capsys.readouterr().out
+        assert "guide/setup.md:3:".replace("/", os.sep) in capsys.readouterr().out
 
     def test_installed_module_runs_as_a_script(self, tree):
         result = subprocess.run(
