@@ -15,8 +15,8 @@
 1. **Hierarchy Preservation**: Translates H1 (`#`), H2 (`##`), H3 (`###`), and H4 (`####`) headings into styled Word heading levels.
 2. **List & Bullet Formatting**: Converts Markdown unordered bullet points (`- `, `* `) and ordered lists (`1. `) into native Word list items.
 3. **Monospaced Code Block Support**: Renders technical code fences (` ``` `) into monospaced code blocks with left indentation and dark slate styling.
-4. **Reference Template Injection**: Option to supply a custom reference Word template (`.docx`) for corporate fonts, margins, headers/footers, and branding.
-5. **Py-LogKit Logging**: Color-coded progress output (`pylogkit`).
+4. **Reference Template Injection**: Option to supply a custom reference Word template (`.docx`) for corporate fonts, margins, headers/footers, and branding. The template's styles, page setup, headers, footers and properties are used. Its body content (cover page, placeholder text) is removed unless you pass `--keep-template-body`.
+5. **Progress Logging**: Progress messages on stderr, colour-coded when stderr is a terminal. The library only uses the standard `logging` module and never configures it.
 
 ---
 
@@ -27,16 +27,19 @@ The package wraps `python-docx` AST node builders into a clean conversion engine
 ```
 py-doc2docx/
 ├── src/
-│   └── pydoc2docx/
-│       ├── __init__.py         # Package initialization
-│       ├── converter.py        # Core DocxConverter engine
-│       ├── cli.py              # CLI Argument Parser & Runner
-│       └── pylogkit/           # Py-LogKit logging framework
+│   ├── py_doc/
+│   │   ├── __init__.py         # Package initialization
+│   │   ├── cli.py              # CLI Argument Parser, Runner and logging setup
+│   │   └── render/
+│   │       └── docx.py         # Core DocxConverter engine
+│   └── pydoc2docx/             # Compatibility alias for the old import name
 ├── tests/
 │   ├── fixtures/               # Markdown corpus used by the regression suite
 │   ├── golden/                 # Expected DOCX outlines (change detectors)
 │   ├── test_converter.py       # Semantic tests of the converter
 │   ├── test_cli.py             # CLI integration tests
+│   ├── test_logging.py         # Logging is configured by the CLI, not on import
+│   ├── test_compat.py          # Old pydoc2docx import name and command still work
 │   ├── test_fixtures.py        # Corpus and golden-output tests
 │   └── test_known_defects.py   # Known defects, marked xfail with issue numbers
 ├── .github/workflows/ci.yml    # Lint, test matrix, build and CI gate
@@ -107,6 +110,7 @@ py-doc2docx docs/ -o dist/docx/
 | `--output` | `-o` | Same as input | Output `.docx` file path or destination directory |
 | `--template` | `-t` | `None` | Optional path to reference Word (`.docx`) template |
 | `--allow-missing-template` | | Off | Warn and use a blank document if the template file is missing (default: fail with exit status 1) |
+| `--keep-template-body` | | Off | Keep the template's own body content and append the converted document after it (default: remove it) |
 
 ---
 
@@ -114,10 +118,12 @@ py-doc2docx docs/ -o dist/docx/
 
 ```python
 from pathlib import Path
-from pydoc2docx import DocxConverter
+from py_doc import DocxConverter  # the old `pydoc2docx` import name still works
 
 # Initialize converter with optional template.
 # A missing template raises FileNotFoundError unless allow_missing_template=True.
+# The template's body content is removed unless keep_template_body=True.
+# Input that is not valid UTF-8 raises py_doc.ConversionError.
 converter = DocxConverter(template_path=Path("templates/Template.docx"))
 
 # Convert Markdown file

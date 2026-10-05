@@ -8,7 +8,7 @@ import sys
 import pytest
 from docx import Document
 from docx_helpers import texts
-from pydoc2docx.cli import main
+from py_doc.cli import main
 
 
 def run_cli(monkeypatch, *args: str) -> None:
@@ -51,6 +51,27 @@ class TestFileMode:
         run_cli(monkeypatch, str(src), "-t", str(template))
         assert Document(str(tmp_path / "spec.docx")).core_properties.title == "Corporate template"
 
+    def test_template_body_is_removed_unless_keep_template_body_is_given(self, tmp_path, monkeypatch):
+        template = tmp_path / "template.docx"
+        doc = Document()
+        doc.add_paragraph("Template boilerplate")
+        doc.save(str(template))
+        src = tmp_path / "spec.md"
+        src.write_text("# Spec\n", encoding="utf-8")
+        run_cli(monkeypatch, str(src), "-t", str(template))
+        assert texts(tmp_path / "spec.docx") == ["Spec"]
+        run_cli(monkeypatch, str(src), "-t", str(template), "--keep-template-body", "-o", str(tmp_path / "kept.docx"))
+        assert texts(tmp_path / "kept.docx") == ["Template boilerplate", "Spec"]
+
+    def test_invalid_utf8_input_exits_with_status_1_and_no_traceback(self, tmp_path, monkeypatch, capsys):
+        src = tmp_path / "spec.md"
+        src.write_bytes(b"caf\xe9\n")
+        with pytest.raises(SystemExit) as exc:
+            run_cli(monkeypatch, str(src))
+        assert exc.value.code == 1
+        assert "not valid UTF-8" in capsys.readouterr().out
+        assert not (tmp_path / "spec.docx").exists()
+
     def test_missing_template_exits_with_status_1_and_writes_nothing(self, tmp_path, monkeypatch, capsys):
         src = tmp_path / "spec.md"
         src.write_text("# Spec\n", encoding="utf-8")
@@ -79,7 +100,7 @@ class TestFileMode:
 
     def test_module_entry_point_prints_help(self):
         result = subprocess.run(
-            [sys.executable, "-m", "pydoc2docx.cli", "--help"],
+            [sys.executable, "-m", "py_doc.cli", "--help"],
             capture_output=True,
             text=True,
             check=False,
