@@ -3,14 +3,8 @@ import os
 import sys
 from pathlib import Path
 
-from ctxlogkit import setup_logging
-
+from ._logging import configure_logging
 from .render.docx import ConversionError, DocxConverter
-
-
-def _configure_logging() -> None:
-    """Send progress messages to stderr. Library code never configures logging, only the CLI does."""
-    setup_logging(name="py_doc", level="INFO", mode="compact", console_stream=sys.stderr)
 
 
 def main():
@@ -35,7 +29,7 @@ def main():
     )
 
     args = parser.parse_args()
-    _configure_logging()
+    configure_logging()
 
     if args.template and not args.allow_missing_template and not Path(args.template).is_file():
         print(f"Error: Word template not found: {args.template}")

@@ -39,6 +39,7 @@ dev = [
 
 [project.scripts]
 py-doc2docx = "py_doc.cli:main"
+py-doclint = "py_doc.lint.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
