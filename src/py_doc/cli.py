@@ -1,22 +1,16 @@
 import argparse
-import logging
 import os
 import sys
 from pathlib import Path
 
-import colorlog
+from pylogkit import setup_logging
 
 from .render.docx import ConversionError, DocxConverter
 
 
 def _configure_logging() -> None:
-    """Send progress messages to stderr, colour-coded when stderr is a terminal."""
-    handler = logging.StreamHandler()
-    if handler.stream.isatty():
-        handler.setFormatter(colorlog.ColoredFormatter("%(log_color)s%(levelname)s%(reset)s: %(message)s"))
-    else:
-        handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
-    logging.basicConfig(level=logging.INFO, handlers=[handler])
+    """Send progress messages to stderr. Library code never configures logging, only the CLI does."""
+    setup_logging(name="py_doc", level="INFO", mode="compact", console_stream=sys.stderr)
 
 
 def main():

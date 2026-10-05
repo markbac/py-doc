@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 from pathlib import Path
@@ -17,6 +18,25 @@ from pydoc2docx import DocxConverter  # noqa: E402
 FIXTURES = Path(__file__).parent / "fixtures"
 GOLDEN = Path(__file__).parent / "golden"
 AST_GOLDEN = GOLDEN / "ast"
+
+
+@pytest.fixture(autouse=True)
+def restore_py_doc_logger():
+    """Undo the logging setup that CLI tests trigger by calling main() in-process.
+
+    py-logkit replaces the handlers of the ``py_doc`` logger and turns propagation off. Without
+    this, a stale handler pointing at a closed capture stream would outlive the test.
+    """
+    logger = logging.getLogger("py_doc")
+    propagate, level = logger.propagate, logger.level
+    handlers = list(logger.handlers)
+    yield
+    for handler in list(logger.handlers):
+        if handler not in handlers and type(handler) is logging.StreamHandler:
+            logger.removeHandler(handler)
+            handler.close()
+    logger.propagate = propagate
+    logger.setLevel(level)
 
 
 @pytest.fixture
