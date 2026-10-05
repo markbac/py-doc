@@ -7,13 +7,10 @@ visible and stops fixes landing without a test.
 
 Fixed defects move to the regular test modules (for example #6 directory
 mode in test_cli.py, #49 and #53 in test_converter.py, #9 in test_converter.py
-and test_cli.py).
+and test_cli.py, #10 import-time logging in test_logging.py).
 """
 
 from __future__ import annotations
-
-import subprocess
-import sys
 
 import pytest
 from docx import Document
@@ -22,20 +19,6 @@ from docx_helpers import styles, texts
 
 def defect(issue: str):
     return pytest.mark.xfail(strict=True, reason=issue)
-
-
-@defect("#10")
-def test_importing_the_library_does_not_configure_logging():
-    code = (
-        "import logging\n"
-        "before = set(logging.root.manager.loggerDict)\n"
-        "import pydoc2docx\n"
-        "configured = [n for n, lg in logging.root.manager.loggerDict.items()\n"
-        "              if n not in before and getattr(lg, 'handlers', [])]\n"
-        "raise SystemExit(1 if configured else 0)\n"
-    )
-    result = subprocess.run([sys.executable, "-c", code], check=False)
-    assert result.returncode == 0
 
 
 class TestMarkdownSemantics:

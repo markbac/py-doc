@@ -8,7 +8,7 @@ import sys
 import pytest
 from docx import Document
 from docx_helpers import texts
-from pydoc2docx.cli import main
+from py_doc.cli import main
 
 
 def run_cli(monkeypatch, *args: str) -> None:
@@ -100,7 +100,7 @@ class TestFileMode:
 
     def test_module_entry_point_prints_help(self):
         result = subprocess.run(
-            [sys.executable, "-m", "pydoc2docx.cli", "--help"],
+            [sys.executable, "-m", "py_doc.cli", "--help"],
             capture_output=True,
             text=True,
             check=False,

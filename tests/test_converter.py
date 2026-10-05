@@ -6,8 +6,7 @@ import pytest
 from docx import Document
 from docx.shared import Inches
 from docx_helpers import outline, styles, texts
-from pydoc2docx import DocxConverter
-from pydoc2docx.converter import ConversionError
+from py_doc import ConversionError, DocxConverter
 
 
 class TestHeadings:

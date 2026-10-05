@@ -1,9 +1,5 @@
-"""
-py-doc2docx: Markdown to Word (.docx) Technical Document Converter
-"""
+"""Compatibility alias for the old import name. Use `py_doc` in new code."""
 
-__version__ = "0.1.0"
+from py_doc import ConversionError, DocxConverter, __version__
 
-from .converter import DocxConverter
-
-__all__ = ["DocxConverter"]
+__all__ = ["ConversionError", "DocxConverter", "__version__"]
