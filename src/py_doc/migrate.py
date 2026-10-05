@@ -70,7 +70,7 @@ def discover(paths: list[Path]) -> list[Path]:
                 for name in sorted(files)
                 if name.lower().endswith((".yml", ".yaml")) and name not in CONFIG_NAMES
             ]
-    return sorted(dict.fromkeys(p.resolve() for p in found))
+    return sorted(dict.fromkeys(p.resolve() for p in found), key=lambda p: p.as_posix())
 
 
 def read_createdocs(path: Path) -> dict | None:

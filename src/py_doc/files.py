@@ -41,7 +41,7 @@ def find_markdown(
             if not d.startswith(".") and d not in exclude_dirs and (skip is None or (Path(root) / d).resolve() != skip)
         )
         found += [Path(root) / name for name in sorted(files) if is_markdown(Path(name))]
-    return sorted(found)
+    return sorted(found, key=lambda p: p.as_posix())  # the same order on every platform
 
 
 def write_output(path: Path, save: Callable[[str], object]) -> None:

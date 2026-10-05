@@ -228,7 +228,7 @@ class TestResultsAndOrdering:
 
     def test_issue_text_form_has_file_line_severity_rule_and_message(self):
         (issue,) = DocLinter().lint_text("a dtls b\n", file="docs/a.md")
-        assert str(issue).startswith("docs/a.md:1: warning DOC001 [Glossary] Incorrect term capitalization 'dtls'.")
+        assert str(issue).startswith(str(Path("docs/a.md")) + ":1: warning DOC001 [Glossary] Incorrect term capitalization 'dtls'.")
 
     def test_crlf_and_byte_order_mark_do_not_change_line_numbers(self, tmp_path):
         path = tmp_path / "a.md"
