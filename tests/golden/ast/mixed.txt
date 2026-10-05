@@ -1,0 +1,28 @@
+Document
+  Heading level=1 @1
+    Text text="Technical Specification" @1
+  Paragraph @3
+    Text text="Introductory paragraph describing the system." @3
+  Heading level=2 @5
+    Text text="Requirements" @5
+  List tight @7-8
+    ListItem @7
+      Paragraph @7
+        Text text="The system shall convert Markdown." @7
+    ListItem @8
+      Paragraph @8
+        Text text="The system shall preserve headings." @8
+  List ordered start=1 tight @10-11
+    ListItem @10
+      Paragraph @10
+        Text text="Install the tool." @10
+    ListItem @11
+      Paragraph @11
+        Text text="Run the converter." @11
+  Heading level=2 @13
+    Text text="Example" @13
+  CodeBlock text="py-doc2docx spec.md -o spec.docx" language="bash" info="bash" fenced closed @15-17
+  Heading level=3 @19
+    Text text="Notes" @19
+  Paragraph @21
+    Text text="Closing paragraph." @21

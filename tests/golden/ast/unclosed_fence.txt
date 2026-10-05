@@ -1,0 +1,6 @@
+Document
+  Heading level=1 @1
+    Text text="Unclosed fence" @1
+  Paragraph @3
+    Text text="Before the fence." @3
+  CodeBlock text="print(\"this code is lost\")\nmore = 1" language="python" info="python" fenced @5-7

@@ -1,0 +1,15 @@
+Document
+  Paragraph @1
+    Text text="See the " @1
+    Link url="https://example.com/docs" @1
+      Text text="project site" @1
+    Text text=" for details." @1
+  Paragraph @3
+    Text text="Autolink: " @3
+    Link url="https://example.com/auto" @3
+      Text text="https://example.com/auto" @3
+  Paragraph @5
+    Text text="Reference link to " @5
+    Link url="https://example.com/guide" @5
+      Text text="the guide" @5
+    Text text="." @5

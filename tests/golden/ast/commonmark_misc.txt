@@ -1,0 +1,48 @@
+Document
+  Heading level=1 @1-2
+    Text text="Setext Heading" @1
+  Heading level=2 @4-5
+    Text text="Second Level Setext" @4
+  HtmlBlock text="<div class=\"note\">\nRaw html block\n</div>" @7-9
+  CodeBlock text="indented code line one\nindented code line two" info="" closed @11-12
+  List @14-16
+    ListItem @14
+      Paragraph @14
+        Text text="loose item one" @14
+    ListItem @16
+      Paragraph @16
+        Text text="loose item two" @16
+  List ordered start=5 tight @18-19
+    ListItem @18
+      Paragraph @18
+        Text text="Starts at five" @18
+    ListItem @19
+      Paragraph @19
+        Text text="Then six" @19
+  Paragraph @21-22
+    Text text="Line with a hard break" @21
+    HardBreak @21
+    Text text="continues here and uses a *literal asterisk*." @22
+  Paragraph @24
+    Text text="~~not struck~~ and - [ ] not a task" @24
+  BlockQuote @26-33
+    Paragraph @26
+      Text text="Quote with a list:" @26
+    List tight @28-29
+      ListItem @28
+        Paragraph @28
+          Text text="quoted item" @28
+      ListItem @29
+        Paragraph @29
+          Text text="another one" @29
+    CodeBlock text="quoted code" info="" fenced closed @31-33
+  Paragraph @35-37
+    Text text="Inline " @35
+    HtmlInline text="<span>" @35
+    Text text="html" @35
+    HtmlInline text="</span>" @35
+    Text text=" and a line" @35
+    SoftBreak @35
+    Text text="that wraps with " @36
+    CodeSpan text="code spanning lines" @36
+    Text text=" and more text." @36

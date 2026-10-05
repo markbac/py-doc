@@ -1,0 +1,6 @@
+Document
+  FrontMatter text="title: Design Notes\nversion: 1.2\ntags: [architecture, draft]" @1-5
+  Heading level=1 @7
+    Text text="Design Notes" @7
+  Paragraph @9
+    Text text="Text after the front matter." @9

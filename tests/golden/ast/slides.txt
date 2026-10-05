@@ -1,0 +1,26 @@
+Document
+  Heading level=1 @1
+    Text text="Deck Title" @1
+  Paragraph @3-4
+    Text text="Subtitle line one" @3
+    SoftBreak @3
+    Text text="Subtitle line two" @4
+  ThematicBreak @6
+  Heading level=2 @8
+    Text text="Section A" @8
+  List tight @10-11
+    ListItem @10
+      Paragraph @10
+        Text text="point one" @10
+    ListItem @11
+      Paragraph @11
+        Text text="point two" @11
+  ThematicBreak @13
+  Heading level=2 @15
+    Text text="Config example" @15
+  CodeBlock text="---\nkey: value\n---" language="yaml" info="yaml" fenced closed @17-21
+  ThematicBreak @23
+  Heading level=2 @25
+    Text text="Closing" @25
+  Paragraph @27
+    Text text="Thank you." @27

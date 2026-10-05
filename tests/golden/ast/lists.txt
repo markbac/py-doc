@@ -1,0 +1,25 @@
+Document
+  List tight @1-2
+    ListItem @1
+      Paragraph @1
+        Text text="Dash item one" @1
+    ListItem @2
+      Paragraph @2
+        Text text="Dash item two" @2
+  List tight @3-4
+    ListItem @3
+      Paragraph @3
+        Text text="Star item one" @3
+    ListItem @4
+      Paragraph @4
+        Text text="Star item two" @4
+  List ordered start=1 tight @6-8
+    ListItem @6
+      Paragraph @6
+        Text text="Ordered one" @6
+    ListItem @7
+      Paragraph @7
+        Text text="Ordered two" @7
+    ListItem @8
+      Paragraph @8
+        Text text="Ordered three" @8

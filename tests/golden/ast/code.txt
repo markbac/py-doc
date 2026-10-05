@@ -1,0 +1,7 @@
+Document
+  Paragraph @1
+    Text text="Intro paragraph." @1
+  CodeBlock text="def hello():\n    print(\"hello\")" language="python" info="python" fenced closed @3-6
+  Paragraph @8
+    Text text="Between blocks." @8
+  CodeBlock text="plain block\n  with indentation" info="" fenced closed @10-13

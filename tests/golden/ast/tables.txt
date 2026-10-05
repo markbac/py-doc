@@ -1,0 +1,23 @@
+Document
+  Table @1-4
+    TableRow header @1
+      TableCell @1
+        Text text="Name" @1
+      TableCell @1
+        Text text="Type" @1
+      TableCell @1
+        Text text="Description" @1
+    TableRow @3
+      TableCell @3
+        Text text="id" @3
+      TableCell @3
+        Text text="int" @3
+      TableCell @3
+        Text text="Primary key" @3
+    TableRow @4
+      TableCell @4
+        Text text="name" @4
+      TableCell @4
+        Text text="str" @4
+      TableCell @4
+        Text text="Display name" @4

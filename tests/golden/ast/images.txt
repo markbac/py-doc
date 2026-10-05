@@ -1,0 +1,7 @@
+Document
+  Paragraph @1
+    Image url="images/architecture.png" alt="Architecture overview" @1
+  Paragraph @3
+    Text text="Text before " @3
+    Image url="logo.svg" alt="inline logo" @3
+    Text text=" and after." @3
