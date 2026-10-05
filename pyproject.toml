@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "py-doc2docx"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Convert Markdown Technical Documentation to Word (.docx) Documents"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -41,7 +41,11 @@ dev = [
 
 [project.scripts]
 py-doc2docx = "py_doc.cli:main"
+py-doc2slides = "py_doc.slides_cli:main"
 py-doclint = "py_doc.lint.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "py_doc.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

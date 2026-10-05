@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import unquote
 
+from zipfile import BadZipFile
+
 from lxml import etree
 from pptx import Presentation
 from pptx.dml.color import RGBColor
@@ -25,6 +27,7 @@ from pptx.parts.image import Image
 from pptx.util import Inches, Pt
 
 from py_doc.errors import ConversionError
+from py_doc.files import template_source, write_output
 from py_doc.markdown import FrontMatterError, Metadata, ParseError, parse, plain_text, read_metadata
 from py_doc.markdown import nodes as n
 
@@ -372,6 +375,10 @@ def _local_image(base_dir: Path, url: str) -> Path | None:
 # --- the converter ---------------------------------------------------------------------------------
 
 
+_POTX_TYPE = b"application/vnd.openxmlformats-officedocument.presentationml.template.main+xml"
+_PPTX_TYPE = b"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"
+
+
 class SlidesConverter:
     """
     Converts Markdown technical documentation into PowerPoint (.pptx) presentation decks.
@@ -428,8 +435,8 @@ class SlidesConverter:
     def _open_template(self):
         if self.template_path and self.template_path.is_file():
             try:
-                prs = Presentation(str(self.template_path))
-            except (PythonPptxError, KeyError, ValueError) as exc:
+                prs = Presentation(template_source(self.template_path, ".potx", _POTX_TYPE, _PPTX_TYPE))
+            except (PythonPptxError, BadZipFile, KeyError, ValueError) as exc:
                 raise ConversionError(f"Cannot read PowerPoint template '{self.template_path}': {exc}") from exc
             logger.info(f"Loaded reference PowerPoint template: {self.template_path.name}")
             if not self.keep_template_slides:
@@ -479,12 +486,17 @@ class SlidesConverter:
 
     # converting
 
+    def validate_template(self) -> None:
+        """Raise now if the template cannot be used, so a batch fails once instead of for every file."""
+        if self.template_path and not self.template_path.is_file() and self.allow_missing_template:
+            return
+        self._open_template()
+
     def convert_file(self, md_path: Path, output_path: Path) -> Path:
         md_path = Path(md_path).resolve()
         output_path = Path(output_path).resolve()
-        output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if not md_path.exists():
+        if not md_path.is_file():
             raise FileNotFoundError(f"Markdown file not found: {md_path}")
 
         logger.info(f"Converting Markdown '{md_path.name}' -> PowerPoint '{output_path.name}'...")
@@ -521,7 +533,7 @@ class SlidesConverter:
         if metadata.keywords:
             prs.core_properties.keywords = metadata.keywords
 
-        prs.save(str(output_path))
+        write_output(output_path, prs.save)
         logger.info(f"Successfully generated PowerPoint presentation ({len(slides)} slides): {output_path}")
         return output_path
 

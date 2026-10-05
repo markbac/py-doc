@@ -7,8 +7,9 @@ import sys
 from pathlib import Path
 
 from py_doc._logging import configure_logging
+from py_doc.files import DEFAULT_EXCLUDE_DIRS
 
-from .config import DEFAULT_EXCLUDE_DIRS, LintConfig
+from .config import LintConfig
 from .linter import DocLinter, LintTargetError
 from .model import FileResult, LintIssue, LintReport
 

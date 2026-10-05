@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import logging
-import os
 from pathlib import Path
 
+from py_doc.files import MARKDOWN_SUFFIXES, find_markdown
 from py_doc.markdown import ParseError, parse
 
 from . import rules
@@ -14,8 +14,6 @@ from .model import FileResult, LintIssue, LintReport
 from .text import segments
 
 logger = logging.getLogger(__name__)
-
-MARKDOWN_SUFFIXES = (".md", ".markdown")
 
 _RULES = (
     (RULE_GLOSSARY, rules.glossary),
@@ -89,8 +87,4 @@ class DocLinter:
 
     def find_files(self, directory: Path) -> list[Path]:
         """Markdown files below ``directory``, skipping hidden and vendor directories, sorted by path."""
-        found: list[Path] = []
-        for root, dirs, files in os.walk(directory):
-            dirs[:] = sorted(d for d in dirs if not d.startswith(".") and d not in self.config.exclude_dirs)
-            found += [Path(root) / name for name in sorted(files) if name.lower().endswith(MARKDOWN_SUFFIXES)]
-        return sorted(found)
+        return find_markdown(directory, self.config.exclude_dirs)

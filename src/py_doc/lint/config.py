@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from py_doc.files import DEFAULT_EXCLUDE_DIRS
+
 DEFAULT_GLOSSARY: dict[str, list[str]] = {
     "LwM2M": ["lwm2m", "LWM2M", "Lw2m"],
     "DTLS": ["dtls", "Dtls"],
@@ -31,11 +33,6 @@ DEFAULT_PHRASES: dict[str, str] = {
 DEFAULT_ALLOWED_ACRONYMS = frozenset(
     {"TOC", "URL", "CLI", "HTML", "CSS", "SVG", "PNG", "CPU", "RAM", "ROM", "OK"}
     | {"NOTE", "TODO", "FIXME", "WARNING", "IMPORTANT", "TIP", "README", "LICENSE", "FAQ", "PDF", "USB"}
-)
-
-# Directories that are never documentation: hidden ones are skipped as well.
-DEFAULT_EXCLUDE_DIRS = frozenset(
-    {"node_modules", "venv", "env", "site-packages", "__pycache__", "dist", "build", "vendor"}
 )
 
 RULE_GLOSSARY = "DOC001"

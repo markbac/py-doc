@@ -9,12 +9,14 @@ from __future__ import annotations
 
 import logging
 import re
+from zipfile import BadZipFile
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Optional
 from urllib.parse import unquote
 
 from docx import Document
+from docx.opc.exceptions import PackageNotFoundError
 from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.image.exceptions import UnrecognizedImageError
@@ -24,6 +26,7 @@ from docx.oxml.ns import qn
 from docx.shared import Emu, Inches, Pt, RGBColor
 
 from py_doc.errors import ConversionError
+from py_doc.files import template_source, write_output
 from py_doc.markdown import FrontMatterError, Metadata, ParseError, parse, read_metadata
 from py_doc.markdown import nodes as n
 
@@ -51,6 +54,10 @@ class _Format:
     link: bool = False
 
 
+_DOTX_TYPE = b"application/vnd.openxmlformats-officedocument.wordprocessingml.template.main+xml"
+_DOCX_TYPE = b"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+
+
 class _Renderer:
     """Writes the nodes of one parsed document into a python-docx ``Document``."""
 
@@ -61,6 +68,7 @@ class _Renderer:
         self.style_names = {style.name for style in doc.styles}
         self.has_link_style = "Hyperlink" in self.style_names
         self.restart_warned = False
+        self.missing: list[str] = []
 
     def render(self, document: n.Document) -> None:
         self.blocks(document.children, quote=0)
@@ -101,10 +109,20 @@ class _Renderer:
         elif name == "Quote":
             style.font.italic = True
             style.paragraph_format.left_indent = Inches(0.4)
-        elif name.startswith("List"):
-            logger.warning(f"The template has no '{name}' style, so those list items get no bullet or number")
+        if name != CODE_STYLE:
+            self.missing.append(name)
         self.style_names.add(name)
         return name
+
+    def report_missing(self, template: Path | None) -> None:
+        """One warning naming every style the template lacks, so a template can be fixed in one pass."""
+        if not self.missing or template is None:
+            return
+        names = ", ".join(f"'{name}'" for name in self.missing)
+        message = f"Template '{template.name}' lacks these styles, so plain defaults were used: {names}"
+        if any(name.startswith("List") for name in self.missing):
+            message += ". The list styles it creates have no bullet or number"
+        logger.warning(message)
 
     # --- blocks ---------------------------------------------------------------------------------
 
@@ -222,6 +240,8 @@ class _Renderer:
         table = self.doc.add_table(rows=len(node.children), cols=columns)
         if "Table Grid" in self.style_names:
             table.style = "Table Grid"
+        elif "Table Grid" not in self.missing:
+            self.missing.append("Table Grid")
         for word_row, row in zip(table.rows, node.children):
             for index, cell in enumerate(row.children):
                 paragraph = word_row.cells[index].paragraphs[0]
@@ -385,28 +405,40 @@ class DocxConverter:
             )
         return content
 
-    def convert_file(self, md_path: Path, output_path: Path) -> Path:
-        md_path = Path(md_path).resolve()
-        output_path = Path(output_path).resolve()
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        if not md_path.exists():
-            raise FileNotFoundError(f"Markdown file not found: {md_path}")
-
-        logger.info(f"Converting Markdown '{md_path.name}' -> Word '{output_path.name}'...")
-
+    def _open_template(self):
+        """The template as a python-docx document, or a blank one (``.dotx`` templates are accepted)."""
         if self.template_path and self.template_path.is_file():
-            doc = Document(str(self.template_path))
+            try:
+                doc = Document(template_source(self.template_path, ".dotx", _DOTX_TYPE, _DOCX_TYPE))
+            except (PackageNotFoundError, BadZipFile, KeyError, ValueError) as exc:
+                raise ConversionError(
+                    f"Cannot read Word template '{self.template_path}': it is not a valid .docx or .dotx file"
+                ) from exc
             logger.info(f"Loaded reference Word template: {self.template_path.name}")
             if not self.keep_template_body:
                 self._clear_body(doc)
-        elif self.template_path:
+            return doc
+        if self.template_path:
             if not self.allow_missing_template:
                 raise FileNotFoundError(f"Word template not found: {self.template_path}")
             logger.warning(f"Word template not found, using a default blank document: {self.template_path}")
-            doc = Document()
-        else:
-            doc = Document()
+        return Document()
+
+    def validate_template(self) -> None:
+        """Raise now if the template cannot be used, so a batch fails once instead of for every file."""
+        if self.template_path and not self.template_path.is_file() and self.allow_missing_template:
+            return
+        self._open_template()
+
+    def convert_file(self, md_path: Path, output_path: Path) -> Path:
+        md_path = Path(md_path).resolve()
+        output_path = Path(output_path).resolve()
+
+        if not md_path.is_file():
+            raise FileNotFoundError(f"Markdown file not found: {md_path}")
+
+        logger.info(f"Converting Markdown '{md_path.name}' -> Word '{output_path.name}'...")
+        doc = self._open_template()
 
         text = self._read_markdown(md_path)
         try:
@@ -418,7 +450,8 @@ class DocxConverter:
         renderer = _Renderer(doc, md_path.parent, md_path.name)
         renderer.render(document)
         renderer.set_properties(metadata)
+        renderer.report_missing(self.template_path if self.template_path and self.template_path.is_file() else None)
 
-        doc.save(str(output_path))
+        write_output(output_path, doc.save)
         logger.info(f"Successfully generated Word document: {output_path}")
         return output_path
