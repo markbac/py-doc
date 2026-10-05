@@ -146,6 +146,8 @@ class _Renderer:
             self.list_block(block, depth=1, quote=quote)
         elif isinstance(block, n.ThematicBreak):
             self.thematic_break()
+        elif isinstance(block, n.PageBreak):
+            self.doc.add_page_break()
         elif isinstance(block, n.HtmlBlock):
             self.doc.add_paragraph(block.text)  # shown as written: Word cannot render HTML
         elif isinstance(block, n.Table):
@@ -432,22 +434,24 @@ class DocxConverter:
 
     def convert_file(self, md_path: Path, output_path: Path) -> Path:
         md_path = Path(md_path).resolve()
-        output_path = Path(output_path).resolve()
-
         if not md_path.is_file():
             raise FileNotFoundError(f"Markdown file not found: {md_path}")
-
-        logger.info(f"Converting Markdown '{md_path.name}' -> Word '{output_path.name}'...")
-        doc = self._open_template()
-
         text = self._read_markdown(md_path)
         try:
             document = parse(text)
             metadata = read_metadata(document)
         except (ParseError, FrontMatterError) as exc:
             raise ConversionError(f"Cannot convert '{md_path}': {exc}") from exc
+        return self.convert_document(document, metadata, md_path.parent, md_path.name, output_path)
 
-        renderer = _Renderer(doc, md_path.parent, md_path.name)
+    def convert_document(
+        self, document: n.Document, metadata: Metadata, base_dir: Path, name: str, output_path: Path
+    ) -> Path:
+        """Render a parsed document. ``base_dir`` is where relative image paths start, ``name`` is for messages."""
+        output_path = Path(output_path).resolve()
+        logger.info(f"Converting Markdown '{name}' -> Word '{output_path.name}'...")
+        doc = self._open_template()
+        renderer = _Renderer(doc, Path(base_dir), name)
         renderer.render(document)
         renderer.set_properties(metadata)
         renderer.report_missing(self.template_path if self.template_path and self.template_path.is_file() else None)

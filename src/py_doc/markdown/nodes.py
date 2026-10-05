@@ -141,6 +141,14 @@ class ThematicBreak:
 
 
 @dataclass
+class PageBreak:
+    """Not produced by the parser: a build inserts it between the source files of a document."""
+
+    line: int
+    end_line: int
+
+
+@dataclass
 class HtmlBlock:
     line: int
     end_line: int
@@ -169,7 +177,7 @@ class Table:
     children: list[TableRow]
 
 
-Block = Union[Heading, Paragraph, CodeBlock, BlockQuote, List, ThematicBreak, HtmlBlock, Table]
+Block = Union[Heading, Paragraph, CodeBlock, BlockQuote, List, ThematicBreak, PageBreak, HtmlBlock, Table]
 
 
 # --- Document -----------------------------------------------------------------------------------

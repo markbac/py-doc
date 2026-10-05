@@ -86,7 +86,7 @@ def _chunks(blocks: list[n.Block], split_level: int) -> list[list[n.Block]]:
     """Cut top-level blocks at thematic breaks and at headings of ``split_level`` or shallower."""
     chunks: list[list[n.Block]] = [[]]
     for block in blocks:
-        if isinstance(block, n.ThematicBreak):
+        if isinstance(block, (n.ThematicBreak, n.PageBreak)):
             chunks.append([])
             continue
         if isinstance(block, n.Heading) and 0 < block.level <= split_level and chunks[-1]:
@@ -494,20 +494,23 @@ class SlidesConverter:
 
     def convert_file(self, md_path: Path, output_path: Path) -> Path:
         md_path = Path(md_path).resolve()
-        output_path = Path(output_path).resolve()
-
         if not md_path.is_file():
             raise FileNotFoundError(f"Markdown file not found: {md_path}")
-
-        logger.info(f"Converting Markdown '{md_path.name}' -> PowerPoint '{output_path.name}'...")
-        prs = self._open_template()
-
         text = self._read_markdown(md_path)
         try:
             document = parse(text)
             metadata = read_metadata(document)
         except (ParseError, FrontMatterError) as exc:
             raise ConversionError(f"Cannot convert '{md_path}': {exc}") from exc
+        return self.convert_document(document, metadata, md_path.parent, md_path.name, output_path)
+
+    def convert_document(
+        self, document: n.Document, metadata: Metadata, base_dir: Path, name: str, output_path: Path
+    ) -> Path:
+        """Render a parsed document. ``base_dir`` is where relative image paths start, ``name`` is for messages."""
+        output_path = Path(output_path).resolve()
+        logger.info(f"Converting Markdown '{name}' -> PowerPoint '{output_path.name}'...")
+        prs = self._open_template()
 
         title_layout = self._find_layout(prs, self.title_layout, "Title Slide", (PP_PLACEHOLDER.SUBTITLE,), "title")
         content_layout = self._find_layout(prs, self.content_layout, "Title and Content", _BODY_TYPES, "content")
@@ -519,12 +522,12 @@ class SlidesConverter:
 
         slides = build_slides(document, metadata, self.split_level)
         if not slides:
-            logger.warning(f"'{md_path.name}' has no content, so the presentation has no slides")
+            logger.warning(f"'{name}' has no content, so the presentation has no slides")
         if any(slide.is_title for slide in slides) and title_layout is None:
             logger.warning("The template has no title slide layout, so the title slide uses the content layout")
 
         for slide in slides:
-            self._write(prs, slide, title_layout, content_layout, md_path)
+            self._write(prs, slide, title_layout, content_layout, Path(base_dir), name)
 
         if metadata.title:
             prs.core_properties.title = metadata.title
@@ -537,11 +540,11 @@ class SlidesConverter:
         logger.info(f"Successfully generated PowerPoint presentation ({len(slides)} slides): {output_path}")
         return output_path
 
-    def _write(self, prs, slide: _Slide, title_layout, content_layout, md_path: Path) -> None:
+    def _write(self, prs, slide: _Slide, title_layout, content_layout, base_dir: Path, name: str) -> None:
         if slide.is_title and title_layout is not None:
             self._write_title_slide(prs, slide, title_layout)
         else:
-            self._write_content_slide(prs, slide, content_layout, md_path)
+            self._write_content_slide(prs, slide, content_layout, base_dir, name)
         if slide.notes:
             prs.slides[-1].notes_slide.notes_text_frame.text = "\n\n".join(slide.notes)
 
@@ -556,21 +559,21 @@ class SlidesConverter:
         else:
             _remove(subtitle)
 
-    def _write_content_slide(self, prs, slide: _Slide, layout, md_path: Path) -> None:
+    def _write_content_slide(self, prs, slide: _Slide, layout, base_dir: Path, name: str) -> None:
         created = prs.slides.add_slide(layout)
         _placeholder(created, _TITLE_TYPES).text = slide.title
         body_shape = _placeholder(created, _BODY_TYPES)
 
         frame = body_shape.text_frame
         frame.word_wrap = True
-        body = _Body(frame, md_path.parent, md_path.name)
+        body = _Body(frame, base_dir, name)
         if slide.is_title:  # a title slide written with the content layout keeps its subtitle lines
             body.blocks([n.Paragraph(0, 0, [n.Text(0, line)]) for line in slide.subtitle])
         body.blocks(slide.blocks)
 
         if body.lines > LINES_PER_SLIDE:
             logger.warning(
-                f"Slide '{slide.title}' in '{md_path.name}' has about {body.lines} lines, which may not fit. "
+                f"Slide '{slide.title}' in '{name}' has about {body.lines} lines, which may not fit. "
                 "Split it with a thematic break or a heading"
             )
         if body.has_text:

@@ -171,3 +171,63 @@ class TestCommandLine:
         )
         assert result.returncode == 1
         assert "setup.md:3: warning DOC001" in result.stdout
+
+
+class TestConfigFile:
+    @pytest.fixture
+    def docs(self, tmp_path):
+        (tmp_path / "docs").mkdir()
+        (tmp_path / "docs" / "a.md").write_text("A dtls typo, in order to test.\n", encoding="utf-8")
+        return tmp_path
+
+    def write(self, root, text):
+        (root / "py-doc.yml").write_text(text, encoding="utf-8")
+
+    def test_without_a_config_the_built_in_policy_applies(self, docs, capsys):
+        assert run([str(docs / "docs")]) == 0
+        assert "DOC001" in capsys.readouterr().out
+
+    def test_error_severity_fails_even_without_strict(self, docs, capsys):
+        self.write(docs, "lint:\n  rules:\n    DOC001: error\n")
+        assert run([str(docs / "docs")]) == 1
+        assert "error DOC001" in capsys.readouterr().out
+
+    def test_disabled_rule_is_not_reported(self, docs, capsys):
+        self.write(docs, "lint:\n  rules:\n    DOC001: off\n")
+        assert run([str(docs / "docs"), "--strict"]) == 1  # DOC002 still warns
+        out = capsys.readouterr().out
+        assert "DOC001" not in out and "DOC002" in out
+
+    def test_all_rules_off_is_clean_under_strict(self, docs, capsys):
+        self.write(docs, "lint:\n  rules: {DOC001: off, DOC002: off}\n")
+        assert run([str(docs / "docs"), "--strict"]) == 0
+
+    def test_config_is_found_above_a_file_target(self, docs, capsys):
+        self.write(docs, "lint:\n  rules: {DOC001: error}\n")
+        assert run([str(docs / "docs" / "a.md")]) == 1
+
+    def test_explicit_config_beats_discovery(self, docs, tmp_path, capsys):
+        self.write(docs, "lint:\n  rules: {DOC001: error}\n")
+        other = tmp_path / "other.yml"
+        other.write_text("lint:\n  rules: {DOC001: info}\n", encoding="utf-8")
+        assert run([str(docs / "docs"), "--config", str(other)]) == 0
+
+    def test_project_glossary_terms_are_checked(self, docs, capsys):
+        (docs / "docs" / "b.md").write_text("We run k8s.\n", encoding="utf-8")
+        self.write(docs, "lint:\n  glossary:\n    Kubernetes: [k8s]\n")
+        run([str(docs / "docs" / "b.md")])
+        assert "k8s" in capsys.readouterr().out
+
+    def test_bad_config_exits_2_with_the_place(self, docs, capsys):
+        self.write(docs, "lint:\n  rules: {DOC999: error}\n")
+        assert run([str(docs / "docs")]) == 2
+        assert "unknown rule 'DOC999'" in capsys.readouterr().err
+
+    def test_exclude_flag_adds_to_the_config(self, docs, capsys):
+        self.write(docs, "lint:\n  exclude: [skipme]\n")
+        for name in ("skipme", "alsoskip"):
+            (docs / "docs" / name).mkdir()
+            (docs / "docs" / name / "x.md").write_text("A dtls typo.\n", encoding="utf-8")
+        run([str(docs / "docs"), "--exclude", "alsoskip"])
+        out = capsys.readouterr().out
+        assert "skipme" not in out and "alsoskip" not in out

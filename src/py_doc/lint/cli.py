@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 
 from py_doc._logging import configure_logging
-from py_doc.files import DEFAULT_EXCLUDE_DIRS
+from py_doc.config import ConfigError, find_config, load_config
 
 from .config import LintConfig
 from .linter import DocLinter, LintTargetError
 from .model import FileResult, LintIssue, LintReport
+
+logger = logging.getLogger(__name__)
 
 
 def _display(path: Path) -> Path:
@@ -29,7 +32,7 @@ def _shown(issue: LintIssue) -> LintIssue:
 
 
 def run(argv: list[str] | None = None) -> int:
-    """Run the linter and return the exit status: 0 clean, 1 issues found with --strict, 2 errors."""
+    """Run the linter and return the exit status: 0 clean, 1 issues found, 2 errors."""
     parser = argparse.ArgumentParser(
         prog="py-doclint", description="Technical writing style and glossary checks for Markdown"
     )
@@ -42,16 +45,35 @@ def run(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--exclude", action="append", default=[], metavar="DIR", help="Also skip directories with this name"
     )
+    parser.add_argument("--config", metavar="FILE", help="py-doc.yml to read (default: the nearest one above the target)")
     args = parser.parse_args(argv)
     configure_logging()
 
-    config = LintConfig(exclude_dirs=DEFAULT_EXCLUDE_DIRS | frozenset(args.exclude))
+    try:
+        config = _load_config(args)
+    except ConfigError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 2
+    config.exclude_dirs = config.exclude_dirs | frozenset(args.exclude)
     try:
         report = DocLinter(config=config).lint_path(args.target)
     except LintTargetError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
     return _print(report, strict=args.strict)
+
+
+def _load_config(args: argparse.Namespace) -> LintConfig:
+    """The lint settings of the chosen or nearest py-doc.yml, or the built-in ones."""
+    if args.config:
+        path = Path(args.config)
+    else:
+        target = Path(args.target).resolve()
+        path = find_config(target if target.is_dir() else target.parent)
+    if path is None:
+        return LintConfig()
+    logger.info(f"Using configuration {path}")
+    return load_config(path).lint
 
 
 def _print(report: LintReport, strict: bool) -> int:
@@ -66,6 +88,8 @@ def _print(report: LintReport, strict: bool) -> int:
     )
     if report.errors:
         return 2
+    if report.count("error"):
+        return 1  # an issue the configuration calls an error always fails
     return 1 if strict and failing else 0
 
 
