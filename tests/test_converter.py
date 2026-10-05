@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 from docx import Document
+from docx.enum.style import WD_STYLE_TYPE
 from docx.shared import Inches
 from docx_helpers import outline, styles, texts
 from py_doc import ConversionError, DocxConverter
@@ -15,9 +16,21 @@ class TestHeadings:
         assert styles(out) == ["Heading 1", "Heading 2", "Heading 3", "Heading 4"]
         assert texts(out) == ["One", "Two", "Three", "Four"]
 
-    def test_levels_above_four_are_clamped_to_heading_4(self, convert_text):
+    def test_levels_five_and_six_keep_their_own_heading_styles(self, convert_text):
         out = convert_text("##### Five\n\n###### Six\n")
-        assert styles(out) == ["Heading 4", "Heading 4"]
+        assert styles(out) == ["Heading 5", "Heading 6"]
+
+    def test_closing_sequence_is_not_part_of_the_heading_text(self, convert_text):
+        out = convert_text("## Title ##\n\n### Other ###   \n")
+        assert texts(out) == ["Title", "Other"]
+
+    def test_heading_that_is_only_a_closing_sequence_is_empty_and_skipped(self, convert_text):
+        out = convert_text("# #\n\nAfter\n")
+        assert texts(out) == ["After"]
+
+    def test_setext_headings_are_headings(self, convert_text):
+        out = convert_text("Title\n=====\n\nSub\n---\n")
+        assert styles(out) == ["Heading 1", "Heading 2"]
 
     def test_heading_text_is_stripped(self, convert_text):
         out = convert_text("##    Spaced out   \n")
@@ -71,13 +84,26 @@ class TestLists:
 
 
 class TestCodeBlocks:
-    def test_code_block_is_monospaced_and_indented(self, convert_text):
+    def test_code_block_uses_the_code_style(self, convert_text):
         out = convert_text("```python\nprint('x')\n```\n")
         (item,) = outline(out)
+        assert item["style"] == "Code"
         assert item["text"] == "print('x')"
-        assert item["font"] == "Consolas"
-        assert item["size_pt"] == 9.5
-        assert item["left_indent_in"] == 0.4
+
+    def test_default_code_style_is_monospaced_and_indented(self, convert_text):
+        style = Document(str(convert_text("```\nx\n```\n"))).styles["Code"]
+        assert style.font.name == "Consolas"
+        assert style.font.size.pt == 9.5
+        assert style.paragraph_format.left_indent == Inches(0.4)
+
+    def test_template_defined_code_style_is_honoured(self, tmp_path, convert_text):
+        template = tmp_path / "template.docx"
+        doc = Document()
+        code = doc.styles.add_style("Code", WD_STYLE_TYPE.PARAGRAPH)
+        code.font.name = "Courier New"
+        doc.save(str(template))
+        out = convert_text("```\nx\n```\n", template=template)
+        assert Document(str(out)).styles["Code"].font.name == "Courier New"
 
     def test_multiline_content_and_blank_lines_are_preserved(self, convert_text):
         out = convert_text("```\na\n\n  b\n```\n")
@@ -89,14 +115,41 @@ class TestCodeBlocks:
 
     def test_markdown_inside_fence_is_not_interpreted(self, convert_text):
         out = convert_text("```\n# not a heading\n- not a bullet\n```\n")
-        assert styles(out) == ["Normal"]
+        assert styles(out) == ["Code"]
         assert texts(out) == ["# not a heading\n- not a bullet"]
+
+    def test_tilde_fences_are_code_blocks(self, convert_text):
+        out = convert_text("~~~\ncode\n~~~\n")
+        assert texts(out) == ["code"]
+        assert styles(out) == ["Code"]
+
+    def test_longer_outer_fence_contains_a_shorter_fence(self, convert_text):
+        out = convert_text("````\n```\ninner\n```\n````\n")
+        assert texts(out) == ["```\ninner\n```"]
+        assert styles(out) == ["Code"]
+
+    def test_a_fence_line_with_an_info_string_does_not_close_the_block(self, convert_text):
+        out = convert_text("```\nA\n```text\nB\n```\n")
+        assert texts(out) == ["A\n```text\nB"]
+
+    def test_a_tilde_line_does_not_close_a_backtick_fence(self, convert_text):
+        out = convert_text("```\nA\n~~~\nB\n```\n")
+        assert texts(out) == ["A\n~~~\nB"]
+
+    def test_indented_code_block_is_a_code_paragraph(self, convert_text):
+        out = convert_text("Text\n\n    indented one\n    indented two\n")
+        assert texts(out) == ["Text", "indented one\nindented two"]
+        assert styles(out) == ["Normal", "Code"]
 
     def test_unclosed_fence_keeps_its_content_and_warns(self, convert_text, caplog):
         out = convert_text("Before\n\n```python\nprint('kept')\nmore = 1\n")
         assert texts(out) == ["Before", "print('kept')\nmore = 1"]
-        assert outline(out)[1]["font"] == "Consolas"
-        assert "Unclosed code fence" in caplog.text
+        assert styles(out)[1] == "Code"
+        assert "Unclosed code fence at line 3" in caplog.text
+
+    def test_closed_fence_does_not_warn(self, convert_text, caplog):
+        convert_text("```\nx\n```\n")
+        assert "Unclosed" not in caplog.text
 
     def test_text_around_blocks_is_kept_in_order(self, convert_text):
         out = convert_text("Before\n\n```\ncode\n```\n\nAfter\n")

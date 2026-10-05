@@ -12,17 +12,19 @@
 
 `py-doc2docx` converts technical documentation written in Markdown into formatted Word documents suitable for client deliverables, specifications, and formal engineering documentation:
 
-1. **Hierarchy Preservation**: Translates H1 (`#`), H2 (`##`), H3 (`###`), and H4 (`####`) headings into styled Word heading levels.
-2. **List & Bullet Formatting**: Converts Markdown unordered bullet points (`- `, `* `) and ordered lists (`1. `) into native Word list items.
-3. **Monospaced Code Block Support**: Renders technical code fences (` ``` `) into monospaced code blocks with left indentation and dark slate styling.
-4. **Reference Template Injection**: Option to supply a custom reference Word template (`.docx`) for corporate fonts, margins, headers/footers, and branding. The template's styles, page setup, headers, footers and properties are used. Its body content (cover page, placeholder text) is removed unless you pass `--keep-template-body`.
-5. **Progress Logging**: Progress messages on stderr, configured by the command line with [py-logkit](https://github.com/markbac/py-logkit) (colour on a terminal, off for pipes and `NO_COLOR`). The library itself only uses the standard `logging` module and never configures it.
+1. **Hierarchy Preservation**: Translates headings (ATX `#` to `######` and setext underlines) into Word heading styles `Heading 1` to `Heading 6`.
+2. **Lists**: Bullet and numbered lists become native Word list items, nested up to three levels. Each numbered list restarts at its own start number.
+3. **Inline Formatting and Links**: Strong, emphasis and inline code become run formatting. Links become Word hyperlinks.
+4. **Tables, Quotes and Images**: Tables become Word tables, block quotes use the `Quote` style, and local pictures are embedded with their alt text.
+5. **Code Blocks**: Fenced (backtick or tilde) and indented code become paragraphs in the `Code` style: monospaced, with a left indent. A template that defines a `Code` style controls how they look.
+6. **Reference Template Injection**: Option to supply a custom reference Word template (`.docx`) for corporate fonts, margins, headers/footers, and branding. The template's styles, page setup, headers, footers and properties are used. Its body content (cover page, placeholder text) is removed unless you pass `--keep-template-body`.
+7. **Progress Logging**: Progress messages on stderr, configured by the command line with [py-logkit](https://github.com/markbac/py-logkit) (colour on a terminal, off for pipes and `NO_COLOR`). The library itself only uses the standard `logging` module and never configures it.
 
 ---
 
 ## 🏗️ Tool Architecture
 
-The package wraps `python-docx` AST node builders into a clean conversion engine:
+The package parses Markdown into a typed tree and renders it with `python-docx`:
 
 ```
 py-doc2docx/
@@ -30,18 +32,20 @@ py-doc2docx/
 │   ├── py_doc/
 │   │   ├── __init__.py         # Package initialization
 │   │   ├── cli.py              # CLI Argument Parser, Runner and logging setup
+│   │   ├── markdown/           # Shared parser and typed document tree (AST)
 │   │   └── render/
-│   │       └── docx.py         # Core DocxConverter engine
+│   │       └── docx.py         # DocxConverter: renders the tree as Word
 │   └── pydoc2docx/             # Compatibility alias for the old import name
 ├── tests/
 │   ├── fixtures/               # Markdown corpus used by the regression suite
 │   ├── golden/                 # Expected DOCX outlines (change detectors)
 │   ├── test_converter.py       # Semantic tests of the converter
+│   ├── test_docx_render.py     # How each Markdown construct is rendered
+│   ├── test_markdown_ast.py    # Parser and document tree tests
 │   ├── test_cli.py             # CLI integration tests
 │   ├── test_logging.py         # Logging is configured by the CLI, not on import
 │   ├── test_compat.py          # Old pydoc2docx import name and command still work
-│   ├── test_fixtures.py        # Corpus and golden-output tests
-│   └── test_known_defects.py   # Known defects, marked xfail with issue numbers
+│   └── test_fixtures.py        # Corpus and golden-output tests
 ├── .github/workflows/ci.yml    # Lint, test matrix, build and CI gate
 ├── pyproject.toml              # Package metadata, entry points, tool config
 └── README.md                   # Comprehensive documentation
@@ -50,17 +54,16 @@ py-doc2docx/
 ### Conversion Data Pipeline
 
 ```
-[Markdown File (.md)] ──► [Markdown Line Buffer Parser]
+[Markdown File (.md)] ──► [py_doc.markdown parser (markdown-it-py)]
                                     │
                                     ▼
-                          [DocxConverter Engine]
+                          [Typed document tree (AST)]
                                     │
-        ┌───────────────────────────┼───────────────────────────┐
-        ▼                           ▼                           ▼
-[Heading Builder]           [List Item Builder]        [Code Fence Builder]
-  (H1..H4 Styles)             (List Bullet/Number)       (Consolas 9.5pt)
-        │                           │                           │
-        └───────────────────────────┼───────────────────────────┘
+                                    ▼
+                          [DocxConverter renderer]
+                                    │
+                                    ▼
+                  [Word styles: Heading n, List Bullet, Code, ...]
                                     │
                                     ▼
                          [Optional Template Injector]
@@ -68,6 +71,27 @@ py-doc2docx/
                                     ▼
                          [Word File (.docx) Saved]
 ```
+
+## 📝 Supported Markdown
+
+Parsing follows CommonMark, plus tables. Each construct is written with a named Word style, so a reference template decides how it looks. A style the template lacks is created with a plain default.
+
+| Markdown | Word output |
+|---|---|
+| Headings, levels 1 to 6 | `Heading 1` to `Heading 6`. A closing `#` sequence is removed, and an empty heading is skipped |
+| Paragraphs | `Normal`. Soft line breaks become spaces, hard breaks become line breaks |
+| Strong, emphasis, inline code | Bold, italic, and a `Consolas` run |
+| Links, autolinks, reference links | Word hyperlinks, with the title as the tooltip |
+| Images | A local picture is embedded, scaled to the page width, with its alt text. Anything else (a web address, a missing file, an unsupported format) becomes `[Image: alt text]` linked to the address, with a warning |
+| Bullet and numbered lists | `List Bullet` and `List Number`, with `2` and `3` for nested levels (deeper levels stay at 3). Further paragraphs in an item use `List Continue` |
+| Tables | A Word table in `Table Grid` style. The header row is bold and column alignment is kept |
+| Block quotes | `Quote`. Nested quotes are indented further. Lists and code inside a quote keep their own styles |
+| Fenced and indented code | `Code`. The language on a fence is not shown |
+| Thematic breaks | An empty paragraph with a bottom border |
+| Raw HTML | Shown as written, because Word cannot render it |
+| Front matter | Not rendered. Metadata support is tracked in #44 |
+
+> **Note:** Markdown the parser does not know raises `ConversionError` instead of being dropped, so content never disappears silently. Task-list checkboxes, strikethrough and footnotes are not CommonMark and appear as literal text.
 
 ---
 

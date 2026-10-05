@@ -56,11 +56,11 @@
     "left_indent_in": null
   },
   {
-    "style": "Normal",
+    "style": "Code",
     "text": "py-doc2docx spec.md -o spec.docx",
-    "font": "Consolas",
-    "size_pt": 9.5,
-    "left_indent_in": 0.4
+    "font": null,
+    "size_pt": null,
+    "left_indent_in": null
   },
   {
     "style": "Heading 3",
