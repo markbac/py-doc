@@ -26,7 +26,7 @@ dependencies = [
     "python-docx>=1.0.0",
     "markdown-it-py>=3.0",
     "mdit-py-plugins>=0.4",
-    "pylogkit @ git+https://github.com/markbac/py-logkit@dd9276285efa8a5e585c9a7be934f73c22a2ef57",
+    "ctxlogkit @ git+https://github.com/markbac/py-logkit@96453b403015ed762bcc5b3ffd5adbea3ef4fb0c",
 ]
 
 [project.optional-dependencies]

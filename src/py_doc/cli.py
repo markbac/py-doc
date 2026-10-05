@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 
-from pylogkit import setup_logging
+from ctxlogkit import setup_logging
 
 from .render.docx import ConversionError, DocxConverter
 
