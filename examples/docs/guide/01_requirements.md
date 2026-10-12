@@ -1,3 +1,7 @@
+---
+title: Requirements
+---
+
 # Requirements
 
 The node shall meet the requirements in the table.

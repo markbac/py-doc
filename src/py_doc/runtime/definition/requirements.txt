@@ -9,3 +9,7 @@ pypikchr==0.2.0
 railroad-diagrams==3.0.1
 lxml==6.1.3
 wireviz==0.4.1
+# Site builds (py-doc site build, engine: mkdocs)
+mkdocs==1.6.1
+mkdocs-material==9.7.7
+pymdown-extensions==12.2

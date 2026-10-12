@@ -1,3 +1,7 @@
+---
+title: Change history
+---
+
 # Change history
 
 This source is joined with `heading_offset: 1`, so its headings sit one level lower, and with a

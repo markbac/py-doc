@@ -1,0 +1,20 @@
+# Made by `py-doc site init`. Change anything here: py-doc writes only the pages (a folder per document
+# under docs/) and the navigation (py-doc-nav.yml, taken in by INHERIT). A nav: here replaces that one.
+INHERIT: py-doc-nav.yml
+site_name: "Sensor Node examples"
+docs_dir: docs
+site_dir: build
+theme:
+  name: material
+  features: [navigation.sections, navigation.indexes, content.code.copy]
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tasklist: {custom_checkbox: true}
+  - pymdownx.arithmatex: {generic: true}
+extra_javascript:
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js

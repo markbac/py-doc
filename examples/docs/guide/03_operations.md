@@ -1,3 +1,7 @@
+---
+title: Operations
+---
+
 # Operations
 
 The node is {{status_text}}.

@@ -37,7 +37,9 @@ SEVERITIES = ("error", "warning", "info")
 DEFAULT_OUTPUT_DIR = "build"
 
 # Top-level sections that are accepted and kept, but nothing uses them yet.
-RESERVED_SECTIONS = ("collections", "bundles", "content", "site")
+RESERVED_SECTIONS = ("collections", "bundles", "content")
+SITE_ENGINES = ("mkdocs", "starlight")
+DEFAULT_SITE_DIR = "site"
 
 _META_KEYS = (
     "title", "subtitle", "author", "date", "version", "status", "document_number", "description",
@@ -130,6 +132,16 @@ class C4Settings:
 
 
 @dataclass
+class SiteConfig:
+    """The ``site:`` section: a web site made of the documents, built by MkDocs or Astro + Starlight."""
+
+    engine: str
+    dir: Path
+    title: str | None = None
+    documents: list[str] = field(default_factory=list)  # empty: every document, in the order they are defined
+
+
+@dataclass
 class ProjectConfig:
     root: Path
     name: str | None = None
@@ -139,6 +151,7 @@ class ProjectConfig:
     runtime: RuntimeSettings = field(default_factory=RuntimeSettings)
     c4: C4Settings = field(default_factory=C4Settings)
     report: Path | None = None  # reports.path: where `py-doc build` writes its JSON report
+    site: SiteConfig | None = None
     build: dict[str, Any] = field(default_factory=dict)
     reserved: dict[str, Any] = field(default_factory=dict)
 
@@ -229,7 +242,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -255,11 +268,31 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     if "path" in reports:
         config.report = _path(root, reports["path"], "reports.path")
 
+    if "site" in top:
+        config.site = _parse_site(_mapping(top["site"] or {}, "site"), root, config)
+
     for name in RESERVED_SECTIONS:
         if name in top:
             config.reserved[name] = top[name]
             logger.warning(f"The '{name}' section is accepted but not used yet")
     return config
+
+
+def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
+    _only(data, ("engine", "dir", "title", "documents"), "site")
+    engine = _typed(data, "engine", str, "site")
+    if engine not in SITE_ENGINES:
+        raise ConfigError(f"site.engine must be one of {', '.join(SITE_ENGINES)}, not {engine!r}")
+    documents = [str(name) for name in _typed(data, "documents", list, "site", [])]
+    for name in documents:
+        if name not in config.documents:
+            raise ConfigError(f"site.documents names '{name}', which is not under documents. Defined: {', '.join(config.documents)}")
+    return SiteConfig(
+        engine=engine,
+        dir=_path(root, data.get("dir", DEFAULT_SITE_DIR), "site.dir"),
+        title=_typed(data, "title", str, "site") or config.name,
+        documents=documents,
+    )
 
 
 def _parse_runtime(data: dict) -> RuntimeSettings:

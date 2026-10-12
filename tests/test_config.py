@@ -157,9 +157,22 @@ class TestLint:
 
 
 def test_reserved_sections_are_kept_with_a_warning(tmp_path, caplog):
-    config = load_config(write(tmp_path, "site: {name: x}\n"))
-    assert config.reserved == {"site": {"name": "x"}}
-    assert "'site' section is accepted but not used yet" in caplog.text
+    config = load_config(write(tmp_path, "bundles: {name: x}\n"))
+    assert config.reserved == {"bundles": {"name": "x"}}
+    assert "'bundles' section is accepted but not used yet" in caplog.text
+
+
+def test_the_site_section(tmp_path):
+    docs = "project: {name: Sensor}\ndocuments:\n  guide: {sources: [a.md]}\n  notes: {sources: [b.md]}\n"
+    config = load_config(write(tmp_path, docs + "site: {engine: starlight, documents: [guide]}\n"))
+    assert config.site.engine == "starlight" and config.site.dir == tmp_path.resolve() / "site"
+    assert config.site.title == "Sensor" and config.site.documents == ["guide"]
+    with pytest.raises(ConfigError, match="site.engine must be one of mkdocs, starlight"):
+        load_config(write(tmp_path, docs + "site: {engine: hugo}\n"))
+    with pytest.raises(ConfigError, match="site.documents names 'other'"):
+        load_config(write(tmp_path, docs + "site: {engine: mkdocs, documents: [other]}\n"))
+    with pytest.raises(ConfigError, match="unknown key 'theme' in site"):
+        load_config(write(tmp_path, docs + "site: {engine: mkdocs, theme: x}\n"))
 
 
 def test_find_config_walks_up(tmp_path):

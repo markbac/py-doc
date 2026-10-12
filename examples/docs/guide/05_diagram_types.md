@@ -1,3 +1,7 @@
+---
+title: Diagram types
+---
+
 # Diagram types
 
 Every fenced diagram type that `py-doc` draws is shown once in this chapter. The block stays in the Markdown and is
