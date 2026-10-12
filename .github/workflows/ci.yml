@@ -58,6 +58,8 @@ jobs:
           py-doc lint --help
           py-doc build --help
           py-doc migrate --help
+          py-doc template --help
+          py-doc import --help
 
   build:
     name: Build package

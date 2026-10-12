@@ -15,6 +15,7 @@ Pandoc, run in the tool container, writes every output. The linter reads the Mar
 |---|---|
 | `py-doc docx` | Convert Markdown to Word |
 | `py-doc slides` | Convert Markdown to PowerPoint |
+| `py-doc import` | Convert a Word document to Markdown |
 | `py-doc template` | Check and list the styles of a Word or PowerPoint template |
 | `py-doc lint` | Check writing style, glossary terms and acronyms |
 | `py-doc build` | Build every document described in `py-doc.yml` |
@@ -123,6 +124,17 @@ Slides start at headings up to `split_level` (`--split-level`, default 2) and at
 - **Speaker notes**: write `<!-- notes: text -->`.
 - **Footer**: `footer: "{title} v{version}"` in `py-doc.yml`, and `{{VERSION}}` in a template shape.
 - **Long slides**: a slide with more than 16 lines gets a warning, because nothing is shrunk silently.
+
+## Importing Word documents
+
+`py-doc import Report.docx` writes `report.md` and `report/media/image_001.png`, ... next to the Word file (`-o DIR` puts them elsewhere). The Markdown is what `py-doc docx` reads back, so a document can start in Word and move to Markdown.
+
+- Headings are moved up so that the first one is `#`. Title, Subtitle and the document properties (title, author, date, subject, keywords, version, status, document number, classification, company) become front matter.
+- Lists keep their nesting, tables become pipe tables (merged cells are flattened to empty cells), consecutive `Code` paragraphs become one fenced block, `Quote` becomes a blockquote, `Note`, `Tip`, `Important`, `Warning` and `Caution` styles become `> [!NOTE]` callouts, and captions become `[[CAPTION:Figure]]` lines before their picture or table.
+- Tracked changes are accepted: insertions are kept and deletions dropped. The contents table is left out.
+- Pictures are saved as PNG in the order the document uses them. EMF, WMF and SVG go through Inkscape in the tool container; a picture that cannot be converted is named in a warning and shows as `(image not imported)`. Floating pictures are placed inline unless `--no-defloat-images` is given, which leaves them out with a warning.
+- Text boxes and footnotes are not imported; one warning gives the count.
+- An existing `.md` file is not replaced unless `--force` is given (exit status 1). A file that is not a Word document exits with status 2. `--print-output-paths` prints the two locations.
 
 ## Linting
 

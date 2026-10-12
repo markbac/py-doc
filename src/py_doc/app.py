@@ -24,6 +24,7 @@ from .migrate import LEGACY_FORMATS, Migration, migrate, render
 from .report import BuildReport
 from .runtime import connect
 from .slides_cli import run_slides
+from .import_cli import run_import
 from .template_cli import run_template
 from .tools_cli import run_doctor, run_tools
 
@@ -35,6 +36,7 @@ _DELEGATES = {
     "slides": ("Convert Markdown to PowerPoint (.pptx)", run_slides),
     "lint": ("Check Markdown for writing style and glossary use", run_lint),
     "tools": ("Build and inspect the tool container image", run_tools),
+    "import": ("Convert a Word document (.docx) to Markdown", run_import),
     "template": ("Check and inspect Word and PowerPoint templates", run_template),
     "doctor": ("Check that the tool container works", run_doctor),
 }
