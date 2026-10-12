@@ -1,0 +1,10 @@
+# Python diagram tools, installed into /opt/venv in the image. Versions are those createdocs was
+# tested with. blockdiag is the fork that works with current Pillow.
+Pillow==11.2.1
+blockdiag @ git+https://github.com/yuzutech/blockdiag.git@e2c2b672eb2050a6191dc037f48490e85c56dfca
+actdiag==3.0.0
+nwdiag==3.0.0
+seqdiag==3.0.0
+pypikchr==0.2.0
+railroad-diagrams==3.0.1
+wireviz==0.4.1

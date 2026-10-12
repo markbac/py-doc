@@ -53,6 +53,9 @@ version = {attr = "py_doc.__version__"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+py_doc = ["runtime/definition/*", "runtime/definition/extra-ca/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

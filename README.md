@@ -23,6 +23,30 @@ The old commands `py-doc2docx`, `py-doc2slides` and `py-doclint` still work and 
 
 Linux and Windows. The tool runner (see below) refuses to start on any other platform, with exit status `2` and a message that names the two supported ones. Commands that run no external tool work wherever Python does.
 
+## Tool container
+
+Programs that are not Python (pandoc, TeX, PlantUML, Mermaid, Graphviz and the rest) run inside one container image, so nothing but Python and Docker has to be installed. On Linux that is Docker. On Windows it is Docker Engine inside a WSL 2 distribution (not Docker Desktop).
+
+```bash
+py-doc doctor            # check the platform, WSL, Docker, the image and a trivial run
+py-doc tools lock        # record the checksums of the downloaded tools (once, then commit tools.lock)
+py-doc tools build       # build the image here (several GB, 10 to 30 minutes the first time)
+py-doc tools status      # image tag, and the version of each tool inside it
+py-doc tools prune       # remove images left by older py-doc versions
+```
+
+The image is built from a `Dockerfile` that ships in the package, and its tag is a hash of that folder, so a release that changes the toolchain rebuilds and one that does not reuses the image. A command that needs the image and finds none builds it first. Builds behind a proxy that re-signs TLS take `--ca-file`. Machines that cannot build can use `py-doc tools save` and `py-doc tools load`.
+
+`py-doc.yml` can name the engine:
+
+```yaml
+runtime:
+  docker: /usr/bin/docker   # if it is not on the path
+  wsl_distro: Ubuntu        # Windows only: the distribution that runs Docker
+```
+
+Environment problems (no engine, no image, an unsupported platform) exit with status `2`. A tool that runs and fails exits with `1` and its whole output is shown.
+
 ## Installation
 
 ```bash
