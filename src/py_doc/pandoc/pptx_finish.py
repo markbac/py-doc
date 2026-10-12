@@ -108,6 +108,14 @@ def _lines(slide) -> int:
     return count
 
 
+def _fill_version(shapes, version: str) -> None:
+    for shape in shapes:
+        if shape.has_text_frame and "{{VERSION}}" in shape.text_frame.text:
+            for paragraph in shape.text_frame.paragraphs:
+                for run in paragraph.runs:
+                    run.text = run.text.replace("{{VERSION}}", version)
+
+
 def finish_pptx(path: Path, metadata: Metadata, options: dict[str, Any]) -> None:
     """Rewrite ``path`` in place."""
     ensure_fntdata_content_type(path)
@@ -122,12 +130,12 @@ def finish_pptx(path: Path, metadata: Metadata, options: dict[str, Any]) -> None
     footer = options.get("footer")
     text = _footer_text(footer, metadata) if footer else None
     without_footer = 0
+    for master in presentation.slide_masters:  # the token usually sits on the master or a layout
+        _fill_version(master.shapes, version)
+        for layout in master.slide_layouts:
+            _fill_version(layout.shapes, version)
     for number, slide in enumerate(presentation.slides, start=1):
-        for shape in slide.shapes:
-            if shape.has_text_frame and "{{VERSION}}" in shape.text_frame.text:
-                for paragraph in shape.text_frame.paragraphs:
-                    for run in paragraph.runs:
-                        run.text = run.text.replace("{{VERSION}}", version)
+        _fill_version(slide.shapes, version)
         if text and not _add_footer(slide, text):
             without_footer += 1
         lines = _lines(slide)

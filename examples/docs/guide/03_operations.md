@@ -1,6 +1,6 @@
 # Operations
 
-The gateway is {{status_text}}.
+The node is {{status_text}}.
 
 [[IF: audience == staff]]
 ## Staff notes
@@ -12,9 +12,13 @@ Staff can reach the console on the service port.
 Customers see only the public build.
 [[ENDIF]]
 
+[[IF: audience != staff]]
+This paragraph is shown to everyone except staff.
+[[ENDIF]]
+
 ## Glossary
 
-[[INCLUDE: includes/glossary.md]]
+[[INCLUDE: ../includes/glossary.md]]
 
 > [!IMPORTANT]
 > Always check the version before updating. An update to the wrong version cannot be undone.
@@ -24,4 +28,4 @@ Customers see only the public build.
 
 ## Contacts
 
-Questions go to the platform team.
+[[INCLUDE: ../includes/support.md]]

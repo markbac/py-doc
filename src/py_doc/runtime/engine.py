@@ -17,7 +17,7 @@ import os
 import subprocess
 import threading
 import uuid
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -125,7 +125,13 @@ class Runtime:
             ) from exc
 
     def _execute(
-        self, args: Sequence[str], *, timeout: float | None, stdin: bytes | None = None, stream: bool = False
+        self,
+        args: Sequence[str],
+        *,
+        timeout: float | None,
+        stdin: bytes | None = None,
+        stream: bool = False,
+        on_line: Callable[[str], None] | None = None,
     ) -> tuple[int | None, bytes, bytes]:
         """Run ``args`` in the engine's world. Returns (exit status or None on timeout, stdout, stderr)."""
         proc = self._spawn(args, capture_input=stdin)
@@ -134,8 +140,11 @@ class Runtime:
         def pump(pipe, key: str) -> None:
             for line in iter(pipe.readline, b""):
                 chunks[key].append(line)
-                if stream:
-                    logger.debug("%s", line.decode("utf-8", errors="replace").rstrip())
+                if stream or on_line:
+                    text = line.decode("utf-8", errors="replace").rstrip()
+                    logger.debug("%s", text)
+                    if on_line:
+                        on_line(text)
             pipe.close()
 
         threads = [
@@ -169,10 +178,16 @@ class Runtime:
         return done.returncode, done.stdout, done.stderr
 
     def engine(
-        self, args: Sequence[str], *, timeout: float | None = 60, check: bool = True, stream: bool = False
+        self,
+        args: Sequence[str],
+        *,
+        timeout: float | None = 60,
+        check: bool = True,
+        stream: bool = False,
+        on_line: Callable[[str], None] | None = None,
     ) -> ToolResult:
-        """Run ``docker <args>`` (build, image inspect, info, and so on)."""
-        code, out, err = self._execute([*self.docker, *args], timeout=timeout, stream=stream)
+        """Run ``docker <args>`` (build, image inspect, info, and so on). ``on_line`` sees each output line as it arrives."""
+        code, out, err = self._execute([*self.docker, *args], timeout=timeout, stream=stream, on_line=on_line)
         if code is None:
             raise ToolTimeout("docker " + args[0], timeout or 0)
         result = ToolResult(code, _text(out), _text(err))

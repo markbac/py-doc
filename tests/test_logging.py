@@ -30,3 +30,29 @@ def test_cli_writes_messages_to_stderr_without_colour_codes_when_piped(tmp_path)
     assert "[WARNING] No Markdown files found" in result.stderr
     assert result.stdout == ""
     assert "\x1b" not in result.stderr
+
+
+def _log_once(env_extra: dict[str, str]) -> str:
+    code = (
+        "import logging\n"
+        "from py_doc._logging import configure_logging\n"
+        "configure_logging()\n"
+        "logging.getLogger('py_doc.t').warning('careful')\n"
+    )
+    import os
+
+    env = {**os.environ, **env_extra}
+    for name in ("NO_COLOR", "FORCE_COLOR"):
+        if name not in env_extra:
+            env.pop(name, None)
+    return subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env, check=True).stderr
+
+
+def test_the_compact_layout_is_coloured_when_colour_is_forced():
+    text = _log_once({"FORCE_COLOR": "1"})
+    assert "\x1b[33mWARNING\x1b[0m" in text and "\x1b[33mcareful\x1b[0m" in text
+
+
+def test_the_compact_layout_is_plain_when_piped():
+    assert _log_once({}) == "[WARNING] careful\n"
+    assert _log_once({"NO_COLOR": "1"}) == "[WARNING] careful\n"

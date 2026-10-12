@@ -30,9 +30,9 @@ DEFAULT_TOC_DEPTH = 3
 INPUT_FORMAT = "markdown+fenced_divs+raw_html+raw_attribute+table_captions+strikeout+task_lists"
 FILTERS = {
     "docx": ("admonitions.lua", "pagebreak.lua"),
-    "pptx": ("admonitions.lua", "pagebreak.lua"),
-    "html": ("admonitions.lua", "pagebreak.lua"),
-    "pdf": ("admonitions.lua", "pagebreak.lua", "center-div.lua"),
+    "pptx": ("admonitions.lua", "pagebreak.lua", "markers.lua"),
+    "html": ("admonitions.lua", "pagebreak.lua", "markers.lua"),
+    "pdf": ("admonitions.lua", "pagebreak.lua", "center-div.lua", "markers.lua"),
 }
 THEME = RESOURCES / "createdocs.theme"
 

@@ -10,8 +10,10 @@ from __future__ import annotations
 import hashlib
 import logging
 import os
+import re
 import shutil
 import tempfile
+import time
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -118,6 +120,46 @@ def exists(runtime: Runtime) -> bool:
     return runtime.engine(["image", "inspect", runtime.image], check=False).returncode == 0
 
 
+_BUILDKIT_STEP = re.compile(r"^#(\d+) \[(?:[\w.-]+\s+)?\s*(\d+)/(\d+)\]\s+(.*)")
+_CLASSIC_STEP = re.compile(r"^Step (\d+)/(\d+) : (.*)")
+HEARTBEAT = 60.0
+
+
+class BuildProgress:
+    """Turns the build output into one line per step, plus a note every minute while a long step runs."""
+
+    def __init__(self, clock=time.monotonic):
+        self.clock = clock
+        self.started = self.last_note = clock()
+        self.step = "starting"
+        self._seen: set[str] = set()
+
+    def __call__(self, line: str) -> None:
+        match = _BUILDKIT_STEP.match(line)
+        if match:
+            key, number, total, text = match.groups()
+        elif match := _CLASSIC_STEP.match(line):
+            number, total, text = match.groups()
+            key = number
+        else:
+            return self._heartbeat()
+        if key not in self._seen:
+            self._seen.add(key)
+            self.step = f"step {number} of {total}"
+            self.last_note = self.clock()
+            logger.info("[%s/%s] %s (%s elapsed)", number, total, text.strip()[:90], self.elapsed())
+
+    def _heartbeat(self) -> None:
+        now = self.clock()
+        if now - self.last_note >= HEARTBEAT:
+            self.last_note = now
+            logger.info("Still building, now on %s (%s elapsed)", self.step, self.elapsed())
+
+    def elapsed(self) -> str:
+        seconds = int(self.clock() - self.started)
+        return f"{seconds // 60} min {seconds % 60:02d} s" if seconds >= 60 else f"{seconds} s"
+
+
 def build(runtime: Runtime, *, ca_file: Path | None = None, no_cache: bool = False) -> None:
     """Build the image from the packaged definition. Slow the first time, cached after."""
     missing = unlocked()
@@ -136,15 +178,16 @@ def build(runtime: Runtime, *, ca_file: Path | None = None, no_cache: bool = Fal
                 raise EnvironmentProblem(f"Certificate file not found: {ca_file}")
             shutil.copy2(ca_file, context / "extra-ca" / "extra-ca.crt")
         where = runtime.container_path(context)
-        args = ["build", "--tag", runtime.image, "--file", f"{where}/Dockerfile"]
+        args = ["build", "--progress=plain", "--tag", runtime.image, "--file", f"{where}/Dockerfile"]
         for name in _PROXY_VARIABLES:
             if os.environ.get(name):
                 args += ["--build-arg", f"{name}={os.environ[name]}"]
         if no_cache:
             args.append("--no-cache")
         logger.info("Building %s. The first build downloads several GB and can take 10 to 30 minutes", runtime.image)
-        runtime.engine([*args, where], timeout=BUILD_TIMEOUT, stream=True)
-    logger.info("Built %s", runtime.image)
+        progress = BuildProgress()
+        runtime.engine([*args, where], timeout=BUILD_TIMEOUT, on_line=progress)
+    logger.info("Built %s in %s", runtime.image, progress.elapsed())
 
 
 def ensure(runtime: Runtime, *, allow_build: bool = True) -> None:

@@ -1,4 +1,4 @@
-"""``py-doc c4``: check, export and draw Structurizr workspaces, and manage the Structurizr Lite container."""
+"""``py-doc c4``: check, export and draw Structurizr workspaces, and manage the Structurizr Local container."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from .check import check_model
 from .generate import LEVELS, generate
 from .model import load_workspace
 from .render import render_views
-from .lock import LOCK, lock_lite, resolve_lite
-from .stack import LITE_PORT, ExternalStack, Stack
+from .lock import LOCK, lock_image, resolve_image
+from .stack import SERVER_PORT, ExternalStack, Stack
 from .structurizr import TEXT_FORMATS, StructurizrCli, find_workspaces, workspace_json
 
 logger = logging.getLogger(__name__)
@@ -48,14 +48,14 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("-f", "--formats", nargs="+", choices=FORMATS, default=["svg", "plantuml", "mermaid"], help="Formats to write")
     export.add_argument("--views", nargs="+", metavar="KEY", help="Draw only these views")
     export.add_argument("--levels", nargs="+", choices=LEVELS, help="Levels of Markdown to write (default: all)")
-    export.add_argument("--url", help="A Structurizr Lite or server that is already running, as the tool container can reach it")
+    export.add_argument("--url", help="A Structurizr Local or server that is already running, as the tool container can reach it")
     export.add_argument("--dry-run", action="store_true", help="List what would be written and write nothing")
 
-    lock = actions.add_parser("lock", help="Pin the Structurizr Lite image by digest in c4-images.lock")
+    lock = actions.add_parser("lock", help="Pin the Structurizr Local image by digest in c4-images.lock")
     common(lock)
-    lock.add_argument("--tag", default="latest", help="The Lite tag to pin (default: latest)")
+    lock.add_argument("--tag", default="latest", help="The structurizr/structurizr tag to pin (default: latest)")
 
-    for name, text in (("up", "Start Structurizr Lite for a workspace"), ("down", "Stop Structurizr Lite"), ("status", "Say whether Lite is running")):
+    for name, text in (("up", "Start Structurizr Local for a workspace"), ("down", "Stop Structurizr Local"), ("status", "Say whether Local is running")):
         common(actions.add_parser(name, help=text))
     return parser
 
@@ -93,7 +93,7 @@ def run_c4(argv: Sequence[str] | None = None) -> int:
             return box[0]
 
         if args.action == "lock":
-            print(f"Pinned {lock_lite(runtime(), root, args.tag)} in {root / LOCK}")
+            print(f"Pinned {lock_image(runtime(), root, args.tag)} in {root / LOCK}")
             return 0
         files = _find(args.workspace)
         if args.action in ("up", "down", "status"):
@@ -112,12 +112,12 @@ def run_c4(argv: Sequence[str] | None = None) -> int:
 def _stack(action: str, files: list[Path], runtime, c4: C4Settings, root: Path) -> int:
     if len(files) != 1:
         raise ConversionError(f"{len(files)} workspaces found. Name one: {', '.join(str(f) for f in files)}")
-    stack = Stack(runtime(), files[0], image=resolve_lite(c4.lite_image, root), port=c4.port or LITE_PORT)
+    stack = Stack(runtime(), files[0], image=resolve_image(c4.image, root), port=c4.port or SERVER_PORT)
     if action == "status":
         print(stack.status())
     elif action == "up":
         print("started" if stack.up() else "already running")
-        print(f"Structurizr Lite: http://127.0.0.1:{stack.port}/workspace")
+        print(f"Structurizr Local: http://127.0.0.1:{stack.port}/workspace")
     else:
         stack.down()
         print("stopped")
@@ -174,7 +174,7 @@ def _export_one(args: argparse.Namespace, file: Path, out: Path, runtime, c4: C4
     drawn = tuple(f for f in formats if f in DRAWN)
     pictures: dict[str, str] = {}
     if drawn:
-        stack = ExternalStack(args.url) if args.url else Stack(runtime(), file, image=resolve_lite(c4.lite_image, root), port=c4.port or LITE_PORT)
+        stack = ExternalStack(args.url) if args.url else Stack(runtime(), file, image=resolve_image(c4.image, root), port=c4.port or SERVER_PORT)
         files = render_views(ws, file, out, runtime(), formats=drawn, keys=args.views, stack=stack)
         pictures = {p.stem: p.name for p in files if p.suffix == f".{drawn[0]}"}
     for fmt in (f for f in formats if f in TEXT_FORMATS):

@@ -40,7 +40,7 @@ Programs that are not Python (pandoc, TeX, PlantUML, Mermaid, Graphviz and the r
 py-doc setup             # install Docker Engine (Ubuntu or Debian: in the WSL distro on Windows, or here on Linux)
 py-doc doctor            # check the platform, WSL, Docker, the image and a trivial run
 py-doc tools lock        # only after changing a tool version in tools.lock (the shipped checksums are already recorded)
-py-doc tools build       # build the image here (several GB, 10 to 30 minutes the first time)
+py-doc tools build       # build the image here (several GB, 10 to 30 minutes the first time; prints each step and a note every minute)
 py-doc tools status      # image tag, and the version of each tool inside it
 py-doc tools prune       # remove images left by older py-doc versions
 ```
@@ -149,23 +149,23 @@ Slides start at headings up to `split_level` (`--split-level`, default 2) and at
 py-doc reads a [Structurizr](https://structurizr.com) workspace, writes Markdown from it, draws its views and joins the result with hand-written chapters.
 
 - **Model.** `structurizr-cli export -format json` (in the tool container, or the program named by `c4.cli`) resolves the DSL, so py-doc has no DSL parser of its own. A `workspace.json` is read directly and needs no Java. Exports are cached in `.py-doc/c4` by the hash of the DSL and every file it includes (`!include`, `!docs`, `!adrs`). The versions tested are listed in `py_doc/c4/structurizr.py`. A field the format has dropped is named in the error.
-- **Pictures.** Views are drawn as Structurizr draws them, in a browser. py-doc starts Structurizr Lite on a private Docker network, opens it with headless Chromium in the tool container (the `export-diagrams.js` script, based on the official `structurizr/puppeteer` one), writes `<view key>.png` and `.svg`, and stops Lite if it started it. A failing view, an empty view, a missing picture or a missing engine is an error with a non-zero exit status that names the view. Nothing is ever written as a stand-in picture.
+- **Pictures.** Views are drawn as Structurizr draws them, in a browser. py-doc starts Structurizr Local on a private Docker network, opens it with headless Chromium in the tool container (the `export-diagrams.js` script, based on the official `structurizr/puppeteer` one), writes `<view key>.png` and `.svg`, and stops Lite if it started it. A failing view, an empty view, a missing picture or a missing engine is an error with a non-zero exit status that names the view. Nothing is ever written as a stand-in picture.
 - **Text.** One Markdown page per level: context, containers, components, relationships, deployment, dynamic views, an element catalogue with a glossary, and the workspace's `!docs` and `!adrs`. Output is sorted and has no times. Each page says that it is generated and from which file.
 
 ```yaml
 c4:
   cli: structurizr-cli          # optional: use this program instead of the one in the tool container
-  lite_image: structurizr/lite@sha256:...   # optional: pin Structurizr Lite
+  image: structurizr/structurizr@sha256:...   # optional: pin Structurizr Local
   port: 8080
 
 documents:
   architecture:
-    title: Meter Gateway Architecture
+    title: Sensor Node Architecture
     sources:
       - file: intro.md
       - structurizr: architecture/workspace.dsl      # or workspace.json
         levels: [context, containers, components, deployment]
-        systems: [Meter Gateway]
+        systems: [Sensor Node]
         heading_offset: 1
         diagrams: {engine: browser, format: png}     # or {engine: source, format: mermaid}
       - file: decisions.md
@@ -180,12 +180,12 @@ With `engine: source`, the views are put in the text as `plantuml` or `mermaid` 
 | --- | --- |
 | `py-doc c4 check PATH` | Reads each workspace and checks the model: `C4001` element without description, `C4002` container without technology, `C4003` relationship without description, `C4004` element with no relationships. Severities are set under `lint.rules`. `--strict` fails on warnings |
 | `py-doc c4 export PATH -o DIR -f FORMAT...` | Writes `png`, `svg`, `plantuml`, `c4plantuml`, `mermaid`, `dot`, `static` and `markdown`. `--views KEY...` limits the pictures, `--levels` the pages, `--dry-run` lists the files and writes nothing, `--url` uses a Lite that is already running (reachable from the container) |
-| `py-doc c4 lock [--tag TAG]` | Pulls the Structurizr Lite image and records its digest in `c4-images.lock`, so builds use the same image everywhere. Without a lock file, `py-doc` warns and uses the tag |
-| `py-doc c4 up`, `down`, `status` | Start, stop and inspect the Structurizr Lite container for a workspace, so authors can edit live at `http://127.0.0.1:8080/workspace` |
+| `py-doc c4 lock [--tag TAG]` | Pulls the Structurizr Local image and records its digest in `c4-images.lock`, so builds use the same image everywhere. Without a lock file, `py-doc` warns and uses the tag |
+| `py-doc c4 up`, `down`, `status` | Start, stop and inspect the Structurizr Local container for a workspace, so authors can edit live at `http://127.0.0.1:8080/workspace` |
 
 `PATH` is a `.dsl` or `workspace.json` file, or a folder: workspaces below it are found in sorted order, skipping hidden and vendor folders and files that are only `!include`d.
 
-Lite is given the workspace folder as a bind mount, so the layout it saves lands in `workspace.json` beside the DSL and no copying in or out is needed. This replaces the `sync` step of the old scripts.
+Structurizr Local (`structurizr/structurizr local`, which replaces the retired Structurizr Lite) is given the workspace folder as a bind mount, with auto-save off and the diagrams read-only, so drawing never changes your files. Local opens only `workspace.dsl` or `workspace.json`, so a workspace with another name is copied to a temporary folder first. The old `c4.lite_image` setting is now `c4.image`.
 
 `py-doc lint` also runs the model rules for each `structurizr:` source in `py-doc.yml`. The export cache lives in `.py-doc/c4/json` at the project root, whatever the working folder.
 

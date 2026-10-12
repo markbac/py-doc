@@ -1,41 +1,57 @@
 {
   "id": 1,
-  "name": "Meter Gateway",
-  "description": "Reads meters and reports to the head-end.",
+  "name": "Sensor Node",
+  "description": "Measures temperature and humidity and publishes the readings to a cloud platform.",
   "properties": {"version": "1.0"},
   "model": {
     "people": [
-      {"id": "1", "name": "Installer", "description": "Installs and commissions gateways.", "tags": "Element,Person",
-       "relationships": [{"id": "20", "sourceId": "1", "destinationId": "3", "description": "Commissions using", "technology": "USB"}]}
+      {"id": "1", "name": "Installer", "description": "Installs and commissions sensor nodes.", "tags": "Element,Person",
+       "relationships": [{"id": "20", "sourceId": "1", "destinationId": "3", "description": "Commissions nodes with"}]},
+      {"id": "2", "name": "Analyst", "description": "Looks at the readings.", "tags": "Element,Person",
+       "relationships": [{"id": "21", "sourceId": "2", "destinationId": "4", "description": "Views readings in", "technology": "HTTPS"}]}
     ],
     "softwareSystems": [
-      {"id": "2", "name": "Head-end System", "description": "Collects readings from all gateways.", "tags": "Element,Software System,External"},
-      {"id": "3", "name": "Meter Gateway", "description": "Reads meters and sends readings to the head-end.", "tags": "Element,Software System",
-       "relationships": [{"id": "21", "sourceId": "3", "destinationId": "2", "description": "Sends readings to", "technology": "LwM2M over DTLS"}],
+      {"id": "3", "name": "Commissioning App", "description": "Configures a node over Bluetooth.", "tags": "Element,Software System,External",
+       "relationships": [{"id": "22", "sourceId": "3", "destinationId": "5", "description": "Configures", "technology": "BLE"}]},
+      {"id": "4", "name": "Cloud Platform", "description": "Collects readings from all nodes.", "tags": "Element,Software System,External"},
+      {"id": "5", "name": "Sensor Node", "description": "Measures temperature and humidity and publishes the readings.", "tags": "Element,Software System",
+       "relationships": [{"id": "23", "sourceId": "5", "destinationId": "4", "description": "Publishes readings to", "technology": "MQTT over TLS"}],
        "containers": [
-         {"id": "4", "name": "Reader", "description": "Polls the meter.", "technology": "C, FreeRTOS", "tags": "Element,Container",
-          "relationships": [{"id": "22", "sourceId": "4", "destinationId": "5", "description": "Stores readings in", "technology": "SQL"}]},
-         {"id": "5", "name": "Buffer", "description": "Keeps readings while the network is down.", "technology": "SQLite on flash", "tags": "Element,Container",
-          "relationships": [{"id": "23", "sourceId": "5", "destinationId": "6", "description": "Hands batches to", "technology": "Queue"}]},
-         {"id": "6", "name": "Uplink", "description": "Sends readings.", "technology": "C, LwM2M over DTLS", "tags": "Element,Container",
-          "relationships": [{"id": "24", "sourceId": "6", "destinationId": "2", "description": "Sends readings to", "technology": "LwM2M over DTLS", "linkedRelationshipId": "21"}],
-          "components": [{"id": "7", "name": "Session Manager", "description": "Keeps the DTLS session alive.", "technology": "C", "tags": "Element,Component"}]}
+         {"id": "6", "name": "Sensor Driver", "description": "Reads the sensors on a timer.", "technology": "C, FreeRTOS", "tags": "Element,Container",
+          "relationships": [{"id": "24", "sourceId": "6", "destinationId": "7", "description": "Stores readings in", "technology": "Function call"}]},
+         {"id": "7", "name": "Data Buffer", "description": "Keeps readings while the network is down.", "technology": "Ring buffer in flash", "tags": "Element,Container",
+          "relationships": [{"id": "25", "sourceId": "7", "destinationId": "8", "description": "Hands batches to", "technology": "Queue"}]},
+         {"id": "8", "name": "Uplink Client", "description": "Publishes readings.", "technology": "C, MQTT over TLS", "tags": "Element,Container",
+          "relationships": [{"id": "26", "sourceId": "8", "destinationId": "4", "description": "Publishes readings to", "technology": "MQTT over TLS", "linkedRelationshipId": "23"}],
+          "components": [
+            {"id": "10", "name": "Session Manager", "description": "Keeps the TLS session alive.", "technology": "C", "tags": "Element,Component",
+             "relationships": [{"id": "29", "sourceId": "10", "destinationId": "4", "description": "Keeps the session with", "technology": "MQTT over TLS", "linkedRelationshipId": "26"}]},
+            {"id": "11", "name": "Publisher", "description": "Builds and sends MQTT messages.", "technology": "C", "tags": "Element,Component",
+             "relationships": [{"id": "28", "sourceId": "11", "destinationId": "10", "description": "Uses", "technology": "Function call"}]}
+          ]},
+         {"id": "9", "name": "Firmware Updater", "description": "Downloads and installs new firmware.", "technology": "C, MCUboot", "tags": "Element,Container",
+          "relationships": [{"id": "27", "sourceId": "9", "destinationId": "4", "description": "Downloads firmware from", "technology": "HTTPS"}]}
        ]}
     ],
     "deploymentNodes": [
-      {"id": "30", "name": "Gateway hardware", "environment": "Field", "technology": "Cortex-M4",
+      {"id": "30", "name": "Sensor node hardware", "environment": "Field", "technology": "Cortex-M0+",
        "containerInstances": [
-         {"id": "31", "containerId": "4", "environment": "Field"},
-         {"id": "32", "containerId": "5", "environment": "Field"},
-         {"id": "33", "containerId": "6", "environment": "Field"}]}
+         {"id": "31", "containerId": "6", "environment": "Field"},
+         {"id": "32", "containerId": "7", "environment": "Field"},
+         {"id": "33", "containerId": "8", "environment": "Field"},
+         {"id": "34", "containerId": "9", "environment": "Field"}]}
     ]
   },
   "views": {
-    "systemContextViews": [{"key": "SystemContext", "softwareSystemId": "3", "elements": [{"id": "1"}, {"id": "2"}, {"id": "3"}]}],
-    "containerViews": [{"key": "Containers", "softwareSystemId": "3", "elements": [{"id": "2"}, {"id": "4"}, {"id": "5"}, {"id": "6"}]}],
-    "componentViews": [{"key": "Components", "containerId": "6", "elements": [{"id": "2"}, {"id": "7"}]}],
-    "dynamicViews": [{"key": "Reading", "title": "How one reading travels.", "softwareSystemId": "3", "elements": [{"id": "4"}, {"id": "5"}, {"id": "6"}, {"id": "2"}],
-                      "relationships": [{"id": "22", "order": "1", "description": "Stores reading"}, {"id": "23", "order": "2", "description": "Hands over batch"}, {"id": "24", "order": "3", "description": "Sends batch"}]}],
-    "deploymentViews": [{"key": "FieldDeployment", "softwareSystemId": "3", "environment": "Field", "elements": [{"id": "30"}]}]
+    "systemContextViews": [{"key": "SystemContext", "softwareSystemId": "5", "elements": [{"id": "1"}, {"id": "2"}, {"id": "3"}, {"id": "4"}, {"id": "5"}]}],
+    "containerViews": [{"key": "Containers", "softwareSystemId": "5", "elements": [{"id": "4"}, {"id": "6"}, {"id": "7"}, {"id": "8"}, {"id": "9"}]}],
+    "componentViews": [{"key": "Components", "containerId": "8", "elements": [{"id": "4"}, {"id": "10"}, {"id": "11"}]}],
+    "dynamicViews": [{"key": "Reading", "title": "How one reading travels.", "softwareSystemId": "5", "elements": [{"id": "6"}, {"id": "7"}, {"id": "8"}, {"id": "4"}],
+                      "relationships": [{"id": "24", "order": "1", "description": "Stores reading"}, {"id": "25", "order": "2", "description": "Hands over batch"}, {"id": "26", "order": "3", "description": "Publishes batch"}]}],
+    "deploymentViews": [{"key": "FieldDeployment", "softwareSystemId": "5", "environment": "Field", "elements": [{"id": "30"}]}],
+    "configuration": {"styles": {"elements": [
+      {"tag": "Element", "shape": "RoundedBox"},
+      {"tag": "Person", "shape": "Person"},
+      {"tag": "External", "background": "#999999"}]}}
   }
 }

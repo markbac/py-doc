@@ -1,4 +1,4 @@
-"""Pin the Structurizr Lite image by digest: ``py-doc c4 lock`` writes ``c4-images.lock``, and builds read it."""
+"""Pin the Structurizr Local image by digest: ``py-doc c4 lock`` writes ``c4-images.lock``, and builds read it."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 from py_doc.errors import ConversionError
 from py_doc.runtime import Runtime
 
-from .stack import LITE_IMAGE
+from .stack import SERVER_IMAGE
 
 logger = logging.getLogger(__name__)
 LOCK = "c4-images.lock"
@@ -32,24 +32,24 @@ def read_lock(root: Path) -> dict[str, str]:
     return pinned
 
 
-def lock_lite(runtime: Runtime, root: Path, tag: str = "latest") -> str:
-    """Pull ``structurizr/lite:tag``, record its digest in the lock file and return the pinned reference."""
-    runtime.engine(["pull", f"{LITE_IMAGE}:{tag}"], timeout=1800)
-    result = runtime.engine(["image", "inspect", "--format", "{{index .RepoDigests 0}}", f"{LITE_IMAGE}:{tag}"])
+def lock_image(runtime: Runtime, root: Path, tag: str = "latest") -> str:
+    """Pull ``structurizr/structurizr:tag``, record its digest in the lock file and return the pinned reference."""
+    runtime.engine(["pull", f"{SERVER_IMAGE}:{tag}"], timeout=1800)
+    result = runtime.engine(["image", "inspect", "--format", "{{index .RepoDigests 0}}", f"{SERVER_IMAGE}:{tag}"])
     pinned = result.stdout.strip()
     if not _DIGEST.match(pinned):
-        raise ConversionError(f"Docker gave no digest for {LITE_IMAGE}:{tag} (got {pinned!r})")
-    text = f"# Pinned container images for py-doc c4. Written by `py-doc c4 lock`.\n{LITE_IMAGE} {pinned}\n"
+        raise ConversionError(f"Docker gave no digest for {SERVER_IMAGE}:{tag} (got {pinned!r})")
+    text = f"# Pinned container images for py-doc c4. Written by `py-doc c4 lock`.\n{SERVER_IMAGE} {pinned}\n"
     (root / LOCK).write_text(text, encoding="utf-8")
     return pinned
 
 
-def resolve_lite(configured: str | None, root: Path) -> str:
-    """The Lite image to run: ``c4.lite_image``, else the locked one, else the tag, which moves, with a warning."""
+def resolve_image(configured: str | None, root: Path) -> str:
+    """The Structurizr Local image to run: ``c4.image``, else the locked one, else the tag, which moves, with a warning."""
     if configured:
         return configured
-    locked = read_lock(root).get(LITE_IMAGE)
+    locked = read_lock(root).get(SERVER_IMAGE)
     if locked:
         return locked
-    logger.warning("%s is not pinned, so a new release can change the pictures. Run `py-doc c4 lock`", LITE_IMAGE)
-    return LITE_IMAGE
+    logger.warning("%s is not pinned, so a new release can change the pictures. Run `py-doc c4 lock`", SERVER_IMAGE)
+    return SERVER_IMAGE

@@ -1,80 +1,141 @@
 # Example project for py-doc. Run `py-doc build` in this folder.
-# Everything is checked when the file loads, so a typo is an error that names its place.
+# Everything is checked when the file loads, so a typo is an error that names its place,
+# such as `documents.guide.sources[1].page_brek`. Paths are relative to this file.
 
 project:
-  name: Meter Gateway examples
+  name: Sensor Node examples
 
-outputs:                          # defaults for every document
+# Defaults for every document. A document's own `outputs` override them.
+outputs:
   docx:
-    template: templates/company.docx
+    template: templates/sensor.docx    # `status: Draft` picks templates/sensor_Draft.docx when it exists
     dir: build
   pptx:
-    template: templates/company.pptx
+    template: templates/sensor.pptx    # `status: Draft` picks templates/sensor_Draft.pptx
     dir: build
   pdf:
     dir: build
   html:
+    template: templates/doc.css        # for HTML the template is the stylesheet
     dir: build
 
 documents:
   guide:
-    # The guide: front matter in the first file gives the title, author and so on.
+    # The guide joins the files below in order. The front matter of the first one gives the title,
+    # subtitle, author, date, status, classification and document number.
     sources:
-      - docs/00_overview.md
-      - docs/01_requirements.md
-      - file: docs/02_design.md
+      - docs/guide/00_overview.md
+      - docs/guide/01_requirements.md
+      - file: docs/guide/02_design.md
+        page_break: true               # start this file on a new page
+      - docs/guide/03_operations.md
+      - file: docs/guide/04_change_history.md
+        heading_offset: 1              # shift every heading one level down (kept within 1 to 6)
+        title: "Appendix: Change history"   # replaces the first heading of the file
         page_break: true
-      - docs/03_operations.md
-      - {file: docs/DRAFT.md, include: false}
-    variables:
+      - {file: docs/guide/DRAFT.md, include: false}   # listed, but no build uses it
+    keywords: [IoT, sensor, MQTT]
+    variables:                         # {{version}} and {{status_text}} in the Markdown
       version: "1.0"
       status_text: in service
-    conditions:
+    conditions:                        # [[IF: internal]] and [[IF: audience == staff]]
       internal: false
       audience: customer
     outputs:
-      docx: {name: "{name}-v{version}"}
-      pdf: {}
-      html: {}
+      docx: {name: "{name}-v{version}", toc: true}    # build/guide-v1.0.docx, with a contents list
+      pdf: {toc: true}                                # build/guide.pdf, made by XeLaTeX
+      html: {toc: true}                               # build/guide.html, one self-contained file
+
+  datasheet:
+    # The same pipeline with every diagram type. Each type needs the tool container.
+    sources: [docs/datasheet.md]
+    variables: {version: "1.0"}
+    outputs:
+      docx:
+        template: templates/datasheet.docx            # a template with its own placeholder style
+        placeholder_prefix: "@@"                      # @@Title, @@Version ... instead of Replace-with-Title
+        marker: "<<BODY>>"                            # where the body goes, instead of [[INSERTCONTENT]]
+        name: "{name}-{version_safe}"                 # build/datasheet-1_0.docx
+        # allow_missing_template: true                # warn and use a blank document if the template is missing
+      pdf:
+        toc: false                                    # no contents list
+        template: templates/report.tex                # a LaTeX template with its own colours
+
+  release-notes:
+    # `version: git` is `git describe --tags --always` of this folder. Outside a repository, or
+    # without a commit, the build fails instead of inventing a version.
+    title: Sensor Node Release Notes
+    author: A. Writer
+    version: git
+    sources: [docs/release-notes.md]
+    outputs:
+      docx: {name: "{name}-{version_safe}"}           # for example build/release-notes-v1_2_3.docx
 
   deck:
-    sources: [docs/slides.md]
+    sources: [docs/deck/slides.md]
+    variables: {version: "1.0"}        # {{version}} in the slides and in the footer pattern
+    conditions: {internal: false}      # the [[IF: internal]] slide is left out
     outputs:
       pptx:
-        split_level: 2
-        footer: "{title} v{version}"
+        split_level: 2                 # a new slide at each heading up to level 2
+        footer: "{title} v{version}"   # fills the footer of every slide
 
   architecture:
     # Chapters generated from a Structurizr workspace, between hand-written ones.
-    # workspace.json needs no Java. Use architecture/workspace.dsl instead with `py-doc c4 lock` and Docker.
-    title: Meter Gateway Architecture
+    # workspace.json needs no Java. To start from the DSL, name architecture/workspace.dsl instead:
+    # it is converted by structurizr-cli in the tool container, and the result is cached.
+    title: Sensor Node Architecture
     author: A. Writer
     version: "1.0"
+    status: Draft
+    document_number: SN-AD-001
     sources:
       - docs/includes/audience.md
       - structurizr: architecture/workspace.json
         levels: [context, containers, components, relationships, deployment]
         heading_offset: 1
+        # `browser` draws each view with Structurizr Local and headless Chromium, so the views look as
+        # they do in Structurizr. `source` needs architecture/workspace.dsl: structurizr-cli writes
+        # PlantUML or Mermaid text (`format: plantuml`), and that is drawn like any other diagram.
+        # Both need Docker.
         diagrams: {engine: browser, format: png}
     outputs:
       docx: {}
+      html: {}
 
+# Structurizr Local, started on a private Docker network for the `browser` engine.
+# `py-doc c4 lock` pins the image by digest in c4-images.lock.
 c4:
   port: 8080
+
+# A JSON report of every build: tools and versions, sources, outputs with SHA-256, diagrams.
+reports:
+  path: build/report.json
 
 lint:
   exclude: [build]
   rules:
-    DOC003: info
-    C4004: off
-  glossary:
-    LwM2M: [lwm2m, Lwm2m]
-  phrases:
+    DOC003: info                       # error, warning, info or off
+    C4004: off                         # a model element without relationships
+  glossary:                            # the canonical spelling, then the wrong ones
+    MQTT: [mqtt, Mqtt]
+    TLS: [tls]
+    BLE: [ble]
+    OTA: [ota]
+    I2C: [i2c]
+  phrases:                             # a wordy phrase and what to write instead
     utilise: use
-  structure: structure-rules.yaml
+  acronyms:
+    min_length: 3
+    allowed: [SBOM]
+  structure: structure-rules.yaml      # project conventions as data
+  # markdownlint runs in the tool container, only when this is set. Uncomment it once Docker works:
+  # markdownlint:
+  #   config: .markdownlint.yaml         # a file, or the settings written here as a mapping
+  #   severity: warning
   vale:
-    enabled: auto                 # runs when Vale is installed
+    enabled: auto                      # runs when Vale is installed
     spelling: en-GB
     rules_file: vale-rules.yml
-    packages: []                  # for example [write-good], then `py-doc lint --sync`
+    packages: []                       # for example [write-good], then `py-doc lint --sync`
     ignore: ["build/**"]

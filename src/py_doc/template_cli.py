@@ -26,6 +26,8 @@ def build_parser() -> argparse.ArgumentParser:
         noise.add_argument("-v", "--verbose", action="store_true", help="Also show INFO findings")
         if name == "check":
             sub.add_argument("--strict", action="store_true", help="Exit with status 1 for warnings as well as failures")
+            sub.add_argument("--prefix", default="Replace-with-", help="The placeholder_prefix of the template (default: Replace-with-)")
+            sub.add_argument("--marker", default="[[INSERTCONTENT]]", help="The marker line where the body goes (default: [[INSERTCONTENT]])")
     diff = commands.add_parser("diff", help="Compare the styles (or layouts) of two templates", description="Compare two templates")
     diff.add_argument("first", type=Path, help="The template to start from")
     diff.add_argument("second", type=Path, help="The template to compare it with")
@@ -56,7 +58,7 @@ def run_template(argv: Sequence[str] | None = None) -> int:
             headers = ("Type", "Style", "Bold", "Next") if kind == "word" else ("Layout", "Placeholders")
             print(_table(inventory(args.template), headers))
             return 0
-        report = check_template(args.template)
+        report = check_template(args.template, args.prefix, args.marker)
     except (FileNotFoundError, ConversionError) as exc:
         _error(str(exc))
         return 2

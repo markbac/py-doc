@@ -60,7 +60,7 @@ def render_views(
     port: int | None = None,
     stack: Stack | ExternalStack | None = None,
 ) -> list[Path]:
-    """Draw the views with Structurizr Lite and headless Chromium. Raises :class:`RenderError` naming what failed."""
+    """Draw the views with Structurizr Local and headless Chromium. Raises :class:`RenderError` naming what failed."""
     bad = [f for f in formats if f not in FORMATS]
     if bad:
         raise RenderError(f"Cannot draw '{bad[0]}' pictures. Formats: {', '.join(FORMATS)}")

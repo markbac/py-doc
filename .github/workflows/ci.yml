@@ -44,7 +44,7 @@ jobs:
           allow-prereleases: true
       - name: Pandoc, XeLaTeX and Graphviz (the tests run them on the host in place of the container)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc texlive-xetex texlive-latex-recommended texlive-fonts-recommended fonts-crosextra-caladea fonts-crosextra-carlito graphviz
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-plain-generic texlive-fonts-recommended fonts-crosextra-caladea fonts-crosextra-carlito graphviz
       - name: Vale (for the end-to-end test)
         if: runner.os == 'Linux'
         run: |

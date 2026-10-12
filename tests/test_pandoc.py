@@ -240,7 +240,7 @@ def test_the_command_mounts_resources_read_only_and_translates_paths(tmp_path, m
     assert any("py-doc-" in m and not m.endswith("readonly") for m in mounts)
     resource_path = next(w for w in run if w.startswith("--resource-path=")).replace("\\", "/")
     assert tmp_path.as_posix() in resource_path
-    assert run.count("--lua-filter") == 2 and "--embed-resources" in run
+    assert run.count("--lua-filter") == 3 and "--embed-resources" in run
 
 
 def test_pdf_and_html_need_a_runtime(tmp_path):
@@ -277,3 +277,50 @@ class TestCommand:
         monkeypatch.setattr(app, "connect", refuse)
         assert app.main(["build", "-f", "html"]) == 2
         assert "guide: Docker is not running" in capsys.readouterr().err
+
+
+def test_latex_template_defines_task_list_boxes():
+    """pandoc writes \\boxtimes and \\square for `- [x]` items, so the PDF template must load amssymb."""
+    template = (Path(source.__file__).parent / "resources" / "latex_template.tex").read_text(encoding="utf-8")
+    assert "\\usepackage{amssymb}" in template
+
+
+def test_pdf_html_and_pptx_turn_caption_markers_into_captions():
+    from py_doc.pandoc.engine import FILTERS
+
+    assert "markers.lua" in FILTERS["pdf"]
+    assert "markers.lua" in FILTERS["html"]
+    assert "markers.lua" in FILTERS["pptx"]
+    assert "markers.lua" not in FILTERS["docx"]  # Word numbers the marker itself
+
+
+@pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc is not installed")
+def test_marker_filter_makes_captions_and_drops_word_only_markers(tmp_path):
+    import subprocess
+
+    from py_doc.pandoc.engine import INPUT_FORMAT, RESOURCES
+
+    md = tmp_path / "c.md"
+    md.write_text(
+        "[[STYLE:Lead Paragraph]] A lead\n\n"
+        "[[CAPTION:Figure]] The logo\n![Logo](logo.png)\n\n"
+        "[[CAPTION:Figure]] A diagram\n\n::: {style=\"text-align:center;\"}\n![dot diagram](d.png)\n:::\n\n"
+        "[[CAPTION:Table]] Requirements\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n"
+        "[[LANDSCAPE]]\n\n"
+        "| C | D |\n|---|---|\n| 3 | 4 |\n\n[[CAPTION:Table]] After the table\n\n"
+        "[[PORTRAIT]]\n\n"
+        "[[CAPTION:Figure]] The code\n```c\nint x;\n```\n\n"
+        "[[CAPTION:Table]] Alone\n",
+        encoding="utf-8",
+    )
+    done = subprocess.run(
+        ["pandoc", str(md), f"--from={INPUT_FORMAT}", f"--lua-filter={RESOURCES / 'markers.lua'}", "--to=html5"],
+        capture_output=True, text=True, check=True, cwd=tmp_path,
+    )  # fmt: skip
+    html = done.stdout
+    assert "[[" not in html
+    assert "A lead" in html
+    for caption in ("The logo", "A diagram", "The code"):
+        assert f"<figcaption>{caption}</figcaption>" in html or f"<figcaption aria-hidden=\"true\">{caption}</figcaption>" in html
+    assert "<caption>Requirements</caption>" in html and "<caption>After the table</caption>" in html
+    assert "Alone" in html

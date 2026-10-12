@@ -235,3 +235,56 @@ def test_a_stopped_engine_gives_exit_status_2(cli, capsys):
     cli.configure(daemon=False)
     assert main(["tools", "status"]) == 2
     assert "not running" in capsys.readouterr().err
+
+
+# --- build progress ------------------------------------------------------------------------------
+
+
+class Clock:
+    def __init__(self):
+        self.now = 0.0
+
+    def __call__(self):
+        return self.now
+
+
+def test_the_build_progress_names_each_step_once(caplog):
+    clock = Clock()
+    progress = image.BuildProgress(clock)
+    with caplog.at_level("INFO", logger="py_doc.runtime.image"):
+        for line in (
+            "#1 [internal] load build definition from Dockerfile",
+            "#5 [ 2/14] RUN apt-get update && apt-get install -y curl",
+            "#5 0.5 Get:1 http://archive.ubuntu.com/ubuntu noble InRelease",
+            "#5 DONE 41.2s",
+            "#6 [stage-1 10/14] COPY fetch.sh /tmp/build/",
+            "Step 3/14 : RUN echo classic",
+        ):
+            progress(line)
+    messages = [r.getMessage() for r in caplog.records]
+    assert messages[0].startswith("[2/14] RUN apt-get update") and messages[1].startswith("[10/14] COPY fetch.sh")
+    assert messages[2].startswith("[3/14] RUN echo classic") and len(messages) == 3
+
+
+def test_a_long_step_gets_a_note_every_minute(caplog):
+    clock = Clock()
+    progress = image.BuildProgress(clock)
+    progress("#5 [ 2/14] RUN apt-get update")
+    with caplog.at_level("INFO", logger="py_doc.runtime.image"):
+        clock.now = 30
+        progress("#5 0.5 downloading")
+        clock.now = 95
+        progress("#5 1.5 downloading")
+        clock.now = 100
+        progress("#5 1.6 downloading")
+    notes = [r.getMessage() for r in caplog.records]
+    assert notes == ["Still building, now on step 2 of 14 (1 min 35 s elapsed)"]
+
+
+def test_a_build_passes_plain_progress_and_reports_the_steps(definition, engine, caplog):
+    record_checksums(definition)
+    with caplog.at_level("INFO", logger="py_doc.runtime.image"):
+        image.build(runtime_for(engine))
+    (call,) = [c for c in engine.docker_calls() if c[0] == "build"]
+    assert "--progress=plain" in call
+    assert any(r.getMessage().startswith("Built ") and " in " in r.getMessage() for r in caplog.records)
