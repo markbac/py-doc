@@ -285,11 +285,12 @@ def test_latex_template_defines_task_list_boxes():
     assert "\\usepackage{amssymb}" in template
 
 
-def test_pdf_and_html_turn_caption_markers_into_captions():
+def test_pdf_html_and_pptx_turn_caption_markers_into_captions():
     from py_doc.pandoc.engine import FILTERS
 
     assert "captions.lua" in FILTERS["pdf"]
     assert "captions.lua" in FILTERS["html"]
+    assert "captions.lua" in FILTERS["pptx"]
     assert "captions.lua" not in FILTERS["docx"]  # Word numbers the marker itself
 
 

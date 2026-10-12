@@ -23,6 +23,7 @@ version: "1.0"
 ## Next steps
 
 [[CAPTION:Table]] Next steps
+
 | Step | Owner |
 |---|---|
 | Confirm buffer size | Firmware |
