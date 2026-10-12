@@ -19,6 +19,10 @@ All of it works from one parsed document tree, so the converters and the linter 
 
 The old commands `py-doc2docx`, `py-doc2slides` and `py-doclint` still work and print a one-line note naming their replacement. `-q` hides the note. The old import names `pydoc2docx`, `pydoc2slides` and `pydoclint` also still work.
 
+## Supported platforms
+
+Linux and Windows. The tool runner (see below) refuses to start on any other platform, with exit status `2` and a message that names the two supported ones. Commands that run no external tool work wherever Python does.
+
 ## Installation
 
 ```bash
@@ -259,7 +263,7 @@ python -m pytest
 ruff check .
 ```
 
-CI runs on Linux with Python 3.10 to 3.14, and on Windows and macOS with the oldest and newest.
+CI runs on Linux with Python 3.10 to 3.14, and on Windows with the oldest and newest. macOS is not supported.
 
 ## License
 

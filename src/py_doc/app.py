@@ -16,7 +16,7 @@ from ._logging import configure_logging
 from .build import build_document
 from .cli import run_docx
 from .config import FORMATS, ConfigError, find_config, load_config
-from .errors import ConversionError
+from .errors import ConversionError, exit_status
 from .lint.cli import run as run_lint
 from .migrate import LEGACY_FORMATS, Migration, migrate, render
 from .slides_cli import run_slides
@@ -94,6 +94,7 @@ def _build(args: argparse.Namespace) -> int:
         return 1
 
     failed = 0
+    status = 0
     names = args.documents or list(config.documents)
     for name in names:
         try:
@@ -101,14 +102,16 @@ def _build(args: argparse.Namespace) -> int:
         except (FileNotFoundError, ConversionError) as exc:
             _error(f"{name}: {exc}")
             failed += 1
+            status = max(status, exit_status(exc))
         except Exception as exc:  # one document must not stop the others
             logger.debug("Unexpected failure", exc_info=True)
             _error(f"{name}: {type(exc).__name__}: {exc}")
             failed += 1
+            status = max(status, 1)
     if len(names) > 1 or failed:
         summary = f"{len(names) - failed} of {len(names)} document(s) built" + (f", {failed} failed" if failed else "")
         (logger.error if failed else logger.info)(summary)
-    return 1 if failed else 0
+    return status
 
 
 # --- migrate -------------------------------------------------------------------------------------
