@@ -75,7 +75,6 @@ def finish_docx(body_path: Path, template: Path | None, metadata: Metadata, opti
     post.apply_orientation_markers(document)
     post.apply_layout_fixes(document)
     post.rescale_landscape_images(document)
-    post.normalize_body_bold(document)
     post.apply_explicit_styles(document)
     post.format_all_tables(document)
     post.update_core_properties(

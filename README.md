@@ -247,6 +247,13 @@ outputs:
 - **A missing template is an error**, unless `allow_missing_template: true`. Pandoc's own warnings are shown as warnings.
 - Pictures are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown.
 
+Word layout features:
+
+- **Contents list**: `docx: {toc: true}` adds a table of contents to the depth of `toc_depth` (front matter). Word fills in the page numbers when the file is opened and asks to update fields.
+- **Captions**: `[[CAPTION:Figure]] Text` (or `Table`) on the line before a picture or table becomes a numbered caption. Numbers are `SEQ` fields, shared with the captions pandoc makes itself, so they renumber in Word. Cross-references to captions are not supported.
+- **Callouts**: `> [!NOTE]` and `> **Note:**` (note, tip, important, warning, caution) become boxes in the `Div.note` ... `Div.caution` styles. The built-in reference document defines them. If your template lacks a style that the document uses, one warning says so and those callouts are plain paragraphs.
+- **Pages**: `[[LANDSCAPE]]` and `[[PORTRAIT]]` start a section of that orientation. `[[STYLE:Name]]` applies a named style, and warns once if the template has none of that name.
+
 ### Diagrams
 
 A fenced block whose language is a diagram type becomes a picture in the pandoc outputs:

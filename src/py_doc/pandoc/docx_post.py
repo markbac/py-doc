@@ -109,8 +109,12 @@ def _set_pgSz(sectPr, orientation: str) -> None:
         pgSz.set(qn("w:h"), "16838")
 
 
-def _insert_seq_field(paragraph, label: str) -> None:
-    """Insert a ``SEQ <label>`` field so Word recognises it for Table of Figures."""
+def _insert_seq_field(paragraph, label: str, number: int) -> None:
+    """Insert a ``SEQ <label>`` field so Word recognises it for Table of Figures.
+
+    ``number`` is the value shown until Word updates the field, so the caption reads right even in
+    programs that never do.
+    """
     paragraph.style = "Caption"
     paragraph.add_run(f"{label} ")
     run = paragraph.add_run()
@@ -122,7 +126,9 @@ def _insert_seq_field(paragraph, label: str) -> None:
     fld_sep.set(qn("w:fldCharType"), "separate")
     fld_end               = OxmlElement("w:fldChar")
     fld_end.set(qn("w:fldCharType"), "end")
-    run._r.extend([fld_begin, instr, fld_sep, fld_end])
+    shown                 = OxmlElement("w:t")
+    shown.text            = str(number)
+    run._r.extend([fld_begin, instr, fld_sep, shown, fld_end])
     paragraph.add_run(": ")
 
 
@@ -419,15 +425,23 @@ def apply_explicit_styles(doc: Document) -> None:
       inserts a ``SEQ`` field so Word tracks figure / table numbers.
     """
     log.debug("apply_explicit_styles: scanning")
+    counts: dict[str, int] = {}
+    missing: dict[str, int] = {}
     for p in doc.paragraphs:
+        # captions pandoc wrote itself count in the same sequence
+        for instr in p._p.iter(qn("w:instrText")):
+            found = re.match(r"\s*SEQ\s+(\S+)", instr.text or "")
+            if found:
+                counts[found.group(1)] = counts.get(found.group(1), 0) + 1
         raw = p.text or ""
 
         cap_m = CAPTION_PATTERN.search(raw)
         if cap_m:
-            label   = cap_m.group("style").strip() if False else cap_m.group("label").strip()
+            label   = cap_m.group("label").strip()
             cleaned = CAPTION_PATTERN.sub("", raw).strip()
+            counts[label] = counts.get(label, 0) + 1
             p.text  = ""
-            _insert_seq_field(p, label)
+            _insert_seq_field(p, label, counts[label])
             if cleaned:
                 p.add_run(cleaned)
             log.debug("Caption SEQ %s applied", label)
@@ -440,9 +454,12 @@ def apply_explicit_styles(doc: Document) -> None:
             try:
                 p.style = style_name
                 log.debug("Style '%s' applied", style_name)
-            except Exception as exc:
-                log.error("Failed to apply style '%s': %s", style_name, exc)
+            except KeyError:
+                missing[style_name] = missing.get(style_name, 0) + 1
 
+    if missing:
+        log.warning("The document has no style %s, so %s left as Normal", ", ".join(f"'{n}'" for n in missing),
+                    "those paragraphs are" if sum(missing.values()) > 1 else "that paragraph is")
     log.debug("apply_explicit_styles: done")
 
 
@@ -638,67 +655,6 @@ def apply_layout_fixes(doc: Document, max_image_height_cm: float = 20.0) -> None
             p.paragraph_format.keep_together = True
 
     log.debug("apply_layout_fixes: done")
-
-
-# ---------------------------------------------------------------------------
-# Body bold normalisation
-# ---------------------------------------------------------------------------
-
-def normalize_body_bold(
-    doc: Document,
-    body_par_styles: tuple[str, ...] = (
-        "Normal", "Body Text", "BodyText", "List Paragraph", "List"
-    ),
-    max_logs: int = 500,
-) -> None:
-    """
-    Remove direct bold formatting from runs in body paragraph styles.
-    Headings and ``Div.*`` paragraphs are protected.
-    """
-    logs_left = max_logs
-
-    def _log(msg: str):
-        nonlocal logs_left
-        if logs_left > 0:
-            log.debug(msg)
-            logs_left -= 1
-
-    def _process(p, where: str):
-        name = (p.style.name or "") if p.style else ""
-        if name.lower().startswith(("heading", "div.")):
-            return
-        if name not in body_par_styles:
-            return
-        changed = 0
-        for r in p.runs:
-            if r.font.bold is True:
-                r.font.bold = False
-                changed += 1
-        if changed:
-            _log(f"[bold-norm][{where}] style='{name}' cleared {changed} runs: "
-                 f"'{snippet(p.text)}'")
-
-    for p in doc.paragraphs:
-        _process(p, "body")
-
-    for si, section in enumerate(doc.sections):
-        for hf_name, hf in (("header", section.header), ("footer", section.footer)):
-            for p in hf.paragraphs:
-                _process(p, f"s{si}.{hf_name}")
-
-    def _walk_table(tbl, prefix: str):
-        for ri, row in enumerate(tbl.rows):
-            for ci, cell in enumerate(row.cells):
-                for p in cell.paragraphs:
-                    _process(p, f"{prefix}.r{ri}.c{ci}")
-                for ti, inner in enumerate(cell.tables):
-                    _walk_table(inner, f"{prefix}.r{ri}.c{ci}.t{ti}")
-
-    for ti, tbl in enumerate(doc.tables):
-        _walk_table(tbl, f"tbl{ti}")
-
-    if logs_left <= 0:
-        log.debug("normalize_body_bold: log cap reached (%d)", max_logs)
 
 
 # ---------------------------------------------------------------------------

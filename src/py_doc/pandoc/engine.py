@@ -16,6 +16,8 @@ from py_doc.errors import ConversionError
 from py_doc.markdown import Metadata
 from py_doc.runtime import Mount, Runtime
 
+from .reference import default_reference, missing_callout_styles
+
 logger = logging.getLogger(__name__)
 
 RESOURCES = Path(__file__).parent / "resources"
@@ -68,7 +70,7 @@ def _metadata_file(metadata: Metadata) -> dict[str, Any]:
     return {key: str(value) for key, value in values.items() if value not in (None, "")}
 
 
-def _command(job: PandocJob, runtime: Runtime, work: Path) -> tuple[list, list[Mount]]:
+def _command(job: PandocJob, runtime: Runtime, work: Path, reference: Path | None) -> tuple[list, list[Mount]]:
     options = job.options
     fmt = job.fmt
     mounts = [Mount(RESOURCES), Mount(work, writable=True)]
@@ -92,8 +94,10 @@ def _command(job: PandocJob, runtime: Runtime, work: Path) -> tuple[list, list[M
 
     if fmt == "docx":
         argv.append("--to=docx+native_numbering")
-        if job.template is not None:
-            argv += ["--reference-doc", job.template]
+        if reference is not None:
+            argv += ["--reference-doc", reference]
+        if options.get("toc", False):
+            argv.append("--toc")
     elif fmt == "pptx":
         argv.append("--to=pptx")
         argv.append(f"--slide-level={options.get('split_level', 2)}")
@@ -123,7 +127,17 @@ def convert(runtime: Runtime, job: PandocJob) -> Path:
         (work / "metadata.yaml").write_text(
             yaml.safe_dump(_metadata_file(job.metadata), allow_unicode=True, sort_keys=False), encoding="utf-8"
         )
-        argv, mounts = _command(job, runtime, work)
+        reference = None
+        if job.fmt == "docx":
+            reference = job.template if job.template is not None else default_reference(runtime, work)
+            if job.template is not None:
+                missing = missing_callout_styles(job.template, job.markdown)
+                if missing:
+                    logger.warning(
+                        f"The template {job.template.name} has no style {', '.join(missing)}, so callouts of "
+                        "those kinds are plain paragraphs. Add a paragraph style with that name to give them a box"
+                    )
+        argv, mounts = _command(job, runtime, work, reference)
         result = runtime.run(argv, mounts=mounts, workdir=work, timeout=TIMEOUT)
         for line in result.stderr.splitlines():
             if line.startswith("[WARNING]"):

@@ -37,7 +37,7 @@ _META_KEYS = (
 _OUTPUT_OPTIONS = {
     "docx": (
         "path", "template", "engine", "keep_template_body", "allow_missing_template", "name", "placeholder_prefix",
-        "marker",
+        "marker", "toc",
     ),
     "pptx": (
         "path", "template", "engine", "keep_template_slides", "allow_missing_template", "split_level",
