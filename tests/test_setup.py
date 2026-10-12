@@ -71,7 +71,7 @@ def test_dry_run_prints_the_script_and_runs_nothing(windows, monkeypatch, capsys
     recorder = Recorder()
     assert run_setup(["--dry-run"], run=recorder) == 0
     out = capsys.readouterr().out
-    assert "apt-get install -y docker-ce" in out and "'ann'" in out
+    assert "apt install -y docker-ce" in out and "'ann'" in out
     assert recorder.scripts() == []
 
 
