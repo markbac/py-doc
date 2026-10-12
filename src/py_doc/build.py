@@ -15,6 +15,7 @@ from .naming import git_version, status_template
 from .pandoc import PandocJob, convert
 from .pandoc.source import join_sources
 from .runtime import Runtime
+from .template_check import log_problems
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +80,8 @@ def render_output(fmt, joined, metadata, output, name, source_dirs, template, se
     if template is not None and not template.is_file() and settings.get("allow_missing_template", False):
         logger.warning(f"Template {template} not found, so {name}.{fmt} is built without it")
         template = None
+    if template is not None and template.is_file() and fmt in ("docx", "pptx"):
+        log_problems(template, skip=("Callout styles",))  # the converter reports the callouts a document uses
     drawn = render_parts(joined.parts, fmt, runtime, keep_going)
     job = PandocJob(fmt, drawn.markdown, metadata, output, source_dirs, template, settings, drawn.pictures)
     return convert(runtime(), job)

@@ -15,6 +15,7 @@ Pandoc, run in the tool container, writes every output. The linter reads the Mar
 |---|---|
 | `py-doc docx` | Convert Markdown to Word |
 | `py-doc slides` | Convert Markdown to PowerPoint |
+| `py-doc template` | Check and list the styles of a Word or PowerPoint template |
 | `py-doc lint` | Check writing style, glossary terms and acronyms |
 | `py-doc build` | Build every document described in `py-doc.yml` |
 | `py-doc migrate` | Create `py-doc.yml` from legacy `createdocs` build files |
@@ -110,6 +111,8 @@ Pandoc reads the Markdown (its own flavour, with fenced divs, raw HTML, table ca
 A word or sentence is never dropped silently by py-doc itself, but anything pandoc cannot represent in a format (raw HTML in Word, for example) is dropped by pandoc, which says so in a warning.
 
 ### Word templates
+
+`py-doc template check Template.docx` reports what the template lacks for the pandoc pipeline (`.docx`, `.dotx`, `.pptx` and `.potx` are accepted), and `py-doc template show` lists its styles or layouts. FAIL (a style of the wrong type, bold body text, a deck without the `Title Slide` or `Title and Content` layout) exits with status 1, WARN (a style pandoc will take from its own defaults) only with `--strict`, and `-v` adds INFO. A build runs the check and logs the failures, and carries on.
 
 The template is pandoc's reference document, so its styles decide how everything looks, and the result is merged into it (see [Pandoc outputs](#pandoc-outputs)). A template can be `.docx` or `.dotx`. Without one, a built-in reference document is used, which defines the callout box styles. If the template lacks a `Div.note` style or another the document needs, one warning names it.
 

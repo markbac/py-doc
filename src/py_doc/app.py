@@ -22,6 +22,7 @@ from .lint.cli import run as run_lint
 from .migrate import LEGACY_FORMATS, Migration, migrate, render
 from .runtime import connect
 from .slides_cli import run_slides
+from .template_cli import run_template
 from .tools_cli import run_doctor, run_tools
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ _DELEGATES = {
     "slides": ("Convert Markdown to PowerPoint (.pptx)", run_slides),
     "lint": ("Check Markdown for writing style and glossary use", run_lint),
     "tools": ("Build and inspect the tool container image", run_tools),
+    "template": ("Check and inspect Word and PowerPoint templates", run_template),
     "doctor": ("Check that the tool container works", run_doctor),
 }
 
