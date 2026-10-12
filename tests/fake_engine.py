@@ -81,7 +81,10 @@ DOCKER = textwrap.dedent(
             time.sleep(state["sleep"])
         if state.get("mode") == "host":
             env.pop("HOME", None)
-            done = subprocess.run(command, cwd=workdir, env={**os.environ, **env})
+            import shutil
+
+            found = shutil.which(command[0])  # finds name.bat on Windows, where a script cannot start by its bare name
+            done = subprocess.run([found or command[0], *command[1:]], cwd=workdir, env={**os.environ, **env})
             sys.exit(done.returncode)
         sys.stdout.buffer.write(bytes.fromhex(state["stdout_hex"]) if "stdout_hex" in state else state.get("stdout", "").encode("utf-8"))
         sys.stderr.buffer.write(state.get("stderr", "").encode("utf-8"))
@@ -117,6 +120,10 @@ WSL = textwrap.dedent(
     if distro is not None and distro not in distros:
         sys.stdout.buffer.write(("There is no distribution with the supplied name.\\r\\n").encode("utf-16-le"))
         sys.exit(1)
+    def print(text=""):  # the real wsl.exe writes UTF-8 whatever the console code page is
+        sys.stdout.buffer.write((str(text) + "\\n").encode("utf-8"))
+        sys.stdout.flush()
+
     assert args[0] == "--exec", args
     rest = args[1:]
     if rest[0] == "wslpath":

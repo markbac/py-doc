@@ -234,12 +234,12 @@ def test_the_command_mounts_resources_read_only_and_translates_paths(tmp_path, m
     with pytest.raises(ConversionError, match="wrote no html file"):
         build_document(config, doc, ["html"], runtime=lambda: runtime)
     (run,) = engine.runs()
-    mounts = [word for word in run if word.startswith("type=bind")]
+    mounts = [word.replace("\\", "/") for word in run if word.startswith("type=bind")]
     assert any("pandoc/resources" in m and m.endswith("readonly") for m in mounts)
-    assert any(f"source={tmp_path}," in m and m.endswith("readonly") for m in mounts)
+    assert any(f"source={tmp_path.as_posix()}," in m and m.endswith("readonly") for m in mounts)
     assert any("py-doc-" in m and not m.endswith("readonly") for m in mounts)
-    resource_path = next(w for w in run if w.startswith("--resource-path="))
-    assert str(tmp_path) in resource_path
+    resource_path = next(w for w in run if w.startswith("--resource-path=")).replace("\\", "/")
+    assert tmp_path.as_posix() in resource_path
     assert run.count("--lua-filter") == 2 and "--embed-resources" in run
 
 

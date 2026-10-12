@@ -51,8 +51,14 @@ def stub(tmp_path, monkeypatch, name: str, body: str) -> Path:
     folder = tmp_path / "stubs"
     folder.mkdir(exist_ok=True)
     path = folder / name
-    path.write_text(f"#!{sys.executable}\nimport json, os, sys\n{body}\n", encoding="utf-8")
-    path.chmod(path.stat().st_mode | stat.S_IEXEC)
+    code = f"import json, os, sys\n{body}\n"
+    if sys.platform == "win32":  # a script cannot start by its bare name there: name.bat runs name.py
+        (folder / f"{name}.py").write_text(code, encoding="utf-8")
+        path = folder / f"{name}.bat"
+        path.write_text(f'@"{sys.executable}" "%~dp0{name}.py" %*\n', encoding="utf-8")
+    else:
+        path.write_text(f"#!{sys.executable}\n{code}", encoding="utf-8")
+        path.chmod(path.stat().st_mode | stat.S_IEXEC)
     monkeypatch.setenv("PATH", f"{folder}{os.pathsep}{os.environ['PATH']}")
     return path
 
