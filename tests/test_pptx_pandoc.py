@@ -48,7 +48,7 @@ def make(tmp_path, monkeypatch):
         (tmp_path / "d.md").write_text(sample, encoding="utf-8")
         tpl = f"template: {template}, " if template else ""
         (tmp_path / "py-doc.yml").write_text(
-            f"documents:\n  deck:\n    sources: [d.md]\n    outputs:\n      pptx: {{engine: pandoc, {tpl}{options}}}\n", encoding="utf-8"
+            f"documents:\n  deck:\n    sources: [d.md]\n    outputs:\n      pptx: {{{tpl}{options}}}\n", encoding="utf-8"
         )
         config = load_config(tmp_path / "py-doc.yml")
         (out,) = build_document(config, config.documents["deck"], ["pptx"], runtime=runtime)

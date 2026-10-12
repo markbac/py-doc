@@ -7,8 +7,12 @@ import sys
 
 import pytest
 from docx import Document
+from docx.enum.style import WD_STYLE_TYPE
 from docx_helpers import texts
 from py_doc.cli import main
+
+
+pytestmark = pytest.mark.usefixtures("pandoc_runtime")
 
 
 def run_cli(monkeypatch, *args: str) -> None:
@@ -44,24 +48,24 @@ class TestFileMode:
     def test_template_option_is_applied(self, tmp_path, monkeypatch):
         template = tmp_path / "template.docx"
         doc = Document()
-        doc.core_properties.title = "Corporate template"
+        doc.styles.add_style("Corporate", WD_STYLE_TYPE.PARAGRAPH)
         doc.save(str(template))
         src = tmp_path / "spec.md"
         src.write_text("# Spec\n", encoding="utf-8")
         run_cli(monkeypatch, str(src), "-t", str(template))
-        assert Document(str(tmp_path / "spec.docx")).core_properties.title == "Corporate template"
+        assert "Corporate" in [style.name for style in Document(str(tmp_path / "spec.docx")).styles]
 
-    def test_template_body_is_removed_unless_keep_template_body_is_given(self, tmp_path, monkeypatch):
+    def test_template_body_stays_and_the_document_goes_at_the_marker_or_the_end(self, tmp_path, monkeypatch):
         template = tmp_path / "template.docx"
         doc = Document()
-        doc.add_paragraph("Template boilerplate")
+        doc.add_paragraph("Cover")
+        doc.add_paragraph("[[INSERTCONTENT]]")
+        doc.add_paragraph("Back page")
         doc.save(str(template))
         src = tmp_path / "spec.md"
         src.write_text("# Spec\n", encoding="utf-8")
         run_cli(monkeypatch, str(src), "-t", str(template))
-        assert texts(tmp_path / "spec.docx") == ["Spec"]
-        run_cli(monkeypatch, str(src), "-t", str(template), "--keep-template-body", "-o", str(tmp_path / "kept.docx"))
-        assert texts(tmp_path / "kept.docx") == ["Template boilerplate", "Spec"]
+        assert [t for t in texts(tmp_path / "spec.docx") if t] == ["Cover", "Spec", "Back page"]
 
     def test_invalid_utf8_input_exits_with_status_1_and_no_traceback(self, tmp_path, monkeypatch, capsys):
         src = tmp_path / "spec.md"
@@ -212,7 +216,7 @@ class TestFailures:
     def test_unexpected_error_in_one_file_is_reported_and_the_batch_goes_on(
         self, md_tree, tmp_path, monkeypatch, capsys
     ):
-        from py_doc.render.docx import DocxConverter
+        from py_doc.convert import DocxConverter
 
         real = DocxConverter.convert_file
 
@@ -270,7 +274,7 @@ class TestOptions:
         src = tmp_path / "spec.md"
         src.write_text("# Spec\n", encoding="utf-8")
         run_cli(monkeypatch, str(src))
-        assert "Converting" in capsys.readouterr().err
+        assert "Wrote" in capsys.readouterr().err
 
     def test_quiet_and_verbose_cannot_be_combined(self, monkeypatch):
         with pytest.raises(SystemExit) as exc:

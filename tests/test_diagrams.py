@@ -187,7 +187,7 @@ class TestDot:
     def test_a_broken_diagram_stops_the_build_and_writes_nothing(self, tmp_path, host):
         _, runtime = host
         (tmp_path / "g.md").write_text("# G\n\n```dot\ndigraph { a -> b }\n```\n\n```dot\ndigraph { a -> \n```\n", encoding="utf-8")
-        (tmp_path / "py-doc.yml").write_text("documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {engine: pandoc}\n", encoding="utf-8")
+        (tmp_path / "py-doc.yml").write_text("documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {}\n", encoding="utf-8")
         config = load_config(tmp_path / "py-doc.yml")
         with pytest.raises(DiagramError, match=r"g\.md:7"):
             build_document(config, config.documents["g"], runtime=runtime)
@@ -199,7 +199,7 @@ class TestDot:
 
         _, runtime = host
         (tmp_path / "g.md").write_text(f"# G\n\n```dot title=\"Flow\"\n{self.DOT}\n```\n", encoding="utf-8")
-        (tmp_path / "py-doc.yml").write_text("documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {engine: pandoc}\n      html: {}\n", encoding="utf-8")
+        (tmp_path / "py-doc.yml").write_text("documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {}\n      html: {}\n", encoding="utf-8")
         config = load_config(tmp_path / "py-doc.yml")
         docx, html = build_document(config, config.documents["g"], runtime=runtime)
         assert len(Document(str(docx)).inline_shapes) == 1

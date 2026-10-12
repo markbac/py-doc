@@ -154,7 +154,7 @@ class TestHtml:
 class TestDocx:
     def test_pandoc_word_output(self, tmp_path, host):
         _, runtime = host
-        config, doc = project(tmp_path, "      docx: {engine: pandoc}\n")
+        config, doc = project(tmp_path, "      docx: {}\n")
         (out,) = build_document(config, doc, ["docx"], runtime=runtime)
         document = Document(str(out))
         styles = [(p.style.name, p.text) for p in document.paragraphs]
@@ -172,7 +172,7 @@ class TestDocx:
         template.add_paragraph("[[INSERTCONTENT]]")
         template.add_paragraph("Back page")
         template.save(tmp_path / "tpl.docx")
-        config, doc = project(tmp_path, "      docx: {engine: pandoc, template: tpl.docx}\n")
+        config, doc = project(tmp_path, "      docx: {template: tpl.docx}\n")
         (out,) = build_document(config, doc, ["docx"], runtime=runtime)
         texts = [p.text for p in Document(str(out)).paragraphs]
         assert texts[0] == "Cover: Guide v 1.2"
@@ -181,10 +181,10 @@ class TestDocx:
 
     def test_a_missing_template_is_an_error_unless_allowed(self, tmp_path, host):
         _, runtime = host
-        config, doc = project(tmp_path, "      docx: {engine: pandoc, template: gone.docx}\n")
+        config, doc = project(tmp_path, "      docx: {template: gone.docx}\n")
         with pytest.raises(ConversionError, match="template was not found"):
             build_document(config, doc, ["docx"], runtime=runtime)
-        config, doc = project(tmp_path, "      docx: {engine: pandoc, template: gone.docx, allow_missing_template: true}\n")
+        config, doc = project(tmp_path, "      docx: {template: gone.docx, allow_missing_template: true}\n")
         (out,) = build_document(config, doc, ["docx"], runtime=runtime)
         assert out.is_file()
 
@@ -192,7 +192,7 @@ class TestDocx:
 @needs_pandoc
 def test_pandoc_slides(tmp_path, host):
     _, runtime = host
-    config, doc = project(tmp_path, "      pptx: {engine: pandoc}\n")
+    config, doc = project(tmp_path, "      pptx: {}\n")
     (out,) = build_document(config, doc, ["pptx"], runtime=runtime)
     assert len(Presentation(str(out)).slides) >= 1
 
@@ -277,12 +277,3 @@ class TestCommand:
         monkeypatch.setattr(app, "connect", refuse)
         assert app.main(["build", "-f", "html"]) == 2
         assert "guide: Docker is not running" in capsys.readouterr().err
-
-    def test_native_outputs_do_not_start_the_container(self, tmp_path, monkeypatch):
-        from py_doc import app
-
-        project(tmp_path, "      docx: {}\n")
-        monkeypatch.chdir(tmp_path)
-        monkeypatch.setattr(app, "connect", lambda settings: pytest.fail("the container was started"))
-        assert app.main(["build"]) == 0
-        assert (tmp_path / "build" / "guide.docx").is_file()

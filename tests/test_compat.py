@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 import subprocess
 import sys
 
@@ -10,6 +12,9 @@ import pydoc2docx
 from pydoc2docx.cli import main as old_main
 from pydoc2docx.converter import DocxConverter as OldConverter
 from py_doc.cli import main
+
+
+pytestmark = pytest.mark.usefixtures("pandoc_runtime")
 
 
 def test_old_import_names_are_the_same_objects():
@@ -140,8 +145,8 @@ class TestRenameNotice:
         assert capsys.readouterr().err == ""
 
     def test_real_legacy_entry_points_show_the_notice(self, tmp_path):
-        md = tmp_path / "a.md"
-        md.write_text("# A\n", encoding="utf-8")
+        empty = tmp_path / "empty"  # nothing to convert, so no container is needed
+        empty.mkdir()
         for module in ("pydoc2docx", "pydoc2slides"):
-            result = subprocess.run([sys.executable, "-m", module, str(md)], capture_output=True, text=True, check=False)
+            result = subprocess.run([sys.executable, "-m", module, str(empty)], capture_output=True, text=True, check=False)
             assert result.returncode == 0 and "is now part of py-doc" in result.stderr, module

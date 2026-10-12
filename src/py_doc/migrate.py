@@ -185,8 +185,6 @@ def migrate(paths: list[Path], config_dir: Path, source_format: str = "createdoc
         for fmt, wanted in built.items():
             if wanted:
                 outputs[fmt] = {"path": rel((base / output).with_suffix(f".{fmt}").resolve())} if output else {}
-        if "docx" in outputs:
-            outputs["docx"]["engine"] = "pandoc"  # createdocs used pandoc, so the same engine keeps the same output
         if "html" in outputs and cli.get("css"):
             outputs["html"]["template"] = rel((base / cli["css"]).resolve())
         template = None

@@ -7,8 +7,12 @@ import sys
 
 import pytest
 from pptx import Presentation
+from pptx.util import Inches
 from pptx_helpers import titles
 from py_doc.slides_cli import main
+
+
+pytestmark = pytest.mark.usefixtures("pandoc_runtime")
 
 
 def run_cli(monkeypatch, *args: str) -> None:
@@ -49,11 +53,12 @@ def test_split_level_out_of_range_is_a_usage_error(deck_md, monkeypatch):
 @pytest.mark.parametrize("flag", ["-t", "--template", "-r", "--reference"])
 def test_template_and_its_old_names(flag, deck_md, tmp_path, monkeypatch):
     template = tmp_path / "t.pptx"
-    prs = Presentation()
-    prs.core_properties.title = "kept"
+    template.write_bytes(subprocess.run(["pandoc", "--print-default-data-file", "reference.pptx"], capture_output=True, check=True).stdout)
+    prs = Presentation(str(template))
+    prs.slide_width = Inches(8)
     prs.save(str(template))
     run_cli(monkeypatch, str(deck_md), flag, str(template), "-o", str(tmp_path / "x.pptx"))
-    assert Presentation(str(tmp_path / "x.pptx")).core_properties.title == "kept"
+    assert Presentation(str(tmp_path / "x.pptx")).slide_width == Inches(8)
 
 
 def test_missing_template_exits_1_on_stderr(deck_md, tmp_path, monkeypatch, capsys):
@@ -67,13 +72,6 @@ def test_missing_template_exits_1_on_stderr(deck_md, tmp_path, monkeypatch, caps
 def test_allow_missing_template_falls_back(deck_md, tmp_path, monkeypatch):
     run_cli(monkeypatch, str(deck_md), "-t", str(tmp_path / "gone.pptx"), "--allow-missing-template")
     assert (tmp_path / "deck.pptx").exists()
-
-
-def test_unknown_layout_name_fails_that_file_with_status_1(deck_md, tmp_path, monkeypatch, capsys):
-    with pytest.raises(SystemExit) as exc:
-        run_cli(monkeypatch, str(deck_md), "--content-layout", "Nope")
-    assert exc.value.code == 1
-    assert "no layout named 'Nope'" in capsys.readouterr().err
 
 
 def test_batch_continues_after_a_bad_file(tmp_path, monkeypatch, capsys):

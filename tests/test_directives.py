@@ -6,7 +6,7 @@ import logging
 
 import pytest
 from py_doc import directives
-from py_doc.build import merge_document
+from py_doc.pandoc.source import join_sources
 from py_doc.config import load_config
 from py_doc.directives import DirectiveError, expand
 from py_doc.errors import ConversionError
@@ -149,24 +149,25 @@ class TestBuild:
         )
         return load_config(tmp_path / "py-doc.yml").documents["g"]
 
-    def text_of(self, merged):
-        from py_doc.markdown import nodes as n, plain_text
+    def merge_document(self, doc, variables=None, conditions=None):
+        return join_sources(doc.sources, {**doc.variables, **(variables or {})}, {**doc.conditions, **(conditions or {})}, doc.id)
 
-        return " ".join(plain_text(b.children) for b in merged.document.children if isinstance(b, n.Paragraph))
+    def text_of(self, joined):
+        return " ".join(line for line in joined.markdown.splitlines() if line and not line.startswith("#"))
 
     def test_configured_values_are_applied(self, tmp_path):
         doc(tmp_path, "# T\n\n[[IF: a]]\nshown {{v}}\n[[ENDIF]]\n")
-        assert self.text_of(merge_document(self.config(tmp_path))) == "shown from-file"
+        assert self.text_of(self.merge_document(self.config(tmp_path))) == "shown from-file"
 
     def test_overrides_win(self, tmp_path):
         doc(tmp_path, "# T\n\n[[IF: a]]\nshown {{v}}\n[[ENDIF]]\n\nother\n")
-        merged = merge_document(self.config(tmp_path), {"v": "cli"}, {"a": False})
+        merged = self.merge_document(self.config(tmp_path), {"v": "cli"}, {"a": False})
         assert self.text_of(merged) == "other"
 
     def test_a_directive_error_stops_the_build(self, tmp_path):
         doc(tmp_path, "[[INCLUDE: gone.md]]\n")
         with pytest.raises(ConversionError, match="included file not found"):
-            merge_document(self.config(tmp_path))
+            self.merge_document(self.config(tmp_path))
 
 
 class TestLint:

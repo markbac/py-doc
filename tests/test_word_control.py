@@ -140,7 +140,7 @@ def make_template(path: Path, body_text: str = "Cover") -> Path:
 def build(tmp_path, host, front: str, outputs: str = "template: tpl.docx", extra_files=None):
     (tmp_path / "g.md").write_text(f"---\n{front}\n---\n# Body\n\nText.\n", encoding="utf-8")
     config = write_config(
-        tmp_path, f"documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {{engine: pandoc, {outputs}}}\n"
+        tmp_path, f"documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {{{outputs}}}\n"
     )
     return build_document(config, config.documents["g"], runtime=host)
 

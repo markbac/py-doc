@@ -795,10 +795,11 @@ def mark_for_toc_update(doc: Document) -> None:
 
 
 def clean_trailing_pagebreak(doc: Document) -> None:
-    """Remove the trailing blank paragraph commonly left after the TOC."""
+    """Remove the trailing blank paragraph commonly left after the TOC. A paragraph with a picture or field is kept."""
     if len(doc.paragraphs) > 1:
         last_p = doc.paragraphs[-1]
-        if not last_p.text.strip():
+        holds = last_p._element.xpath(".//w:drawing | .//w:pict | .//w:fldChar | .//w:fldSimple | .//w:sectPr | .//w:br")
+        if not last_p.text.strip() and not holds:
             parent = last_p._element.getparent()
             if parent is not None:
                 parent.remove(last_p._element)

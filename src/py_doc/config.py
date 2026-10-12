@@ -23,7 +23,14 @@ logger = logging.getLogger(__name__)
 
 CONFIG_NAMES = ("py-doc.yml", "py-doc.yaml")
 FORMATS = {"docx": ".docx", "pptx": ".pptx", "pdf": ".pdf", "html": ".html"}
-ENGINES = ("native", "pandoc")  # for docx and pptx; pdf and html always use pandoc
+# Options of the retired native renderers, with what to do instead.
+REMOVED_OPTIONS = {
+    "engine": "pandoc is the only engine now, so remove 'engine'",
+    "keep_template_body": "the document goes where the template has its [[INSERTCONTENT]] line (see 'marker'), so remove it",
+    "keep_template_slides": "pandoc starts from the template's layouts and drops its slides, so remove it",
+    "title_layout": "pandoc picks the layouts by their standard names (Title Slide, Title and Content), so remove it",
+    "content_layout": "pandoc picks the layouts by their standard names (Title Slide, Title and Content), so remove it",
+}
 SEVERITIES = ("error", "warning", "info")
 DEFAULT_OUTPUT_DIR = "build"
 
@@ -36,12 +43,10 @@ _META_KEYS = (
 )  # fmt: skip
 _OUTPUT_OPTIONS = {
     "docx": (
-        "path", "template", "engine", "keep_template_body", "allow_missing_template", "name", "placeholder_prefix",
-        "marker", "toc",
+        "path", "template", "allow_missing_template", "name", "placeholder_prefix", "marker", "toc",
     ),
     "pptx": (
-        "path", "template", "engine", "keep_template_slides", "allow_missing_template", "split_level",
-        "title_layout", "content_layout", "name", "footer",
+        "path", "template", "allow_missing_template", "split_level", "name", "footer",
     ),
     "pdf": ("path", "template", "toc", "name"),
     "html": ("path", "template", "toc", "name"),
@@ -49,7 +54,7 @@ _OUTPUT_OPTIONS = {
 
 
 _OPTION_TYPES = {
-    "split_level": int, "engine": str, "title_layout": str, "content_layout": str,
+    "split_level": int,
     "name": str, "placeholder_prefix": str, "marker": str, "footer": str,
 }  # fmt: skip
 
@@ -236,6 +241,9 @@ def _parse_outputs(data: dict, root: Path, where: str, defaults: bool = False) -
     for fmt, raw in data.items():
         place = f"{where}.{fmt}"
         raw = {} if raw is None else _mapping(raw, place)
+        for option, advice in REMOVED_OPTIONS.items():
+            if option in raw:
+                raise ConfigError(f"{place}.{option} is no longer an option: {advice}")
         _only(raw, ("dir", *_OUTPUT_OPTIONS[fmt]) if defaults else _OUTPUT_OPTIONS[fmt], place)
         key = "dir" if defaults else "path"
         settings = OutputSettings()
@@ -249,8 +257,6 @@ def _parse_outputs(data: dict, root: Path, where: str, defaults: bool = False) -
             if option in ("path", "template") or option not in raw:
                 continue
             settings.options[option] = _typed(raw, option, _OPTION_TYPES.get(option, bool), place)
-        if settings.options.get("engine", "native") not in ENGINES:
-            raise ConfigError(f"{place}.engine must be one of {', '.join(ENGINES)}")
         if "name" in settings.options:
             try:
                 check_name_pattern(settings.options["name"], f"{place}.name")

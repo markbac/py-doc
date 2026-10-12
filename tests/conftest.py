@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -12,9 +12,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from docx_helpers import outline  # noqa: E402
-from pydoc2docx import DocxConverter  # noqa: E402
-from py_doc.render.pptx import SlidesConverter  # noqa: E402
+from fake_engine import install  # noqa: E402
+from py_doc import app  # noqa: E402
+from py_doc import convert as converters  # noqa: E402
+from py_doc.convert import DocxConverter, SlidesConverter  # noqa: E402
+from py_doc.runtime import Runtime  # noqa: E402
 
 FIXTURES = Path(__file__).parent / "fixtures"
 GOLDEN = Path(__file__).parent / "golden"
@@ -46,21 +48,32 @@ def fixtures_dir() -> Path:
 
 
 @pytest.fixture
-def convert_text(tmp_path):
+def pandoc_runtime(tmp_path, monkeypatch):
+    """Converters run pandoc for real: the fake container engine executes the tool on the host."""
+    if shutil.which("pandoc") is None:
+        pytest.skip("pandoc is not installed")
+    engine = install(tmp_path, monkeypatch, mode="host")
+    runtime = Runtime("tools:test", docker=engine.docker, platform_name="linux")
+    monkeypatch.setattr(converters, "connect", lambda *args, **kwargs: runtime)
+    monkeypatch.setattr(app, "connect", lambda *args, **kwargs: runtime)
+    return runtime
+
+
+@pytest.fixture
+def convert_text(tmp_path, pandoc_runtime):
     """Convert a Markdown string and return the DOCX path."""
 
-    def _convert(markdown: str | bytes, template: Path | None = None, keep_template_body: bool = False) -> Path:
+    def _convert(markdown: str | bytes, template: Path | None = None) -> Path:
         src = tmp_path / "doc.md"
         # bytes keep CRLF intact on every Python version and let tests supply invalid UTF-8
         src.write_bytes(markdown if isinstance(markdown, bytes) else markdown.encode("utf-8"))
-        converter = DocxConverter(template_path=template, keep_template_body=keep_template_body)
-        return converter.convert_file(src, tmp_path / "doc.docx")
+        return DocxConverter(template_path=template).convert_file(src, tmp_path / "doc.docx")
 
     return _convert
 
 
 @pytest.fixture
-def convert_fixture(tmp_path):
+def convert_fixture(tmp_path, pandoc_runtime):
     """Convert a named file from tests/fixtures and return the DOCX path."""
 
     def _convert(name: str) -> Path:
@@ -70,7 +83,7 @@ def convert_fixture(tmp_path):
 
 
 @pytest.fixture
-def convert_slides(tmp_path):
+def convert_slides(tmp_path, pandoc_runtime):
     """Convert a Markdown string to a deck and return the PPTX path."""
 
     def _convert(markdown: str | bytes, **options) -> Path:
@@ -79,24 +92,6 @@ def convert_slides(tmp_path):
         return SlidesConverter(**options).convert_file(src, tmp_path / "deck.pptx")
 
     return _convert
-
-
-@pytest.fixture
-def check_golden():
-    """Compare a DOCX outline with tests/golden/<name>.json.
-
-    Set UPDATE_GOLDEN=1 to rewrite the golden files after a deliberate change.
-    """
-
-    def _check(name: str, docx_path: Path) -> None:
-        actual = outline(docx_path)
-        golden = GOLDEN / f"{name}.json"
-        if os.environ.get("UPDATE_GOLDEN") == "1":
-            golden.write_text(json.dumps(actual, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        assert golden.exists(), f"Missing golden file {golden}; run with UPDATE_GOLDEN=1"
-        assert actual == json.loads(golden.read_text(encoding="utf-8"))
-
-    return _check
 
 
 @pytest.fixture

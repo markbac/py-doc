@@ -75,7 +75,7 @@ def built(tmp_path, monkeypatch):
     engine = install(tmp_path, monkeypatch, mode="host")
     runtime = lambda: Runtime("tools:test", docker=engine.docker, platform_name="linux")  # noqa: E731
 
-    def build(outputs="docx: {engine: pandoc, toc: true}", meta="toc_depth: 2\n", sample=SAMPLE):
+    def build(outputs="docx: {toc: true}", meta="toc_depth: 2\n", sample=SAMPLE):
         (tmp_path / "g.md").write_text(sample, encoding="utf-8")
         png(tmp_path / "pic.png")
         (tmp_path / "py-doc.yml").write_text(
@@ -101,7 +101,7 @@ def test_the_contents_list_follows_toc_depth_and_updates_on_opening(built):
 
 
 def test_no_contents_list_unless_asked(built):
-    assert "TOC \\o" not in xml(built("docx: {engine: pandoc}"), "word/document.xml")
+    assert "TOC \\o" not in xml(built("docx: {}"), "word/document.xml")
 
 
 def test_figure_captions_are_numbered_by_fields_across_the_document(built):
@@ -138,7 +138,7 @@ def test_each_callout_kind_is_a_box_in_its_own_style(built):
 def test_a_template_without_the_callout_styles_is_told_once(built, tmp_path, caplog):
     Document().save(tmp_path / "plain.docx")
     with caplog.at_level(logging.WARNING):
-        built("docx: {engine: pandoc, template: plain.docx}")
+        built("docx: {template: plain.docx}")
     warnings = [r.getMessage() for r in caplog.records if "has no style" in r.getMessage()]
     assert len(warnings) == 1 and "Div.note" in warnings[0] and "Div.caution" in warnings[0]
 
@@ -146,7 +146,7 @@ def test_a_template_without_the_callout_styles_is_told_once(built, tmp_path, cap
 def test_a_template_is_only_told_about_the_callouts_used(built, tmp_path, caplog):
     Document().save(tmp_path / "plain.docx")
     with caplog.at_level(logging.WARNING):
-        built("docx: {engine: pandoc, template: plain.docx}", sample="# T\n\n> [!NOTE]\n> n\n")
+        built("docx: {template: plain.docx}", sample="# T\n\n> [!NOTE]\n> n\n")
     (message,) = [r.getMessage() for r in caplog.records if "has no style" in r.getMessage()]
     assert "Div.note" in message and "Div.tip" not in message
 
@@ -181,3 +181,8 @@ def test_the_file_is_well_formed(built):
         for name in archive.namelist():
             if name.endswith((".xml", ".rels")):
                 etree.fromstring(archive.read(name))
+
+
+def test_a_picture_in_the_last_paragraph_is_kept(built):
+    out = built(sample="# T\n\nText.\n\n![](pic.png)\n")
+    assert len(Document(str(out)).inline_shapes) == 1

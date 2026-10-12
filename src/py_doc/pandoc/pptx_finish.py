@@ -13,6 +13,7 @@ from pptx import Presentation
 from pptx.enum.shapes import PP_PLACEHOLDER
 
 from py_doc.directives import Fence
+from py_doc.errors import ConversionError
 from py_doc.markdown import Metadata
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,12 @@ def finish_pptx(path: Path, metadata: Metadata, options: dict[str, Any]) -> None
     """Rewrite ``path`` in place."""
     ensure_fntdata_content_type(path)
     presentation = Presentation(str(path))
+    if not len(presentation.slides):
+        raise ConversionError(
+            "The deck has no slides. The template probably lacks the layouts pandoc uses "
+            "(Title Slide, Title and Content, Section Header, Two Content, Comparison, Content with Caption, Blank). "
+            "Start from the output of `pandoc -o custom-reference.pptx --print-default-data-file reference.pptx`"
+        )
     version = metadata.version or ""
     footer = options.get("footer")
     text = _footer_text(footer, metadata) if footer else None

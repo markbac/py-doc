@@ -153,12 +153,12 @@ def test_pdf_only_document_gets_a_pdf_output_and_no_word_file(tmp_path):
     assert not any(f.level == "warning" for f in result.findings)
 
 
-def test_html_keeps_its_stylesheet_and_word_uses_the_same_engine_as_before(tmp_path):
+def test_html_keeps_its_stylesheet(tmp_path):
     write(tmp_path / "a.md", "# A\n")
     write(tmp_path / "a.yaml", "cli: {emit-docx: true, emit-html: true, output: out/a.docx, css: s.css}\nentries: [{file: a.md}]\n")
     outputs = migrate([tmp_path], tmp_path).config["documents"]["a"]["outputs"]
     assert outputs == {
-        "docx": {"path": "out/a.docx", "engine": "pandoc", "name": "{name}-{version_safe}"},
+        "docx": {"path": "out/a.docx", "name": "{name}-{version_safe}"},
         "html": {"path": "out/a.html", "template": "s.css", "name": "{name}-{version_safe}"},
     }
 
@@ -193,13 +193,15 @@ def test_unknown_meta_key_is_reported(tmp_path):
 
 
 def test_generated_file_loads_and_builds_the_same_document(repo):
-    from py_doc.build import merge_document
+    from py_doc.build import _combine_metadata
+    from py_doc.pandoc.source import join_sources
 
     result = migrate([repo / "docs"], repo)
     (repo / "py-doc.yml").write_text(render(result.config), encoding="utf-8")
     config = load_config(repo / "py-doc.yml")
-    merged = merge_document(config.documents["big"])
-    assert merged.metadata.title == "Big"
+    doc = config.documents["big"]
+    joined = join_sources(doc.sources, doc.variables, doc.conditions, doc.id)
+    assert _combine_metadata(doc, joined.metadata, joined.first_heading).title == "Big"
     assert config.output_path(config.documents["big"], "docx", "2.0") == repo / "build" / "guides" / "big-2_0.docx"
     assert config.outputs["docx"].template == repo / "templates" / "T.docx"
 

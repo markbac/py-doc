@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 import shutil
 import tempfile
-from dataclasses import dataclass, field
+import zipfile
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -13,10 +14,12 @@ import yaml
 
 from py_doc.diagrams import copy_pictures
 from py_doc.errors import ConversionError
+from py_doc.files import template_source
 from py_doc.markdown import Metadata
 from py_doc.runtime import Mount, Runtime
 
 from .pptx_finish import notes_to_divs
+from .source import first_heading
 from .reference import default_reference, missing_callout_styles
 
 logger = logging.getLogger(__name__)
@@ -54,8 +57,12 @@ def _required(path: Path, what: str) -> Path:
     return path
 
 
-def _metadata_file(metadata: Metadata) -> dict[str, Any]:
-    """The pandoc metadata for a document. Names with underscores become the dashed names templates use."""
+def _metadata_file(metadata: Metadata, fmt: str, markdown: str) -> dict[str, Any]:
+    """The pandoc metadata for a document. Names with underscores become the dashed names templates use.
+
+    A title that is the first heading is not given to pandoc as the title, because the document would then
+    show it twice (as the title and as the heading). The page title of HTML is still set.
+    """
     values: dict[str, Any] = {
         "title": metadata.title,
         "subtitle": metadata.subtitle,
@@ -68,7 +75,30 @@ def _metadata_file(metadata: Metadata) -> dict[str, Any]:
     }
     for key, value in metadata.extra.items():
         values.setdefault(str(key).replace("_", "-"), value)
+    if values["title"] and values["title"] == first_heading(markdown):
+        del values["title"]
+        if fmt == "html":
+            values["pagetitle"] = metadata.title
     return {key: str(value) for key, value in values.items() if value not in (None, "")}
+
+
+_OFFICE = "application/vnd.openxmlformats-officedocument"
+_TEMPLATE_TYPES = {  # template file type -> (its content type, the document one, the document suffix)
+    ".dotx": (f"{_OFFICE}.wordprocessingml.template.main+xml", f"{_OFFICE}.wordprocessingml.document.main+xml", ".docx"),
+    ".potx": (f"{_OFFICE}.presentationml.template.main+xml", f"{_OFFICE}.presentationml.presentation.main+xml", ".pptx"),
+}
+
+
+def _as_document(template: Path, work: Path) -> Path:
+    """pandoc and the Office libraries only take documents, so a .dotx or .potx is copied as one."""
+    if template.suffix.lower() in (".docx", ".dotx", ".pptx", ".potx") and not zipfile.is_zipfile(template):
+        raise ConversionError(f"The template '{template}' is not a valid {template.suffix} file")
+    kind = _TEMPLATE_TYPES.get(template.suffix.lower())
+    if kind is None:
+        return template
+    copy = work / f"template{kind[2]}"
+    copy.write_bytes(template_source(template, template.suffix.lower(), kind[0].encode(), kind[1].encode()).getvalue())
+    return copy
 
 
 def _command(job: PandocJob, runtime: Runtime, work: Path, reference: Path | None) -> tuple[list, list[Mount]]:
@@ -126,8 +156,10 @@ def convert(runtime: Runtime, job: PandocJob) -> Path:
         markdown = notes_to_divs(job.markdown) if job.fmt == "pptx" else job.markdown
         (work / "combined.md").write_text(markdown, encoding="utf-8", newline="\n")
         copy_pictures(job.pictures, work)
+        if job.template is not None:
+            job = replace(job, template=_as_document(job.template, work))
         (work / "metadata.yaml").write_text(
-            yaml.safe_dump(_metadata_file(job.metadata), allow_unicode=True, sort_keys=False), encoding="utf-8"
+            yaml.safe_dump(_metadata_file(job.metadata, job.fmt, job.markdown), allow_unicode=True, sort_keys=False), encoding="utf-8"
         )
         reference = None
         if job.fmt == "docx":
@@ -155,10 +187,12 @@ def convert(runtime: Runtime, job: PandocJob) -> Path:
             from .pptx_finish import finish_pptx
 
             finish_pptx(produced, job.metadata, job.options)
-        job.output.parent.mkdir(parents=True, exist_ok=True)
         try:
+            job.output.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(produced, job.output)
         except PermissionError as exc:
             raise ConversionError(f"Cannot write {job.output}: it is locked (open in another program?)") from exc
+        except OSError as exc:
+            raise ConversionError(f"Cannot write '{job.output}': {exc.strerror or exc}") from exc
     logger.info(f"Wrote {job.output}")
     return job.output

@@ -3,9 +3,11 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 
-`py-doc` turns Markdown technical documentation into **Word (`.docx`)** documents and **PowerPoint (`.pptx`)** decks, checks its writing quality, and builds whole sets of documents from one `py-doc.yml`. It replaces three earlier tools (`py-doc2docx`, `py-doc2slides`, `py-doclint`) and the `createdocs` build files from `markbac/technical-documentation`.
+`py-doc` turns Markdown technical documentation into **Word (`.docx`)** documents, **PowerPoint (`.pptx`)** decks, **PDF** and **HTML**, checks its writing quality, and builds whole sets of documents from one `py-doc.yml`. It replaces three earlier tools (`py-doc2docx`, `py-doc2slides`, `py-doclint`) and the `createdocs` build files from `markbac/technical-documentation`.
 
-All of it works from one parsed document tree, so the converters and the linter agree on what the Markdown means.
+Pandoc, run in the tool container, writes every output. The linter reads the Markdown with its own parser.
+
+> **Important:** Docker is required for every conversion. The earlier built-in Word and PowerPoint renderers (`engine: native`) are gone, and so are the options that only they had. See [Upgrading](#upgrading-from-the-native-renderers).
 
 ## Commands
 
@@ -79,10 +81,7 @@ The same options work with the old command names (`py-doc2docx`, `py-doc2slides`
 | `-o`, `--output` | both | The output file, or a folder. A folder (an existing one, or a path ending in `/`) gets `<name>.docx` or `<name>.pptx` inside it |
 | `-t`, `--template` | both | A reference `.docx` or `.dotx` (Word), or `.pptx` or `.potx` (PowerPoint). `-r`, `--reference` is the old slides name |
 | `--allow-missing-template` | both | Warn and use a blank document if the template file is missing (default: fail) |
-| `--keep-template-body` | docx | Keep the template's own content and append the converted document after it |
-| `--keep-template-slides` | slides | Keep the template's own slides and add the converted ones after them |
 | `--split-level N` | slides | Start a new slide at each heading up to level N (default 2) |
-| `--title-layout`, `--content-layout` | slides | Name the template layouts to use |
 | `-q`, `-v` | both | Only warnings and errors, or debug detail |
 | `--version` | both | Print the version |
 
@@ -95,42 +94,32 @@ Behaviour that applies to a folder:
 
 ## Supported Markdown
 
-Parsing follows CommonMark, plus tables. Each construct is written with a named Word style, so a reference template decides how it looks. A style the template lacks is created with a plain default.
+Pandoc reads the Markdown (its own flavour, with fenced divs, raw HTML, table captions, strikethrough and task lists), so footnotes, definition lists, math and the rest of pandoc Markdown work too. The Word styles pandoc writes (`Heading 1`, `Body Text`, `First Paragraph`, `Compact`, `Block Text`, `Source Code`, `Table`, `Image Caption` and so on) come from the template, which is the reference document.
 
-| Markdown | Word output |
+| Markdown | Output |
 |---|---|
-| Headings, levels 1 to 6 | `Heading 1` to `Heading 6`. A closing `#` sequence is removed, and an empty heading is skipped |
-| Paragraphs | `Normal`. Soft line breaks become spaces, hard breaks become line breaks |
-| Strong, emphasis, inline code | Bold, italic, and a `Consolas` run |
-| Links, autolinks, reference links | Word hyperlinks, with the title as the tooltip |
-| Images | A local picture is embedded, scaled to the page width, with its alt text. Anything else (a web address, a missing file, an unsupported format) becomes `[Image: alt text]` linked to the address, with a warning |
-| Bullet and numbered lists | `List Bullet` and `List Number`, with `2` and `3` for nested levels (deeper levels stay at 3). Further paragraphs in an item use `List Continue` |
-| Tables | A Word table in `Table Grid` style. The header row is bold and column alignment is kept |
-| Block quotes | `Quote`. Nested quotes are indented further. Lists and code inside a quote keep their own styles |
-| Fenced and indented code | `Code`. The language on a fence is not shown |
-| Thematic breaks | An empty paragraph with a bottom border |
-| Raw HTML | Shown as written, because Word cannot render it |
-| Front matter | Not rendered. Title, author, keywords and similar keys become the document properties |
+| Front matter | Title, author, date, version, status and the like become the document properties and the title block. A first heading equal to the title is not shown twice |
+| Callouts, `> [!NOTE]` and `> **Note:**` | A box in the `Div.note` to `Div.caution` styles (Word), a coloured block (HTML, PDF) |
+| `[[CAPTION:Figure]] text` | A numbered caption for the picture or table that follows |
+| `[[LANDSCAPE]]`, `[[PORTRAIT]]` | A section of that orientation (Word, and picture widths in the other formats) |
+| `[[STYLE:Name]] text` | The paragraph in that Word style |
+| `::: {.pagebreak}` and `:::` | A page break, or a new slide |
+| Fenced diagram blocks | A picture, see [Diagrams](#diagrams) |
+| Raw HTML | Kept in HTML, dropped elsewhere by pandoc |
 
-> **Note:** Markdown the parser does not know raises `ConversionError` instead of being dropped, so content never disappears silently. Task-list checkboxes, strikethrough and footnotes are not CommonMark and appear as literal text.
-
-> **Note:** Markdown the parser does not know raises `ConversionError` instead of being dropped, so content never disappears silently. Task-list checkboxes, strikethrough and footnotes are not CommonMark and appear as literal text.
+A word or sentence is never dropped silently by py-doc itself, but anything pandoc cannot represent in a format (raw HTML in Word, for example) is dropped by pandoc, which says so in a warning.
 
 ### Word templates
 
-A template supplies styles, page setup, headers, footers and properties. Its body is removed unless you pass `--keep-template-body`. The converter writes each construct with a named style: `Normal`, `Heading 1` to `Heading 6`, `List Bullet` and `List Number` (with `2` and `3` added for nested levels), `List Continue`, `Quote`, `Table Grid` and `Code`. A style the template lacks is created with plain defaults, and one warning lists all of them so a template can be fixed in one pass. `Code` is optional and never reported. List styles created this way have no bullet or number, because numbering lives in the template.
+The template is pandoc's reference document, so its styles decide how everything looks, and the result is merged into it (see [Pandoc outputs](#pandoc-outputs)). A template can be `.docx` or `.dotx`. Without one, a built-in reference document is used, which defines the callout box styles. If the template lacks a `Div.note` style or another the document needs, one warning names it.
 
 ## PowerPoint output
 
-Slides are cut at a thematic break (`---`) and at headings up to `--split-level`. The first heading of a slide is its title, and a slide without one is called `Slide N`.
+Slides start at headings up to `split_level` (`--split-level`, default 2) and at `::: {.pagebreak}` lines. The title and author in the front matter make the title slide. Layouts are chosen by pandoc from the template's standard layout names, so a template must come from `pandoc --print-default-data-file reference.pptx`, edited in PowerPoint. A template that gives an empty deck is reported with that hint.
 
-- **Title slide**: the first slide is a title slide when it has a title, and it has either front matter lines (subtitle, author, date) or at most one paragraph of body text. Other content follows on a `(continued)` slide.
-- **Body**: paragraphs, bullets (nested up to nine levels), numbered lists (keeping their start number) and code (`Consolas`) go in the body placeholder. Block quotes are italic and indented.
-- **Tables and pictures** are placed below the text without overlapping it, and pictures are scaled to fit. A picture that cannot be embedded stays as `[Image: alt]` with a warning.
-- **Speaker notes**: write `<!-- notes: text -->`. Other HTML comments are dropped.
+- **Speaker notes**: write `<!-- notes: text -->`.
+- **Footer**: `footer: "{title} v{version}"` in `py-doc.yml`, and `{{VERSION}}` in a template shape.
 - **Long slides**: a slide with more than 16 lines gets a warning, because nothing is shrunk silently.
-
-A PowerPoint template needs a layout with a title and a subtitle placeholder for the title slide (optional, with a warning if missing) and a layout with a title and a body placeholder for content slides. `Title Slide` and `Title and Content` are used when present, otherwise the first layout with the right placeholders. Name others with `--title-layout` and `--content-layout`. The template's own slides are removed unless you pass `--keep-template-slides`.
 
 ## Linting
 
@@ -213,7 +202,7 @@ lint:
 ```
 
 - **Documents** join their sources in order. Properties come from the configuration, then from the first source's front matter. A document builds the formats listed under `outputs`, or Word if none is listed.
-- **Output options** per format: `template`, `allow_missing_template`, `keep_template_body` (docx), `keep_template_slides`, `split_level`, `title_layout`, `content_layout` (pptx). A document's value overrides the default. See [Pandoc outputs](#pandoc-outputs) for `engine`, `pdf` and `html`.
+- **Output options** per format: `template`, `allow_missing_template`, `name`, `placeholder_prefix`, `marker`, `toc` (docx), `split_level`, `footer` (pptx). A document's value overrides the default. See [Pandoc outputs](#pandoc-outputs) for the details, `pdf` and `html`.
 - **Lint** settings extend the built-in glossary, phrases and allowed acronyms. An issue whose rule is set to `error` fails `py-doc lint` even without `--strict`.
 - **Reserved**: `collections`, `bundles`, `content` and `site` are accepted and kept, with a warning, because nothing uses them yet.
 
@@ -225,14 +214,14 @@ py-doc build --var version=2.1 --condition internal=true
 
 ### Pandoc outputs
 
-PDF and HTML are made by pandoc, which runs in the tool container (see [Tool container](#tool-container)). Word and PowerPoint can use it too with `engine: pandoc`; the default `native` engine is the built-in renderer and does not need the container.
+Every output is made by pandoc, which runs in the tool container (see [Tool container](#tool-container)).
 
 ```yaml
 outputs:
-  docx: {engine: pandoc, template: templates/Template.docx}
+  docx: {template: templates/Template.docx}
   pdf: {toc: true}                  # XeLaTeX, with the built-in template unless `template` names a .tex file
   html: {template: styles/doc.css}  # one self-contained file; `template` is the stylesheet
-  pptx: {engine: pandoc, split_level: 2, template: templates/Slides.pptx}
+  pptx: {split_level: 2, template: templates/Slides.pptx}
 ```
 
 - **Word** is written by pandoc with the template as its reference document. When a template is set, the result is merged into it: `Replace-with-Title`, `-Author`, `-Version`, `-Document-Number`, `-Date`, `-Description` and `-Classification` are filled in, and the body goes where `[[INSERTCONTENT]]` stands (at the end if there is no marker). `[[LANDSCAPE]]`, `[[PORTRAIT]]`, `[[STYLE:Name]]` and `[[CAPTION:Figure]]` lines are applied afterwards.
@@ -279,7 +268,6 @@ Alice -> Bob : hello
 - **A broken diagram stops the build** with the file, the line and the tool's own message, and no output file is written. `py-doc build --keep-going` draws every diagram first and lists all the failures together.
 - **Pictures are cached** in your user cache folder (`PY_DOC_CACHE` overrides it), keyed by the diagram text, the format and the tool image, so an unchanged diagram is not drawn again. A PlantUML diagram with `!include` is always drawn, because the included file can change on its own.
 - **PlantUML includes** are looked up in the folder of the Markdown file, which is the only source folder the tool can read.
-- The built-in `native` Word and PowerPoint renderers do not draw diagrams, they show the block as code. Use `engine: pandoc`.
 
 ### Includes, conditions and variables
 
@@ -356,18 +344,30 @@ src/
 │   ├── cli.py            # py-doc2docx and py-doc docx
 │   ├── slides_cli.py     # py-doc2slides and py-doc slides
 │   ├── _cli.py           # options, output paths and batch conversion shared by both
+│   ├── convert.py        # DocxConverter and SlidesConverter, one file through pandoc
+│   ├── pandoc/           # the pandoc command, Word and PowerPoint finishing, Lua filters
+│   ├── diagrams/         # diagram fences to pictures
+│   ├── runtime/          # the tool container
 │   ├── config.py         # py-doc.yml model and validation
 │   ├── build.py          # joins a document's sources and renders it
 │   ├── migrate.py        # createdocs to py-doc.yml
-│   ├── files.py          # finding Markdown, writing outputs, template types
-│   ├── markdown/         # parser, document tree (AST) and front matter
-│   ├── render/           # docx.py and pptx.py walk the tree
+│   ├── files.py          # finding Markdown, template types
+│   ├── markdown/         # parser and front matter, used by the linter
 │   └── lint/             # rules, linter and py-doclint command line
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/
 └── pydoclint/
-tests/                    # semantic, golden-output, command line and migration tests
+tests/                    # command line, pandoc output, linter and migration tests
 ```
+
+## Upgrading from the native renderers
+
+Earlier versions drew Word and PowerPoint files themselves unless a document said `engine: pandoc`. That path is removed, so Docker is needed for every conversion.
+
+- `engine` in `py-doc.yml` is an error, with a message. Delete it.
+- `keep_template_body`, `keep_template_slides`, `title_layout` and `content_layout` are errors too, and so are `--keep-template-body`, `--keep-template-slides`, `--title-layout` and `--content-layout`. The document now goes where the template has `[[INSERTCONTENT]]` (at the end without one), and pandoc picks the layouts.
+- Output looks different: pandoc's styles replace the old ones. Check your templates, and run `py-doc doctor` first.
+- `DocxConverter` and `SlidesConverter` keep their names. They take an optional `runtime` and connect to the container on first use.
 
 ## Running tests
 
