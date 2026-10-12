@@ -71,7 +71,7 @@ def test_dry_run_prints_the_script_and_runs_nothing(windows, monkeypatch, capsys
     recorder = Recorder()
     assert run_setup(["--dry-run"], run=recorder) == 0
     out = capsys.readouterr().out
-    assert "apt-get install -y docker-ce" in out and "'ann'" in out
+    assert "apt install -y docker-ce" in out and "'ann'" in out
     assert recorder.scripts() == []
 
 
@@ -127,3 +127,9 @@ def test_the_command_is_listed(capsys):
     with pytest.raises(SystemExit):
         main(["--help"])
     assert "setup" in capsys.readouterr().out
+
+
+def test_the_script_waits_for_apt_locks_held_by_unattended_upgrades():
+    text = docker_setup.script("ann", True)
+    assert "DPkg::Lock::Timeout" in text and "apt install -y docker-ce" in text
+    assert "\napt-get install" not in text and "\napt-get update" not in text  # only the wrapper calls apt-get
