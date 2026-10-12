@@ -1,10 +1,29 @@
 # py-doc examples
 
-A small project to run every part of `py-doc` against. Work from this folder:
+A small project to try every part of `py-doc` on: Markdown sources, a `py-doc.yml`, Word and PowerPoint templates, lint rules and a Structurizr model. Copy the folder and change it into your own project.
 
-```bash
-cd examples
-```
+## Before you start
+
+1. Install `py-doc` (Python 3.10 or later) from the repository root:
+
+    ```bash
+    pip install -e .
+    ```
+
+1. Build the tool image once. It holds pandoc, Mermaid, PlantUML, Graphviz, xelatex, Inkscape and Structurizr, so nothing else needs installing. Docker must be running (on Windows, Docker in WSL).
+
+    ```bash
+    py-doc tools build        # slow the first time
+    py-doc doctor             # checks that the image works
+    ```
+
+1. Work from this folder. `py-doc` finds `py-doc.yml` here and writes to `build/`:
+
+    ```bash
+    cd examples
+    ```
+
+What needs Docker: Word, PowerPoint, PDF and HTML output, Mermaid, PlantUML and Graphviz diagrams, and exporting a `.dsl` workspace. What does not: `lint` (built-in rules), `template check|show|diff|usage`, `import`, and `c4 check|export -f markdown` on `architecture/workspace.json`.
 
 ## What is here
 
@@ -16,9 +35,20 @@ cd examples
 - `vale-rules.yml` and `structure-rules.yaml` -- rule files used by `py-doc lint`.
 - `word/design_meeting.docx` -- a Word file to try `py-doc import` on.
 
+## Which file makes which output
+
+| Command | Reads | Writes |
+|---|---|---|
+| `py-doc build guide` | `docs/00_overview.md` to `03_operations.md`, `docs/includes/`, `templates/company.docx` | `build/guide-v1.0.docx`, `build/guide.pdf`, `build/guide.html` |
+| `py-doc build deck` | `docs/slides.md`, `templates/company.pptx` | `build/deck.pptx` |
+| `py-doc build architecture` | `architecture/workspace.json`, `docs/includes/audience.md` | `build/architecture.docx` (chapters generated from the model) |
+| `py-doc import` | `word/design_meeting.docx` | Markdown and pictures in `imported/` |
+
+Output names, templates, variables and conditions are set in `py-doc.yml`. The comments in that file explain each setting.
+
 ## Build the outputs
 
-Each command writes into `build/`.
+Each command writes into `build/`. Run them in this order the first time.
 
 ```bash
 # Word, PDF and HTML of the guide (the formats in py-doc.yml)
@@ -90,3 +120,19 @@ py-doc c4 down
 ```
 
 > **Note:** Generated pages and the export cache live in `.py-doc/` at the project root. It is ignored by Git.
+
+## Try the features
+
+- **Variables and conditions:** `py-doc build guide -f docx --var version=2.0 --condition internal=true`, then open the file. The `{{version}}` text, the file name and the internal-only paragraphs change.
+- **Templates:** the front matter in `docs/00_overview.md` fills the `Replace-with-*` placeholders on the title page of `templates/company.docx`. The body goes where `[[INSERTCONTENT]]` stands.
+- **Callouts, captions, page breaks, orientation:** see `docs/00_overview.md` and `docs/02_design.md`.
+- **Diagrams:** `docs/02_design.md` has Graphviz, Mermaid and PlantUML blocks and a code include.
+- **Your own template:** edit `templates/make_templates.py` and run `python templates/make_templates.py`, or point `outputs.docx.template` in `py-doc.yml` at your own file and run `py-doc template check YOUR.docx --strict`.
+- **Your own documents:** add Markdown files to `docs/`, list them under a new entry in `documents:` in `py-doc.yml`, and run `py-doc build NAME`.
+
+## If something fails
+
+- Exit status `2` means the environment: Docker is not running or the image is not built. Run `py-doc doctor`.
+- Exit status `1` means a tool ran and failed. Its output is shown above the error.
+- `py-doc lint docs --strict` should report nothing for these files. If you change them, it names the file and line.
+- Generated pages and caches live in `.py-doc/` at the project root. It is ignored by Git and safe to delete.
