@@ -11,6 +11,7 @@ from typing import Any
 
 import yaml
 
+from py_doc.diagrams import copy_pictures
 from py_doc.errors import ConversionError
 from py_doc.markdown import Metadata
 from py_doc.runtime import Mount, Runtime
@@ -41,6 +42,7 @@ class PandocJob:
     source_dirs: list[Path] = field(default_factory=list)
     template: Path | None = None  # Word/PowerPoint reference document, LaTeX template for PDF, CSS for HTML
     options: dict[str, Any] = field(default_factory=dict)
+    pictures: dict[str, Path] = field(default_factory=dict)  # name in the document -> file, from the diagram renderers
 
 
 def _required(path: Path, what: str) -> Path:
@@ -117,6 +119,7 @@ def convert(runtime: Runtime, job: PandocJob) -> Path:
     with tempfile.TemporaryDirectory(prefix="py-doc-") as folder:
         work = Path(folder)
         (work / "combined.md").write_text(job.markdown, encoding="utf-8", newline="\n")
+        copy_pictures(job.pictures, work)
         (work / "metadata.yaml").write_text(
             yaml.safe_dump(_metadata_file(job.metadata), allow_unicode=True, sort_keys=False), encoding="utf-8"
         )

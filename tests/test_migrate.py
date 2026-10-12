@@ -114,7 +114,7 @@ def test_the_same_source_in_two_documents_is_reported_and_kept_in_both(repo):
 def test_unsupported_settings_are_reported_not_dropped_silently(repo):
     result = migrate([repo / "docs"], repo)
     messages = {(f.file.name, f.message) for f in result.findings if f.level == "warning"}
-    assert ("GU-1.yaml", "cli.plantuml-jar-path was left out: PlantUML diagrams are not rendered") in messages
+    assert ("GU-1.yaml", "cli.plantuml-jar-path was left out: the tool container supplies PlantUML") in messages
     assert ("GU-1.yaml", "createdocs chose the template from the status. py-doc uses one template per output") in messages
     assert ("big.yaml", "entries[3].extra_key has no equivalent and was left out") in messages
 

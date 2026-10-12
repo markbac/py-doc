@@ -28,10 +28,10 @@ _ENTRY_KEYS = {"file", "heading_offset", "title", "page_break", "include"}
 # What createdocs can build that py-doc cannot (yet), and the cli keys that only matter to those.
 _UNSUPPORTED_EMIT = {"emit-md": "processed Markdown"}
 _UNUSED_CLI = {
-    "plantuml-jar-path": "PlantUML diagrams are not rendered",
-    "ditaa-jar-path": "ditaa diagrams are not rendered",
+    "plantuml-jar-path": "the tool container supplies PlantUML",
+    "ditaa-jar-path": "the tool container supplies ditaa",
     "keep-tmp": "there is no temporary build folder",
-    "no-svg-to-png": "SVG pictures are not converted",
+    "no-svg-to-png": "pictures are converted for the format that needs them",
     "pdf-from-docx": "PDF is always built with XeLaTeX",
     "verbose": "use -v on the command line",
 }

@@ -10,6 +10,7 @@ from pathlib import Path
 
 from . import directives
 from .config import DocumentConfig, ProjectConfig
+from .diagrams import render_parts
 from .errors import ConversionError
 from .markdown import FrontMatterError, Metadata, ParseError, parse, plain_text, read_metadata
 from .markdown import nodes as n
@@ -122,10 +123,12 @@ def build_document(
     variables: dict | None = None,
     conditions: dict | None = None,
     runtime: Callable[[], Runtime] | None = None,
+    keep_going: bool = False,
 ) -> list[Path]:
     """Build one document in each of ``formats`` (default: the ones it lists). Returns the files written.
 
     ``runtime`` returns the tool container runtime, and is only called when a pandoc output needs it.
+    With ``keep_going`` every broken diagram is reported at once instead of stopping at the first.
     """
     chosen = formats or config.output_formats(doc)
     plans = [(fmt, *_settings(config, doc, fmt)) for fmt in chosen]
@@ -137,7 +140,7 @@ def build_document(
                 joined = join_sources(
                     [s for s in doc.sources], {**doc.variables, **(variables or {})}, {**doc.conditions, **(conditions or {})}, doc.id
                 )
-            written.append(_pandoc_output(config, doc, fmt, template, settings, joined, runtime))
+            written.append(_pandoc_output(config, doc, fmt, template, settings, joined, runtime, keep_going))
             continue
         if merged is None:
             merged = merge_document(doc, variables, conditions)
@@ -164,16 +167,17 @@ def build_document(
     return written
 
 
-def _pandoc_output(config, doc, fmt, template, settings, joined, runtime) -> Path:
+def _pandoc_output(config, doc, fmt, template, settings, joined, runtime, keep_going) -> Path:
     if runtime is None:
         raise ConversionError(f"Building {fmt} needs the tool container, but no runtime was given")
     if template is not None and not template.is_file() and settings.get("allow_missing_template", False):
         logger.warning(f"Template {template} not found, so {doc.id}.{fmt} is built without it")
         template = None
     metadata = _combine_metadata(doc, joined.metadata, joined.first_heading)
+    drawn = render_parts(joined.parts, fmt, runtime, keep_going)
     job = PandocJob(
-        fmt, joined.markdown, metadata, config.output_path(doc, fmt),
-        sorted({s.file.parent for s in doc.sources if s.include}), template, settings,
+        fmt, drawn.markdown, metadata, config.output_path(doc, fmt),
+        sorted({s.file.parent for s in doc.sources if s.include}), template, settings, drawn.pictures,
     )  # fmt: skip
     return convert(runtime(), job)
 

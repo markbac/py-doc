@@ -25,9 +25,13 @@ _FRONT_END = re.compile(r"^(---|\.\.\.)\s*$")
 
 @dataclass
 class Joined:
-    markdown: str
+    parts: list[tuple[Path, str]]  # each source file with its text, ready to be joined
     metadata: Metadata
     first_heading: str | None
+
+    @property
+    def markdown(self) -> str:
+        return "\n".join(text for _, text in self.parts)
 
 
 def split_front_matter(text: str) -> tuple[str | None, str]:
@@ -93,7 +97,7 @@ def join_sources(sources, variables: dict, conditions: dict, doc_id: str) -> Joi
     ``sources`` are the :class:`py_doc.config.Source` entries of a document. The metadata is that of the
     first source's front matter.
     """
-    parts: list[str] = []
+    parts: list[tuple[Path, str]] = []
     first = Metadata()
     included = [source for source in sources if source.include]
     if not included:
@@ -113,8 +117,8 @@ def join_sources(sources, variables: dict, conditions: dict, doc_id: str) -> Joi
         if source.title:
             body = retitle(body, source.title)
         body = shift_headings(body, source.heading_offset, source.file.name)
-        if index and source.page_break:
-            parts.append(PAGE_BREAK)
-        parts.append(body.rstrip("\n") + "\n")
-    markdown = "\n".join(parts)
-    return Joined(markdown, first, first_heading(markdown))
+        text = body.rstrip("\n") + "\n"
+        parts.append((source.file, f"{PAGE_BREAK}\n{text}" if index and source.page_break else text))
+    joined = Joined(parts, first, None)
+    joined.first_heading = first_heading(joined.markdown)
+    return joined

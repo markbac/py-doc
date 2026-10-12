@@ -55,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument(
         "--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a [[IF:]] condition"
     )
+    build.add_argument("--keep-going", action="store_true", help="Report every broken diagram, not just the first")
     noise = build.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -125,7 +126,7 @@ def _build(args: argparse.Namespace) -> int:
     for name in names:
         try:
             build_document(
-                config, config.documents[name], args.format, dict(args.var), _conditions(args.condition), runtime
+                config, config.documents[name], args.format, dict(args.var), _conditions(args.condition), runtime, args.keep_going
             )
         except (FileNotFoundError, ConversionError) as exc:
             _error(f"{name}: {exc}")
