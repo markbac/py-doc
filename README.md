@@ -15,6 +15,7 @@ Pandoc, run in the tool container, writes every output. The linter reads the Mar
 |---|---|
 | `py-doc docx` | Convert Markdown to Word |
 | `py-doc slides` | Convert Markdown to PowerPoint |
+| `py-doc c4` | Check, export and draw Structurizr workspaces |
 | `py-doc import` | Convert a Word document to Markdown |
 | `py-doc template` | Check and list the styles of a Word or PowerPoint template |
 | `py-doc lint` | Check writing style, glossary terms and acronyms |
@@ -135,6 +136,50 @@ Slides start at headings up to `split_level` (`--split-level`, default 2) and at
 - Pictures are saved as PNG in the order the document uses them. EMF, WMF and SVG go through Inkscape in the tool container; a picture that cannot be converted is named in a warning and shows as `(image not imported)`. Floating pictures are placed inline unless `--no-defloat-images` is given, which leaves them out with a warning.
 - Text boxes and footnotes are not imported; one warning gives the count.
 - An existing `.md` file is not replaced unless `--force` is given (exit status 1). A file that is not a Word document exits with status 2. `--print-output-paths` prints the two locations.
+
+## Structurizr and C4
+
+py-doc reads a [Structurizr](https://structurizr.com) workspace, writes Markdown from it, draws its views and joins the result with hand-written chapters.
+
+- **Model.** `structurizr-cli export -format json` (in the tool container, or the program named by `c4.cli`) resolves the DSL, so py-doc has no DSL parser of its own. A `workspace.json` is read directly and needs no Java. Exports are cached in `.py-doc/c4` by the hash of the DSL and every file it includes (`!include`, `!docs`, `!adrs`). The versions tested are listed in `py_doc/c4/structurizr.py`. A field the format has dropped is named in the error.
+- **Pictures.** Views are drawn as Structurizr draws them, in a browser. py-doc starts Structurizr Lite on a private Docker network, opens it with headless Chromium in the tool container (the `export-diagrams.js` script, based on the official `structurizr/puppeteer` one), writes `<view key>.png` and `.svg`, and stops Lite if it started it. A failing view, an empty view, a missing picture or a missing engine is an error with a non-zero exit status that names the view. Nothing is ever written as a stand-in picture.
+- **Text.** One Markdown page per level: context, containers, components, relationships, deployment, dynamic views, an element catalogue with a glossary, and the workspace's `!docs` and `!adrs`. Output is sorted and has no times. Each page says that it is generated and from which file.
+
+```yaml
+c4:
+  cli: structurizr-cli          # optional: use this program instead of the one in the tool container
+  lite_image: structurizr/lite@sha256:...   # optional: pin Structurizr Lite
+  port: 8080
+
+documents:
+  architecture:
+    title: Meter Gateway Architecture
+    sources:
+      - file: intro.md
+      - structurizr: architecture/workspace.dsl      # or workspace.json
+        levels: [context, containers, components, deployment]
+        systems: [Meter Gateway]
+        heading_offset: 1
+        diagrams: {engine: browser, format: png}     # or {engine: source, format: mermaid}
+      - file: decisions.md
+    outputs:
+      docx: {}
+      pptx: {split_level: 2}
+```
+
+With `engine: source`, the views are put in the text as `plantuml` or `mermaid` blocks under a line that says what they are. The diagram step then draws them. Generated pages are rebuilt only when the workspace or these options change. For PowerPoint, every view is a level 2 heading with its picture, so `split_level: 2` gives one slide per view.
+
+| Command | Does |
+| --- | --- |
+| `py-doc c4 check PATH` | Reads each workspace and checks the model: `C4001` element without description, `C4002` container without technology, `C4003` relationship without description, `C4004` element with no relationships. Severities are set under `lint.rules`. `--strict` fails on warnings |
+| `py-doc c4 export PATH -o DIR -f FORMAT...` | Writes `png`, `svg`, `plantuml`, `c4plantuml`, `mermaid`, `dot`, `static` and `markdown`. `--views KEY...` limits the pictures, `--levels` the pages, `--dry-run` lists the files and writes nothing, `--url` uses a Lite that is already running (reachable from the container) |
+| `py-doc c4 up`, `down`, `status` | Start, stop and inspect the Structurizr Lite container for a workspace, so authors can edit live at `http://127.0.0.1:8080/workspace` |
+
+`PATH` is a `.dsl` or `workspace.json` file, or a folder: workspaces below it are found in sorted order, skipping hidden and vendor folders and files that are only `!include`d.
+
+Lite is given the workspace folder as a bind mount, so the layout it saves lands in `workspace.json` beside the DSL and no copying in or out is needed. This replaces the `sync` step of the old scripts.
+
+`py-c4-exporter` still works. It prints a rename note and runs `py-doc c4 export` with the same flags.
 
 ## Linting
 

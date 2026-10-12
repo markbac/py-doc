@@ -57,7 +57,7 @@ def test_the_dockerfile_copies_only_files_that_exist_and_pins_its_base():
 
 def test_every_tool_the_dockerfile_fetches_is_in_the_lock_file():
     text = (REAL / "Dockerfile").read_text(encoding="utf-8")
-    fetched = set(re.findall(r"fetch\.sh (\w+) ", text))
+    fetched = set(re.findall(r"fetch\.sh ([\w-]+) ", text))
     assert fetched == {entry.name for entry in image.read_lock(REAL / "tools.lock")}
 
 
@@ -94,7 +94,7 @@ def test_the_tag_is_the_same_after_a_windows_checkout(definition):
 
 def test_the_shipped_lock_file_lists_the_tools_and_records_nothing_invented():
     entries = image.read_lock(REAL / "tools.lock")
-    assert [e.name for e in entries] == ["pandoc", "plantuml", "ditaa", "vale"]
+    assert [e.name for e in entries] == ["pandoc", "plantuml", "ditaa", "vale", "structurizr-cli"]
     assert all(not e.recorded for e in entries)
     assert next(e for e in entries if e.name == "pandoc").version == "3.8.2.1"
 

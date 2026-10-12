@@ -7,6 +7,7 @@ from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
+from .c4 import source as c4_source
 from .config import DocumentConfig, ProjectConfig
 from .diagrams import render_parts
 from .errors import ConversionError
@@ -57,20 +58,21 @@ def build_document(
     A ``report`` collects the outputs, sources, diagrams and template problems.
     """
     chosen = formats or config.output_formats(doc)
+    sources = c4_source.expand(list(doc.sources), doc.id, config.root, runtime, config.c4)
     plans = [(fmt, *_settings(config, doc, fmt)) for fmt in chosen]
     joined = None
     written: list[Path] = []
     for fmt, template, settings in plans:
         if joined is None:
             joined = join_sources(
-                list(doc.sources), {**doc.variables, **(variables or {})}, {**doc.conditions, **(conditions or {})}, doc.id
+                sources, {**doc.variables, **(variables or {})}, {**doc.conditions, **(conditions or {})}, doc.id
             )
         metadata = _combine_metadata(doc, joined.metadata, joined.first_heading, config.root)
         if report is not None and not report.document(doc.id)["sources"]:
             report.sources(doc.id, joined.parts)
         output = render_output(
             fmt, joined, metadata, config.output_path(doc, fmt, metadata.version), doc.id,
-            sorted({s.file.parent for s in doc.sources if s.include}), template, settings, runtime, keep_going, report,
+            sorted({s.file.parent for s in sources if s.include}), template, settings, runtime, keep_going, report,
         )  # fmt: skip
         written.append(output)
         if report is not None:

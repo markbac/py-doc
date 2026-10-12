@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from py_doc.lint.config import C4_RULES
 from py_doc.config import ConfigError, find_config, load_config, parse_config
 
 
@@ -135,7 +136,7 @@ class TestLint:
 
     def test_rule_severity_and_off(self, tmp_path):
         lint = self.load(tmp_path, "  rules:\n    DOC001: error\n    DOC002: off\n    DOC003: warning\n")
-        assert lint.severities == {"DOC001": "error", "DOC002": "warning", "DOC003": "warning", "DOC004": "error"}
+        assert lint.severities == {"DOC001": "error", "DOC002": "warning", "DOC003": "warning", "DOC004": "error"} | C4_RULES
         assert lint.disabled_rules == {"DOC002"}
 
     def test_glossary_and_phrases_extend_the_defaults(self, tmp_path):

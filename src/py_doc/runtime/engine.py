@@ -240,7 +240,7 @@ class Runtime:
         workdir: str | os.PathLike | None = None,
         env: Mapping[str, str] | None = None,
         timeout: float = DEFAULT_TIMEOUT,
-        network: bool = False,
+        network: bool | str = False,
         shm_size: str | None = None,
         image: str | None = None,
         check: bool = True,
@@ -267,7 +267,9 @@ class Runtime:
         name = f"py-doc-{uuid.uuid4().hex[:12]}"
         command = [*self.docker, "run", "--rm", "--pull", "never", "--name", name, "--user", self.user()]
         command += ["--cap-drop", "ALL", "--security-opt", "no-new-privileges"]
-        if not network:
+        if isinstance(network, str):
+            command += ["--network", network]  # a user-defined network, such as the one the Structurizr stack runs in
+        elif not network:
             command += ["--network", "none"]
         if shm_size:
             command += ["--shm-size", shm_size]

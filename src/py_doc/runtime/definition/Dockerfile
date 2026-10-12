@@ -11,10 +11,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # A certificate for builds behind a TLS-inspecting proxy (nothing unless --ca-file was given).
 COPY extra-ca/ /usr/local/share/ca-certificates/
-COPY tools.lock fetch.sh requirements.txt package.json puppeteer.json /tmp/build/
+COPY tools.lock fetch.sh requirements.txt package.json puppeteer.json export-diagrams.js /tmp/build/
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl git \
+ && apt-get install -y --no-install-recommends ca-certificates curl git unzip \
  && update-ca-certificates \
  && apt-get install -y --no-install-recommends \
       fontconfig fonts-dejavu fonts-liberation fonts-noto-core lmodern \
@@ -31,10 +31,14 @@ RUN sh /tmp/build/fetch.sh pandoc /tmp/pandoc.deb \
  && sh /tmp/build/fetch.sh ditaa /opt/ditaa.jar \
  && sh /tmp/build/fetch.sh vale /tmp/vale.tar.gz \
  && tar -xzf /tmp/vale.tar.gz -C /usr/local/bin vale \
+ && sh /tmp/build/fetch.sh structurizr-cli /tmp/structurizr-cli.zip \
+ && unzip -q /tmp/structurizr-cli.zip -d /opt/structurizr-cli \
+ && printf '#!/bin/sh\nexec /opt/structurizr-cli/structurizr.sh "$@"\n' > /usr/local/bin/structurizr-cli \
+ && chmod +x /opt/structurizr-cli/structurizr.sh /usr/local/bin/structurizr-cli \
  && printf '#!/bin/sh\nexec java -Djava.awt.headless=true -jar /opt/plantuml.jar "$@"\n' > /usr/local/bin/plantuml \
  && printf '#!/bin/sh\nexec java -Djava.awt.headless=true -jar /opt/ditaa.jar "$@"\n' > /usr/local/bin/ditaa \
  && chmod +x /usr/local/bin/plantuml /usr/local/bin/ditaa \
- && rm -f /tmp/pandoc.deb /tmp/vale.tar.gz
+ && rm -f /tmp/pandoc.deb /tmp/vale.tar.gz /tmp/structurizr-cli.zip
 
 # Python and Node diagram tools, at the versions pinned beside this file.
 RUN python3 -m venv /opt/venv \
@@ -43,6 +47,7 @@ RUN python3 -m venv /opt/venv \
  && cp /tmp/build/package.json /opt/node/package.json \
  && cd /opt/node && npm install --omit=dev --no-audit --no-fund \
  && cp /tmp/build/puppeteer.json /etc/py-doc/puppeteer.json \
+ && cp /tmp/build/export-diagrams.js /opt/node/export-diagrams.js \
  && rm -rf /tmp/build /root/.npm
 
 # A cache every run shares, as a volume: font caches, TeX caches and Chromium profiles live here.

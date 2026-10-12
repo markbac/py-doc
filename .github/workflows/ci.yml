@@ -67,6 +67,8 @@ jobs:
           py-doc migrate --help
           py-doc template --help
           py-doc import --help
+          py-doc c4 --help
+          py-c4-exporter --help
 
   build:
     name: Build package

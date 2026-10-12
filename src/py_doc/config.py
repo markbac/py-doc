@@ -66,12 +66,23 @@ class ConfigError(Exception):
 
 
 @dataclass
+class StructurizrSpec:
+    """A source made from a Structurizr workspace: ``Source.file`` is the ``.dsl`` or ``workspace.json``."""
+
+    levels: list[str] = field(default_factory=list)  # empty: all levels
+    systems: list[str] = field(default_factory=list)  # empty: all systems
+    engine: str = "browser"  # browser (Lite and Chromium) or source (the diagram source as a code block)
+    format: str = "png"  # png or svg for the browser engine, plantuml or mermaid for source
+
+
+@dataclass
 class Source:
     file: Path
     heading_offset: int = 0
     title: str | None = None
     page_break: bool = False
     include: bool = True
+    structurizr: StructurizrSpec | None = None
 
 
 @dataclass
@@ -110,6 +121,15 @@ class DocumentConfig:
 
 
 @dataclass
+class C4Settings:
+    """The ``c4:`` section: how Structurizr is run."""
+
+    cli: str | None = None  # a structurizr-cli on this machine, instead of the one in the tool container
+    lite_image: str | None = None  # the Structurizr Lite image, such as structurizr/lite@sha256:...
+    port: int | None = None  # the local port Structurizr Lite is published on
+
+
+@dataclass
 class ProjectConfig:
     root: Path
     name: str | None = None
@@ -117,6 +137,7 @@ class ProjectConfig:
     outputs: dict[str, OutputSettings] = field(default_factory=dict)
     lint: LintConfig = field(default_factory=LintConfig)
     runtime: RuntimeSettings = field(default_factory=RuntimeSettings)
+    c4: C4Settings = field(default_factory=C4Settings)
     report: Path | None = None  # reports.path: where `py-doc build` writes its JSON report
     build: dict[str, Any] = field(default_factory=dict)
     reserved: dict[str, Any] = field(default_factory=dict)
@@ -208,7 +229,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -222,9 +243,12 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
 
     config.lint = _parse_lint(_mapping(top.get("lint", {}), "lint"), root)
     config.lint.documents = {
-        doc_id: [source.file for source in doc.sources if source.include] for doc_id, doc in config.documents.items()
+        doc_id: [source.file for source in doc.sources if source.include and source.structurizr is None] for doc_id, doc in config.documents.items()
     }
     config.build = _mapping(top.get("build", {}), "build")
+    c4 = _mapping(top.get("c4", {}), "c4")
+    _only(c4, ("cli", "lite_image", "port"), "c4")
+    config.c4 = C4Settings(_typed(c4, "cli", str, "c4"), _typed(c4, "lite_image", str, "c4"), _typed(c4, "port", int, "c4"))
     config.runtime = _parse_runtime(_mapping(top.get("runtime", {}), "runtime"))
     reports = _mapping(top.get("reports", {}), "reports")
     _only(reports, ("path",), "reports")
@@ -295,11 +319,17 @@ def _parse_document(doc_id: str, raw: Any, root: Path) -> DocumentConfig:
     for index, item in enumerate(sources):
         place = f"{where}.sources[{index}]"
         entry = {"file": item} if isinstance(item, str) else _mapping(item, place)
-        _only(entry, ("file", "heading_offset", "title", "page_break", "include"), place)
+        spec = None
+        if "structurizr" in entry:
+            _only(entry, ("structurizr", "levels", "systems", "diagrams", "heading_offset", "title", "page_break"), place)
+            spec = _parse_structurizr(entry, place)
+            entry = {**entry, "file": entry["structurizr"]}
+        _only(entry, ("file", "structurizr", "levels", "systems", "diagrams", "heading_offset", "title", "page_break", "include"), place)
         if "file" not in entry:
-            raise ConfigError(f"{place} needs a 'file'")
+            raise ConfigError(f"{place} needs a 'file' or a 'structurizr' workspace")
         doc.sources.append(
             Source(
+                structurizr=spec,
                 file=_path(root, entry["file"], f"{place}.file"),
                 heading_offset=_typed(entry, "heading_offset", int, place, 0),
                 title=_typed(entry, "title", str, place),
@@ -311,6 +341,29 @@ def _parse_document(doc_id: str, raw: Any, root: Path) -> DocumentConfig:
     doc.variables = _mapping(data.get("variables", {}), f"{where}.variables")
     doc.conditions = _mapping(data.get("conditions", {}), f"{where}.conditions")
     return doc
+
+
+def _parse_structurizr(entry: dict, place: str) -> StructurizrSpec:
+    from .c4.generate import LEVELS
+
+    spec = StructurizrSpec()
+    levels = _typed(entry, "levels", list, place, [])
+    for level in levels:
+        if level not in LEVELS:
+            raise ConfigError(f"{place}.levels has unknown level '{level}'. Levels: {', '.join(LEVELS)}")
+    spec.levels = [str(level) for level in levels]
+    spec.systems = [str(name) for name in _typed(entry, "systems", list, place, [])]
+    diagrams = _mapping(entry.get("diagrams", {}), f"{place}.diagrams")
+    _only(diagrams, ("engine", "format"), f"{place}.diagrams")
+    spec.engine = _typed(diagrams, "engine", str, f"{place}.diagrams", "browser")
+    if spec.engine not in ("browser", "source"):
+        raise ConfigError(f"{place}.diagrams.engine must be browser or source, not {spec.engine!r}")
+    default = "png" if spec.engine == "browser" else "mermaid"
+    spec.format = _typed(diagrams, "format", str, f"{place}.diagrams", default)
+    allowed = ("png", "svg") if spec.engine == "browser" else ("plantuml", "mermaid")
+    if spec.format not in allowed:
+        raise ConfigError(f"{place}.diagrams.format must be one of {', '.join(allowed)} for the {spec.engine} engine")
+    return spec
 
 
 def _parse_markdownlint(data: dict, root: Path) -> MarkdownlintSettings:

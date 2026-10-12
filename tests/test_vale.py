@@ -18,6 +18,12 @@ from py_doc.lint.vale_config import ValeConfigError, parse_vale
 from py_doc.lint.model import LintIssue
 
 
+@pytest.fixture(autouse=True)
+def in_a_temporary_folder(tmp_path, monkeypatch):
+    """The .py-doc folder goes under the working folder, so keep it out of the repository."""
+    monkeypatch.chdir(tmp_path)
+
+
 @pytest.fixture
 def project(tmp_path):
     (tmp_path / "docs").mkdir()
@@ -185,7 +191,7 @@ def test_show_config_check_engines_and_sync(project, tmp_path, monkeypatch, caps
 
 def test_the_schema_accepts_a_full_definition():
     jsonschema = pytest.importorskip("jsonschema")
-    schema = json.loads(Path("src/py_doc/lint/vale.schema.json").read_text())
+    schema = json.loads((Path(__file__).parent.parent / "src/py_doc/lint/vale.schema.json").read_text())
     sample = yaml.safe_load(
         "enabled: auto\nbinary: vale\nmin_alert_level: suggestion\npackages: [write-good]\nspelling: en-GB\n"
         "rules: {PyDoc.SentenceLength: {level: warning, max: 30}, PyDoc.PassiveVoice: false, write-good.Weasel: error}\n"

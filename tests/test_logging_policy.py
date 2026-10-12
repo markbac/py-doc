@@ -16,7 +16,7 @@ SRC = Path(__file__).parent.parent / "src"
 
 # Modules that are command line front ends: they print results and errors for people and programs.
 FRONT_ENDS = {
-    "app.py", "_cli.py", "cli.py", "slides_cli.py", "tools_cli.py", "template_cli.py", "import_cli.py", "__main__.py", "lint/cli.py",
+    "app.py", "_cli.py", "cli.py", "slides_cli.py", "tools_cli.py", "template_cli.py", "import_cli.py", "__main__.py", "lint/cli.py", "c4/cli.py",
 }  # fmt: skip
 
 
@@ -44,7 +44,7 @@ def test_library_modules_do_not_print():
     offenders = []
     for path in sources():
         relative = path.relative_to(SRC / "py_doc").as_posix() if "py_doc" in path.parts else path.name
-        if relative in FRONT_ENDS or path.parts[-2] in ("pydoc2docx", "pydoc2slides", "pydoclint"):
+        if relative in FRONT_ENDS or path.parts[-2] in ("pydoc2docx", "pydoc2slides", "pydoclint", "pyc4exporter"):
             continue
         if re.search(r"^\s*print\(", path.read_text(encoding="utf-8"), re.M):
             offenders.append(relative)
@@ -53,7 +53,7 @@ def test_library_modules_do_not_print():
 
 @pytest.mark.parametrize(
     "command",
-    [["docx"], ["slides"], ["lint"], ["build"], ["migrate"], ["doctor"], ["import", "x"], ["template", "check", "x"], ["template", "show", "x"]]
+    [["docx"], ["slides"], ["lint"], ["build"], ["migrate"], ["doctor"], ["import", "x"], ["c4", "check"], ["c4", "export"], ["template", "check", "x"], ["template", "show", "x"]]
     + [["tools", action] for action in ("build", "status", "prune", "lock", "save", "load")],
 )
 def test_every_command_takes_quiet_and_verbose(command, capsys):

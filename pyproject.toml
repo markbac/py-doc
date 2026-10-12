@@ -53,6 +53,7 @@ py-doc = "py_doc.app:run"
 py-doc2docx = "py_doc.cli:main"
 py-doc2slides = "py_doc.slides_cli:main"
 py-doclint = "py_doc.lint.cli:main"
+py-c4-exporter = "pyc4exporter.cli:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "py_doc.__version__"}
