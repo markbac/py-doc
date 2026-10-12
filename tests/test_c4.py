@@ -320,12 +320,20 @@ def test_a_running_server_is_used_and_left_running(ws, box, tmp_path):
     assert not any(c[0] in ("run", "rm") for c in box.engine_calls)
 
 
-def test_local_gets_the_workspace_folder(project, box):
+def test_local_gets_a_copy_with_only_the_named_workspace(project, box):
+    original = '{"name": "hand written"}\n'
+    (project / "workspace.json").write_text(original)
     (project / "workspace.dsl").write_text("workspace {}\n")
-    stack = Stack(box, project / "workspace.dsl")
+    stack = Stack(box, project / "workspace.json")
     stack.up()
     run = [c for c in box.engine_calls if c[0] == "run"][0]
-    assert f"type=bind,source={project.resolve().as_posix()},target=/usr/local/structurizr" in run
+    source = next(a for a in run if a.startswith("type=bind")).split("source=")[1].split(",target")[0]
+    staged = Path(source)
+    assert staged != project.resolve() and not (staged / "workspace.dsl").exists()
+    (staged / "workspace.json").write_text("{}")  # what Local saves stays in the copy
+    assert (project / "workspace.json").read_text() == original
+    stack.down()
+    assert not staged.exists()
 
 
 def test_a_workspace_with_another_name_is_staged_as_workspace_dsl(project, box):

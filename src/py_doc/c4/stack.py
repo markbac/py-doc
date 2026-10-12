@@ -85,10 +85,9 @@ class Stack:
         return True
 
     def _folder(self) -> Path:
-        """The folder Local reads. It only opens ``workspace.dsl`` or ``workspace.json``, so a workspace with
-        another name is copied, with its neighbours (for ``!include``), into a folder of its own."""
-        if self.file.stem == "workspace":
-            return self.workspace
+        """The folder Local reads: a copy of the workspace, with its neighbours (for ``!include``), as the only
+        ``workspace.dsl`` or ``workspace.json`` in it. Local writes ``workspace.json`` when it parses a ``.dsl``,
+        and prefers the ``.dsl`` when both are there, so it is never given the project folder itself."""
         self._staged = Path(tempfile.mkdtemp(prefix="py-doc-c4-"))
         folder = self._staged / "workspace"
         shutil.copytree(self.workspace, folder, ignore=shutil.ignore_patterns("workspace.dsl", "workspace.json", ".git", "node_modules"))

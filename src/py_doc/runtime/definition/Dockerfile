@@ -21,10 +21,11 @@ RUN apt-get update \
       texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended \
       texlive-pictures texlive-plain-generic \
       default-jre-headless graphviz inkscape librsvg2-bin chromium \
-      nodejs npm python3 python3-venv python3-pip \
+      python3 python3-venv python3-pip xz-utils \
  && rm -rf /var/lib/apt/lists/*
 
-# Downloaded tools. Their urls and checksums are in tools.lock, and a mismatch stops the build.
+# Downloaded tools, and Node.js (Debian 12 has Node 18, and vega-cli and markdownlint need 20 or later).
+# Their urls and checksums are in tools.lock, and a mismatch stops the build.
 RUN sh /tmp/build/fetch.sh pandoc /tmp/pandoc.deb \
  && apt-get install -y --no-install-recommends /tmp/pandoc.deb \
  && sh /tmp/build/fetch.sh plantuml /opt/plantuml.jar \
@@ -38,7 +39,9 @@ RUN sh /tmp/build/fetch.sh pandoc /tmp/pandoc.deb \
  && printf '#!/bin/sh\nexec java -Djava.awt.headless=true -jar /opt/plantuml.jar "$@"\n' > /usr/local/bin/plantuml \
  && printf '#!/bin/sh\nexec java -Djava.awt.headless=true -jar /opt/ditaa.jar "$@"\n' > /usr/local/bin/ditaa \
  && chmod +x /usr/local/bin/plantuml /usr/local/bin/ditaa \
- && rm -f /tmp/pandoc.deb /tmp/vale.tar.gz /tmp/structurizr-cli.zip
+ && sh /tmp/build/fetch.sh node /tmp/node.tar.xz \
+ && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 --exclude CHANGELOG.md --exclude LICENSE --exclude README.md \
+ && rm -f /tmp/pandoc.deb /tmp/vale.tar.gz /tmp/structurizr-cli.zip /tmp/node.tar.xz
 
 # Python and Node diagram tools, at the versions pinned beside this file.
 # --legacy-peer-deps: mermaid-cli 11.12.0 declares a peer of puppeteer ^23, but the image pins puppeteer 24.

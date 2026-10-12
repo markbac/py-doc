@@ -96,7 +96,7 @@ def test_the_tag_is_the_same_after_a_windows_checkout(definition):
 
 def test_the_shipped_lock_file_lists_the_tools_with_their_checksums():
     entries = image.read_lock(REAL / "tools.lock")
-    assert [e.name for e in entries] == ["pandoc", "plantuml", "ditaa", "vale", "structurizr-cli"]
+    assert [e.name for e in entries] == ["pandoc", "plantuml", "ditaa", "vale", "structurizr-cli", "node"]
     assert all(e.recorded and re.fullmatch(r"[0-9a-f]{64}", e.sha256) for e in entries)
     assert next(e for e in entries if e.name == "pandoc").version == "3.8.2.1"
 
