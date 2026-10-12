@@ -16,7 +16,7 @@ outputs:
   pdf:
     dir: build
   html:
-    template: templates/doc.css        # for HTML the template is the stylesheet
+    template: templates/doc.css        # for HTML the template is the stylesheet. `status: Draft` picks doc_Draft.css
     dir: build
 
 documents:
@@ -32,6 +32,10 @@ documents:
       - file: docs/guide/04_change_history.md
         heading_offset: 1              # shift every heading one level down (kept within 1 to 6)
         title: "Appendix: Change history"   # replaces the first heading of the file
+        page_break: true
+      - file: docs/datasheet.md        # one of every diagram type, as an appendix
+        heading_offset: 1
+        title: "Appendix: Diagram types"
         page_break: true
       - {file: docs/guide/DRAFT.md, include: false}   # listed, but no build uses it
     keywords: [IoT, sensor, MQTT]
@@ -59,7 +63,7 @@ documents:
         # allow_missing_template: true                # warn and use a blank document if the template is missing
       pdf:
         toc: false                                    # no contents list
-        template: templates/report.tex                # a LaTeX template with its own colours
+        template: templates/report.tex                # a LaTeX template with its own colours. `status: Draft` picks report_Draft.tex
 
   release-notes:
     # `version: git` is `git describe --tags --always` of this folder. Outside a repository, or

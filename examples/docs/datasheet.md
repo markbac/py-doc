@@ -10,7 +10,7 @@ document_number: SN-DS-001
 description: Electrical and protocol data for the SN-100, drawn with every diagram type py-doc supports.
 ---
 
-# Overview
+# Datasheet overview
 
 The SN-100 measures temperature and humidity. This datasheet shows the diagram types that
 `py-doc` draws. Each one is a fenced block, so the diagram stays in the Markdown and is drawn at

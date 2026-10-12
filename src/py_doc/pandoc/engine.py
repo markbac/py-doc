@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import shutil
 import tempfile
 import zipfile
@@ -101,6 +102,28 @@ def _as_document(template: Path, work: Path) -> Path:
     return copy
 
 
+def _pandoc_version(runtime: Runtime) -> tuple[int, ...]:
+    """The pandoc version, asked once per runtime. The tool image pins a recent one. A host pandoc may be older."""
+    known = getattr(runtime, "_pandoc_version", None)
+    if known is None:
+        try:
+            first = runtime.run(["pandoc", "--version"], timeout=60, check=False).stdout.split("\n", 1)[0]
+            known = tuple(int(n) for n in re.findall(r"\d+", first.split()[-1]))
+        except Exception:  # noqa: BLE001 - an unreadable version means the pinned, recent pandoc
+            known = ()
+        known = known or (99,)
+        try:
+            runtime._pandoc_version = known
+        except AttributeError:
+            pass
+    return known
+
+
+def _highlight_option(runtime: Runtime) -> str:
+    """pandoc 3.8 renamed ``--highlight-style`` to ``--syntax-highlighting`` and warns about the old name."""
+    return "--syntax-highlighting" if _pandoc_version(runtime) >= (3, 8) else "--highlight-style"
+
+
 def _command(job: PandocJob, runtime: Runtime, work: Path, reference: Path | None) -> tuple[list, list[Mount]]:
     options = job.options
     fmt = job.fmt
@@ -115,7 +138,7 @@ def _command(job: PandocJob, runtime: Runtime, work: Path, reference: Path | Non
         "pandoc", work / "combined.md", f"--from={INPUT_FORMAT}",
         f"--resource-path={':'.join(search)}",
         "--metadata-file", work / "metadata.yaml",
-        "--highlight-style", _required(THEME, "highlight theme"),
+        _highlight_option(runtime), _required(THEME, "highlight theme"),
         "--output", produced,
     ]  # fmt: skip
     for name in FILTERS[fmt]:
@@ -135,7 +158,7 @@ def _command(job: PandocJob, runtime: Runtime, work: Path, reference: Path | Non
         if job.template is not None:
             argv += ["--reference-doc", job.template]
     elif fmt == "html":
-        argv += ["--to=html5", "--standalone", "--embed-resources"]
+        argv += ["--to=html5", "--standalone", "--embed-resources", "--mathml"]
         argv += ["--css", job.template if job.template is not None else _required(RESOURCES / "html.css", "stylesheet")]
         if options.get("toc", False):
             argv.append("--toc")

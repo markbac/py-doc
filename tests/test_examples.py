@@ -186,15 +186,31 @@ def test_the_deck_uses_the_layouts_notes_and_footer(examples, pandoc_runtime):
     assert "CAPTION" not in xml and "[[" not in xml and "{{" not in xml
     assert "Sensor Node" in xml and "v1.0" in xml, "the footer pattern is applied"
     assert "<a:tbl>" in xml, "a table"
+    titles = {slide.shapes.title.text: slide.slide_layout.name for slide in slides if slide.shapes.title is not None}
+    assert titles["One column"] == "Title and Content"
+    assert titles["Two columns of text"] in ("Two Content", "Comparison")
+    assert titles["Two columns: text and picture"] in ("Two Content", "Comparison")
     assert any(shape.shape_type == 13 for slide in slides for shape in slide.shapes), "a picture"
     master = "".join(m.part.blob.decode("utf-8") for m in presentation.slide_masters)
     assert "{{VERSION}}" not in master
 
 
-def test_a_draft_deck_uses_the_draft_template(examples, pandoc_runtime):
+def test_a_released_deck_uses_the_base_template(examples, pandoc_runtime):
     slides = examples / "docs" / "deck" / "slides.md"
-    slides.write_text(slides.read_text(encoding="utf-8").replace("status: Released", "status: Draft"), encoding="utf-8")
+    slides.write_text(slides.read_text(encoding="utf-8").replace("status: Draft", "status: Released"), encoding="utf-8")
     assert main(["build", "deck"]) == 0
+    master = "".join(m.part.blob.decode("utf-8") for m in Presentation(examples / "build" / "deck.pptx").slide_masters)
+    assert "DRAFT" not in master and "Version 1.0" in master
+
+
+def test_a_draft_html_guide_uses_the_draft_stylesheet(examples, pandoc_runtime):
+    assert main(["build", "guide", "-f", "html"]) == 0
+    html = (examples / "build" / "guide.html").read_text(encoding="utf-8")
+    assert "DRAFT" in html and "#c62828" in html
+
+
+def test_a_draft_deck_uses_the_draft_template(examples, pandoc_runtime):
+    assert main(["build", "deck"]) == 0  # slides.md says status: Draft
     master = "".join(m.part.blob.decode("utf-8") for m in Presentation(examples / "build" / "deck.pptx").slide_masters)
     assert "DRAFT" in master
 
