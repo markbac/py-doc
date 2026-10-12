@@ -32,11 +32,11 @@ def test_cli_writes_messages_to_stderr_without_colour_codes_when_piped(tmp_path)
     assert "\x1b" not in result.stderr
 
 
-def _log_once(env_extra: dict[str, str]) -> str:
+def _log_once(env_extra: dict[str, str], verbose: bool = False) -> str:
     code = (
         "import logging\n"
         "from py_doc._logging import configure_logging\n"
-        "configure_logging()\n"
+        f"configure_logging(verbose={verbose})\n"
         "logging.getLogger('py_doc.t').warning('careful')\n"
     )
     import os
@@ -56,3 +56,11 @@ def test_the_compact_layout_is_coloured_when_colour_is_forced():
 def test_the_compact_layout_is_plain_when_piped():
     assert _log_once({}) == "[WARNING] careful\n"
     assert _log_once({"NO_COLOR": "1"}) == "[WARNING] careful\n"
+
+
+def test_verbose_adds_the_time_and_the_logger_name_in_colour():
+    import re
+
+    plain = _log_once({"NO_COLOR": "1"}, verbose=True)
+    assert re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d \[WARNING\] careful \(py_doc\.t\)\n", plain), plain
+    assert "\x1b[" in _log_once({"FORCE_COLOR": "1"}, verbose=True)
