@@ -1,6 +1,9 @@
-[[CAPTION:Table]] Terms
+[[CAPTION:Table]] Terms used in this guide
+
 | Term | Meaning |
 |---|---|
-| UART | Serial link between the gateway and the meter |
-| LwM2M | Lightweight device management protocol |
-| DTLS | Datagram transport layer security |
+| BLE | Bluetooth Low Energy, used to commission a node |
+| I2C | Two-wire bus between the microcontroller and the sensors |
+| MQTT | Lightweight publish and subscribe messaging protocol |
+| OTA | Over-the-air firmware update |
+| TLS | Transport layer security |

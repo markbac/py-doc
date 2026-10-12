@@ -1,24 +1,36 @@
 ---
-title: Meter Gateway
+title: SN-100 Sensor Node
 author: A. Writer
 version: "1.0"
 ---
 
-## Why a gateway
+## Why a sensor node
 
-- Meters speak serial, the head-end speaks IP
-- The gateway translates and buffers
+- Sensors speak I2C, the cloud speaks IP
+- The node translates and buffers
 
 <!-- notes: Keep this to one minute. -->
 
 ## How it works
 
-1. Read the meter
-1. Buffer the reading
-1. Send it over LwM2M
+1. Wake on a timer
+1. Read the sensors
+1. Publish over MQTT
+
+<!-- notes: Mention that the buffer covers network outages. -->
 
 ::: {.pagebreak}
 :::
+
+## Data flow
+
+[[CAPTION:Figure]] From sensor to cloud
+```dot
+digraph flow {
+  rankdir=LR;
+  Sensors -> Device -> Cloud;
+}
+```
 
 ## Next steps
 

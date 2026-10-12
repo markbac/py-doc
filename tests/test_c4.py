@@ -254,7 +254,8 @@ def test_every_view_is_drawn_as_png_and_svg(ws, box, tmp_path):
     assert sorted(p.name for p in files) == sorted(f"{k}.{f}" for k in VIEWS for f in ("png", "svg"))
     assert any(c[0] == "run" for c in box.engine_calls) and box.engine_calls[-2][0] == "rm"  # started and stopped Lite
     run = [c for c in box.engine_calls if c[0] == "run"][0]
-    assert "STRUCTURIZR_WORKSPACE_FILENAME=workspace" not in run and run[-1] == "structurizr/lite"
+    assert run[-2:] == ["structurizr/structurizr", "local"]
+    assert "STRUCTURIZR_AUTOSAVEINTERVAL=0" in run and "STRUCTURIZR_EDITABLE=false" in run
 
 
 def test_a_view_that_fails_names_the_view_and_fails(ws, box, tmp_path):
@@ -311,17 +312,33 @@ def test_stale_pictures_are_removed_first(ws, box, tmp_path):
     assert not (out / "Live.png").exists()
 
 
-def test_a_running_lite_is_used_and_left_running(ws, box, tmp_path):
+def test_a_running_server_is_used_and_left_running(ws, box, tmp_path):
     box.running = True
     draw(ws, box, tmp_path)
     assert not any(c[0] in ("run", "rm") for c in box.engine_calls)
 
 
-def test_lite_gets_the_workspace_folder_and_name(project, box):
-    Stack(box, project / "model2.dsl").up()
+def test_local_gets_the_workspace_folder(project, box):
+    (project / "workspace.dsl").write_text("workspace {}\n")
+    stack = Stack(box, project / "workspace.dsl")
+    stack.up()
     run = [c for c in box.engine_calls if c[0] == "run"][0]
     assert f"type=bind,source={project.resolve().as_posix()},target=/usr/local/structurizr" in run
-    assert "STRUCTURIZR_WORKSPACE_FILENAME=model2" in run
+
+
+def test_a_workspace_with_another_name_is_staged_as_workspace_dsl(project, box):
+    (project / "model2.dsl").write_text("workspace { !include more.dsl }\n")
+    (project / "more.dsl").write_text("// included\n")
+    (project / "workspace.dsl").write_text("workspace { /* another model */ }\n")
+    stack = Stack(box, project / "model2.dsl")
+    stack.up()
+    run = [c for c in box.engine_calls if c[0] == "run"][0]
+    source = next(a for a in run if a.startswith("type=bind")).split("source=")[1].split(",target")[0]
+    staged = Path(source)
+    assert staged != project.resolve() and (staged / "more.dsl").is_file()
+    assert (staged / "workspace.dsl").read_text().startswith("workspace { !include more.dsl")
+    stack.down()
+    assert not staged.exists()
 
 
 # --- the commands -----------------------------------------------------------------------------------
@@ -551,26 +568,26 @@ def test_a_build_joins_generated_chapters_pictures_and_hand_written_text(tmp_pat
 # --- the lock file, the cache root and the model rules in py-doc lint ---------------------------------
 
 
-DIGEST = "structurizr/lite@sha256:" + "a" * 64
+DIGEST = "structurizr/structurizr@sha256:" + "a" * 64
 
 
 def test_lock_pins_lite_and_builds_use_it(tmp_path, box):
-    from py_doc.c4.lock import LOCK, lock_lite, read_lock, resolve_lite
+    from py_doc.c4.lock import LOCK, lock_image, read_lock, resolve_image
 
     box.engine = lambda args, **kw: ToolResult(0, DIGEST + "\n" if args[0] == "image" else "", "")
-    assert lock_lite(box, tmp_path) == DIGEST
-    assert read_lock(tmp_path) == {"structurizr/lite": DIGEST}
-    assert resolve_lite(None, tmp_path) == DIGEST
-    assert resolve_lite("structurizr/lite:2025", tmp_path) == "structurizr/lite:2025"  # py-doc.yml wins
-    (tmp_path / LOCK).write_text("structurizr/lite nonsense\n")
+    assert lock_image(box, tmp_path) == DIGEST
+    assert read_lock(tmp_path) == {"structurizr/structurizr": DIGEST}
+    assert resolve_image(None, tmp_path) == DIGEST
+    assert resolve_image("structurizr/structurizr:2025", tmp_path) == "structurizr/structurizr:2025"  # py-doc.yml wins
+    (tmp_path / LOCK).write_text("structurizr/structurizr nonsense\n")
     with pytest.raises(Exception, match=r"c4-images.lock:1: expected"):
         read_lock(tmp_path)
 
 
 def test_an_unpinned_image_warns(tmp_path, caplog):
-    from py_doc.c4.lock import resolve_lite
+    from py_doc.c4.lock import resolve_image
 
-    assert resolve_lite(None, tmp_path) == "structurizr/lite"
+    assert resolve_image(None, tmp_path) == "structurizr/structurizr"
     assert "py-doc c4 lock" in caplog.text
 
 

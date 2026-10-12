@@ -57,14 +57,14 @@ The CSV report (`write_csv`) and the editor line format (`write_editor_format`) 
 
 ## Structurizr scripts
 
-Covered by `py-doc c4` (export through the container, Lite on a named network, headless diagram export, caching, model rules, image lock):
+Covered by `py-doc c4` (export through the container, Structurizr Local on a named network, headless diagram export, caching, model rules, image lock):
 
 - `structurizr-container.py`, `structurizr-export.py`, `structurizr-local.py`, `structurizr-playground.py`, `export-diagrams.js`, `pylogkit.py`.
 
 Not ported by design:
 
 - `structurizr-local.py` builds a Maven plugin JAR from source. It is outside the Markdown pipeline and needs Java and Maven on the host.
-- `structurizr-playground.py` runs `structurizr/playground`. It is a viewer only, and `py-doc c4 up` covers the Lite viewer.
+- `structurizr-playground.py` runs `structurizr/playground`. It is a viewer only, and `py-doc c4 up` covers the Local viewer.
 - `export-structurizr-diagrams.js` is an older copy of `export-diagrams.js` with `--no-sandbox` fixed on and no login support. `py-doc` uses the newer one.
 
 Defects in the original:
@@ -86,6 +86,17 @@ Not needed: tools come from the Docker image (`py-doc tools build`). Defects in 
 ### createdocs.ps1
 
 A wrapper that sources `..\scripts\_run.ps1`, which is not in the bundle. Replaced by the `py-doc` command.
+
+## Structurizr Lite and the new tooling
+
+Structurizr Lite gets no more updates. `py-doc c4` now draws views with `structurizr/structurizr local`, the
+tool the Structurizr documentation names as its replacement (the bundle's `structurizr-local.py` uses the same
+image and command). Local reads only `workspace.dsl` or `workspace.json`, so a workspace with another name is
+copied to a temporary folder first, and auto-save is off so drawing never changes the project.
+
+Not changed yet: DSL export (`py-doc c4 export`, DSL as a source) still runs `structurizr-cli`, pinned in
+`tools.lock`. The new consolidated tool (`structurizr.war`, Java 21, from `download.structurizr.com`) is its
+successor. Moving to it needs its checksum recorded with `py-doc tools lock` and a Java 21 image.
 
 ## Follow-ups done
 

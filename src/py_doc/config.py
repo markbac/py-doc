@@ -71,7 +71,7 @@ class StructurizrSpec:
 
     levels: list[str] = field(default_factory=list)  # empty: all levels
     systems: list[str] = field(default_factory=list)  # empty: all systems
-    engine: str = "browser"  # browser (Lite and Chromium) or source (the diagram source as a code block)
+    engine: str = "browser"  # browser (Structurizr Local and Chromium) or source (the diagram source as a code block)
     format: str = "png"  # png or svg for the browser engine, plantuml or mermaid for source
 
 
@@ -125,8 +125,8 @@ class C4Settings:
     """The ``c4:`` section: how Structurizr is run."""
 
     cli: str | None = None  # a structurizr-cli on this machine, instead of the one in the tool container
-    lite_image: str | None = None  # the Structurizr Lite image, such as structurizr/lite@sha256:...
-    port: int | None = None  # the local port Structurizr Lite is published on
+    image: str | None = None  # the Structurizr Local image, such as structurizr/structurizr@sha256:...
+    port: int | None = None  # the local port Structurizr Local is published on
 
 
 @dataclass
@@ -247,8 +247,8 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     }
     config.build = _mapping(top.get("build", {}), "build")
     c4 = _mapping(top.get("c4", {}), "c4")
-    _only(c4, ("cli", "lite_image", "port"), "c4")
-    config.c4 = C4Settings(_typed(c4, "cli", str, "c4"), _typed(c4, "lite_image", str, "c4"), _typed(c4, "port", int, "c4"))
+    _only(c4, ("cli", "image", "port"), "c4")
+    config.c4 = C4Settings(_typed(c4, "cli", str, "c4"), _typed(c4, "image", str, "c4"), _typed(c4, "port", int, "c4"))
     config.runtime = _parse_runtime(_mapping(top.get("runtime", {}), "runtime"))
     reports = _mapping(top.get("reports", {}), "reports")
     _only(reports, ("path",), "reports")

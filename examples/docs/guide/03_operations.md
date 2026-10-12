@@ -1,6 +1,6 @@
 # Operations
 
-The gateway is {{status_text}}.
+The node is {{status_text}}.
 
 [[IF: audience == staff]]
 ## Staff notes
@@ -14,7 +14,7 @@ Customers see only the public build.
 
 ## Glossary
 
-[[INCLUDE: includes/glossary.md]]
+[[INCLUDE: ../includes/glossary.md]]
 
 > [!IMPORTANT]
 > Always check the version before updating. An update to the wrong version cannot be undone.
