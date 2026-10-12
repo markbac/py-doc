@@ -69,7 +69,7 @@ A slide with no `columns` block has a single column, which is the Title and Cont
 ::: notes
 Each step appears on a click.
 
-The notes can have several paragraphs, because this is a pandoc notes block.
+The notes can have more than one paragraph, because this is a pandoc notes block.
 :::
 
 # Design

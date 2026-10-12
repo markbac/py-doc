@@ -151,6 +151,12 @@ class TestDot:
 
         assert Image.open(path).info["dpi"][0] == pytest.approx(192, abs=1)
 
+    def test_a_deck_gets_the_picture_without_a_div(self, tmp_path, host):
+        """pandoc's PowerPoint writer prints the alt text of a picture inside a div, instead of the picture."""
+        _, runtime = host
+        rendered = render_parts(part(tmp_path, f"```dot\n{self.DOT}\n```\n"), "pptx", runtime)
+        assert ":::" not in rendered.markdown and "![dot diagram](diagrams/" in rendered.markdown
+
     def test_html_gets_svg(self, tmp_path, host):
         _, runtime = host
         rendered = render_parts(part(tmp_path, f"```dot\n{self.DOT}\n```\n"), "html", runtime)

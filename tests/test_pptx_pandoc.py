@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 from fake_engine import install
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 from py_doc.build import build_document
 from py_doc.config import load_config
@@ -165,3 +166,11 @@ def test_split_level_controls_the_slides(make):
     one = len(Presentation(str(make("split_level: 1"))).slides)
     two = len(Presentation(str(make("split_level: 2"))).slides)
     assert one != two
+
+
+@pytest.mark.skipif(shutil.which("dot") is None, reason="Graphviz is not installed")
+def test_a_diagram_on_a_slide_is_a_picture_with_its_marker_caption(make):
+    out = make(sample="## Flow\n\n[[CAPTION:Figure]] From sensor to cloud\n```dot\ndigraph { a -> b }\n```\n")
+    (slide,) = Presentation(str(out)).slides
+    assert any(shape.shape_type == MSO_SHAPE_TYPE.PICTURE for shape in slide.shapes)
+    assert "From sensor to cloud" in texts(out) and "dot diagram" not in texts(out)

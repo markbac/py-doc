@@ -16,6 +16,8 @@ from pptx import Presentation
 from py_doc.app import main
 from py_doc.config import load_config
 
+from conftest import tex_packages_found
+
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 # The host has Graphviz and pandoc, but not the other diagram tools, so those blocks are taken out
 NO_TOOLS = re.compile(
@@ -24,22 +26,14 @@ NO_TOOLS = re.compile(
 )
 
 
-def _tex_packages_found() -> bool:
-    """xelatex with the packages the PDF template loads (ulem and tcolorbox come with texlive-latex-extra and -plain-generic)."""
-    if shutil.which("xelatex") is None or shutil.which("kpsewhich") is None:
-        return False
-    found = subprocess.run(["kpsewhich", "ulem.sty", "tcolorbox.sty"], capture_output=True, text=True).stdout.split()
-    return len(found) == 2
-
-
-needs_xelatex = pytest.mark.skipif(not _tex_packages_found(), reason="xelatex or one of its packages is not installed")
+needs_xelatex = pytest.mark.skipif(not tex_packages_found("ulem.sty", "tcolorbox.sty"), reason="xelatex or one of its packages is not installed")
 
 
 @pytest.fixture
 def examples(tmp_path, monkeypatch):
     """A copy of the examples without the diagrams that need tools the host does not have."""
     target = tmp_path / "examples"
-    shutil.copytree(EXAMPLES, target)
+    shutil.copytree(EXAMPLES, target, ignore=shutil.ignore_patterns("build", ".py-doc", ".structurizr"))  # not what a local build left
     for path in (target / "docs").rglob("*.md"):
         path.write_text(NO_TOOLS.sub("", path.read_text(encoding="utf-8")), encoding="utf-8")
     monkeypatch.chdir(target)

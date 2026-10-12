@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from docx import Document
+from conftest import tex_packages_found
 from fake_engine import install
 from pptx import Presentation
 
@@ -19,7 +20,7 @@ from py_doc.pandoc import source
 from py_doc.runtime import Runtime
 
 needs_pandoc = pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc is not installed")
-needs_xelatex = pytest.mark.skipif(shutil.which("xelatex") is None, reason="xelatex is not installed")
+needs_xelatex = pytest.mark.skipif(not tex_packages_found("ulem.sty", "tcolorbox.sty"), reason="xelatex or one of its packages is not installed")
 
 
 def png(path: Path) -> Path:

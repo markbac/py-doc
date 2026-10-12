@@ -82,6 +82,9 @@ def test_split_level_is_passed_to_pandoc(tmp_path, pandoc_runtime):
 
 
 def test_a_template_without_the_layouts_pandoc_needs_is_explained(tmp_path, pandoc_runtime):
+    version = subprocess.run(["pandoc", "--version"], capture_output=True, text=True).stdout.split()[1]
+    if tuple(int(n) for n in version.split(".")[:2]) >= (3, 10):
+        pytest.skip(f"pandoc {version} falls back to its own layouts. The image's pandoc writes no slides")
     template = tmp_path / "plain.pptx"
     Presentation().save(str(template))  # python-pptx's blank template has other layout names
     (tmp_path / "a.md").write_text("# A\n\n## B\n\n- x\n", encoding="utf-8")

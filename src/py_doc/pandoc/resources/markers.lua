@@ -36,6 +36,15 @@ local function caption_of(inlines)
   return { pandoc.Plain(inlines) }
 end
 
+-- PowerPoint prints a picture's alt text under it, not the figure caption, so there the caption is the alt text too
+local function caption_figure(figure, inlines)
+  figure.caption.long = caption_of(inlines)
+  if FORMAT == "pptx" then
+    figure = figure:walk({ Image = function(image) image.caption = inlines return image end })
+  end
+  return figure
+end
+
 function Blocks(blocks)
   local out = pandoc.List()
   local captioned = 0  -- the position in `out` of the block a marker captioned last
@@ -60,13 +69,13 @@ function Blocks(blocks)
         -- a diagram is a picture inside a centred Div
         local inner = nxt and nxt.t == "Div" and #nxt.content == 1 and nxt.content[1] or nil
         if inner and (inner.t == "Table" or inner.t == "Figure") then
-          inner.caption.long = caption_of(rest)
+          if inner.t == "Figure" then inner = caption_figure(inner, rest) else inner.caption.long = caption_of(rest) end
           nxt.content[1] = inner
           out:insert(nxt)
           captioned = #out
           i = i + 2
         elseif nxt and (nxt.t == "Table" or nxt.t == "Figure") then
-          nxt.caption.long = caption_of(rest)
+          if nxt.t == "Figure" then nxt = caption_figure(nxt, rest) else nxt.caption.long = caption_of(rest) end
           out:insert(nxt)
           captioned = #out
           i = i + 2
@@ -75,14 +84,14 @@ function Blocks(blocks)
           captioned = #out
           i = i + 2
         elseif prev and (prev.t == "Table" or prev.t == "Figure") and not image_at and captioned ~= #out then
-          prev.caption.long = caption_of(rest)
+          if prev.t == "Figure" then out[#out] = caption_figure(prev, rest) else prev.caption.long = caption_of(rest) end
           captioned = #out
           i = i + 1
         elseif image_at then
           local text = pandoc.List()
           for k = 1, image_at - 1 do text:insert(rest[k]) end
           while #text > 0 and (text[#text].t == "SoftBreak" or text[#text].t == "Space") do text:remove() end
-          out:insert(pandoc.Figure(pandoc.Plain({ rest[image_at] }), caption_of(text)))
+          out:insert(caption_figure(pandoc.Figure(pandoc.Plain({ rest[image_at] }), caption_of(text)), text))
           captioned = #out
           i = i + 1
         else

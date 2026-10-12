@@ -187,7 +187,11 @@ def render_parts(
                 continue
             name = f"diagrams/{picture.name}"
             pictures[name] = picture
-            replaced += ["", '::: {style="text-align:center;"}', f"![{_alt_text(block, renderer)}]({name})", ":::", ""]
+            picture_line = f"![{_alt_text(block, renderer)}]({name})"
+            if fmt == "pptx":  # pandoc's PowerPoint writer drops a picture inside a div and prints its alt text instead
+                replaced += ["", picture_line, ""]
+            else:
+                replaced += ["", '::: {style="text-align:center;"}', picture_line, ":::", ""]
         replaced += lines[cursor:]
         for position, name in orientation:
             landscape = name == "LANDSCAPE"

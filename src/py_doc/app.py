@@ -38,7 +38,7 @@ _DELEGATES = {
     "lint": ("Check Markdown for writing style and glossary use", run_lint),
     "tools": ("Build and inspect the tool container image", run_tools),
     "c4": ("Check, export and draw Structurizr workspaces", run_c4),
-    "import": ("Convert a Word document (.docx) to Markdown", run_import),
+    "import": ("Convert a Word (.docx) or PowerPoint (.pptx) file to Markdown", run_import),
     "template": ("Check and inspect Word and PowerPoint templates", run_template),
     "doctor": ("Check that the tool container works", run_doctor),
     "setup": ("Install Docker Engine for the tool runner", run_setup),

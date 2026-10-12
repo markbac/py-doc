@@ -110,7 +110,7 @@ class TestAnchors:
     )
     def test_agrees_with_pandoc(self, heading):
         html = subprocess.run(
-            ["pandoc", "-f", "markdown", "-t", "html"], input=f"# {heading}\n", capture_output=True, text=True, check=True
+            ["pandoc", "-f", "markdown", "-t", "html"], input=f"# {heading}\n", capture_output=True, encoding="utf-8", check=True
         ).stdout
         assert f'id="{anchor(heading)}"' in html
 

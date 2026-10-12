@@ -84,6 +84,10 @@ DOCKER = textwrap.dedent(
             import shutil
 
             found = shutil.which(command[0])  # finds name.bat on Windows, where a script cannot start by its bare name
+            if os.name == "nt":  # the container's pandoc takes a:b, a Windows one a;b (the colon in C:/ is a drive)
+                import re
+
+                command = [re.sub(r":(?![/\\\\])", ";", a) if a.startswith("--resource-path=") else a for a in command]
             done = subprocess.run([found or command[0], *command[1:]], cwd=workdir, env={**os.environ, **env})
             sys.exit(done.returncode)
         sys.stdout.buffer.write(bytes.fromhex(state["stdout_hex"]) if "stdout_hex" in state else state.get("stdout", "").encode("utf-8"))

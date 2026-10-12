@@ -34,6 +34,8 @@ CALLOUTS = {"note", "tip", "important", "warning", "caution"}
 QUOTE_STYLES = {"quote", "block text", "intense quote"}
 BITMAP_TYPES = {"image/jpeg", "image/jpg", "image/gif", "image/bmp", "image/tiff", "image/webp", "image/x-ms-bmp"}
 VECTOR_TYPES = {"image/x-emf", "image/emf", "image/x-wmf", "image/wmf", "image/svg+xml"}
+# What python-docx and python-pptx write into a new file's comments: not a description anyone wrote
+LIBRARY_DEFAULTS = re.compile(r"^\s*generated (by|using) python-(docx|pptx)\s*$", re.IGNORECASE)
 CUSTOM_KEYS = {
     "version": "version", "document_number": "document_id", "document_id": "document_id", "classification": "classification",
     "status": "status", "company": "company", "description": "description",
@@ -547,40 +549,52 @@ class _Importer:
         self.problems.append(f"Picture not imported, {message}")
         logger.warning("Picture not imported, %s", message)
 
-    @staticmethod
-    def _pillow_png(blob: bytes) -> bytes:
-        from PIL import Image
-
-        try:
-            with Image.open(io.BytesIO(blob)) as image:
-                image.load()
-                if image.mode not in ("RGB", "RGBA", "L", "LA", "P"):
-                    image = image.convert("RGBA")
-                out = io.BytesIO()
-                image.save(out, format="PNG")
-        except Exception as exc:  # Pillow raises many kinds
-            raise ConversionError(f"Pillow could not read it: {exc}") from exc
-        return out.getvalue()
+    def _pillow_png(self, blob: bytes) -> bytes:
+        return pillow_png(blob)
 
     def _inkscape_png(self, blob: bytes, kind: str) -> bytes:
-        import tempfile
-
-        suffix = {"image/svg+xml": ".svg", "image/x-wmf": ".wmf", "image/wmf": ".wmf"}.get(kind, ".emf")
         if self._connected is None:
             self._connected = self._runtime() if self._runtime is not None else connect()
-        with tempfile.TemporaryDirectory(prefix="py-doc-import-") as tmp:
-            source, target = Path(tmp, f"source{suffix}"), Path(tmp, "image.png")
-            source.write_bytes(blob)
-            try:
-                self._connected.run(
-                    ["inkscape", source, "--export-type=png", f"--export-filename={target}", "--export-dpi=192"],
-                    mounts=[Mount(tmp, writable=True)],
-                )
-            except ToolFailed as exc:
-                raise ConversionError(f"Inkscape failed: {exc.output or exc}") from exc
-            if not target.exists():
-                raise ConversionError("Inkscape wrote no picture")
-            return target.read_bytes()
+        return inkscape_png(self._connected, blob, kind)
+
+
+# --- pictures -------------------------------------------------------------------------------------
+
+
+def pillow_png(blob: bytes) -> bytes:
+    """A bitmap of any kind Pillow reads, as PNG."""
+    from PIL import Image
+
+    try:
+        with Image.open(io.BytesIO(blob)) as image:
+            image.load()
+            if image.mode not in ("RGB", "RGBA", "L", "LA", "P"):
+                image = image.convert("RGBA")
+            out = io.BytesIO()
+            image.save(out, format="PNG")
+    except Exception as exc:  # Pillow raises many kinds
+        raise ConversionError(f"Pillow could not read it: {exc}") from exc
+    return out.getvalue()
+
+
+def inkscape_png(runtime: Runtime, blob: bytes, kind: str) -> bytes:
+    """An EMF, WMF or SVG picture, drawn as PNG by Inkscape in the tool container."""
+    import tempfile
+
+    suffix = {"image/svg+xml": ".svg", "image/x-wmf": ".wmf", "image/wmf": ".wmf"}.get(kind, ".emf")
+    with tempfile.TemporaryDirectory(prefix="py-doc-import-") as tmp:
+        source, target = Path(tmp, f"source{suffix}"), Path(tmp, "image.png")
+        source.write_bytes(blob)
+        try:
+            runtime.run(
+                ["inkscape", source, "--export-type=png", f"--export-filename={target}", "--export-dpi=192"],
+                mounts=[Mount(tmp, writable=True)],
+            )
+        except ToolFailed as exc:
+            raise ConversionError(f"Inkscape failed: {exc.output or exc}") from exc
+        if not target.exists():
+            raise ConversionError("Inkscape wrote no picture")
+        return target.read_bytes()
 
 
 # --- front matter ---------------------------------------------------------------------------------
@@ -624,7 +638,7 @@ def _front_matter(importer: _Importer, path: Path) -> list[str]:
     put("subject", core.subject)
     put("keywords", core.keywords)
     put("category", core.category)
-    put("description", core.comments)
+    put("description", None if LIBRARY_DEFAULTS.match(core.comments or "") else core.comments)
     put("version", core.version)
     put("status", core.content_status)
     for key, value in _custom_properties(path).items():
