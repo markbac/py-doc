@@ -186,10 +186,10 @@ def test_parse_config_accepts_a_dict():
     assert parse_config({"project": {"name": "X"}}, Path(".")).name == "X"
 
 
-def test_the_example_in_the_readme_loads(tmp_path):
+def test_the_example_in_the_user_guide_loads(tmp_path):
     import re
 
-    readme = Path(__file__).parent.parent / "README.md"
+    readme = Path(__file__).parent.parent / "docs" / "guide" / "02_projects.md"  # the configuration example of the user guide
     block = re.search(r"```yaml\n(project:.*?)```", readme.read_text(encoding="utf-8"), re.S).group(1)
     config = load_config(write(tmp_path, block))
     assert list(config.documents) == ["c4-guide"]

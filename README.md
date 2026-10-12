@@ -3,491 +3,62 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 
-`py-doc` turns Markdown technical documentation into **Word (`.docx`)** documents, **PowerPoint (`.pptx`)** decks, **PDF** and **HTML**, checks its writing quality, and builds whole sets of documents from one `py-doc.yml`. It replaces three earlier tools (`py-doc2docx`, `py-doc2slides`, `py-doclint`) and the `createdocs` build files from `markbac/technical-documentation`.
+`py-doc` turns Markdown technical documentation into **Word (`.docx`)** documents, **PowerPoint (`.pptx`)** decks, **PDF**, **HTML** and **web sites** (MkDocs or Astro + Starlight). It checks the writing, draws every common kind of diagram, writes and draws C4 architecture documentation from Structurizr models, imports Word and PowerPoint files, and builds whole sets of documents from one `py-doc.yml`. It replaces three earlier tools (`py-doc2docx`, `py-doc2slides`, `py-doclint`) and the `createdocs` build files from `markbac/technical-documentation`.
 
-Pandoc, run in the tool container, writes every output. The linter reads the Markdown with its own parser.
+Pandoc writes every output, and it runs in a container with every other tool, so only Python and Docker need installing. The linter reads the Markdown with its own parser.
 
-> **Important:** Docker is required for every conversion. The earlier built-in Word and PowerPoint renderers (`engine: native`) are gone, and so are the options that only they had. See [Upgrading](#upgrading-from-the-native-renderers).
+> **Important:** Docker is required for every conversion. On Windows that is Docker Engine in WSL 2, which `py-doc setup` installs.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
+| `py-doc init` | Start a project: `py-doc.yml`, a first document, and optionally a C4 model, templates and a site |
+| `py-doc build` | Build every document described in `py-doc.yml` |
 | `py-doc docx` | Convert Markdown to Word |
 | `py-doc slides` | Convert Markdown to PowerPoint |
-| `py-doc c4` | Check, export and draw Structurizr workspaces |
-| `py-doc import` | Convert a Word document to Markdown |
+| `py-doc lint` | Check writing style, glossary terms, acronyms and project conventions |
+| `py-doc c4` | Check, export, draw and edit Structurizr workspaces (`c4 up` opens the live editor) |
+| `py-doc site` | Make and build a web site of the documents with MkDocs or Astro + Starlight |
+| `py-doc import` | Convert a Word document or a PowerPoint deck to Markdown |
 | `py-doc template` | Check and list the styles of a Word or PowerPoint template |
-| `py-doc lint` | Check writing style, glossary terms and acronyms |
-| `py-doc build` | Build every document described in `py-doc.yml` |
+| `py-doc tools`, `doctor`, `setup` | Build and check the tool container, and install Docker Engine |
 | `py-doc migrate` | Create `py-doc.yml` from legacy `createdocs` build files |
 
-The old commands `py-doc2docx`, `py-doc2slides` and `py-doclint` still work and print a one-line note naming their replacement. `-q` hides the note. The old import names `pydoc2docx`, `pydoc2slides` and `pydoclint` also still work.
+The old commands `py-doc2docx`, `py-doc2slides`, `py-doclint` and `py-c4-exporter` still work and print a one-line note naming their replacement.
 
-## Examples
-
-The `examples/` folder has Markdown sources, a `py-doc.yml`, Word and PowerPoint templates and a Structurizr workspace to run every command against. See `examples/README.md`. The notes on the original scripts are in `docs/bundle-audit.md`.
-
-## Supported platforms
-
-Linux and Windows. The tool runner (see below) refuses to start on any other platform, with exit status `2` and a message that names the two supported ones. Commands that run no external tool work wherever Python does.
-
-## Tool container
-
-Programs that are not Python (pandoc, TeX, PlantUML, Mermaid, Graphviz and the rest) run inside one container image, so nothing but Python and Docker has to be installed. On Linux that is Docker. On Windows it is Docker Engine inside a WSL 2 distribution (not Docker Desktop).
-
-```bash
-py-doc setup             # install Docker Engine (Ubuntu or Debian: in the WSL distro on Windows, or here on Linux)
-py-doc doctor            # check the platform, WSL, Docker, the image and a trivial run
-py-doc tools lock        # only after changing a tool version in tools.lock (the shipped checksums are already recorded)
-py-doc tools build       # build the image here (several GB, 10 to 30 minutes the first time; prints each step and a note every minute)
-py-doc tools status      # image tag, and the version of each tool inside it
-py-doc tools prune       # remove images left by older py-doc versions
-```
-
-`py-doc setup` shows the steps it will run as root, asks first (`--yes` skips the question, `--dry-run` prints the script and runs nothing), then adds Docker's apt repository, installs the engine, adds your user to the `docker` group, turns on systemd in the distro and restarts it. WSL itself must already be installed (`wsl --install -d Ubuntu`). It does nothing when Docker already works, and a build never runs it.
-
-The image is built from a `Dockerfile` that ships in the package, and its tag is a hash of that folder, so a release that changes the toolchain rebuilds and one that does not reuses the image. A command that needs the image and finds none builds it first. Builds behind a proxy that re-signs TLS take `--ca-file`. Machines that cannot build can use `py-doc tools save` and `py-doc tools load`.
-
-`py-doc.yml` can name the engine:
-
-```yaml
-runtime:
-  docker: /usr/bin/docker   # if it is not on the path
-  wsl_distro: Ubuntu        # Windows only: the distribution that runs Docker
-```
-
-Environment problems (no engine, no image, an unsupported platform) exit with status `2`. A tool that runs and fails exits with `1` and its whole output is shown.
-
-## Installation
+## Install
 
 ```bash
 git clone https://github.com/markbac/py-doc.git
 cd py-doc
-
-# Needs Python 3.10 or later. ctxlogkit is installed from GitHub automatically.
-pip install -e .
-
-# With development tools (pytest, ruff, build, twine)
-pip install -e ".[dev]"
+pip install -e .            # Python 3.10 or later
+py-doc setup                # install Docker Engine (in the WSL distro on Windows) if you have not
+py-doc doctor               # check that everything works; the tool image is built on first use
 ```
 
-## Converting files
+Linux and Windows are supported. See [Installation](docs/guide/01_install.md) for the tool container, proxies and offline machines.
+
+## Quick start
 
 ```bash
-py-doc docx Technical_Specification.md -o Technical_Specification.docx
-py-doc docx Technical_Specification.md -t Template.docx
-py-doc docx docs/ -o dist/docx/              # a whole folder, structure kept
-
-py-doc slides talk.md -o talk.pptx
-py-doc slides talk.md -t Corporate.pptx --split-level 1
+py-doc init my-docs --name "Pump Controller" --c4 --site mkdocs -y
+cd my-docs
+py-doc lint docs                            # check the writing
+py-doc build                                # build/overview.docx, build/architecture.docx, ...
+py-doc c4 up architecture/workspace.dsl     # arrange the C4 views in Structurizr; Ctrl+C stops it
+py-doc site build                           # site/build/index.html
 ```
 
-The same options work with the old command names (`py-doc2docx`, `py-doc2slides`).
-
-| Option | Commands | Description |
-|---|---|---|
-| `input` | both | A Markdown file, or a folder searched for `.md` and `.markdown` files in any capitalisation |
-| `-o`, `--output` | both | The output file, or a folder. A folder (an existing one, or a path ending in `/`) gets `<name>.docx` or `<name>.pptx` inside it |
-| `-t`, `--template` | both | A reference `.docx` or `.dotx` (Word), or `.pptx` or `.potx` (PowerPoint). `-r`, `--reference` is the old slides name |
-| `--allow-missing-template` | both | Warn and use a blank document if the template file is missing (default: fail) |
-| `--split-level N` | slides | Start a new slide at each heading up to level N (default 2) |
-| `-q`, `-v` | both | Only warnings and errors, or debug detail |
-| `--version` | both | Print the version |
-
-Behaviour that applies to a folder:
-
-- Hidden folders and `node_modules`, `venv`, `env`, `site-packages`, `__pycache__`, `dist`, `build` and `vendor` are skipped, and so is an output folder inside the input.
-- One bad file does not stop the rest. Each failure is printed on stderr, a summary follows, and the exit status is `1` if anything failed.
-- Two sources that would write the same output (`a.md` and `a.markdown`) are refused before anything is converted.
-- The input is checked before any folder is created, so a typo leaves nothing behind.
-
-## Supported Markdown
-
-Pandoc reads the Markdown (its own flavour, with fenced divs, raw HTML, table captions, strikethrough and task lists), so footnotes, definition lists, math and the rest of pandoc Markdown work too. The Word styles pandoc writes (`Heading 1`, `Body Text`, `First Paragraph`, `Compact`, `Block Text`, `Source Code`, `Table`, `Image Caption` and so on) come from the template, which is the reference document.
-
-| Markdown | Output |
-|---|---|
-| Front matter | Title, author, date, version, status and the like become the document properties and the title block. A first heading equal to the title is not shown twice |
-| Callouts, `> [!NOTE]` and `> **Note:**` | A box in the `Div.note` to `Div.caution` styles (Word), a coloured block (HTML, PDF) |
-| `[[CAPTION:Figure]] text` | A numbered caption for the picture or table that follows |
-| `[[LANDSCAPE]]`, `[[PORTRAIT]]` | A section of that orientation (Word, and picture widths in the other formats) |
-| `[[STYLE:Name]] text` | The paragraph in that Word style |
-| `::: {.pagebreak}` and `:::` | A page break, or a new slide |
-| Fenced diagram blocks | A picture, see [Diagrams](#diagrams) |
-| Raw HTML | Kept in HTML, dropped elsewhere by pandoc |
-
-A word or sentence is never dropped silently by py-doc itself, but anything pandoc cannot represent in a format (raw HTML in Word, for example) is dropped by pandoc, which says so in a warning.
-
-### Word templates
-
-`py-doc template check Template.docx` reports what the template lacks for the pandoc pipeline (`.docx`, `.dotx`, `.pptx` and `.potx` are accepted), and `py-doc template show` lists its styles or layouts. `py-doc template diff A B` lists the styles (or layouts) that are missing from one template or defined differently (exit 1 when they differ), and `py-doc template usage File.docx` counts the styles a Word file uses. FAIL (a style of the wrong type, bold body text, a deck without the `Title Slide` or `Title and Content` layout) exits with status 1, WARN (a style pandoc will take from its own defaults) only with `--strict`, and `-v` adds INFO. A build runs the check and logs the failures, and carries on.
-
-The template is pandoc's reference document, so its styles decide how everything looks, and the result is merged into it (see [Pandoc outputs](#pandoc-outputs)). A template can be `.docx` or `.dotx`. Without one, a built-in reference document is used, which defines the callout box styles. If the template lacks a `Div.note` style or another the document needs, one warning names it.
-
-## PowerPoint output
-
-Slides start at headings up to `split_level` (`--split-level`, default 2) and at `::: {.pagebreak}` lines. The title and author in the front matter make the title slide. Layouts are chosen by pandoc from the template's standard layout names, so a template must come from `pandoc --print-default-data-file reference.pptx`, edited in PowerPoint. A template that gives an empty deck is reported with that hint.
-
-- **Speaker notes**: write `<!-- notes: text -->`.
-- **Footer**: `footer: "{title} v{version}"` in `py-doc.yml`, and `{{VERSION}}` in a template shape.
-- **Long slides**: a slide with more than 16 lines gets a warning, because nothing is shrunk silently.
-
-## Importing Word documents
-
-`py-doc import Report.docx` writes `report.md` and `report/media/image_001.png`, ... next to the Word file (`-o DIR` puts them elsewhere). The Markdown is what `py-doc docx` reads back, so a document can start in Word and move to Markdown.
-
-- Headings are moved up so that the first one is `#`. Title, Subtitle and the document properties (title, author, date, subject, keywords, version, status, document number, classification, company) become front matter.
-- Lists keep their nesting, tables become pipe tables (merged cells are flattened to empty cells), consecutive `Code` paragraphs become one fenced block, `Quote` becomes a blockquote, `Note`, `Tip`, `Important`, `Warning` and `Caution` styles become `> [!NOTE]` callouts, and captions become `[[CAPTION:Figure]]` lines before their picture or table.
-- Tracked changes are accepted: insertions are kept and deletions dropped. The contents table is left out.
-- Pictures are saved as PNG in the order the document uses them. EMF, WMF and SVG go through Inkscape in the tool container; a picture that cannot be converted is named in a warning and shows as `(image not imported)`. Floating pictures are placed inline unless `--no-defloat-images` is given, which leaves them out with a warning.
-- Text boxes and footnotes are not imported; one warning gives the count.
-- An existing `.md` file is not replaced unless `--force` is given (exit status 1). A file that is not a Word document exits with status 2. `--print-output-paths` prints the two locations.
-
-## Structurizr and C4
-
-py-doc reads a [Structurizr](https://structurizr.com) workspace, writes Markdown from it, draws its views and joins the result with hand-written chapters.
-
-- **Model.** `structurizr-cli export -format json` (in the tool container, or the program named by `c4.cli`) resolves the DSL, so py-doc has no DSL parser of its own. A `workspace.json` is read directly and needs no Java. Exports are cached in `.py-doc/c4` by the hash of the DSL and every file it includes (`!include`, `!docs`, `!adrs`). The versions tested are listed in `py_doc/c4/structurizr.py`. A field the format has dropped is named in the error.
-- **Pictures.** Views are drawn as Structurizr draws them, in a browser. py-doc starts Structurizr Local on a private Docker network, opens it with headless Chromium in the tool container (the `export-diagrams.js` script, based on the official `structurizr/puppeteer` one), writes `<view key>.png` and `.svg`, and stops Lite if it started it. A failing view, an empty view, a missing picture or a missing engine is an error with a non-zero exit status that names the view. Nothing is ever written as a stand-in picture.
-- **Text.** One Markdown page per level: context, containers, components, relationships, deployment, dynamic views, an element catalogue with a glossary, and the workspace's `!docs` and `!adrs`. Output is sorted and has no times. Each page says that it is generated and from which file.
-
-```yaml
-c4:
-  cli: structurizr-cli          # optional: use this program instead of the one in the tool container
-  image: structurizr/structurizr@sha256:...   # optional: pin Structurizr Local
-  port: 8080
-
-documents:
-  architecture:
-    title: Sensor Node Architecture
-    sources:
-      - file: intro.md
-      - structurizr: architecture/workspace.dsl      # or workspace.json
-        levels: [context, containers, components, deployment]
-        systems: [Sensor Node]
-        heading_offset: 1
-        diagrams: {engine: browser, format: png}     # or {engine: source, format: mermaid}
-      - file: decisions.md
-    outputs:
-      docx: {}
-      pptx: {split_level: 2}
-```
-
-With `engine: source`, the views are put in the text as `plantuml` or `mermaid` blocks under a line that says what they are. The diagram step then draws them. Generated pages are rebuilt only when the workspace or these options change. For PowerPoint, every view is a level 2 heading with its picture, so `split_level: 2` gives one slide per view.
-
-| Command | Does |
-| --- | --- |
-| `py-doc c4 check PATH` | Reads each workspace and checks the model: `C4001` element without description, `C4002` container without technology, `C4003` relationship without description, `C4004` element with no relationships. Severities are set under `lint.rules`. `--strict` fails on warnings |
-| `py-doc c4 export PATH -o DIR -f FORMAT...` | Writes `png`, `svg`, `plantuml`, `c4plantuml`, `mermaid`, `dot`, `static` and `markdown`. `--views KEY...` limits the pictures, `--levels` the pages, `--dry-run` lists the files and writes nothing, `--url` uses a Lite that is already running (reachable from the container) |
-| `py-doc c4 lock [--tag TAG]` | Pulls the Structurizr Local image and records its digest in `c4-images.lock`, so builds use the same image everywhere. Without a lock file, `py-doc` warns and uses the tag |
-| `py-doc c4 up`, `down`, `status` | Start, stop and inspect the Structurizr Local container for a workspace, so authors can edit live at `http://127.0.0.1:8080/workspace` |
-
-`PATH` is a `.dsl` or `workspace.json` file, or a folder: workspaces below it are found in sorted order, skipping hidden and vendor folders and files that are only `!include`d.
-
-Structurizr Local (`structurizr/structurizr local`, which replaces the retired Structurizr Lite) is given the workspace folder as a bind mount, with auto-save off and the diagrams read-only, so drawing never changes your files. Local opens only `workspace.dsl` or `workspace.json`, so a workspace with another name is copied to a temporary folder first. The old `c4.lite_image` setting is now `c4.image`.
-
-`py-doc lint` also runs the model rules for each `structurizr:` source in `py-doc.yml`. The export cache lives in `.py-doc/c4/json` at the project root, whatever the working folder.
-
-`py-c4-exporter` still works. It prints a rename note and runs `py-doc c4 export` with the same flags.
-
-## Linting
-
-`py-doc lint` (also `py-doclint`) checks Markdown for writing quality. It runs on the shared document tree, so code blocks, inline code, HTML, link destinations and front matter are never treated as prose, and URLs and file names written as plain text are skipped.
-
-```bash
-py-doc lint docs/             # lint a directory (default: the current one)
-py-doc lint docs/Guide.md     # lint one file
-py-doc lint docs/ --strict    # exit 1 if any warning or error is reported
-py-doc lint . --exclude drafts
-py-doc lint docs/ --format csv > issues.csv      # a spreadsheet (the summary goes to standard error)
-py-doc lint docs/ --format github                # ::warning file=...,line=... annotations for GitHub Actions
-```
-
-A `[[CAPTION:Figure]]` or `[[CAPTION:Table]]` marker counts when it is on the line before or after the picture, table or diagram.
-
-| Rule | Category | Default severity | What it reports |
-|---|---|---|---|
-| `DOC001` | Glossary | warning | A glossary term written differently from its canonical form, in any capitalisation (`mQTT`), plus listed misspellings (`Lw2m`) |
-| `DOC002` | Style | warning | Wordy phrases such as "in order to", also when wrapped over two lines, with a shorter wording suggested |
-| `DOC003` | Acronym | info | The first use of an all-capitals acronym that is never defined, or is defined only later |
-| `DOC004` | Directive | error | An `[[ENDIF]]` with nothing open, an `[[IF:]]` never closed, or an include whose file does not exist |
-
-- **Acronym definitions** are recognised in both orders, `Pre-Shared Key (PSK)` and `PSK (Pre-Shared Key)`, including mixed-case forms such as `LwM2M` and `IoT`. The words must spell out the acronym. Words in the built-in allow-list and glossary terms need no definition.
-- **Directories**: hidden directories and `node_modules`, `venv`, `env`, `site-packages`, `__pycache__`, `dist`, `build` and `vendor` are skipped. `.md` and `.markdown` files are found in any capitalisation. Paths are printed relative to the working directory.
-- **Exit status**: `0` when clean, or when only info is reported, or when warnings are reported without `--strict`. `1` for any issue the configuration calls an error, or with `--strict` and at least one warning. `2` when the target is missing or not Markdown, or when any file cannot be read, so an error is never mistaken for a clean result.
-- **Limits**: issues carry a line number but no column, because the document tree records lines only. Terms inside a URL, a dotted or slashed name such as `lwm2m/dtls`, or code are not checked.
-
-```python
-from py_doc.lint import DocLinter
-
-report = DocLinter().lint_path("docs")
-for issue in report.issues:
-    print(issue)  # docs/Guide.md:12: warning DOC001 [Glossary] ...
-print(report.files_scanned, "files scanned,", len(report.errors), "could not be read")
-```
-
-### Structure rules and markdownlint
-
-Two more checks join the style rules in one list, one summary line and one exit status. Errors fail the command and `--strict` fails on warnings, for every engine.
-
-```yaml
-lint:
-  structure: structure-rules.yaml     # a file, or the list of rules written here
-  markdownlint:
-    config: .markdownlint.yaml        # a file, or the settings written here as a mapping
-    severity: warning
-```
-
-- **Structure rules** are project conventions as data. The rule types are `manifest-file-exists`, `regex-line`, `blank-line-between`, `path-exists`, `balanced-markers`, `requires-caption` and `cross-file-anchors`. Code blocks and inline code are never searched. Each rule has an `id`, a `severity` and a `message`, and `enabled: false` switches it off. A mistake in a rule is a configuration error that names the rule. `py-doc lint --print-example-rules` prints an example set: it is the `structure-rules.yaml` of `docs-check` with the legacy-callout rule removed, because both callout spellings are accepted.
-- **Cross-file anchors** work on the documents of `py-doc.yml`. All the files of a document share one set of heading anchors, as they do in pandoc, so a repeated heading gets `-1`, `-2` and so on, and a `[x](#anchor)` link is checked against that set. Files pulled in with `[[INCLUDE:]]` count. A broken link and a repeated heading are reported with file and line.
-- **markdownlint** runs in the tool container (`markdownlint-cli2`), only when `lint.markdownlint` is set, and its findings appear with rules `MD001` and so on. Without it, lint needs no container.
-
-### Vale
-
-`py-doc lint` can run [Vale](https://vale.sh) beside the built-in rules, and shows one list sorted by file and line. Vale is found on the `PATH` (or at `lint.vale.binary`). With `--engine vale` and no Vale on the host, the tool container's copy is used. If Vale is installed and `lint.vale.enabled` is `auto` (the default), both engines run. If it is not installed, one warning says so and the built-in rules run alone.
-
-| Option | Effect |
-| --- | --- |
-| `--engine auto` | Built-in rules and Vale, when Vale is installed (default) |
-| `--engine builtin` | No Vale |
-| `--engine vale` | Vale replaces the text rules `DOC001` to `DOC003`. Structure rules and markdownlint still run. Missing Vale exits with status 2 |
-| `--show-vale-config` | Print the `.vale.ini` py-doc generates, and the rules it wrote |
-| `--check-engines` | Say whether Vale is found, its version (3.0 or newer is needed) and its folder |
-| `--sync` | Run `vale sync` for `lint.vale.packages`. This is the only step that uses the network |
-
-A Vale alert that is an `error` fails the command, and `--strict` fails on warnings, as for the built-in rules. `suggestion` becomes `info`. A Vale crash, bad output or a missing package is an error on every file (exit status 2), never a clean result. Vale's `PyDoc.Terms` and `PyDoc.Wordy` rules repeat `DOC001` and `DOC002`, so the Vale copy is dropped when the built-in rule reports the same line.
-
-```yaml
-lint:
-  vale:
-    enabled: auto             # auto, true or false
-    binary: vale              # if not on the PATH
-    min_alert_level: suggestion
-    packages: [write-good]    # downloaded by `py-doc lint --sync`
-    spelling: en-GB           # en-GB, en-US or off
-    rules:
-      PyDoc.SentenceLength: {level: warning, max: 30}
-      PyDoc.PassiveVoice: off
-      write-good.Weasel: error
-    terms:                    # added to lint.glossary
-      Kubernetes: [k8s, kube]
-    avoid:
-      - {pattern: "\\bsimply\\b", message: "Do not say 'simply'.", level: warning}
-    ignore: ["CHANGELOG.md", "docs/generated/**"]
-    rules_file: [vale-rules.yml]  # shared rules; later files override earlier ones, inline keys override all
-    config: .vale.ini         # use your own file instead: the keys above are then ignored
-```
-
-py-doc writes the configuration, the `PyDoc` style and a vocabulary of your glossary terms into `.py-doc/vale` (it ignores itself in git). `lint.glossary` and `lint.phrases` feed both engines. Every key is checked when `py-doc.yml` loads, and a bad rule id, level or pattern is named by its place (`lint.vale.rules.PyDoc.Typo`). `src/py_doc/lint/vale.schema.json` is a JSON schema for the section.
-
-Rules in the `PyDoc` style:
-
-| Rule | Default | Why |
-| --- | --- | --- |
-| `SentenceLength` (`max` 30) | warning | Long sentences are hard to follow |
-| `ParagraphLength` (`max` 150) | info | Long paragraphs hide the point |
-| `PassiveVoice` | info | Say who does the action |
-| `WeaselWords` | info | Vague words weaken a statement |
-| `Repeated` | error | "the the" is always a typing slip |
-| `DoubleSpace` | warning | One space between words |
-| `HeadingPunctuation` | warning | No full stop at the end of a heading |
-| `HeadingCase` | info | Sentence case in headings |
-| `Placeholders` | warning | `TODO`, `FIXME`, `TBD` and lorem ipsum must not reach a release |
-| `Spelling` | warning | British spelling by default, American with `en-US` |
-| `Terms`, `Wordy`, `Redundant` | warning | Generated from `lint.glossary` and `lint.phrases` |
-| `Acronyms` | info | Spell out an acronym at first use |
-| `Avoid1`, `Avoid2`, ... | as set | Generated from `lint.vale.avoid` |
-
-Skipped heading levels and duplicate headings are not Vale's job. Use the structure rules and markdownlint above (`MD001`, `MD024`). Vale's Markdown handling skips code, front matter and link destinations, and py-doc tells it to ignore `[[directives]]` and `{{variables}}`. The built-in rules also skip code and front matter, so the two agree. Other well-known styles (`Microsoft`, `Google`, `write-good`, `proselint`) can be added by name under `packages`.
-
-Installing Vale: `brew install vale`, `winget install errata-ai.Vale` or `scoop install vale` on Windows, or a release from the Vale site. The py-doc CI installs it and runs the end-to-end test. To move an existing `.vale.ini`, put its `MinAlertLevel`, `Packages` and per-rule levels under `lint.vale` as shown, or keep the file and point `config:` at it.
-
-## Project configuration (`py-doc.yml`)
-
-One file describes documents, outputs and lint policy. `py-doc build` and `py-doc lint` find the nearest `py-doc.yml` above the current folder (or take `--config`). Paths are relative to the file. Every key is checked, so a typo is an error that names its place, such as `documents.guide.sources[1].page_brek`.
-
-```yaml
-project:
-  name: Technical documentation
-
-outputs:                       # defaults for every document
-  docx:
-    template: templates/Template.docx
-    dir: build                 # where documents go unless they set a path
-  pptx:
-    split_level: 2
-
-documents:
-  c4-guide:
-    title: C4 Architecture Modelling
-    author: Mark Bacon
-    version: "1.0.4"
-    document_number: GD-001
-    status: Proposed
-    keywords: [architecture, C4]
-    sources:
-      - index.md
-      - file: 01-foundations.md
-        heading_offset: 0      # shift every heading level (kept within 1 to 6)
-        page_break: true       # start on a new page, or a new slide
-        title: Foundations     # replaces the first heading, or adds one
-      - {file: draft.md, include: false}
-    outputs:
-      docx: {path: build/guides/c4-guide.docx}
-      pptx: {}                 # also build a deck
-
-lint:
-  exclude: [drafts]
-  rules:
-    DOC001: error              # error, warning, info or off
-    DOC002: off
-  glossary:
-    Kubernetes: [k8s]
-  phrases:
-    utilise: use
-  acronyms:
-    min_length: 3
-    allowed: [SBOM]
-```
-
-- **Documents** join their sources in order. Properties come from the configuration, then from the first source's front matter. A document builds the formats listed under `outputs`, or Word if none is listed.
-- **Output options** per format: `template`, `allow_missing_template`, `name`, `placeholder_prefix`, `marker`, `toc` (docx), `split_level`, `footer` (pptx). A document's value overrides the default. See [Pandoc outputs](#pandoc-outputs) for the details, `pdf` and `html`.
-- **Lint** settings extend the built-in glossary, phrases and allowed acronyms. An issue whose rule is set to `error` fails `py-doc lint` even without `--strict`.
-- **Reserved**: `collections`, `bundles`, `content` and `site` are accepted and kept, with a warning, because nothing uses them yet.
-
-```bash
-py-doc build                      # every document
-py-doc build c4-guide -f pptx     # one document, one format
-py-doc build --var version=2.1 --condition internal=true
-```
-
-### Pandoc outputs
-
-Every output is made by pandoc, which runs in the tool container (see [Tool container](#tool-container)).
-
-```yaml
-outputs:
-  docx: {template: templates/Template.docx}
-  pdf: {toc: true}                  # XeLaTeX, with the built-in template unless `template` names a .tex file
-  html: {template: styles/doc.css}  # one self-contained file; `template` is the stylesheet
-  pptx: {split_level: 2, template: templates/Slides.pptx}
-```
-
-- **Word** is written by pandoc with the template as its reference document. When a template is set, the result is merged into it: `Replace-with-Title`, `-Author`, `-Version`, `-Document-Number`, `-Date`, `-Description` and `-Classification` are filled in, and the body goes where `[[INSERTCONTENT]]` stands (at the end if there is no marker). `[[LANDSCAPE]]`, `[[PORTRAIT]]`, `[[STYLE:Name]]` and `[[CAPTION:Figure]]` lines are applied afterwards.
-- **Placeholders** are filled in the template body, tables, headers and footers. `placeholder_prefix` (default `Replace-with-`) and `marker` (default `[[INSERTCONTENT]]`) can be changed. A placeholder the document has no value for is emptied with a warning, and one that no property can fill (`Replace-with-Mystery`) is left and named in a warning.
-- **PowerPoint** (pandoc): `split_level` is the heading level that starts a slide. `<!-- notes: text -->` becomes speaker notes. `footer: "{title} v{version}"` fills the footer placeholder of every slide (a layout without one is reported), `{{VERSION}}` in a template shape is replaced by the version, and a slide with more than 16 lines is reported. Fonts embedded in a template are kept.
-- **Status templates**: with `status: Draft` and `template: Template.docx`, `Template_Draft.docx` (then `Template_draft.docx`) is used when it exists, else the base template, and the log says which. The same rule applies to PowerPoint templates.
-- **File names**: the default is exactly the path given. `name: "{name}-{version_safe}"` on any output makes `guide-1_2_3.docx`; the fields are `{name}` (the file name it would have had), `{version}` (an error when there is no version) and `{version_safe}` (dots become underscores, no version gives `x_x_x`).
-- **Version from git**: `version: git` (in the configuration or the front matter) is `git describe --tags --always` of the project folder. Outside a repository, or without a commit, the build fails instead of inventing a version.
-- **Document properties** (title, author, subject, keywords, category, comments) are capped at Word's 255 characters, with a warning when a value is cut.
-- **Callouts** are drawn as boxes in every format, in both spellings: `> [!NOTE]` and `> **Note:** text`. The kinds are NOTE, TIP, IMPORTANT, WARNING and CAUTION.
-- **Page breaks**: `::: {.pagebreak}` followed by `:::`, or `page_break: true` on a source.
-- **Code** is highlighted with the built-in theme. Headings in `heading_offset` and `title` are found outside code blocks only, and must use `#` markers.
-- **A missing template is an error**, unless `allow_missing_template: true`. Pandoc's own warnings are shown as warnings.
-- Pictures are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown.
-
-Word layout features:
-
-- **Contents list**: `docx: {toc: true}` adds a table of contents to the depth of `toc_depth` (front matter). Word fills in the page numbers when the file is opened and asks to update fields.
-- **Captions**: `[[CAPTION:Figure]] Text` (or `Table`) on the line before a picture or table becomes a numbered caption. Numbers are `SEQ` fields, shared with the captions pandoc makes itself, so they renumber in Word. Cross-references to captions are not supported.
-- **Callouts**: `> [!NOTE]` and `> **Note:**` (note, tip, important, warning, caution) become boxes in the `Div.note` ... `Div.caution` styles. The built-in reference document defines them. If your template lacks a style that the document uses, one warning says so and those callouts are plain paragraphs.
-- **Pages**: `[[LANDSCAPE]]` and `[[PORTRAIT]]` start a section of that orientation. `[[STYLE:Name]]` applies a named style, and warns once if the template has none of that name.
-
-### Build report
-
-`py-doc build --report build.json` (or `reports: {path: build.json}` in `py-doc.yml`) writes a JSON report: the py-doc version, the image tag and id, the version of each tool used, each document with its sources (words, sentences, paragraphs), its outputs (size and SHA-256), every diagram (type, file, line, whether the cache served it), template problems, and every warning with file and line. Keys are in a fixed order and there are no times unless you pass `--timestamps`, which also adds the render time of each diagram. The report is written when the build fails too, with `status: failed` and the error. Word and PowerPoint files contain the time they were written, so their checksums differ between builds. The schema is `py_doc/report.schema.json`.
-
-### Diagrams
-
-A fenced block whose language is a diagram type becomes a picture in the pandoc outputs:
-
-````markdown
-```plantuml title="System context"
-@startuml
-Alice -> Bob : hello
-@enduml
-```
-````
-
-| Fences | Tool |
-|---|---|
-| `mermaid` (also `:::mermaid`), `plantuml` or `puml`, `dot` or `graphviz`, `ditaa` | Mermaid, PlantUML, Graphviz, ditaa |
-| `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`, `packetdiag` | the blockdiag family |
-| `wavedrom`, `bytefield-svg`, `pikchr`, `railroad`, `wireviz` | drawn as SVG |
-| `vega`, `vega-lite` | Vega, drawn as SVG |
-
-- **Format**: HTML keeps SVG where the tool can write it. Word, PowerPoint and PDF get PNG at 192 dpi, shrunk to the page width (wider after a `[[LANDSCAPE]]` line, until `[[PORTRAIT]]`).
-- **Alt text** comes from `caption="..."` or `title="..."` after the language, else from a `title` line in the diagram, else the diagram type.
-- **A broken diagram stops the build** with the file, the line and the tool's own message, and no output file is written. `py-doc build --keep-going` draws every diagram first and lists all the failures together.
-- **Pictures are cached** in your user cache folder (`PY_DOC_CACHE` overrides it), keyed by the diagram text, the format and the tool image, so an unchanged diagram is not drawn again. A PlantUML diagram with `!include` is always drawn, because the included file can change on its own.
-- **PlantUML includes** are looked up in the folder of the Markdown file, which is the only source folder the tool can read.
-
-### Includes, conditions and variables
-
-These lines are applied to each source before it is parsed. They are only recognised outside code, so a document can show the syntax in a fenced block or in backticks.
-
-```markdown
-[[INCLUDE: shared/legal.md]]        <!-- another Markdown file, expanded in turn -->
-[[INCLUDE-CODE: src/server.py]]     <!-- a file as a fenced code block; the language comes from the extension -->
-
-[[IF: internal]]                    <!-- also [[IF: audience == staff]] and [[NOT: internal]] -->
-Internal notes.
-[[ENDIF]]
-
-This is version {{version}}.
-```
-
-Set values under a document in `py-doc.yml`, or for one build with `--var` and `--condition`, which win over the file:
-
-```yaml
-documents:
-  guide:
-    sources: [guide.md]
-    variables: {version: "2.1"}
-    conditions: {internal: false}
-```
-
-- **Paths** start at the file that holds the directive. Image paths in an included file are relative to the file that includes it, not to the included file.
-- **Mistakes are errors** that name the file and line: a missing or circular include, an `[[IF:]]` that is never closed, an `[[ENDIF]]` with nothing open, or a condition that is not defined. An undefined `{{variable}}` is left as written and reported as a warning, because the braces are ordinary text in many documents.
-- **Truth**: `false`, `no`, `off`, `0` and an empty value are false; anything else is true. `==` and `!=` compare as text.
-
-## Migrating from createdocs
-
-```bash
-py-doc migrate docs/ --check      # report only
-py-doc migrate docs/              # write py-doc.yml
-py-doc migrate docs/ --backup     # also keep .bak copies of the originals and any old py-doc.yml
-```
-
-Each `createdocs` YAML file becomes one document, so folders, sources, templates and shared chapters keep their relations. A template used by every Word document is set once under `outputs`. YAML files that are not build files (such as `mkdocs.yml`) are listed as skipped, and the originals are never changed or deleted. An existing output file is not replaced unless you pass `--backup` or `--force`.
-
-The report lists what has no equivalent yet, so nothing is lost quietly:
-
-- Processed Markdown output and the build switches for it.
-- The template chosen from the document status, and the version added to the output file name. `py-doc` writes exactly the path you give.
-- Unknown `meta` and `entries` keys.
-
-## Python API
-
-```python
-from pathlib import Path
-from py_doc import DocxConverter, SlidesConverter
-from py_doc.config import load_config
-from py_doc.build import build_document
-from py_doc.lint import DocLinter
-
-DocxConverter(template_path=Path("Template.docx")).convert_file(Path("a.md"), Path("out/a.docx"))
-SlidesConverter(split_level=1).convert_file(Path("a.md"), Path("out/a.pptx"))
-
-config = load_config(Path("py-doc.yml"))
-build_document(config, config.documents["c4-guide"])
-
-for issue in DocLinter().lint_path("docs").issues:
-    print(issue)
-```
-
-Failures raise `py_doc.ConversionError` (unreadable or unsupported input, bad template, unwritable output) or `FileNotFoundError` (missing input or template). The library only uses the standard `logging` module and never configures it. The command line tools configure it with [ctxlogkit](https://github.com/markbac/py-logkit): progress on stderr, colour on a terminal only.
+## Documentation
+
+py-doc documents itself with py-doc. The sources are in [`docs/`](docs), and the [`py-doc.yml`](py-doc.yml) at the root of this repository builds them: `py-doc build` for Word, HTML and PDF, `py-doc site build` for the web site.
+
+- **User guide**: [introduction](docs/guide/00_introduction.md), [installation](docs/guide/01_install.md), [projects and `py-doc.yml`](docs/guide/02_projects.md), [writing](docs/guide/03_writing.md), [outputs and templates](docs/guide/04_outputs.md), [importing](docs/guide/05_import.md), [C4 architecture](docs/guide/06_c4.md), [linting](docs/guide/07_lint.md), [web sites](docs/guide/08_sites.md), [reference](docs/guide/09_reference.md).
+- **[Requirements](docs/requirements/00_introduction.md)**: what py-doc must do and how well, with the status of every requirement and the open issues.
+- **[Architecture](docs/architecture/00_introduction.md)**: how py-doc is built, with C4 chapters generated from [its Structurizr model](docs/architecture/workspace.dsl), and the decisions behind it.
+- **[Examples](examples/README.md)**: a small project that uses every feature, with a command for each output.
+- **[Bundle audit](docs/bundle-audit.md)**: notes on the original scripts.
 
 ## Layout
 
@@ -495,39 +66,40 @@ Failures raise `py_doc.ConversionError` (unreadable or unsupported input, bad te
 src/
 ├── py_doc/
 │   ├── app.py            # the py-doc command
+│   ├── init.py           # py-doc init
 │   ├── cli.py            # py-doc docx (and the old py-doc2docx)
 │   ├── slides_cli.py     # py-doc slides (and the old py-doc2slides)
 │   ├── _cli.py           # options, output paths and batch conversion shared by both
 │   ├── convert.py        # DocxConverter and SlidesConverter, one file through pandoc
-│   ├── pandoc/           # the pandoc command, Word and PowerPoint finishing, Lua filters
-│   ├── diagrams/         # diagram fences to pictures
-│   ├── runtime/          # the tool container
 │   ├── config.py         # py-doc.yml model and validation
 │   ├── build.py          # joins a document's sources and renders it
-│   ├── migrate.py        # createdocs to py-doc.yml
-│   ├── files.py          # finding Markdown, template types
+│   ├── directives.py     # includes, conditions and variables
+│   ├── pandoc/           # the pandoc command, Word and PowerPoint finishing, Lua filters
+│   ├── diagrams/         # diagram fences to pictures
+│   ├── c4/               # Structurizr workspaces: model, chapters, pictures, live editor
+│   ├── site/             # web sites: pages, navigation, MkDocs and Starlight engines
+│   ├── docx_import.py    # Word to Markdown
+│   ├── pptx_import.py    # PowerPoint to Markdown
+│   ├── runtime/          # the tool container: image, runner, doctor, setup
 │   ├── markdown/         # parser and front matter, used by the linter
-│   └── lint/             # rules, linter and py-doclint command line
+│   ├── lint/             # rules, structure rules, markdownlint, Vale
+│   ├── migrate.py        # createdocs to py-doc.yml
+│   └── report.py         # the JSON build report
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/
 └── pydoclint/
-tests/                    # command line, pandoc output, linter and migration tests
+docs/                     # py-doc's own user guide, requirements and architecture
+examples/                 # a project that uses every feature
+tests/
 ```
-
-## Upgrading from the native renderers
-
-Earlier versions drew Word and PowerPoint files themselves unless a document said `engine: pandoc`. That path is removed, so Docker is needed for every conversion.
-
-- `engine` in `py-doc.yml` is an error, with a message. Delete it.
-- `keep_template_body`, `keep_template_slides`, `title_layout` and `content_layout` are errors too, and so are `--keep-template-body`, `--keep-template-slides`, `--title-layout` and `--content-layout`. The document now goes where the template has `[[INSERTCONTENT]]` (at the end without one), and pandoc picks the layouts.
-- Output looks different: pandoc's styles replace the old ones. Check your templates, and run `py-doc doctor` first.
-- `DocxConverter` and `SlidesConverter` keep their names. They take an optional `runtime` and connect to the container on first use.
 
 ## Running tests
 
 ```bash
+pip install -e ".[dev]"
 python -m pytest
 ruff check .
+py-doc lint docs --strict
 ```
 
 CI runs on Linux with Python 3.10 to 3.14, and on Windows with the oldest and newest. macOS is not supported.

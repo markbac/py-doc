@@ -342,3 +342,23 @@ def test_the_highlight_option_follows_the_pandoc_version(banner, option):
             return ToolResult(0, banner + "\nFeatures: x\n", "")
 
     assert _highlight_option(Fake()) == option
+
+
+def test_markers_shown_as_code_or_within_a_sentence_are_text():
+    from docx import Document as NewDocument
+    from docx.enum.style import WD_STYLE_TYPE
+
+    from py_doc.pandoc.docx_post import apply_explicit_styles
+
+    doc = NewDocument()
+    doc.styles.add_style("Verbatim Char", WD_STYLE_TYPE.CHARACTER)
+    doc.styles.add_style("Lead Paragraph", WD_STYLE_TYPE.PARAGRAPH)
+    shown = doc.add_paragraph()
+    shown.add_run("[[STYLE:Name]] text").style = "Verbatim Char"
+    shown.add_run(" applies a named style.")
+    mentioned = doc.add_paragraph("Write [[CAPTION:Figure]] before a picture.")
+    real = doc.add_paragraph("[[STYLE:Lead Paragraph]] The lead.")
+    apply_explicit_styles(doc)
+    assert shown.text == "[[STYLE:Name]] text applies a named style." and shown.style.name == "Normal"
+    assert mentioned.text == "Write [[CAPTION:Figure]] before a picture."
+    assert real.text == "The lead." and real.style.name == "Lead Paragraph"

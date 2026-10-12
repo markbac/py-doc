@@ -116,6 +116,7 @@ def project(tmp_path):
     Image.new("RGB", (4, 4), "red").save(docs / "images" / "board.png")
     (docs / "01_overview.md").write_text(
         "---\ntitle: Sensor guide\n---\n\n# Overview\n\nVersion {{version}}. See [the design](02_design.md#flow).\n\n"
+        "Write `[text](02_design.md)` or `![](images/none.png)` to link.\n\n"
         "> [!NOTE]\n> Read this first.\n\n![The board](images/board.png)\n\n[[CAPTION:Table]] Pins\n\n| Pin | Use |\n|---|---|\n| 1 | Power |\n",
         encoding="utf-8",
     )
@@ -144,6 +145,7 @@ def test_mkdocs_pages_have_admonitions_links_pictures_and_captions(project, pand
     overview = (docs / "01-overview.md").read_text(encoding="utf-8")
     assert overview.startswith("---\ntitle: Overview\n---\n\n# Overview")
     assert "Version 1.0. See [the design](02-design.md#flow)." in overview
+    assert "`[text](02_design.md)` or `![](images/none.png)`" in overview, "code is shown as written"
     assert "!!! note\n\n    Read this first." in overview
     assert "*Pins*" in overview
     (picture,) = (docs / "media").iterdir()

@@ -29,13 +29,14 @@ A small project to try every part of `py-doc` on. It documents a generic IoT pro
     cd examples
     ```
 
-What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, drawing the views of a model, and exporting a `.dsl` workspace. What does not: `lint` with the built-in rules, `template check|show|diff|usage`, `import`, and `c4 check` and `c4 export -f markdown` on `architecture/workspace.json`.
+What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, drawing the views of a model, exporting a `.dsl` workspace, `c4 up` and the web site. What does not: `lint` with the built-in rules, `template check|show|diff|usage`, `import`, and `c4 check` and `c4 export -f markdown` on `architecture/workspace.json`.
 
 ## What is here
 
 | Path | What it shows |
 |---|---|
-| `py-doc.yml` | Five documents, output defaults, per-document variables and conditions, file naming, the build report, C4 and lint settings. Every setting has a comment |
+| `py-doc.yml` | Five documents, output defaults, per-document variables and conditions, file naming, the build report, C4, lint and site settings. Every setting has a comment |
+| `site/` | The MkDocs site project: `mkdocs.yml` (yours to change) and `py-doc-nav.yml` (written by `py-doc site`) |
 | `docs/guide/` | The guide, in five files: front matter and document properties, variables, conditions, nested includes, every callout style, all heading levels, block quotes, captions, lists, task lists, footnotes, definition lists, maths, code includes, a landscape section, page breaks, an appendix with a shifted heading level, links between chapters. `DRAFT.md` is listed with `include: false` |
 | `docs/guide/05_diagram_types.md` | One example of every other diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega and vega-lite. Graphviz, Mermaid and PlantUML are in `docs/guide/02_design.md` |
 | `docs/datasheet.md` | A short datasheet that includes the diagram chapter, to try the datasheet template (`@@` placeholders) and the LaTeX template |
@@ -53,7 +54,7 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 | `structure-rules.yaml`, `vale-rules.yml`, `.markdownlint.yaml` | Rule files used by `py-doc lint` |
 | `word/design_review.docx` | A Word file to try `py-doc import` on |
 
-The diagram chapter is part of the guide (`docs/guide/05_diagram_types.md`) and of the datasheet, so `py-doc build guide` draws every diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega, vega-lite, Graphviz, Mermaid and PlantUML. All of them are installed in the tool image. `graphviz` and `puml` are accepted as other names for `dot` and `plantuml`. See the Diagrams section of the main README.
+The diagram chapter is part of the guide (`docs/guide/05_diagram_types.md`) and of the datasheet, so `py-doc build guide` draws every diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega, vega-lite, Graphviz, Mermaid and PlantUML. All of them are installed in the tool image. `graphviz` and `puml` are accepted as other names for `dot` and `plantuml`. See the Writing chapter of the user guide (`docs/guide/03_writing.md`).
 
 ## Quick start
 
@@ -67,9 +68,12 @@ py-doc build release-notes                           # build/release-notes-<git 
 py-doc build architecture                            # build/architecture.docx and architecture.html
 py-doc import word/design_review.docx -o imported    # imported/design_review.md and imported/design_review/
 py-doc docx imported/design_review.md                # imported/design_review.docx: the round trip
+py-doc import build/deck.pptx -o imported            # imported/deck.md: the deck back as Markdown
+py-doc site init                                     # site/mkdocs.yml, once
+py-doc site build                                    # site/build/index.html: the guide, datasheet and architecture as a site
 ```
 
-`py-doc import` needs the Word file as its argument, so a bare `py-doc import` prints a usage error. The sample file is `word/design_review.docx`.
+`py-doc import` needs the Word or PowerPoint file as its argument, so a bare `py-doc import` prints a usage error. The sample files are `word/design_review.docx` and the deck you built.
 
 ## Which command makes which output
 
@@ -79,7 +83,8 @@ py-doc docx imported/design_review.md                # imported/design_review.do
 | `py-doc build datasheet` | `docs/datasheet.md`, `templates/datasheet.docx`, `templates/report.tex` | `build/datasheet-1_0.docx`, `build/datasheet.pdf` |
 | `py-doc build deck` | `docs/deck/slides.md`, `templates/sensor.pptx` (or `sensor_Draft.pptx`) | `build/deck.pptx` |
 | `py-doc build architecture` | `architecture/workspace.json`, `docs/includes/audience.md` | `build/architecture.docx`, `build/architecture.html` (chapters generated from the model) |
-| `py-doc import` | `word/design_review.docx` | Markdown and pictures in `imported/` |
+| `py-doc import` | `word/design_review.docx`, `build/deck.pptx` | Markdown and pictures in `imported/` |
+| `py-doc site build` | The sources of the guide, datasheet and architecture, `site/mkdocs.yml` | Pages in `site/docs/<document>/`, navigation in `site/py-doc-nav.yml`, the site in `site/build` |
 
 Every build also writes `build/report.json`, with the tools and versions used, each source, each output with its SHA-256, and each diagram.
 
@@ -118,9 +123,11 @@ py-doc build --keep-going
 To convert a single file without `py-doc.yml`:
 
 ```bash
-py-doc docx docs/guide/00_overview.md -o build/overview.docx --template templates/sensor.docx
-py-doc slides docs/deck/slides.md -o build/slides.pptx --template templates/sensor.pptx --split-level 1
+py-doc docx docs/guide/02_design.md -o build/design.docx --template templates/sensor.docx
+py-doc slides docs/guide/02_design.md -o build/design.pptx --template templates/sensor.pptx --split-level 2
 ```
+
+A file with `[[IF:]]` lines (`00_overview.md`, `03_operations.md`, the deck) needs its conditions, which only `py-doc build` sets, so build those as documents.
 
 ## Templates
 
@@ -160,17 +167,32 @@ py-doc lint --check-engines
 
 `lint.markdownlint` in `py-doc.yml` is commented out, because markdownlint runs in the container. Uncomment it once Docker works, and `.markdownlint.yaml` is used.
 
-## Import a Word file
+## Import a Word file or a deck
 
-`py-doc import` turns a Word file into Markdown. Headings, lists, tables, bold and italic text, pictures and captions are kept, and a caption becomes a `[[CAPTION:Figure]]` or `[[CAPTION:Table]]` line.
+`py-doc import` turns a Word file or a PowerPoint deck into Markdown. Headings, lists, tables, bold and italic text, pictures and captions are kept, and a caption becomes a `[[CAPTION:Figure]]` or `[[CAPTION:Table]]` line. A deck also keeps its sections, columns, code, callouts and speaker notes.
 
 ```bash
 py-doc import word/design_review.docx -o imported
 # writes imported/design_review.md and imported/design_review/ (pictures)
 py-doc docx imported/design_review.md        # builds it again: imported/design_review.docx
+
+py-doc build deck
+py-doc import build/deck.pptx -o imported    # imported/deck.md
+py-doc slides imported/deck.md -t templates/sensor.pptx   # the same slides again
 ```
 
-Without `-o`, the Markdown is written next to the Word file. `--force` replaces an existing `.md` file, and `--no-defloat-images` leaves floating pictures out instead of placing them inline.
+Without `-o`, the Markdown is written next to the input. `--force` replaces an existing `.md` file, and `--no-defloat-images` leaves floating Word pictures out instead of placing them inline. The deck's one equation is not imported, and a warning says so.
+
+## Web site
+
+`site:` in `py-doc.yml` publishes the guide, the datasheet and the architecture as a MkDocs site, from the same sources.
+
+```bash
+py-doc site init        # site/mkdocs.yml and site/docs/index.md, once
+py-doc site build       # pages in site/docs/<document>/, the site in site/build
+```
+
+Each source file is a page, with its diagrams, callouts and captions. `site/mkdocs.yml` is yours to change: py-doc writes only the pages and `site/py-doc-nav.yml`, which `mkdocs.yml` takes in with `INHERIT`. Change `engine: mkdocs` to `engine: starlight` and use another `dir` for an Astro + Starlight site.
 
 ## Structurizr and C4
 
@@ -179,11 +201,14 @@ py-doc c4 check architecture/workspace.json
 py-doc c4 export architecture/workspace.json -o c4-out -f markdown   # c4-out/markdown/*.md, no Docker
 py-doc c4 export architecture/workspace.dsl -o c4-out -f png svg mermaid  # needs Docker
 py-doc c4 lock                                  # pins the Structurizr Local image
-py-doc c4 up                                    # view the model in a browser
-py-doc c4 down
+py-doc c4 up architecture/workspace.dsl         # view and arrange the views in your browser; Ctrl+C stops it
+py-doc c4 up architecture/workspace.dsl --detach   # or leave it running ...
+py-doc c4 down                                  # ... and stop it later
 ```
 
-Structurizr Local only answers requests for `localhost`, so the browser that draws the pictures shares Local's network and opens `http://localhost:8080`. Pictures are drawn with Structurizr Local (`structurizr/structurizr local`, which replaces Structurizr Lite). The first picture pulls the image, which can take a while. `diagrams: {engine: source, format: plantuml}` in `py-doc.yml` is the other route: `structurizr-cli` writes PlantUML text from `architecture/workspace.dsl`, and it is drawn like any other diagram. Both routes need Docker. Without it, `py-doc c4 export architecture/workspace.json -f markdown` still writes the model as Markdown pages.
+`c4 up` opens `http://localhost:8080/workspace/1/diagrams`. Changes to `workspace.dsl` show when the page is reloaded. Layouts arranged in the diagram editor are saved to `workspace.json` beside it, and builds use them. The views here use `autoLayout`, so remove it from a view to arrange that view by hand.
+
+Structurizr Local only answers requests for `localhost`, so the browser that draws the pictures shares Local's network. Pictures are drawn with Structurizr Local (`structurizr/structurizr local`, which replaces Structurizr Lite). The first picture pulls the image, which can take a while. `diagrams: {engine: source, format: plantuml}` in `py-doc.yml` is the other route: `structurizr-cli` writes PlantUML text from `architecture/workspace.dsl`, and it is drawn like any other diagram. Both routes need Docker. Without it, `py-doc c4 export architecture/workspace.json -f markdown` still writes the model as Markdown pages.
 
 > **Note:** Generated pages and the export cache live in `.py-doc/` at the project root. It is ignored by Git.
 

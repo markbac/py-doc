@@ -1,0 +1,101 @@
+---
+title: Writing
+---
+
+# Writing
+
+Pandoc reads the Markdown: its own flavour, with fenced divs, raw HTML, table captions, strikethrough and task lists. Footnotes, definition lists, maths and the rest of pandoc Markdown work too. py-doc adds front matter, callouts, markers, includes, conditions, variables and diagrams.
+
+## Supported Markdown
+
+| Markdown | Output |
+|---|---|
+| Front matter | Title, author, date, version, status and the like become the document properties and the title block. A first heading equal to the title is not shown twice |
+| Callouts, `> [!NOTE]` and `> **Note:**` | A box in the `Div.note` to `Div.caution` styles (Word), a coloured block (HTML, PDF), an admonition or aside (sites) |
+| `[[CAPTION:Figure]] text` | A numbered caption for the picture, diagram or table that follows |
+| `[[LANDSCAPE]]`, `[[PORTRAIT]]` | A section of that orientation (Word), and picture widths in the other formats |
+| `[[STYLE:Name]] text` | The paragraph in that Word style |
+| `::: {.pagebreak}` and `:::` | A page break, or a new slide |
+| Fenced diagram blocks | A picture: see [Diagrams](#diagrams) |
+| Raw HTML | Kept in HTML and sites, dropped elsewhere by pandoc |
+
+py-doc itself never drops a word or a sentence. Anything pandoc cannot represent in a format (raw HTML in Word, for example) is dropped by pandoc, which says so in a warning.
+
+## Front matter
+
+The YAML between `---` lines at the top of the first source of a document gives its properties: `title`, `subtitle`, `author`, `date`, `version`, `status`, `document_number`, `description`, `classification`, `subject`, `keywords`, `category`, `company` and `toc_depth`. A value in `py-doc.yml` wins over the front matter. Every document of py-doc's own repository has front matter, so its properties travel with the file.
+
+## Callouts
+
+Callouts are drawn as boxes in every format, in both spellings:
+
+```markdown
+> [!WARNING]
+> Disconnect the battery first.
+
+> **Tip:** the kinds are note, tip, important, warning and caution.
+```
+
+Word uses the `Div.note` to `Div.caution` paragraph styles. The built-in reference document defines them, and a template that lacks one that the document uses gets a warning naming it. Sites get MkDocs admonitions or Starlight asides.
+
+## Captions, orientation and styles
+
+- **Captions**: `[[CAPTION:Figure]] Text` (or `Table`) on the line before a picture, diagram, code block or table becomes its caption. In Word the number is a `SEQ` field, shared with the captions pandoc makes itself, so captions renumber when Word updates fields. Cross-references to captions are not supported. On a slide the caption is the text under the picture.
+- **Orientation**: `[[LANDSCAPE]]` and `[[PORTRAIT]]` start a Word section of that orientation, and widen or narrow pictures in the other formats.
+- **Styles**: `[[STYLE:Name]] text` applies a named Word paragraph style, and warns once if the template has none of that name. Other formats keep the text.
+- **Page breaks**: `::: {.pagebreak}` followed by `:::`, or `page_break: true` on a source. In a deck it starts a new slide, and on a site it is left out.
+
+## Includes, conditions and variables
+
+These lines are applied to each source before it is parsed. They are only recognised outside code, so a document can show the syntax in a fenced block or in backticks.
+
+```markdown
+[[INCLUDE: shared/legal.md]]        <!-- another Markdown file, expanded in turn -->
+[[INCLUDE-CODE: src/server.py]]     <!-- a file as a fenced code block; the language comes from the extension -->
+
+[[IF: internal]]                    <!-- also [[IF: audience == staff]] and [[NOT: internal]] -->
+Internal notes.
+[[ENDIF]]
+
+This is version {{version}}.
+```
+
+Set values under a document in `py-doc.yml`, or for one build with `--var` and `--condition`, which win over the file:
+
+```yaml
+documents:
+  guide:
+    sources: [guide.md]
+    variables: {version: "2.1"}
+    conditions: {internal: false}
+```
+
+- **Paths** start at the file that holds the directive. Image paths in an included file are relative to the file that includes it, not to the included file.
+- **Mistakes are errors** that name the file and line: a missing or circular include, an `[[IF:]]` that is never closed, an `[[ENDIF]]` with nothing open, or a condition that is not defined. An undefined `{{variable}}` is left as written and reported as a warning, because the braces are ordinary text in many documents.
+- **Truth**: `false`, `no`, `off`, `0` and an empty value are false; anything else is true. `==` and `!=` compare as text.
+
+## Diagrams
+
+A fenced block whose language is a diagram type becomes a picture in every output:
+
+````markdown
+```plantuml title="System context"
+@startuml
+Alice -> Bob : hello
+@enduml
+```
+````
+
+| Fences | Tool |
+|---|---|
+| `mermaid` (also `:::mermaid`), `plantuml` or `puml`, `dot` or `graphviz`, `ditaa` | Mermaid, PlantUML, Graphviz, ditaa |
+| `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`, `packetdiag` | The blockdiag family |
+| `wavedrom`, `bytefield-svg`, `pikchr`, `railroad`, `wireviz` | Drawn as SVG |
+| `vega`, `vega-lite` | Vega, drawn as SVG |
+
+- **Format**: HTML and sites keep SVG where the tool can write it. Word, PowerPoint and PDF get PNG at 192 dpi, shrunk to the page width (wider after a `[[LANDSCAPE]]` line, until `[[PORTRAIT]]`).
+- **Alt text** comes from `caption="..."` or `title="..."` after the language, else from a `title` line in the diagram, else the diagram type.
+- **A broken diagram stops the build** with the file, the line and the tool's own message, and no output file is written. `py-doc build --keep-going` draws every diagram first and lists all the failures together.
+- **Pictures are cached** in your user cache folder (`PY_DOC_CACHE` overrides it), keyed by the diagram text, the format and the tool image, so an unchanged diagram is not drawn again. A PlantUML diagram with `!include` is always drawn, because the included file can change on its own.
+- **PlantUML includes** are looked up in the folder of the Markdown file, which is the only source folder the tool can read.
+- **Pictures** in Markdown are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown.

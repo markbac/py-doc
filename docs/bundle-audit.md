@@ -1,3 +1,7 @@
+---
+title: Bundle audit
+---
+
 # Bundle audit
 
 Findings from reading the remaining tools in `structurizr.zip`. Nothing was copied. Each tool is marked as covered, partly covered or not covered by `py-doc`, with the defects found in the original.

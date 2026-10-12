@@ -161,7 +161,8 @@ def _tags(value: Any) -> list[str]:
 
 
 def _props(value: Any) -> dict[str, str]:
-    return {str(k): str(v) for k, v in sorted((value or {}).items())}
+    """User properties. Structurizr's own bookkeeping (``structurizr.dsl.identifier`` and the like) is not for readers."""
+    return {str(k): str(v) for k, v in sorted((value or {}).items()) if not str(k).startswith("structurizr.")}
 
 
 def _sections(items: Any) -> list[Section]:

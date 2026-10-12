@@ -786,3 +786,11 @@ def test_the_wait_gives_up_after_the_limit_with_clean_logs(quick, tmp_path):
     runtime = _Waiting(failures=10_000, logs="\x1b[34mINFO\x1b[0;39m Themes:")
     with pytest.raises(ConversionError, match=r"did not answer within 300 seconds.\nINFO Themes:"):
         Stack(runtime, tmp_path / "workspace.json")._wait()
+
+
+def test_structurizr_bookkeeping_properties_are_left_out():
+    ws = workspace_from_dict(
+        {"name": "w", "model": {"softwareSystems": [{"id": "1", "name": "S", "properties": {"structurizr.dsl.identifier": "s", "owner": "Team"}}]}, "views": {}}
+    )
+    (system,) = ws.elements.values()
+    assert system.properties == {"owner": "Team"}

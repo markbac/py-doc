@@ -1,5 +1,5 @@
 extends: occurrence
-message: "Sentence is %s words long. Try to keep it under 30."
+message: "Sentence is %d words long. Try to keep it under {max}."
 level: warning
 scope: sentence
 max: 30

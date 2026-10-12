@@ -116,6 +116,7 @@ def test_generated_files_follow_the_definition(tmp_path):
     assert "PyDoc.PassiveVoice = NO" in ini and "write-good.Weasel = error" in ini
     sentence = yaml.safe_load((tmp_path / "vale/styles/PyDoc/SentenceLength.yml").read_text())
     assert sentence["max"] == 20
+    assert sentence["message"] == "Sentence is %d words long. Try to keep it under 20."  # Vale gives the count as a number
     assert yaml.safe_load((tmp_path / "vale/styles/PyDoc/Terms.yml").read_text())["swap"]["k8s"] == "Kubernetes"
     assert yaml.safe_load((tmp_path / "vale/styles/PyDoc/Terms.yml").read_text())["swap"]["lwm2m"] == "LwM2M"
     assert yaml.safe_load((tmp_path / "vale/styles/PyDoc/Avoid1.yml").read_text())["level"] == "error"

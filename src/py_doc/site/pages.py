@@ -40,6 +40,11 @@ OUTPUT_FORMAT = "gfm-tex_math_gfm+tex_math_dollars"  # pipe tables, task lists, 
 TIMEOUT = 900
 _LINK = re.compile(r"(?P<lead>!?\[(?:[^\]\\]|\\.)*\]\()(?P<target><[^>]*>|[^)\s]+)(?P<rest>[^)]*\))")
 _HTML_SRC = re.compile(r'(?P<lead><img\b[^>]*?\bsrc=")(?P<target>[^"]+)(?P<rest>")')
+# Code first (fenced blocks, then inline code of any number of backticks), else a run of text up to the next backtick
+_CODE_OR_TEXT = re.compile(
+    r"(?P<code>^(?P<fence>`{3,}|~{3,})[^\n]*\n.*?^(?P=fence)[ \t]*$|(?P<ticks>`+).+?(?<!`)(?P=ticks)(?!`))|(?P<text>[^`]+|`)",
+    re.MULTILINE | re.DOTALL,
+)
 
 
 @dataclass
@@ -211,4 +216,10 @@ def _relink(page: Page, by_source: dict[Path, Page], engine: str, files: dict[Pa
             new = page_link(target)
         return f"{match['lead']}{new}{match['rest']}" if new else match.group(0)
 
-    return _HTML_SRC.sub(swap, _LINK.sub(swap, page.markdown))
+    def outside_code(match: re.Match) -> str:
+        if match["code"]:
+            return match["code"]  # a fenced block or inline code shows the text as it is
+        text = match["text"]
+        return _HTML_SRC.sub(swap, _LINK.sub(swap, text))
+
+    return _CODE_OR_TEXT.sub(outside_code, page.markdown)

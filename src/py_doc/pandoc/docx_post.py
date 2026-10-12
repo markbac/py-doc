@@ -415,6 +415,16 @@ def find_placeholders(doc: Document, prefix: str) -> set[str]:
 # Explicit style / caption markers
 # ---------------------------------------------------------------------------
 
+def _starts_with_marker(p) -> bool:
+    """The paragraph begins with a marker in plain text. One shown as inline code (`[[STYLE:Name]]`, in pandoc's
+    ``Verbatim Char`` style) or mentioned within a sentence is text, and is left as it is."""
+    for run in p.runs:
+        if not run.text.strip():
+            continue
+        return run.text.lstrip().startswith("[[") and (run.style is None or run.style.name != "Verbatim Char")
+    return False
+
+
 def apply_explicit_styles(doc: Document) -> None:
     """
     Process ``[[STYLE:StyleName]]`` and ``[[CAPTION:Label]]`` markers left
@@ -434,6 +444,8 @@ def apply_explicit_styles(doc: Document) -> None:
             if found:
                 counts[found.group(1)] = counts.get(found.group(1), 0) + 1
         raw = p.text or ""
+        if not _starts_with_marker(p):
+            continue
 
         cap_m = CAPTION_PATTERN.search(raw)
         if cap_m:

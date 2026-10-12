@@ -82,7 +82,14 @@ jobs:
           py-doc import --help
           py-doc c4 --help
           py-doc setup --help
+          py-doc init --help
+          py-doc site --help
           py-c4-exporter --help
+      - name: py-doc's own documentation and the examples lint clean
+        if: runner.os == 'Linux'
+        run: |
+          py-doc lint docs --strict
+          cd examples && py-doc lint docs --strict
 
   build:
     name: Build package
