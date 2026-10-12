@@ -114,7 +114,6 @@ def test_the_same_source_in_two_documents_is_reported_and_kept_in_both(repo):
 def test_unsupported_settings_are_reported_not_dropped_silently(repo):
     result = migrate([repo / "docs"], repo)
     messages = {(f.file.name, f.message) for f in result.findings if f.level == "warning"}
-    assert ("GU-1.yaml", "PDF output is not supported yet and was not carried over") in messages
     assert ("GU-1.yaml", "cli.plantuml-jar-path was left out: PlantUML diagrams are not rendered") in messages
     assert ("GU-1.yaml", "createdocs chose the template from the status. py-doc uses one template per output") in messages
     assert ("big.yaml", "entries[3].extra_key has no equivalent and was left out") in messages
@@ -145,12 +144,27 @@ def test_document_ids_stay_unique(repo):
     assert ids == ["doc", "b-doc"]
 
 
-def test_pdf_only_document_still_gets_a_word_output_with_a_warning(tmp_path):
+def test_pdf_only_document_gets_a_pdf_output_and_no_word_file(tmp_path):
     write(tmp_path / "a.md", "# A\n")
-    write(tmp_path / "a.yaml", "cli: {emit-pdf: true, output: out/a.pdf}\nentries: [{file: a.md}]\n")
+    write(tmp_path / "a.yaml", "cli: {emit-pdf: true, output: out/a.pdf, template: t.docx}\nentries: [{file: a.md}]\n")
+    result = migrate([tmp_path], tmp_path)
+    assert result.config["documents"]["a"]["outputs"] == {"pdf": {"path": "out/a.pdf"}}
+    assert not any(f.level == "warning" for f in result.findings)
+
+
+def test_html_keeps_its_stylesheet_and_word_uses_the_same_engine_as_before(tmp_path):
+    write(tmp_path / "a.md", "# A\n")
+    write(tmp_path / "a.yaml", "cli: {emit-docx: true, emit-html: true, output: out/a.docx, css: s.css}\nentries: [{file: a.md}]\n")
+    outputs = migrate([tmp_path], tmp_path).config["documents"]["a"]["outputs"]
+    assert outputs == {"docx": {"path": "out/a.docx", "engine": "pandoc"}, "html": {"path": "out/a.html", "template": "s.css"}}
+
+
+def test_a_document_that_builds_only_processed_markdown_gets_a_word_output_with_a_warning(tmp_path):
+    write(tmp_path / "a.md", "# A\n")
+    write(tmp_path / "a.yaml", "cli: {emit-md: true, output: out/a.md}\nentries: [{file: a.md}]\n")
     result = migrate([tmp_path], tmp_path)
     assert result.config["documents"]["a"]["outputs"]["docx"]["path"] == "out/a.docx"
-    assert any("built no Word file" in f.message for f in result.findings)
+    assert any("built no Word, PDF or HTML file" in f.message for f in result.findings)
 
 
 def test_output_extension_decides_the_format_when_no_emit_flag_is_set(tmp_path):
@@ -208,17 +222,17 @@ class TestCommand:
         code, out, _ = self.run(monkeypatch, capsys, "docs", "--check")
         assert code == 0
         assert "migrated  docs/guidelines/GU-1.yaml -> documents.GU-1" in out
-        assert "2 files: PDF output" not in out and "Check only: nothing was written" in out
+        assert "files: processed Markdown" not in out and "Check only: nothing was written" in out
         assert not (repo / "py-doc.yml").exists()
 
     def test_repeated_findings_are_grouped(self, repo, monkeypatch, capsys):
         for index in range(4):
             write(repo / "docs" / f"x{index}" / "x.md", "# X\n")
-            write(repo / "docs" / f"x{index}" / "x.yaml", "cli: {emit-pdf: true, output: x.pdf}\nentries: [{file: x.md}]\n")
+            write(repo / "docs" / f"x{index}" / "x.yaml", "cli: {emit-md: true, output: x.md}\nentries: [{file: x.md}]\n")
         monkeypatch.chdir(repo)
         _, out, _ = self.run(monkeypatch, capsys, "docs", "--check")
-        assert "5 files: PDF output is not supported yet" in out
-        assert out.count("PDF output is not supported yet") == 1
+        assert "4 files: processed Markdown output is not supported yet" in out
+        assert out.count("processed Markdown output is not supported yet") == 1
 
     def test_writes_a_config_that_loads(self, repo, monkeypatch, capsys):
         monkeypatch.chdir(repo)

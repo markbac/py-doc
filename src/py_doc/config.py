@@ -21,7 +21,8 @@ from .runtime import RuntimeSettings
 logger = logging.getLogger(__name__)
 
 CONFIG_NAMES = ("py-doc.yml", "py-doc.yaml")
-FORMATS = {"docx": ".docx", "pptx": ".pptx"}
+FORMATS = {"docx": ".docx", "pptx": ".pptx", "pdf": ".pdf", "html": ".html"}
+ENGINES = ("native", "pandoc")  # for docx and pptx; pdf and html always use pandoc
 SEVERITIES = ("error", "warning", "info")
 DEFAULT_OUTPUT_DIR = "build"
 
@@ -33,11 +34,13 @@ _META_KEYS = (
     "classification", "subject", "keywords", "category", "company", "toc_depth",
 )  # fmt: skip
 _OUTPUT_OPTIONS = {
-    "docx": ("path", "template", "keep_template_body", "allow_missing_template"),
+    "docx": ("path", "template", "engine", "keep_template_body", "allow_missing_template"),
     "pptx": (
-        "path", "template", "keep_template_slides", "allow_missing_template", "split_level", "title_layout",
-        "content_layout",
+        "path", "template", "engine", "keep_template_slides", "allow_missing_template", "split_level",
+        "title_layout", "content_layout",
     ),
+    "pdf": ("path", "template", "toc"),
+    "html": ("path", "template", "toc"),
 }  # fmt: skip
 
 
@@ -231,8 +234,10 @@ def _parse_outputs(data: dict, root: Path, where: str, defaults: bool = False) -
         for option in _OUTPUT_OPTIONS[fmt]:
             if option in ("path", "template") or option not in raw:
                 continue
-            kind = int if option == "split_level" else str if option.endswith("layout") else bool
+            kind = int if option == "split_level" else str if option.endswith(("layout", "engine")) else bool
             settings.options[option] = _typed(raw, option, kind, place)
+        if settings.options.get("engine", "native") not in ENGINES:
+            raise ConfigError(f"{place}.engine must be one of {', '.join(ENGINES)}")
         if "split_level" in settings.options and not 1 <= settings.options["split_level"] <= 6:
             raise ConfigError(f"{place}.split_level must be 1 to 6")
         result[fmt] = settings

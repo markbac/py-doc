@@ -213,7 +213,7 @@ lint:
 ```
 
 - **Documents** join their sources in order. Properties come from the configuration, then from the first source's front matter. A document builds the formats listed under `outputs`, or Word if none is listed.
-- **Output options** per format: `template`, `allow_missing_template`, `keep_template_body` (docx), `keep_template_slides`, `split_level`, `title_layout`, `content_layout` (pptx). A document's value overrides the default.
+- **Output options** per format: `template`, `allow_missing_template`, `keep_template_body` (docx), `keep_template_slides`, `split_level`, `title_layout`, `content_layout` (pptx). A document's value overrides the default. See [Pandoc outputs](#pandoc-outputs) for `engine`, `pdf` and `html`.
 - **Lint** settings extend the built-in glossary, phrases and allowed acronyms. An issue whose rule is set to `error` fails `py-doc lint` even without `--strict`.
 - **Reserved**: `collections`, `bundles`, `content` and `site` are accepted and kept, with a warning, because nothing uses them yet.
 
@@ -222,6 +222,25 @@ py-doc build                      # every document
 py-doc build c4-guide -f pptx     # one document, one format
 py-doc build --var version=2.1 --condition internal=true
 ```
+
+### Pandoc outputs
+
+PDF and HTML are made by pandoc, which runs in the tool container (see [Tool container](#tool-container)). Word and PowerPoint can use it too with `engine: pandoc`; the default `native` engine is the built-in renderer and does not need the container.
+
+```yaml
+outputs:
+  docx: {engine: pandoc, template: templates/Template.docx}
+  pdf: {toc: true}                  # XeLaTeX, with the built-in template unless `template` names a .tex file
+  html: {template: styles/doc.css}  # one self-contained file; `template` is the stylesheet
+  pptx: {engine: pandoc, split_level: 2, template: templates/Slides.pptx}
+```
+
+- **Word** is written by pandoc with the template as its reference document. When a template is set, the result is merged into it: `Replace-with-Title`, `-Author`, `-Version`, `-Document-Number`, `-Date`, `-Description` and `-Classification` are filled in, and the body goes where `[[INSERTCONTENT]]` stands (at the end if there is no marker). `[[LANDSCAPE]]`, `[[PORTRAIT]]`, `[[STYLE:Name]]` and `[[CAPTION:Figure]]` lines are applied afterwards.
+- **Callouts** are drawn as boxes in every format, in both spellings: `> [!NOTE]` and `> **Note:** text`. The kinds are NOTE, TIP, IMPORTANT, WARNING and CAUTION.
+- **Page breaks**: `::: {.pagebreak}` followed by `:::`, or `page_break: true` on a source.
+- **Code** is highlighted with the built-in theme. Headings in `heading_offset` and `title` are found outside code blocks only, and must use `#` markers.
+- **A missing template is an error**, unless `allow_missing_template: true`. Pandoc's own warnings are shown as warnings.
+- Pictures are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown.
 
 ### Includes, conditions and variables
 
@@ -264,7 +283,7 @@ Each `createdocs` YAML file becomes one document, so folders, sources, templates
 
 The report lists what has no equivalent yet, so nothing is lost quietly:
 
-- PDF, HTML and processed Markdown output, PlantUML and ditaa rendering, and the other build switches for them.
+- Processed Markdown output, PlantUML and ditaa rendering, and the other build switches for them.
 - The template chosen from the document status, and the version added to the output file name. `py-doc` writes exactly the path you give.
 - Unknown `meta` and `entries` keys.
 

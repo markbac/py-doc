@@ -101,7 +101,7 @@ documents:
         ("documents:\n  g: {sources: [{title: x}]}", "documents.g.sources[0] needs a 'file'"),
         ("documents:\n  g: {sources: [{file: a.md, heading_offset: x}]}", "heading_offset must be int"),
         ("documents:\n  g: {sources: [{file: a.md, heading_offset: true}]}", "heading_offset must be int"),
-        ("documents:\n  g: {sources: [a.md], outputs: {pdf: {}}}", "unknown key 'pdf'"),
+        ("documents:\n  g: {sources: [a.md], outputs: {epub: {}}}", "unknown key 'epub'"),
         ("documents:\n  g: {sources: [a.md], outputs: {pptx: {split_level: 9}}}", "split_level must be 1 to 6"),
         ("outputs:\n  docx: {path: x.docx}", "takes 'dir', not 'path'"),
         ("lint:\n  rules: {DOC999: error}", "unknown rule 'DOC999'"),

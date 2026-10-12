@@ -54,7 +54,7 @@ class DirectiveError(ConversionError):
     """A directive cannot be applied. The message names the file and line."""
 
 
-class _Fence:
+class Fence:
     """Tracks whether a line is inside a fenced code block, following CommonMark's closing rule."""
 
     def __init__(self) -> None:
@@ -137,7 +137,7 @@ def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], 
     if depth > MAX_DEPTH:
         raise DirectiveError(f"{file}: includes are nested more than {MAX_DEPTH} deep")
     out: list[str] = []
-    fence = _Fence()
+    fence = Fence()
     blocks: list[tuple[bool, int]] = []  # (condition held, line of the [[IF:]])
     for number, line in enumerate(text.splitlines(), start=1):
         if fence.inside(line):
@@ -186,7 +186,7 @@ def check(text: str, file: Path) -> list[Problem]:
     That is: an [[ENDIF]] with nothing open, a block never closed, and an include whose file is missing.
     """
     problems: list[Problem] = []
-    fence = _Fence()
+    fence = Fence()
     open_lines: list[int] = []
     for number, line in enumerate(text.splitlines(), start=1):
         if fence.inside(line):

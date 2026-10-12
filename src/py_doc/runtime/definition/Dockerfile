@@ -20,7 +20,7 @@ RUN apt-get update \
       fontconfig fonts-dejavu fonts-liberation fonts-noto-core lmodern \
       texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended \
       texlive-pictures texlive-plain-generic \
-      default-jre-headless graphviz inkscape chromium \
+      default-jre-headless graphviz inkscape librsvg2-bin chromium \
       nodejs npm python3 python3-venv python3-pip \
  && rm -rf /var/lib/apt/lists/*
 

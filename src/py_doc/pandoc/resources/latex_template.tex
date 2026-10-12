@@ -1,0 +1,177 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------------------------------------------------------------------------
+% Fonts (XeLaTeX / fontspec) — Carlito/Caladea are metric-compatible with
+% Calibri/Cambria, matching the look of the Template.docx output so the
+% XeLaTeX and LibreOffice-converted PDFs stay visually consistent.
+% ---------------------------------------------------------------------------
+\usepackage{fontspec}
+\setmainfont{Caladea}
+\setsansfont{Carlito}
+\setmonofont{DejaVu Sans Mono}[Scale=0.88]
+
+\usepackage[a4paper,margin=2.4cm,headheight=14pt]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{placeins}
+\restylefloat{figure}
+\makeatletter
+\let\origfigure\figure
+\let\origendfigure\endfigure
+\renewenvironment{figure}[1][H]{\origfigure[H]}{\origendfigure}
+\makeatother
+\setkeys{Gin}{keepaspectratio}
+\usepackage{adjustbox}
+\usepackage{longtable,booktabs,array,calc}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{enumitem}
+\usepackage[hidelinks,unicode]{hyperref}
+\usepackage{fvextra}
+\usepackage{caption}
+\usepackage{needspace}
+
+% Pandoc marks uncaptioned longtables with \def\LTcaptype{none} as a
+% sentinel to suppress numbering. The caption package's longtable patch
+% (ltcaption.sty, auto-loaded above) looks up \LTcaptype as a real counter
+% name and crashes with "No counter 'none' defined" if it isn't one.
+% Defining a real (unused) counter called "none" satisfies that lookup.
+% Verified: this exact error reproduces with caption+longtable+uncaptioned
+% table, and is resolved by this single line.
+\newcounter{none}
+
+% ---------------------------------------------------------------------------
+% Brand colours
+% ---------------------------------------------------------------------------
+\definecolor{lgblue}{HTML}{003C64}
+\definecolor{lgaccent}{HTML}{0072B2}
+\definecolor{notegrey}{HTML}{4A4A4A}
+\definecolor{noteblue}{HTML}{E7F1F8}
+\definecolor{tipgreen}{HTML}{E8F5E9}
+\definecolor{importantpurple}{HTML}{F1ECF9}
+\definecolor{warningamber}{HTML}{FFF4E0}
+\definecolor{cautionred}{HTML}{FCE8E8}
+
+% ---------------------------------------------------------------------------
+% Heading styles
+% ---------------------------------------------------------------------------
+\titleformat{\section}{\normalfont\sffamily\LARGE\bfseries\color{lgblue}}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalfont\sffamily\Large\bfseries\color{lgblue}}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\normalfont\sffamily\large\bfseries\color{lgaccent}}{\thesubsubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{1.4em}{0.6em}
+\titlespacing*{\subsection}{0pt}{1.1em}{0.5em}
+\titlespacing*{\subsubsection}{0pt}{0.9em}{0.4em}
+
+% ---------------------------------------------------------------------------
+% Header / footer
+% ---------------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\fancyhead[L]{\small\sffamily $title$}
+\fancyhead[R]{\small\sffamily $classification$}
+\fancyfoot[L]{\small\sffamily $document-number$$if(version)$ — v$version$$endif$}
+\fancyfoot[R]{\small\sffamily Page \thepage\ of \NoHyper\pageref{LastPage}\endNoHyper}
+\usepackage{lastpage}
+
+\fancypagestyle{plain}{%
+  \fancyhf{}
+  \fancyfoot[L]{\small\sffamily $document-number$$if(version)$ — v$version$$endif$}
+  \fancyfoot[R]{\small\sffamily Page \thepage\ of \NoHyper\pageref{LastPage}\endNoHyper}
+  \renewcommand{\headrulewidth}{0pt}
+}
+
+% ---------------------------------------------------------------------------
+% Admonition boxes (used by admonitions.lua for latex/pdf output)
+% ---------------------------------------------------------------------------
+\newtcolorbox{notebox}{colback=noteblue,colframe=lgaccent,breakable,boxrule=0.6pt,arc=1mm,left=6pt,right=6pt,top=4pt,bottom=4pt,title={NOTE},fonttitle=\sffamily\bfseries,coltitle=lgblue,colbacktitle=noteblue,attach title to upper}
+\newtcolorbox{tipbox}{colback=tipgreen,colframe=green!45!black,breakable,boxrule=0.6pt,arc=1mm,left=6pt,right=6pt,top=4pt,bottom=4pt,title={TIP},fonttitle=\sffamily\bfseries,coltitle=green!30!black,colbacktitle=tipgreen,attach title to upper}
+\newtcolorbox{importantbox}{colback=importantpurple,colframe=violet!60!black,breakable,boxrule=0.6pt,arc=1mm,left=6pt,right=6pt,top=4pt,bottom=4pt,title={IMPORTANT},fonttitle=\sffamily\bfseries,coltitle=violet!50!black,colbacktitle=importantpurple,attach title to upper}
+\newtcolorbox{warningbox}{colback=warningamber,colframe=orange!80!black,breakable,boxrule=0.6pt,arc=1mm,left=6pt,right=6pt,top=4pt,bottom=4pt,title={WARNING},fonttitle=\sffamily\bfseries,coltitle=orange!70!black,colbacktitle=warningamber,attach title to upper}
+\newtcolorbox{cautionbox}{colback=cautionred,colframe=red!70!black,breakable,boxrule=0.6pt,arc=1mm,left=6pt,right=6pt,top=4pt,bottom=4pt,title={CAUTION},fonttitle=\sffamily\bfseries,coltitle=red!60!black,colbacktitle=cautionred,attach title to upper}
+
+% ---------------------------------------------------------------------------
+% Misc pandoc requirements
+% ---------------------------------------------------------------------------
+\providecommand{\tightlist}{\setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setlength{\emergencystretch}{3em}
+% Clamp every \includegraphics call to fit the page -- shrinks oversized
+% images, never stretches small ones. Hooking \includegraphics itself
+% (rather than only \pandocbounded) makes this work regardless of Pandoc
+% version: older Pandoc emits bare \includegraphics with no size wrapper
+% at all; newer Pandoc wraps it in \pandocbounded. Centering is left to
+% the enclosing figure environment (which already applies \centering) --
+% forcing it here too would wrongly break inline (non-figure) images
+% out of their surrounding text.
+\let\oldincludegraphics\includegraphics
+\renewcommand{\includegraphics}[2][]{%
+  \adjustbox{max width=\linewidth,max height=0.8\textheight,keepaspectratio}{\oldincludegraphics[#1]{#2}}%
+}
+\newcommand{\pandocbounded}[1]{#1}
+\newcommand{\passthrough}[1]{#1}
+
+$if(highlighting-macros)$
+$highlighting-macros$
+$endif$
+
+\hypersetup{
+  pdftitle={$title$},
+  pdfauthor={$author$},
+  colorlinks=true,
+  linkcolor=lgaccent,
+  urlcolor=lgaccent,
+  citecolor=lgaccent
+}
+
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+% ---------------------------------------------------------------------------
+% Title page
+% ---------------------------------------------------------------------------
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{center}
+\vspace*{1.5cm}
+{\sffamily\color{lgblue}\Huge\bfseries $title$\par}
+\vspace{0.4cm}
+$if(description)$
+{\sffamily\color{notegrey}\large $description$\par}
+\vspace{0.6cm}
+$endif$
+
+\vspace{1cm}
+\begin{tcolorbox}[colback=white,colframe=lgblue,boxrule=0.8pt,arc=1mm,width=0.72\textwidth,left=14pt,right=14pt,top=10pt,bottom=10pt]
+\sffamily
+\begin{tabular}{@{}ll@{}}
+\textbf{Document number:} & $document-number$ \\[2pt]
+$if(version)$\textbf{Version:} & $version$ \\[2pt]$endif$
+$if(status)$\textbf{Status:} & $status$ \\[2pt]$endif$
+\textbf{Classification:} & $classification$ \\[2pt]
+\textbf{Author:} & $author$ \\[2pt]
+\textbf{Date:} & $date$ \\
+\end{tabular}
+\end{tcolorbox}
+\end{center}
+\vfill
+{\centering\sffamily\small\color{notegrey} $classification$ --- $document-number$\par}
+\end{titlepage}
+
+\newpage
+$if(toc)$
+{\hypersetup{linkcolor=lgblue}
+\tableofcontents}
+\newpage
+$endif$
+
+$body$
+
+\FloatBarrier
+
+\end{document}

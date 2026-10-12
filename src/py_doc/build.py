@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from pathlib import Path
 
@@ -12,6 +13,9 @@ from .config import DocumentConfig, ProjectConfig
 from .errors import ConversionError
 from .markdown import FrontMatterError, Metadata, ParseError, parse, plain_text, read_metadata
 from .markdown import nodes as n
+from .pandoc import PandocJob, convert
+from .pandoc.source import join_sources
+from .runtime import Runtime
 from .render.docx import DocxConverter
 from .render.pptx import SlidesConverter
 
@@ -53,6 +57,19 @@ def _retitle(blocks: list, title: str) -> list:
     return [n.Heading(1, 1, 1, [n.Text(1, title)]), *blocks]
 
 
+def _combine_metadata(doc: DocumentConfig, first: Metadata, heading: str | None) -> Metadata:
+    """Properties from the configuration, then the first source's front matter, then its first heading."""
+    configured = doc.metadata()
+    merged = Metadata(
+        **{
+            name: getattr(configured, name) or getattr(first, name)
+            for name in ("title", "subtitle", "author", "date", "version", "status", "document_id", "keywords")
+        },
+        extra={**first.extra, **configured.extra},
+    )
+    return replace(merged, title=heading or doc.id) if merged.title is None else merged
+
+
 def merge_document(doc: DocumentConfig, variables: dict | None = None, conditions: dict | None = None) -> Merged:
     """Join the included sources of ``doc`` into one document, with the configured properties applied.
 
@@ -88,18 +105,14 @@ def merge_document(doc: DocumentConfig, variables: dict | None = None, condition
             blocks.append(n.PageBreak(0, 0))
         blocks += body
 
-    configured = doc.metadata()
-    merged = Metadata(
-        **{
-            name: getattr(configured, name) or getattr(first_metadata, name)
-            for name in ("title", "subtitle", "author", "date", "version", "status", "document_id", "keywords")
-        },
-        extra={**first_metadata.extra, **configured.extra},
-    )
-    if merged.title is None:
-        heading = next((b for b in blocks if isinstance(b, n.Heading)), None)
-        merged = replace(merged, title=plain_text(heading.children) if heading else doc.id)
+    heading = next((b for b in blocks if isinstance(b, n.Heading)), None)
+    merged = _combine_metadata(doc, first_metadata, plain_text(heading.children) if heading else None)
     return Merged(n.Document(None, blocks), merged)
+
+
+def _engine(fmt: str, settings: dict) -> str:
+    """PDF and HTML are made by pandoc. Word and PowerPoint use the renderer chosen under ``engine``."""
+    return "pandoc" if fmt in ("pdf", "html") else settings.get("engine", "native")
 
 
 def build_document(
@@ -108,13 +121,27 @@ def build_document(
     formats: list[str] | None = None,
     variables: dict | None = None,
     conditions: dict | None = None,
+    runtime: Callable[[], Runtime] | None = None,
 ) -> list[Path]:
-    """Build one document in each of ``formats`` (default: the ones it lists). Returns the files written."""
-    merged = merge_document(doc, variables, conditions)
+    """Build one document in each of ``formats`` (default: the ones it lists). Returns the files written.
+
+    ``runtime`` returns the tool container runtime, and is only called when a pandoc output needs it.
+    """
+    chosen = formats or config.output_formats(doc)
+    plans = [(fmt, *_settings(config, doc, fmt)) for fmt in chosen]
+    merged = joined = None
     written: list[Path] = []
-    base = doc.sources[0].file.parent
-    for fmt in formats or config.output_formats(doc):
-        template, settings = _settings(config, doc, fmt)
+    for fmt, template, settings in plans:
+        if _engine(fmt, settings) == "pandoc":
+            if joined is None:
+                joined = join_sources(
+                    [s for s in doc.sources], {**doc.variables, **(variables or {})}, {**doc.conditions, **(conditions or {})}, doc.id
+                )
+            written.append(_pandoc_output(config, doc, fmt, template, settings, joined, runtime))
+            continue
+        if merged is None:
+            merged = merge_document(doc, variables, conditions)
+        base = doc.sources[0].file.parent
         if fmt == "docx":
             converter = DocxConverter(
                 template_path=template,
@@ -135,6 +162,20 @@ def build_document(
             converter.convert_document(merged.document, merged.metadata, base, doc.id, config.output_path(doc, fmt))
         )
     return written
+
+
+def _pandoc_output(config, doc, fmt, template, settings, joined, runtime) -> Path:
+    if runtime is None:
+        raise ConversionError(f"Building {fmt} needs the tool container, but no runtime was given")
+    if template is not None and not template.is_file() and settings.get("allow_missing_template", False):
+        logger.warning(f"Template {template} not found, so {doc.id}.{fmt} is built without it")
+        template = None
+    metadata = _combine_metadata(doc, joined.metadata, joined.first_heading)
+    job = PandocJob(
+        fmt, joined.markdown, metadata, config.output_path(doc, fmt),
+        sorted({s.file.parent for s in doc.sources if s.include}), template, settings,
+    )  # fmt: skip
+    return convert(runtime(), job)
 
 
 def _settings(config: ProjectConfig, doc: DocumentConfig, fmt: str):

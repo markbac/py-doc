@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import logging
 import os
 import shutil
@@ -19,6 +20,7 @@ from .config import FORMATS, ConfigError, find_config, load_config
 from .errors import ConversionError, exit_status
 from .lint.cli import run as run_lint
 from .migrate import LEGACY_FORMATS, Migration, migrate, render
+from .runtime import connect
 from .slides_cli import run_slides
 from .tools_cli import run_doctor, run_tools
 
@@ -116,13 +118,14 @@ def _build(args: argparse.Namespace) -> int:
         _error(f"Unknown document(s): {', '.join(unknown)}. Defined: {', '.join(config.documents)}")
         return 1
 
+    runtime = functools.cache(lambda: connect(config.runtime))  # the container is only needed for pandoc outputs
     failed = 0
     status = 0
     names = args.documents or list(config.documents)
     for name in names:
         try:
             build_document(
-                config, config.documents[name], args.format, dict(args.var), _conditions(args.condition)
+                config, config.documents[name], args.format, dict(args.var), _conditions(args.condition), runtime
             )
         except (FileNotFoundError, ConversionError) as exc:
             _error(f"{name}: {exc}")
