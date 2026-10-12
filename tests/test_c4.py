@@ -68,8 +68,16 @@ class FakeBox:
     def container_path(self, path):
         return Path(path).resolve().as_posix()
 
+    def user(self):
+        return "1000:1000"
+
+    def keep_alive(self, detached=False):
+        return None
+
     def engine(self, args, **kwargs):
         self.engine_calls.append(list(args))
+        if args[0] in ("run", "rm"):
+            self.running = args[0] == "run"
         if args[0] == "inspect":
             return ToolResult(0, "true\n", "") if self.running else ToolResult(1, "", "No such object")
         if args[0] == "network" and args[1] == "inspect":
@@ -336,6 +344,73 @@ def test_local_gets_a_copy_with_only_the_named_workspace(project, box):
     assert not staged.exists()
 
 
+def test_a_staged_dsl_keeps_its_saved_layouts(project, box):
+    (project / "workspace.dsl").write_text("workspace {}\n")
+    (project / "workspace.json").write_text('{"views": "with layouts"}')
+    stack = Stack(box, project / "workspace.dsl")
+    stack.up()
+    run = [c for c in box.engine_calls if c[0] == "run"][0]
+    staged = Path(next(a for a in run if a.startswith("type=bind")).split("source=")[1].split(",target")[0])
+    assert staged != project.resolve() and (staged / "workspace.json").read_text() == '{"views": "with layouts"}'
+    assert "STRUCTURIZR_EDITABLE=false" in run and ["--user", "1000:1000"] == run[run.index("--user") : run.index("--user") + 2]
+    stack.down()
+
+
+def test_live_local_edits_the_project_folder(project, box):
+    (project / "workspace.dsl").write_text("workspace {}\n")
+    stack = Stack(box, project / "workspace.dsl", live=True)
+    stack.up()
+    run = [c for c in box.engine_calls if c[0] == "run"][0]
+    assert f"type=bind,source={project.resolve().as_posix()},target=/usr/local/structurizr" in run
+    assert "STRUCTURIZR_EDITABLE=true" in run and not any("AUTOSAVE" in a for a in run)
+    stack.down()
+    assert project.is_dir() and (project / "workspace.dsl").is_file()
+
+
+def test_live_local_copies_a_workspace_with_another_name(project, box, caplog):
+    (project / "model2.dsl").write_text("workspace {}\n")
+    stack = Stack(box, project / "model2.dsl", live=True)
+    stack.up()
+    assert "layouts saved in the browser are not kept" in caplog.text
+    stack.down()
+
+
+class _Keeper:
+    pid = 4242
+
+    def __init__(self):
+        self.ended = False
+
+    def terminate(self):
+        self.ended = True
+
+
+def test_wsl_is_kept_running_while_local_runs(project, box, monkeypatch):
+    keeper = _Keeper()
+    monkeypatch.setattr(box, "keep_alive", lambda detached=False: keeper, raising=False)
+    (project / "workspace.dsl").write_text("workspace {}\n")
+    stack = Stack(box, project / "workspace.dsl")
+    stack.up()
+    assert not keeper.ended
+    stack.down()
+    assert keeper.ended
+
+
+def test_a_detached_local_records_its_keeper_for_the_next_down(project, box, monkeypatch, tmp_path):
+    keeper = _Keeper()
+    ended = []
+    monkeypatch.setattr(box, "keep_alive", lambda detached=False: keeper, raising=False)
+    monkeypatch.setattr(stack_module, "_end_wsl_process", ended.append)
+    (project / "workspace.dsl").write_text("workspace {}\n")
+    state = tmp_path / "state"
+    first = Stack(box, project / "workspace.dsl", live=True, state=state)
+    first.up()
+    first.detach()
+    assert (state / stack_module.KEEPER_FILE).read_text() == "4242" and not keeper.ended
+    Stack(box, project / "workspace.dsl", live=True, state=state).down()
+    assert ended == [4242] and not (state / stack_module.KEEPER_FILE).exists()
+
+
 def test_a_workspace_with_another_name_is_staged_as_workspace_dsl(project, box):
     (project / "model2.dsl").write_text("workspace { !include more.dsl }\n")
     (project / "more.dsl").write_text("// included\n")
@@ -430,13 +505,35 @@ def test_a_missing_engine_exits_2(project, tmp_path, monkeypatch, capsys):
     assert main(["c4", "export", str(FIXTURE), "-o", str(tmp_path / "o"), "-f", "png"]) == 2
 
 
-def test_up_status_and_down(patched, project, capsys):
+def test_up_detached_status_and_down(patched, project, capsys):
     assert main(["c4", "status", str(project / "workspace.dsl")]) == 0
     assert capsys.readouterr().out.strip() == "absent"
-    assert main(["c4", "up", str(project / "workspace.dsl")]) == 0
-    assert "started" in capsys.readouterr().out
+    assert main(["c4", "up", str(project / "workspace.dsl"), "--detach", "--no-browser"]) == 0
+    out = capsys.readouterr().out
+    assert "http://localhost:8080/workspace/1/diagrams" in out and "c4 down" in out
+    assert main(["c4", "status", str(project / "workspace.dsl")]) == 0
+    assert capsys.readouterr().out.strip() == "running"
     assert main(["c4", "down", str(project / "workspace.dsl")]) == 0
     assert patched.engine_calls[-2][:2] == ["rm", "-f"]
+
+
+def test_up_runs_until_ctrl_c_then_stops_local(patched, project, capsys, monkeypatch):
+    opened = []
+    monkeypatch.setattr("py_doc.c4.cli.webbrowser.open", opened.append)
+
+    def interrupt(seconds):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("py_doc.c4.cli.time.sleep", interrupt)
+    assert main(["c4", "up", str(project / "workspace.dsl")]) == 0
+    assert opened == ["http://localhost:8080/workspace/1/diagrams"]
+    assert "stopped" in capsys.readouterr().out and not patched.running
+
+
+def test_up_reports_a_local_that_stops_by_itself(patched, project, capsys, monkeypatch):
+    monkeypatch.setattr("py_doc.c4.cli.time.sleep", lambda s: setattr(patched, "running", False))
+    assert main(["c4", "up", str(project / "workspace.dsl"), "--no-browser"]) == 1
+    assert "stopped by itself" in capsys.readouterr().err
 
 
 def test_dry_run_creates_no_output_folder_even_for_a_missing_input(patched, tmp_path):
@@ -640,6 +737,9 @@ class _Waiting:
 
     def __init__(self, failures=0, running=True, logs="x"):
         self.failures, self.running, self.logs, self.calls = failures, running, logs, []
+
+    def keep_alive(self, detached=False):
+        return None
 
     def engine(self, args, **kwargs):
         self.calls.append(args[0])

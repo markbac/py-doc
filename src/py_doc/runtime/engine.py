@@ -341,6 +341,25 @@ class Runtime:
         except EnvironmentProblem:
             logger.debug("Could not stop container %s", name)
 
+    def keep_alive(self, detached: bool = False) -> subprocess.Popen | None:
+        """Keep the WSL distro running while a container must outlive this command (None on Linux).
+
+        WSL stops a distro soon after its last ``wsl.exe`` exits, and Docker and every container with it. The
+        process returned is a ``sleep`` inside the distro: end it with ``terminate()``. A ``detached`` one has
+        no console and survives this program, for ``py-doc c4 up --detach``.
+        """
+        if not self.windows:
+            return None
+        flags = 0x00000008 | 0x00000200 if detached else 0x08000000  # DETACHED_PROCESS | NEW_PROCESS_GROUP, else NO_WINDOW
+        command = [*self._prefix(), "sleep", "infinity"]
+        logger.debug("Keeping WSL running: %s", " ".join(command))
+        try:
+            return subprocess.Popen(
+                command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags
+            )
+        except FileNotFoundError as exc:
+            raise EnvironmentProblem("wsl.exe was not found. Install WSL 2 (`wsl --install`)") from exc
+
 
 def _text(data: bytes) -> str:
     try:
