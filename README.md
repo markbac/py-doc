@@ -37,12 +37,15 @@ Linux and Windows. The tool runner (see below) refuses to start on any other pla
 Programs that are not Python (pandoc, TeX, PlantUML, Mermaid, Graphviz and the rest) run inside one container image, so nothing but Python and Docker has to be installed. On Linux that is Docker. On Windows it is Docker Engine inside a WSL 2 distribution (not Docker Desktop).
 
 ```bash
+py-doc setup             # install Docker Engine (Ubuntu or Debian: in the WSL distro on Windows, or here on Linux)
 py-doc doctor            # check the platform, WSL, Docker, the image and a trivial run
 py-doc tools lock        # only after changing a tool version in tools.lock (the shipped checksums are already recorded)
 py-doc tools build       # build the image here (several GB, 10 to 30 minutes the first time)
 py-doc tools status      # image tag, and the version of each tool inside it
 py-doc tools prune       # remove images left by older py-doc versions
 ```
+
+`py-doc setup` shows the steps it will run as root, asks first (`--yes` skips the question, `--dry-run` prints the script and runs nothing), then adds Docker's apt repository, installs the engine, adds your user to the `docker` group, turns on systemd in the distro and restarts it. WSL itself must already be installed (`wsl --install -d Ubuntu`). It does nothing when Docker already works, and a build never runs it.
 
 The image is built from a `Dockerfile` that ships in the package, and its tag is a hash of that folder, so a release that changes the toolchain rebuilds and one that does not reuses the image. A command that needs the image and finds none builds it first. Builds behind a proxy that re-signs TLS take `--ca-file`. Machines that cannot build can use `py-doc tools save` and `py-doc tools load`.
 

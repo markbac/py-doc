@@ -27,7 +27,7 @@ from .slides_cli import run_slides
 from .c4.cli import run_c4
 from .import_cli import run_import
 from .template_cli import run_template
-from .tools_cli import run_doctor, run_tools
+from .tools_cli import run_doctor, run_setup, run_tools
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ _DELEGATES = {
     "import": ("Convert a Word document (.docx) to Markdown", run_import),
     "template": ("Check and inspect Word and PowerPoint templates", run_template),
     "doctor": ("Check that the tool container works", run_doctor),
+    "setup": ("Install Docker Engine for the tool runner", run_setup),
 }
 
 
