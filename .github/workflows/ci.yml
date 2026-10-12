@@ -53,7 +53,17 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install vale -y
       - run: python -m pip install -e ".[dev]"
-      - run: python -m pytest -v
+      - name: Tests
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -v -rf --tb=short > pytest.log 2>&1
+          code=$?
+          if [ $code -ne 0 ]; then
+            grep -E "^(FAILED|ERROR)|Error" pytest.log | head -15 | cut -c1-400 | while IFS= read -r line; do echo "::error::$line"; done
+          fi
+          tail -5 pytest.log
+          exit $code
       - name: Commands start
         run: |
           py-doc2docx --version
