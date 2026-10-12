@@ -277,3 +277,9 @@ class TestCommand:
         monkeypatch.setattr(app, "connect", refuse)
         assert app.main(["build", "-f", "html"]) == 2
         assert "guide: Docker is not running" in capsys.readouterr().err
+
+
+def test_latex_template_defines_task_list_boxes():
+    """pandoc writes \\boxtimes and \\square for `- [x]` items, so the PDF template must load amssymb."""
+    template = (Path(source.__file__).parent / "resources" / "latex_template.tex").read_text(encoding="utf-8")
+    assert "\\usepackage{amssymb}" in template
