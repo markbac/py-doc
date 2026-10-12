@@ -200,9 +200,17 @@ def _inside(position: int, spans: list[tuple[int, int]]) -> bool:
 
 
 def live_lines(lines: list[str]) -> Iterator[tuple[int, str]]:
-    """``(line number, line)`` for every line outside fenced code."""
+    """``(line number, line)`` for every line outside fenced code and the front matter."""
     fence = Fence()
+    start = 1
+    if lines and lines[0].strip() == "---":
+        for number, line in enumerate(lines[1:], start=2):
+            if line.strip() in ("---", "..."):
+                start = number + 1
+                break
     for number, line in enumerate(lines, start=1):
+        if number < start:
+            continue
         if not fence.inside(line):
             yield number, line
 
@@ -287,7 +295,8 @@ def _balanced(file: Path, lines: list[str], rule: StructureRule) -> list[LintIss
 
 
 def _captions(file: Path, lines: list[str], rules: list[StructureRule]) -> list[LintIssue]:
-    """Tables, pictures, code blocks, diagram divs and trigger lines each need a caption on the line after."""
+    """Tables, pictures, code blocks, diagram divs and trigger lines each need a caption marker on the line before or after (the build accepts both, and the Word importer
+    and the C4 pages put it before)."""
     table = next((r for r in rules if r.block == "table"), None)
     image = next((r for r in rules if r.block == "image"), None)
     fenced = next((r for r in rules if r.block == "fence"), None)
@@ -295,7 +304,14 @@ def _captions(file: Path, lines: list[str], rules: list[StructureRule]) -> list[
     count = len(lines)
     issues: list[LintIssue] = []
 
-    def captioned(after: int, rule: StructureRule) -> bool:
+    def captioned(after: int, rule: StructureRule, first: int | None = None) -> bool:
+        """The marker is on the next non-blank line after the block, or on the one before its first line."""
+        if first is not None:
+            back = first - 1
+            while back >= 0 and not lines[back].strip():
+                back -= 1
+            if back >= 0 and rule.required_pattern.search(lines[back]):
+                return True
         index = after
         while index < count and not lines[index].strip():
             index += 1
@@ -310,7 +326,7 @@ def _captions(file: Path, lines: list[str], rules: list[StructureRule]) -> list[
             while end < count and not (lines[end].lstrip().startswith(marker[0] * len(marker)) and not lines[end].strip(marker[0])):
                 end += 1
             wanted = fenced is not None and (not fenced.languages or language in fenced.languages)
-            if wanted and not captioned(end + 1, fenced):
+            if wanted and not captioned(end + 1, fenced, i):
                 issues.append(_issue(fenced, file, min(end + 1, count), fenced.message))
             i = end + 1
             continue
@@ -319,20 +335,21 @@ def _captions(file: Path, lines: list[str], rules: list[StructureRule]) -> list[
             end = i + 1
             while end < count and not lines[end].startswith(marker):
                 end += 1
-            if fenced is not None and language in (fenced.div_languages or ()) and not captioned(end + 1, fenced):
+            if fenced is not None and language in (fenced.div_languages or ()) and not captioned(end + 1, fenced, i):
                 issues.append(_issue(fenced, file, min(end + 1, count), fenced.message))
             i = end + 1
             continue
         if table and _TABLE_ROW.match(line):
+            first = i
             while i < count and _TABLE_ROW.match(lines[i]):
                 i += 1
-            if not captioned(i, table):
+            if not captioned(i, table, first):
                 issues.append(_issue(table, file, i, table.message))
             continue
-        if image and _IMAGE.search(line) and not captioned(i + 1, image):
+        if image and _IMAGE.search(line) and not captioned(i + 1, image, i):
             issues.append(_issue(image, file, i + 1, image.message))
         for rule in line_rules:
-            if rule.trigger_pattern.search(line) and not captioned(i + 1, rule):
+            if rule.trigger_pattern.search(line) and not captioned(i + 1, rule, i):
                 issues.append(_issue(rule, file, i + 1, rule.message))
         i += 1
     return issues

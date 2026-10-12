@@ -118,7 +118,7 @@ A word or sentence is never dropped silently by py-doc itself, but anything pand
 
 ### Word templates
 
-`py-doc template check Template.docx` reports what the template lacks for the pandoc pipeline (`.docx`, `.dotx`, `.pptx` and `.potx` are accepted), and `py-doc template show` lists its styles or layouts. FAIL (a style of the wrong type, bold body text, a deck without the `Title Slide` or `Title and Content` layout) exits with status 1, WARN (a style pandoc will take from its own defaults) only with `--strict`, and `-v` adds INFO. A build runs the check and logs the failures, and carries on.
+`py-doc template check Template.docx` reports what the template lacks for the pandoc pipeline (`.docx`, `.dotx`, `.pptx` and `.potx` are accepted), and `py-doc template show` lists its styles or layouts. `py-doc template diff A B` lists the styles (or layouts) that are missing from one template or defined differently (exit 1 when they differ), and `py-doc template usage File.docx` counts the styles a Word file uses. FAIL (a style of the wrong type, bold body text, a deck without the `Title Slide` or `Title and Content` layout) exits with status 1, WARN (a style pandoc will take from its own defaults) only with `--strict`, and `-v` adds INFO. A build runs the check and logs the failures, and carries on.
 
 The template is pandoc's reference document, so its styles decide how everything looks, and the result is merged into it (see [Pandoc outputs](#pandoc-outputs)). A template can be `.docx` or `.dotx`. Without one, a built-in reference document is used, which defines the callout box styles. If the template lacks a `Div.note` style or another the document needs, one warning names it.
 
@@ -197,7 +197,11 @@ py-doc lint docs/             # lint a directory (default: the current one)
 py-doc lint docs/Guide.md     # lint one file
 py-doc lint docs/ --strict    # exit 1 if any warning or error is reported
 py-doc lint . --exclude drafts
+py-doc lint docs/ --format csv > issues.csv      # a spreadsheet (the summary goes to standard error)
+py-doc lint docs/ --format github                # ::warning file=...,line=... annotations for GitHub Actions
 ```
+
+A `[[CAPTION:Figure]]` or `[[CAPTION:Table]]` marker counts when it is on the line before or after the picture, table or diagram.
 
 | Rule | Category | Default severity | What it reports |
 |---|---|---|---|

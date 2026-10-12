@@ -43,7 +43,7 @@ def test_the_templates_pass_the_check(name, capsys):
 
 
 def test_the_documents_lint_clean(examples, capsys):
-    assert main(["lint", "docs", "--engine", "builtin"]) == 0
+    assert main(["lint", "docs", "--engine", "builtin", "--strict"]) == 0
 
 
 def test_the_model_checks_without_java(examples, capsys):

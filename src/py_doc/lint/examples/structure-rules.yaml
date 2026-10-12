@@ -152,7 +152,7 @@ rules:
     severity: warning
     block: table
     required_pattern: '(?<!\\)\[\[CAPTION:Table\]\]'
-    message: "Table has no [[CAPTION:Table]] marker on the line right after it."
+    message: "Table has no [[CAPTION:Table]] marker on the line before or after it."
 
   - id: structure/image-missing-caption
     type: requires-caption
@@ -160,7 +160,7 @@ rules:
     severity: warning
     block: image
     required_pattern: '(?<!\\)\[\[CAPTION:Figure\]\]'
-    message: "Image has no [[CAPTION:Figure]] marker on the line right after it."
+    message: "Image has no [[CAPTION:Figure]] marker on the line before or after it."
 
   - id: structure/diagram-missing-caption
     type: requires-caption
@@ -171,7 +171,7 @@ rules:
     div_languages: [mermaid]     # ::: fenced divs - only these classes need a
                                   # caption (::: {.pagebreak} etc. must not)
     required_pattern: '(?<!\\)\[\[CAPTION:Figure\]\]'
-    message: "Code block has no [[CAPTION:Figure]] marker on the line right after it."
+    message: "Code block has no [[CAPTION:Figure]] marker on the line before or after it."
 
   - id: structure/include-code-missing-caption
     type: requires-caption
@@ -180,7 +180,7 @@ rules:
     block: line
     trigger_pattern: '(?<!\\)\[\[INCLUDE-CODE:'
     required_pattern: '(?<!\\)\[\[CAPTION:Figure\]\]'
-    message: "[[INCLUDE-CODE: ...]] has no [[CAPTION:Figure]] marker on the line right after it."
+    message: "[[INCLUDE-CODE: ...]] has no [[CAPTION:Figure]] marker on the line before or after it."
 
   - id: structure/cross-file-anchor
     type: cross-file-anchors

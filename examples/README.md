@@ -57,6 +57,8 @@ py-doc slides docs/slides.md -o build/slides.pptx --template templates/company.p
 py-doc template check templates/company.docx --strict
 py-doc template check templates/company.pptx --strict
 py-doc template show templates/company.docx
+py-doc template diff templates/company.docx word/design_meeting.docx
+py-doc template usage word/design_meeting.docx
 ```
 
 ## Lint
@@ -64,6 +66,7 @@ py-doc template show templates/company.docx
 ```bash
 py-doc lint docs                    # built-in rules, structure rules and C4 model rules
 py-doc lint docs --engine vale      # Vale with the bundled PyDoc style
+py-doc lint docs --format csv > issues.csv   # or --format github
 py-doc lint --show-vale-config
 py-doc lint --check-engines
 ```

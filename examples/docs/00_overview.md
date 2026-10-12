@@ -22,6 +22,7 @@ trying out `py-doc`: build it with `py-doc build` from this folder.
 > This build is for internal use. It contains notes that must not be sent to customers.
 [[ENDIF]]
 
+[[CAPTION:Figure]] The company logo
 ![Example Ltd](images/logo.png)
 
 ## What the gateway does
@@ -32,6 +33,6 @@ over *LwM2M* on **DTLS**. It buffers readings when the network is down.
 > **Note:** Both callout spellings work. This one is `> **Note:** text`.
 
 > [!TIP]
-> This one is `> [!TIP]`. The kinds are NOTE, TIP, IMPORTANT, WARNING and CAUTION.
+> This one is `> [!TIP]`. The kinds are NOTE, TIP, IMPORTANT, WARNING and `CAUTION`.
 
 See the [requirements](#requirements) and the [design](#design).

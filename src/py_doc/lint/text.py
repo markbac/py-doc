@@ -17,6 +17,8 @@ _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 # Dotted or slashed names such as config.json, http.client and docs/api: identifiers, not prose.
 _GAP = "\ufffc"  # stands in for inline code and inline HTML, which are not prose
 _NAME = re.compile(r"(?<![\w])[\w-]+(?:[./\\][\w-]+)+")
+# py-doc directives ([[INCLUDE: a.md]], [[IF: x]]) and callout markers ([!NOTE]) are markup, not prose.
+_MARKUP = re.compile(r"\[\[[A-Z-]+\b[^\]]*\]\]|\[![A-Za-z]+\]")
 
 
 @dataclass
@@ -66,7 +68,7 @@ class _Builder:
 
 
 def _mask(text: str) -> str:
-    for pattern in (_URL, _EMAIL, _NAME):
+    for pattern in (_URL, _EMAIL, _NAME, _MARKUP):
         text = pattern.sub(lambda m: " " * len(m.group(0)), text)
     return text
 

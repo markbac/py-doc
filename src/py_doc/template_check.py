@@ -278,6 +278,88 @@ def inventory(path: Path) -> list[tuple[str, ...]]:
     ]
 
 
+def _definition(style) -> tuple[str, ...]:
+    """What a style is, in a form two templates can be compared by."""
+    font, fmt = getattr(style, "font", None), getattr(style, "paragraph_format", None)
+    if font is None:  # a list style
+        return ()
+    size = font.size.pt if font.size else None
+    based = style.base_style.name if getattr(style, "base_style", None) is not None else ""
+    following = getattr(style, "next_paragraph_style", None)
+    parts = {
+        "based on": based,
+        "next": following.name if following is not None else "",
+        "font": font.name,
+        "size": size,
+        "bold": font.bold,
+        "italic": font.italic,
+        "colour": str(font.color.rgb) if font.color is not None and font.color.type is not None and font.color.rgb else None,
+        "keep with next": fmt.keep_with_next if fmt is not None else None,
+        "keep together": fmt.keep_together if fmt is not None else None,
+        "space before": fmt.space_before.pt if fmt is not None and fmt.space_before else None,
+        "space after": fmt.space_after.pt if fmt is not None and fmt.space_after else None,
+        "alignment": str(fmt.alignment) if fmt is not None and fmt.alignment is not None else None,
+    }
+    return tuple(f"{key}: {value}" for key, value in parts.items() if value not in (None, ""))
+
+
+def compare(first: Path, second: Path) -> list[tuple[str, str, str]]:
+    """Rows (change, name, detail) between two Word templates, or two decks (by layout name)."""
+    kinds = kind_of(Path(first)), kind_of(Path(second))
+    if kinds[0] != kinds[1]:
+        raise ConversionError(f"Cannot compare a {kinds[0]} template with a {kinds[1]} one")
+    a, b = _opened(Path(first), kinds[0]), _opened(Path(second), kinds[1])
+    rows: list[tuple[str, str, str]] = []
+    if kinds[0] == "word":
+        left, right = styles_of(a), styles_of(b)
+        for name in sorted(left.keys() | right.keys()):
+            if name not in right:
+                rows.append(("only in first", name, left[name][0]))
+            elif name not in left:
+                rows.append(("only in second", name, right[name][0]))
+            elif left[name][0] != right[name][0]:
+                rows.append(("type differs", name, f"{left[name][0]} / {right[name][0]}"))
+            else:
+                one, two = _definition(left[name][1]), _definition(right[name][1])
+                if one != two:
+                    changed = sorted(set(one) ^ set(two))
+                    rows.append(("differs", name, "; ".join(changed)))
+        return rows
+    left = {layout.name: sorted(str(p.placeholder_format.type) for p in layout.placeholders) for layout in a.slide_layouts}
+    right = {layout.name: sorted(str(p.placeholder_format.type) for p in layout.placeholders) for layout in b.slide_layouts}
+    for name in sorted(left.keys() | right.keys()):
+        if name not in right:
+            rows.append(("only in first", name, ""))
+        elif name not in left:
+            rows.append(("only in second", name, ""))
+        elif left[name] != right[name]:
+            rows.append(("differs", name, f"{len(left[name])} / {len(right[name])} placeholders"))
+    return rows
+
+
+def usage(path: Path) -> list[tuple[str, int]]:
+    """How often each paragraph and table style is used in a Word file, most used first."""
+    path = Path(path)
+    if kind_of(path) != "word":
+        raise ConversionError(f"Style usage is only counted for Word files: {path}")
+    document = _opened(path, "word")
+    counts: dict[str, int] = {}
+
+    def paragraphs(container):
+        for paragraph in container.paragraphs:
+            counts[paragraph.style.name] = counts.get(paragraph.style.name, 0) + 1
+        for table in getattr(container, "tables", []):
+            counts[table.style.name if table.style is not None else "(none)"] = (
+                counts.get(table.style.name if table.style is not None else "(none)", 0) + 1
+            )
+            for row in table.rows:
+                for cell in row.cells:
+                    paragraphs(cell)
+
+    paragraphs(document)
+    return sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+
+
 _logged: set[tuple[Path, float]] = set()
 
 

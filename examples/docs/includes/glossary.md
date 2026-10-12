@@ -1,3 +1,4 @@
+[[CAPTION:Table]] Terms
 | Term | Meaning |
 |---|---|
 | UART | Serial link between the gateway and the meter |

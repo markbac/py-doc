@@ -70,6 +70,16 @@ class TestOtherTypes:
         assert found(table + "\n[[CAPTION:Table]] x\n", self.CAPTION) == []
         assert found(table + "\ntext\n", self.CAPTION) == [(3, "r/cap", "warning")]
 
+    def test_a_caption_before_the_block_counts(self):
+        image = {**self.CAPTION, "id": "r/img", "block": "image", "required_pattern": r"\[\[CAPTION:Figure\]\]"}
+        assert found("[[CAPTION:Figure]] a\n![x](a.png)\n", image) == []
+        assert found("[[CAPTION:Table]] a\n| a |\n|---|\n| 1 |\n", self.CAPTION) == []
+        assert found("text\n\n![x](a.png)\n", image) == [(3, "r/img", "warning")]
+
+    def test_front_matter_is_not_checked_as_text(self):
+        rule = {"id": "r/rule", "type": "regex-line", "severity": "warning", "pattern": r"^---\s*$", "message": "m"}
+        assert found("---\ntitle: x\n---\n\ntext\n\n---\n", rule) == [(7, "r/rule", "warning")]
+
     def test_image_fence_div_and_trigger_captions(self):
         image = {**self.CAPTION, "id": "r/img", "block": "image", "required_pattern": r"\[\[CAPTION:Figure\]\]"}
         fence = {**image, "id": "r/fence", "block": "fence", "div_languages": ["mermaid"]}

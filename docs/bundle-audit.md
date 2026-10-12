@@ -45,17 +45,15 @@ Defects in the original:
 
 ### docx_style_inspector.py
 
-`py-doc template show` lists styles and layouts. Not ported:
+`py-doc template show` lists styles and layouts, `template diff` compares two templates and `template usage` counts styles in a document. Not ported:
 
 - Style definitions flattened through the `basedOn` chain.
-- Style usage counts in a finished document.
-- Comparing the required styles of two templates (same, different, missing).
 
 Defects in the original: `STYLE_REFERENCES` names `Light List Accent 3`, which the code does not use, and the references name `createdocs` modules that no longer exist.
 
 ### check_docs.py output formats
 
-Not ported: CSV report (`write_csv`) and the editor line format (`write_editor_format`). `py-doc lint` prints text only. A `--format` option (`text`, `csv`, `github`) would cover CI annotations and spreadsheets.
+The CSV report (`write_csv`) and the editor line format (`write_editor_format`) are covered by `py-doc lint --format csv|github`. The plain text output already has the `file:line:` form editors read.
 
 ## Structurizr scripts
 
@@ -89,7 +87,7 @@ Not needed: tools come from the Docker image (`py-doc tools build`). Defects in 
 
 A wrapper that sources `..\scripts\_run.ps1`, which is not in the bundle. Replaced by the `py-doc` command.
 
-## Suggested follow-ups
+## Follow-ups done
 
-1. `py-doc lint --format csv|github` (the one real gap in check_docs.py).
-2. `py-doc template diff A B` and style usage counts (the unique parts of docx_style_inspector.py).
+- `py-doc lint --format csv|github` covers the report formats of check_docs.py.
+- `py-doc template diff A B` and `py-doc template usage FILE` cover the comparison and usage counts of docx_style_inspector.py. Style definitions flattened through the `basedOn` chain are not ported.

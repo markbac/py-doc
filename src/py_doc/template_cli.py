@@ -9,7 +9,7 @@ from pathlib import Path
 
 from ._logging import configure_logging
 from .errors import ConversionError
-from .template_check import LEVELS, check_template, inventory, kind_of
+from .template_check import LEVELS, check_template, compare, inventory, kind_of, usage
 
 def _error(message: str) -> None:
     print(f"Error: {message}", file=sys.stderr)
@@ -26,6 +26,15 @@ def build_parser() -> argparse.ArgumentParser:
         noise.add_argument("-v", "--verbose", action="store_true", help="Also show INFO findings")
         if name == "check":
             sub.add_argument("--strict", action="store_true", help="Exit with status 1 for warnings as well as failures")
+    diff = commands.add_parser("diff", help="Compare the styles (or layouts) of two templates", description="Compare two templates")
+    diff.add_argument("first", type=Path, help="The template to start from")
+    diff.add_argument("second", type=Path, help="The template to compare it with")
+    count = commands.add_parser("usage", help="Count the styles a Word file uses", description="Count the styles a Word file uses")
+    count.add_argument("document", type=Path, help="A .docx file")
+    for sub in (diff, count):
+        noise = sub.add_mutually_exclusive_group()
+        noise.add_argument("-q", "--quiet", action="store_true", help="Only warnings and errors")
+        noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
     return parser
 
 
@@ -39,6 +48,8 @@ def run_template(argv: Sequence[str] | None = None) -> int:
     """Exit status: 0 fine, 1 failures found (or warnings with --strict), 2 the file cannot be read."""
     args = build_parser().parse_args(argv)
     configure_logging(quiet=args.quiet, verbose=args.verbose)
+    if args.action in ("diff", "usage"):
+        return _compare(args)
     try:
         kind = kind_of(args.template)
         if args.action == "show":
@@ -55,3 +66,20 @@ def run_template(argv: Sequence[str] | None = None) -> int:
             print(f"{level:<5} {finding.check}: {finding.message}")
     print(f"{args.template}: {len(report.failures)} failure(s), {len(report.warnings)} warning(s)")
     return 1 if report.failures or (args.strict and report.warnings) else 0
+
+
+def _compare(args: argparse.Namespace) -> int:
+    """``diff``: 0 when the templates agree, 1 when they differ. ``usage``: 0."""
+    try:
+        if args.action == "usage":
+            print(_table([(name, str(n)) for name, n in usage(args.document)], ("Style", "Used")))
+            return 0
+        rows = compare(args.first, args.second)
+    except (FileNotFoundError, ConversionError) as exc:
+        _error(str(exc))
+        return 2
+    if not rows:
+        print("The templates have the same styles and layouts.")
+        return 0
+    print(_table(rows, ("Change", "Name", "Detail")))
+    return 1

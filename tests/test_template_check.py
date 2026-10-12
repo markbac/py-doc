@@ -181,3 +181,36 @@ def test_a_build_reports_template_problems_once_and_goes_on(tmp_path, pandoc_run
             DocxConverter(template_path=template).convert_file(tmp_path / "a.md", tmp_path / f"{name}.docx")
     assert caplog.text.count("'Normal' is bold") == 1
     assert (tmp_path / "two.docx").is_file()
+
+
+def test_diff_names_the_styles_that_differ(good_docx, tmp_path, capsys):
+    other = tmp_path / "other.docx"
+    document = Document(good_docx)
+    document.styles.add_style("Extra", WD_STYLE_TYPE.PARAGRAPH)
+    document.styles["Normal"].font.size = None
+    document.styles["Caption"].font.bold = True
+    document.save(other)
+    assert main(["template", "diff", str(good_docx), str(other)]) == 1
+    out = capsys.readouterr().out
+    assert "only in second" in out and "Extra" in out and "differs" in out and "Caption" in out
+    assert main(["template", "diff", str(good_docx), str(good_docx)]) == 0
+
+
+def test_diff_refuses_a_word_file_against_a_deck(good_docx, tmp_path, capsys):
+    good_pptx = tmp_path / "deck.pptx"
+    Presentation().save(good_pptx)
+    assert main(["template", "diff", str(good_docx), str(good_pptx)]) == 2
+
+
+def test_usage_counts_paragraph_and_table_styles(tmp_path, capsys):
+    document = Document()
+    document.add_paragraph("a", style="Heading 1")
+    document.add_paragraph("b")
+    document.add_paragraph("c")
+    document.add_table(rows=1, cols=1).cell(0, 0).text = "cell"
+    path = tmp_path / "used.docx"
+    document.save(path)
+    assert main(["template", "usage", str(path)]) == 0
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[1].split() == ["Normal", "3"]
+    assert any(line.split()[:1] == ["Heading"] and line.split()[-1] == "1" for line in lines)

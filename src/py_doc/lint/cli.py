@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import logging
 import sys
 from dataclasses import replace
@@ -53,6 +55,10 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         "--engine", choices=("auto", "builtin", "vale"), default="auto",
         help="auto runs the built-in rules and Vale when it is installed, builtin skips Vale, vale uses Vale for the text rules",
     )  # fmt: skip
+    parser.add_argument(
+        "--format", choices=("text", "csv", "github"), default="text",
+        help="text (default), csv for a spreadsheet, github for workflow annotations",
+    )  # fmt: skip
     parser.add_argument("--show-vale-config", action="store_true", help="Print the Vale configuration py-doc would use and exit")
     parser.add_argument("--check-engines", action="store_true", help="Report whether Vale is found, its version and its folder")
     parser.add_argument("--sync", action="store_true", help="Download the Vale packages in lint.vale.packages (vale sync)")
@@ -86,7 +92,7 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
     except (LintTargetError, ConversionError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
-    return _print(report, strict=args.strict)
+    return _print(report, strict=args.strict, fmt=args.format)
 
 
 def _model_checks(args: argparse.Namespace, config: LintConfig, settings: RuntimeSettings) -> list:
@@ -176,15 +182,38 @@ def _load_config(args: argparse.Namespace) -> tuple[LintConfig, RuntimeSettings]
     return project.lint, project.runtime
 
 
-def _print(report: LintReport, strict: bool) -> int:
-    for issue in report.issues:
-        print(_shown(issue))
+def _csv(issues: list[LintIssue]) -> str:
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(["file", "line", "column", "severity", "rule", "category", "message", "suggestion"])
+    for i in issues:
+        writer.writerow([i.file, i.line, i.column or "", i.severity, i.rule, i.category, i.message, i.suggestion or ""])
+    return out.getvalue()
+
+
+def _annotation(issue: LintIssue) -> str:
+    """A GitHub Actions workflow command. Info is shown as a notice."""
+    level = {"error": "error", "warning": "warning"}.get(issue.severity, "notice")
+    escape = lambda text: text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")  # noqa: E731
+    properties = f"file={issue.file.as_posix()},line={issue.line}" + (f",col={issue.column}" if issue.column else "")
+    properties += f",title={escape(issue.rule).replace(':', '%3A').replace(',', '%2C')}"
+    return f"::{level} {properties}::{escape(issue.message)}"
+
+
+def _print(report: LintReport, strict: bool, fmt: str = "text") -> int:
+    shown = [_shown(issue) for issue in report.issues]
+    if fmt == "csv":
+        print(_csv(shown), end="")
+    else:
+        for issue in shown:
+            print(_annotation(issue) if fmt == "github" else issue)
     for result in report.errors:
         _error(result)
     failing = report.count("warning")
     print(
         f"\n[SUMMARY] Scanned {report.files_scanned} file(s): {len(report.issues)} issue(s) reported"
-        f" ({failing} warning or error), {len(report.errors)} file(s) could not be linted."
+        f" ({failing} warning or error), {len(report.errors)} file(s) could not be linted.",
+        file=sys.stderr if fmt == "csv" else sys.stdout,
     )
     if report.errors:
         return 2
