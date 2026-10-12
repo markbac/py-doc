@@ -7,7 +7,6 @@ Provides Markdown to Word (.docx) and PowerPoint (.pptx) conversion and Markdown
 __version__ = "0.1.0"
 
 from .errors import ConversionError
-from .render.docx import DocxConverter
-from .render.pptx import SlidesConverter
+from .convert import DocxConverter, SlidesConverter
 
 __all__ = ["ConversionError", "DocxConverter", "SlidesConverter"]

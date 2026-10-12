@@ -26,14 +26,13 @@ _META_KEYS = {
 }  # fmt: skip
 _ENTRY_KEYS = {"file", "heading_offset", "title", "page_break", "include"}
 # What createdocs can build that py-doc cannot (yet), and the cli keys that only matter to those.
-_UNSUPPORTED_EMIT = {"emit-pdf": "PDF", "emit-html": "HTML", "emit-md": "processed Markdown"}
+_UNSUPPORTED_EMIT = {"emit-md": "processed Markdown"}
 _UNUSED_CLI = {
-    "plantuml-jar-path": "PlantUML diagrams are not rendered",
-    "ditaa-jar-path": "ditaa diagrams are not rendered",
-    "css": "there is no HTML output",
+    "plantuml-jar-path": "the tool container supplies PlantUML",
+    "ditaa-jar-path": "the tool container supplies ditaa",
     "keep-tmp": "there is no temporary build folder",
-    "no-svg-to-png": "SVG pictures are not converted",
-    "pdf-from-docx": "there is no PDF output",
+    "no-svg-to-png": "pictures are converted for the format that needs them",
+    "pdf-from-docx": "PDF is always built with XeLaTeX",
     "verbose": "use -v on the command line",
 }
 
@@ -146,14 +145,6 @@ def migrate(paths: list[Path], config_dir: Path, source_format: str = "createdoc
                 result.note("warning", yaml_path, f"meta.{key} has no equivalent and was left out")
         if "toc-depth" in cli and "toc_depth" not in doc:
             doc["toc_depth"] = cli["toc-depth"]
-        if doc.get("version"):
-            result.note(
-                "info", yaml_path, "createdocs added the version to the output file name. py-doc writes the exact path"
-            )
-        if doc.get("status"):
-            result.note(
-                "warning", yaml_path, "createdocs chose the template from the status. py-doc uses one template per output"
-            )
 
         # sources
         doc_sources = []
@@ -186,24 +177,30 @@ def migrate(paths: list[Path], config_dir: Path, source_format: str = "createdoc
         for key, reason in _UNUSED_CLI.items():
             if cli.get(key):
                 result.note("warning", yaml_path, f"cli.{key} was left out: {reason}")
-        docx: dict[str, Any] = {}
-        if not flags["emit-docx"]:
-            result.note("warning", yaml_path, "createdocs built no Word file for this document. py-doc builds one")
-        if output:
-            docx["path"] = rel((base / output).with_suffix(".docx").resolve())
+        built = {"docx": flags["emit-docx"], "pdf": flags["emit-pdf"], "html": flags["emit-html"]}
+        if not any(built.values()):
+            result.note("warning", yaml_path, "createdocs built no Word, PDF or HTML file for this document. py-doc builds a Word file")
+            built["docx"] = True
+        outputs: dict[str, Any] = {}
+        for fmt, wanted in built.items():
+            if wanted:
+                outputs[fmt] = {"path": rel((base / output).with_suffix(f".{fmt}").resolve())} if output else {}
+        if "html" in outputs and cli.get("css"):
+            outputs["html"]["template"] = rel((base / cli["css"]).resolve())
         template = None
         if cli.get("template") and cli.get("no-template"):
             result.note("info", yaml_path, "cli.template is ignored because cli.no-template is set")
-        elif cli.get("template"):
+        elif cli.get("template") and "docx" in outputs:
             template = (base / cli["template"]).resolve()
-            docx["template"] = rel(template)
-        doc["outputs"] = {"docx": docx}
+            outputs["docx"]["template"] = rel(template)
+        for settings in outputs.values():
+            settings["name"] = "{name}-{version_safe}"  # createdocs always added the version to the file name
+        doc["outputs"] = outputs
         templates[doc_id] = template
 
         for key in ("variables", "conditions"):
             if data.get(key):
                 doc[key] = data[key]
-                result.note("warning", yaml_path, f"{key} are kept in the file but py-doc does not apply them yet")
 
         documents[doc_id] = doc
         result.migrated.append((yaml_path, doc_id))

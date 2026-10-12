@@ -30,7 +30,10 @@ class Metadata:
     extra: dict[str, Any] = field(default_factory=dict)
 
 
-_ALIASES = {"id": "document_id", "document-id": "document_id", "tags": "keywords"}
+_ALIASES = {
+    "id": "document_id", "document-id": "document_id", "document_number": "document_id",
+    "document-number": "document_id", "tags": "keywords",
+}  # fmt: skip
 _STANDARD = {"title", "subtitle", "author", "date", "version", "status", "document_id", "keywords"}
 
 

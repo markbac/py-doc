@@ -12,7 +12,7 @@ from typing import Protocol
 
 from . import __version__
 from ._logging import configure_logging
-from .errors import ConversionError
+from .errors import ConversionError, exit_status
 from .files import find_markdown, is_markdown
 
 logger = logging.getLogger(__name__)
@@ -84,28 +84,31 @@ def convert_all(converter: Converter, args: argparse.Namespace, suffix: str, lab
             return 1
     except (FileNotFoundError, ConversionError) as exc:
         error(str(exc))
-        return 1
+        return exit_status(exc)
 
     if not pairs:
         logger.warning(f"No Markdown files found in '{input_path}'")
         return 0
 
     failed = 0
+    status = 0
     for src, dst in pairs:
         try:
             converter.convert_file(src, dst)
         except (FileNotFoundError, ConversionError) as exc:
             error(str(exc))
             failed += 1
+            status = max(status, exit_status(exc))
         except Exception as exc:  # one bad file must not stop the rest of a batch
             logger.debug("Unexpected failure", exc_info=True)
             error(f"Cannot convert '{src}': {type(exc).__name__}: {exc}")
             failed += 1
+            status = max(status, 1)
     if len(pairs) > 1 or failed:
         done = len(pairs) - failed
         summary = f"{done} of {len(pairs)} file(s) converted to {label}" + (f", {failed} failed" if failed else "")
         (logger.error if failed else logger.info)(summary)
-    return 1 if failed else 0
+    return status
 
 
 def deprecation_notice(old: str, new: str) -> str:

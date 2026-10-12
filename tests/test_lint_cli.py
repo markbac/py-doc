@@ -231,3 +231,18 @@ class TestConfigFile:
         run([str(docs / "docs"), "--exclude", "alsoskip"])
         out = capsys.readouterr().out
         assert "skipme" not in out and "alsoskip" not in out
+
+
+class TestOutputFormats:
+    def test_csv_is_only_the_table_on_standard_output(self, tree, capsys):
+        assert run([str(tree), "--format", "csv", "--engine", "builtin"]) == 0
+        out, err = capsys.readouterr()
+        rows = list(__import__("csv").reader(out.splitlines()))
+        assert rows[0][:5] == ["file", "line", "column", "severity", "rule"]
+        assert any("setup.md" in row[0] and row[4] == "DOC001" for row in rows[1:])
+        assert "[SUMMARY]" in err and "[SUMMARY]" not in out
+
+    def test_github_gives_workflow_commands(self, tree, capsys):
+        run([str(tree), "--format", "github", "--engine", "builtin"])
+        out = capsys.readouterr().out
+        assert any(line.startswith("::warning file=") and "title=DOC001" in line for line in out.splitlines())

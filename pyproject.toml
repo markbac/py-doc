@@ -3,16 +3,18 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "py-doc2docx"
+name = "py-doc"
 dynamic = ["version"]
-description = "Convert Markdown Technical Documentation to Word (.docx) Documents"
+description = "Markdown technical documentation to Word, PowerPoint, PDF and HTML, with a style linter"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Mark Bacon" }]
-keywords = ["markdown", "docx", "word", "documentation"]
+keywords = ["markdown", "docx", "pptx", "pdf", "html", "pandoc", "documentation", "lint"]
 classifiers = [
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -27,7 +29,11 @@ dependencies = [
     "markdown-it-py>=3.0",
     "mdit-py-plugins>=0.4",
     "python-pptx>=1.0.0",
+    "Pillow>=10.0",
+    "docxcompose>=1.4.0",
+    "setuptools<81",  # docxcompose imports pkg_resources, which setuptools 81 no longer ships
     "PyYAML>=6.0",
+    # Pinned to a commit because py-logkit has no tagged release yet. Move to the first tag when there is one.
     "ctxlogkit @ git+https://github.com/markbac/py-logkit@96453b403015ed762bcc5b3ffd5adbea3ef4fb0c",
 ]
 
@@ -37,6 +43,9 @@ dev = [
     "ruff>=0.5",
     "build>=1.0",
     "twine>=5.0",
+    "railroad-diagrams>=3.0",  # run by the railroad tool test
+    "pypikchr>=0.2.0",  # run by the pikchr tool test
+    "jsonschema>=4.0",  # checks the build report against its schema
 ]
 
 [project.scripts]
@@ -44,12 +53,16 @@ py-doc = "py_doc.app:run"
 py-doc2docx = "py_doc.cli:main"
 py-doc2slides = "py_doc.slides_cli:main"
 py-doclint = "py_doc.lint.cli:main"
+py-c4-exporter = "pyc4exporter.cli:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "py_doc.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+py_doc = ["runtime/definition/*", "runtime/definition/extra-ca/*", "pandoc/resources/*", "diagrams/tools/*", "report.schema.json", "lint/examples/*", "lint/vale_styles/PyDoc/*", "lint/vale.schema.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

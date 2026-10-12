@@ -1,0 +1,8 @@
+# Downloaded tools: name, version, url, sha256. A "-" checksum has not been recorded yet.
+# `py-doc tools lock` downloads each file, records its checksum here, and refuses a change to one
+# that is already recorded. A build refuses to run while any checksum is "-".
+pandoc 3.8.2.1 https://github.com/jgm/pandoc/releases/download/3.8.2.1/pandoc-3.8.2.1-1-amd64.deb -
+plantuml 1.2025.4 https://github.com/plantuml/plantuml/releases/download/v1.2025.4/plantuml-1.2025.4.jar -
+ditaa 0.11.0 https://github.com/stathissideris/ditaa/releases/download/v0.11.0/ditaa-0.11.0-standalone.jar -
+vale 3.24.0 https://github.com/errata-ai/vale/releases/download/v3.24.0/vale_3.24.0_Linux_64-bit.tar.gz -
+structurizr-cli 2025.11.09 https://github.com/structurizr/cli/releases/download/v2025.11.09/structurizr-cli.zip -

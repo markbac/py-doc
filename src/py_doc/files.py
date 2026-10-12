@@ -5,10 +5,8 @@ from __future__ import annotations
 import io
 import os
 import zipfile
-from collections.abc import Callable
 from pathlib import Path
 
-from .errors import ConversionError
 
 MARKDOWN_SUFFIXES = (".md", ".markdown")
 
@@ -42,15 +40,6 @@ def find_markdown(
         )
         found += [Path(root) / name for name in sorted(files) if is_markdown(Path(name))]
     return sorted(found, key=lambda p: p.as_posix())  # the same order on every platform
-
-
-def write_output(path: Path, save: Callable[[str], object]) -> None:
-    """Create the parent directory and call ``save(path)``, turning OS failures into ``ConversionError``."""
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        save(str(path))
-    except OSError as exc:
-        raise ConversionError(f"Cannot write '{path}': {exc.strerror or exc}") from exc
 
 
 def template_source(path: Path, suffix: str, template_type: bytes, document_type: bytes):

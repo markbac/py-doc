@@ -14,13 +14,25 @@ from typing import Any
 import yaml
 
 from .files import DEFAULT_EXCLUDE_DIRS
-from .lint.config import DEFAULT_ALLOWED_ACRONYMS, LintConfig
+from .lint.config import DEFAULT_ALLOWED_ACRONYMS, LintConfig, MarkdownlintSettings
+from .lint.structure import StructureRuleError, load_rules, parse_rules
+from .lint.vale_config import ValeConfigError, parse_vale
 from .markdown.frontmatter import Metadata
+from .naming import check_name_pattern, expand_name
+from .runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
 
 CONFIG_NAMES = ("py-doc.yml", "py-doc.yaml")
-FORMATS = {"docx": ".docx", "pptx": ".pptx"}
+FORMATS = {"docx": ".docx", "pptx": ".pptx", "pdf": ".pdf", "html": ".html"}
+# Options of the retired native renderers, with what to do instead.
+REMOVED_OPTIONS = {
+    "engine": "pandoc is the only engine now, so remove 'engine'",
+    "keep_template_body": "the document goes where the template has its [[INSERTCONTENT]] line (see 'marker'), so remove it",
+    "keep_template_slides": "pandoc starts from the template's layouts and drops its slides, so remove it",
+    "title_layout": "pandoc picks the layouts by their standard names (Title Slide, Title and Content), so remove it",
+    "content_layout": "pandoc picks the layouts by their standard names (Title Slide, Title and Content), so remove it",
+}
 SEVERITIES = ("error", "warning", "info")
 DEFAULT_OUTPUT_DIR = "build"
 
@@ -32,16 +44,35 @@ _META_KEYS = (
     "classification", "subject", "keywords", "category", "company", "toc_depth",
 )  # fmt: skip
 _OUTPUT_OPTIONS = {
-    "docx": ("path", "template", "keep_template_body", "allow_missing_template"),
-    "pptx": (
-        "path", "template", "keep_template_slides", "allow_missing_template", "split_level", "title_layout",
-        "content_layout",
+    "docx": (
+        "path", "template", "allow_missing_template", "name", "placeholder_prefix", "marker", "toc",
     ),
+    "pptx": (
+        "path", "template", "allow_missing_template", "split_level", "name", "footer",
+    ),
+    "pdf": ("path", "template", "toc", "name"),
+    "html": ("path", "template", "toc", "name"),
+}  # fmt: skip
+
+
+_OPTION_TYPES = {
+    "split_level": int,
+    "name": str, "placeholder_prefix": str, "marker": str, "footer": str,
 }  # fmt: skip
 
 
 class ConfigError(Exception):
     """The configuration file cannot be found, read or understood."""
+
+
+@dataclass
+class StructurizrSpec:
+    """A source made from a Structurizr workspace: ``Source.file`` is the ``.dsl`` or ``workspace.json``."""
+
+    levels: list[str] = field(default_factory=list)  # empty: all levels
+    systems: list[str] = field(default_factory=list)  # empty: all systems
+    engine: str = "browser"  # browser (Lite and Chromium) or source (the diagram source as a code block)
+    format: str = "png"  # png or svg for the browser engine, plantuml or mermaid for source
 
 
 @dataclass
@@ -51,6 +82,7 @@ class Source:
     title: str | None = None
     page_break: bool = False
     include: bool = True
+    structurizr: StructurizrSpec | None = None
 
 
 @dataclass
@@ -89,22 +121,38 @@ class DocumentConfig:
 
 
 @dataclass
+class C4Settings:
+    """The ``c4:`` section: how Structurizr is run."""
+
+    cli: str | None = None  # a structurizr-cli on this machine, instead of the one in the tool container
+    lite_image: str | None = None  # the Structurizr Lite image, such as structurizr/lite@sha256:...
+    port: int | None = None  # the local port Structurizr Lite is published on
+
+
+@dataclass
 class ProjectConfig:
     root: Path
     name: str | None = None
     documents: dict[str, DocumentConfig] = field(default_factory=dict)
     outputs: dict[str, OutputSettings] = field(default_factory=dict)
     lint: LintConfig = field(default_factory=LintConfig)
+    runtime: RuntimeSettings = field(default_factory=RuntimeSettings)
+    c4: C4Settings = field(default_factory=C4Settings)
+    report: Path | None = None  # reports.path: where `py-doc build` writes its JSON report
     build: dict[str, Any] = field(default_factory=dict)
     reserved: dict[str, Any] = field(default_factory=dict)
 
-    def output_path(self, document: DocumentConfig, fmt: str) -> Path:
+    def output_path(self, document: DocumentConfig, fmt: str, version: str | None = None) -> Path:
+        """Where an output goes. With a ``name`` pattern the file name is the pattern, else exactly the path given."""
         settings = document.outputs.get(fmt)
-        if settings and settings.path:
-            return settings.path
         default = self.outputs.get(fmt)
-        folder = default.path if default and default.path else self.root / DEFAULT_OUTPUT_DIR
-        return folder / f"{document.id}{FORMATS[fmt]}"
+        if settings and settings.path:
+            path = settings.path
+        else:
+            folder = default.path if default and default.path else self.root / DEFAULT_OUTPUT_DIR
+            path = folder / f"{document.id}{FORMATS[fmt]}"
+        pattern = {**(default.options if default else {}), **(settings.options if settings else {})}.get("name")
+        return path.with_name(expand_name(pattern, path.stem, version) + path.suffix) if pattern else path
 
     def output_formats(self, document: DocumentConfig) -> list[str]:
         """Formats a document builds: the ones it lists, else docx."""
@@ -181,7 +229,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -193,8 +241,19 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     for doc_id, raw in _mapping(top.get("documents", {}), "documents").items():
         config.documents[str(doc_id)] = _parse_document(str(doc_id), raw, root)
 
-    config.lint = _parse_lint(_mapping(top.get("lint", {}), "lint"))
+    config.lint = _parse_lint(_mapping(top.get("lint", {}), "lint"), root)
+    config.lint.documents = {
+        doc_id: [source.file for source in doc.sources if source.include and source.structurizr is None] for doc_id, doc in config.documents.items()
+    }
     config.build = _mapping(top.get("build", {}), "build")
+    c4 = _mapping(top.get("c4", {}), "c4")
+    _only(c4, ("cli", "lite_image", "port"), "c4")
+    config.c4 = C4Settings(_typed(c4, "cli", str, "c4"), _typed(c4, "lite_image", str, "c4"), _typed(c4, "port", int, "c4"))
+    config.runtime = _parse_runtime(_mapping(top.get("runtime", {}), "runtime"))
+    reports = _mapping(top.get("reports", {}), "reports")
+    _only(reports, ("path",), "reports")
+    if "path" in reports:
+        config.report = _path(root, reports["path"], "reports.path")
 
     for name in RESERVED_SECTIONS:
         if name in top:
@@ -203,12 +262,22 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     return config
 
 
+def _parse_runtime(data: dict) -> RuntimeSettings:
+    _only(data, ("docker", "wsl_distro"), "runtime")
+    return RuntimeSettings(
+        docker=_typed(data, "docker", str, "runtime"), wsl_distro=_typed(data, "wsl_distro", str, "runtime")
+    )
+
+
 def _parse_outputs(data: dict, root: Path, where: str, defaults: bool = False) -> dict[str, OutputSettings]:
     _only(data, FORMATS, where)
     result: dict[str, OutputSettings] = {}
     for fmt, raw in data.items():
         place = f"{where}.{fmt}"
         raw = {} if raw is None else _mapping(raw, place)
+        for option, advice in REMOVED_OPTIONS.items():
+            if option in raw:
+                raise ConfigError(f"{place}.{option} is no longer an option: {advice}")
         _only(raw, ("dir", *_OUTPUT_OPTIONS[fmt]) if defaults else _OUTPUT_OPTIONS[fmt], place)
         key = "dir" if defaults else "path"
         settings = OutputSettings()
@@ -221,8 +290,12 @@ def _parse_outputs(data: dict, root: Path, where: str, defaults: bool = False) -
         for option in _OUTPUT_OPTIONS[fmt]:
             if option in ("path", "template") or option not in raw:
                 continue
-            kind = int if option == "split_level" else str if option.endswith("layout") else bool
-            settings.options[option] = _typed(raw, option, kind, place)
+            settings.options[option] = _typed(raw, option, _OPTION_TYPES.get(option, bool), place)
+        if "name" in settings.options:
+            try:
+                check_name_pattern(settings.options["name"], f"{place}.name")
+            except ValueError as exc:
+                raise ConfigError(str(exc)) from None
         if "split_level" in settings.options and not 1 <= settings.options["split_level"] <= 6:
             raise ConfigError(f"{place}.split_level must be 1 to 6")
         result[fmt] = settings
@@ -246,11 +319,17 @@ def _parse_document(doc_id: str, raw: Any, root: Path) -> DocumentConfig:
     for index, item in enumerate(sources):
         place = f"{where}.sources[{index}]"
         entry = {"file": item} if isinstance(item, str) else _mapping(item, place)
-        _only(entry, ("file", "heading_offset", "title", "page_break", "include"), place)
+        spec = None
+        if "structurizr" in entry:
+            _only(entry, ("structurizr", "levels", "systems", "diagrams", "heading_offset", "title", "page_break"), place)
+            spec = _parse_structurizr(entry, place)
+            entry = {**entry, "file": entry["structurizr"]}
+        _only(entry, ("file", "structurizr", "levels", "systems", "diagrams", "heading_offset", "title", "page_break", "include"), place)
         if "file" not in entry:
-            raise ConfigError(f"{place} needs a 'file'")
+            raise ConfigError(f"{place} needs a 'file' or a 'structurizr' workspace")
         doc.sources.append(
             Source(
+                structurizr=spec,
                 file=_path(root, entry["file"], f"{place}.file"),
                 heading_offset=_typed(entry, "heading_offset", int, place, 0),
                 title=_typed(entry, "title", str, place),
@@ -264,8 +343,47 @@ def _parse_document(doc_id: str, raw: Any, root: Path) -> DocumentConfig:
     return doc
 
 
-def _parse_lint(data: dict) -> LintConfig:
-    _only(data, ("exclude", "rules", "glossary", "phrases", "acronyms"), "lint")
+def _parse_structurizr(entry: dict, place: str) -> StructurizrSpec:
+    from .c4.generate import LEVELS
+
+    spec = StructurizrSpec()
+    levels = _typed(entry, "levels", list, place, [])
+    for level in levels:
+        if level not in LEVELS:
+            raise ConfigError(f"{place}.levels has unknown level '{level}'. Levels: {', '.join(LEVELS)}")
+    spec.levels = [str(level) for level in levels]
+    spec.systems = [str(name) for name in _typed(entry, "systems", list, place, [])]
+    diagrams = _mapping(entry.get("diagrams", {}), f"{place}.diagrams")
+    _only(diagrams, ("engine", "format"), f"{place}.diagrams")
+    spec.engine = _typed(diagrams, "engine", str, f"{place}.diagrams", "browser")
+    if spec.engine not in ("browser", "source"):
+        raise ConfigError(f"{place}.diagrams.engine must be browser or source, not {spec.engine!r}")
+    default = "png" if spec.engine == "browser" else "mermaid"
+    spec.format = _typed(diagrams, "format", str, f"{place}.diagrams", default)
+    allowed = ("png", "svg") if spec.engine == "browser" else ("plantuml", "mermaid")
+    if spec.format not in allowed:
+        raise ConfigError(f"{place}.diagrams.format must be one of {', '.join(allowed)} for the {spec.engine} engine")
+    return spec
+
+
+def _parse_markdownlint(data: dict, root: Path) -> MarkdownlintSettings:
+    _only(data, ("config", "severity"), "lint.markdownlint")
+    settings = MarkdownlintSettings()
+    raw = data.get("config")
+    if isinstance(raw, str):
+        settings.config = _path(root, raw, "lint.markdownlint.config")
+    elif isinstance(raw, dict):
+        settings.inline = raw
+    elif raw is not None:
+        raise ConfigError("lint.markdownlint.config must be a file name or a mapping of markdownlint settings")
+    settings.severity = data.get("severity", "warning")
+    if settings.severity not in SEVERITIES:
+        raise ConfigError(f"lint.markdownlint.severity must be one of {', '.join(SEVERITIES)}")
+    return settings
+
+
+def _parse_lint(data: dict, root: Path) -> LintConfig:
+    _only(data, ("exclude", "rules", "glossary", "phrases", "acronyms", "structure", "markdownlint", "vale"), "lint")
     config = LintConfig()
 
     if "exclude" in data:
@@ -286,6 +404,21 @@ def _parse_lint(data: dict) -> LintConfig:
             raise ConfigError(f"lint.rules.{rule} must be one of {', '.join(SEVERITIES)} or off, not {level!r}")
     config.severities = severities
     config.disabled_rules = frozenset(disabled)
+
+    if "structure" in data:
+        raw = data["structure"]
+        try:
+            config.structure = load_rules(_path(root, raw, "lint.structure")) if isinstance(raw, str) else parse_rules(raw)
+        except StructureRuleError as exc:
+            raise ConfigError(str(exc)) from None
+    config.root = root
+    if "vale" in data:
+        try:
+            config.vale = parse_vale(data["vale"], root)
+        except ValeConfigError as exc:
+            raise ConfigError(str(exc)) from None
+    if "markdownlint" in data:
+        config.markdownlint = _parse_markdownlint(_mapping(data["markdownlint"], "lint.markdownlint"), root)
 
     if "glossary" in data:
         glossary = _mapping(data["glossary"], "lint.glossary")

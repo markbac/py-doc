@@ -23,9 +23,11 @@ class LintIssue:
     message: str
     severity: str = "warning"
     suggestion: str | None = None
+    column: int | None = None  # only Vale gives one
 
     def __str__(self) -> str:
-        text = f"{self.file}:{self.line}: {self.severity} {self.rule} [{self.category}] {self.message}"
+        where = f"{self.line}:{self.column}" if self.column else str(self.line)
+        text = f"{self.file}:{where}: {self.severity} {self.rule} [{self.category}] {self.message}"
         return f"{text} (suggestion: {self.suggestion})" if self.suggestion else text
 
 
@@ -58,6 +60,19 @@ class LintReport:
     @property
     def errors(self) -> list[FileResult]:
         return [result for result in self.results if result.error is not None]
+
+    def add(self, issues: list[LintIssue]) -> None:
+        """Put issues from another check with their files, in line order. A file not scanned gets its own result."""
+        by_file = {result.file: result for result in self.results}
+        for issue in issues:
+            result = by_file.get(issue.file)
+            if result is None:
+                result = by_file[issue.file] = FileResult(issue.file)
+                self.results.append(result)
+            if issue not in result.issues:
+                result.issues.append(issue)
+        for result in self.results:
+            result.issues.sort(key=lambda i: (i.line, i.rule))
 
     def count(self, threshold: str = "info") -> int:
         """Number of issues at or above ``threshold``."""

@@ -1,0 +1,80 @@
+# Example project for py-doc. Run `py-doc build` in this folder.
+# Everything is checked when the file loads, so a typo is an error that names its place.
+
+project:
+  name: Meter Gateway examples
+
+outputs:                          # defaults for every document
+  docx:
+    template: templates/company.docx
+    dir: build
+  pptx:
+    template: templates/company.pptx
+    dir: build
+  pdf:
+    dir: build
+  html:
+    dir: build
+
+documents:
+  guide:
+    # The guide: front matter in the first file gives the title, author and so on.
+    sources:
+      - docs/00_overview.md
+      - docs/01_requirements.md
+      - file: docs/02_design.md
+        page_break: true
+      - docs/03_operations.md
+      - {file: docs/DRAFT.md, include: false}
+    variables:
+      version: "1.0"
+      status_text: in service
+    conditions:
+      internal: false
+      audience: customer
+    outputs:
+      docx: {name: "{name}-v{version}"}
+      pdf: {}
+      html: {}
+
+  deck:
+    sources: [docs/slides.md]
+    outputs:
+      pptx:
+        split_level: 2
+        footer: "{title} v{version}"
+
+  architecture:
+    # Chapters generated from a Structurizr workspace, between hand-written ones.
+    # workspace.json needs no Java. Use architecture/workspace.dsl instead with `py-doc c4 lock` and Docker.
+    title: Meter Gateway Architecture
+    author: A. Writer
+    version: "1.0"
+    sources:
+      - docs/includes/audience.md
+      - structurizr: architecture/workspace.json
+        levels: [context, containers, components, relationships, deployment]
+        heading_offset: 1
+        diagrams: {engine: browser, format: png}
+    outputs:
+      docx: {}
+
+c4:
+  port: 8080
+
+lint:
+  exclude: [build]
+  rules:
+    DOC003: info
+    C4004: off
+  glossary:
+    LwM2M: [lwm2m, Lwm2m]
+  phrases:
+    utilise: use
+  structure: structure-rules.yaml
+  vale:
+    enabled: auto                 # runs when Vale is installed
+    spelling: en-GB
+    rules_file: vale-rules.yml
+    packages: []                  # for example [write-good], then `py-doc lint --sync`
+    ignore: ["build/**"]

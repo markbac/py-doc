@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/markbac/py-doc/lint.vale.schema.json",
+  "title": "lint.vale in py-doc.yml",
+  "type": "object",
+  "additionalProperties": false,
+  "$defs": {
+    "level": {"enum": ["error", "warning", "suggestion", "info"]},
+    "rule": {
+      "oneOf": [
+        {"$ref": "#/$defs/level"},
+        {"enum": ["off", false]},
+        {
+          "type": "object",
+          "properties": {
+            "level": {"$ref": "#/$defs/level"},
+            "max": {"type": "integer", "minimum": 1}
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "properties": {
+    "enabled": {"enum": ["auto", true, false], "default": "auto"},
+    "binary": {"type": "string"},
+    "min_alert_level": {"$ref": "#/$defs/level", "default": "suggestion"},
+    "packages": {"type": "array", "items": {"type": "string", "pattern": "^[\\w.-]+$"}},
+    "spelling": {"enum": ["en-GB", "en-US", "off", false], "default": "en-GB"},
+    "rules": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[A-Za-z][\\w-]*\\.[A-Za-z][\\w-]*$"},
+      "additionalProperties": {"$ref": "#/$defs/rule"}
+    },
+    "terms": {
+      "type": "object",
+      "additionalProperties": {"type": "array", "items": {"type": "string"}}
+    },
+    "avoid": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["pattern"],
+        "properties": {
+          "pattern": {"type": "string"},
+          "message": {"type": "string"},
+          "level": {"$ref": "#/$defs/level"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "ignore": {"type": "array", "items": {"type": "string"}},
+    "config": {"type": "string"},
+    "rules_file": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}
+  }
+}

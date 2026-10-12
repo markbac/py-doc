@@ -1,0 +1,49 @@
+{
+  "id": 1,
+  "name": "Big Bank plc",
+  "description": "Internet banking for the customers of Big Bank plc.",
+  "properties": {"version": "1.2"},
+  "model": {
+    "people": [
+      {"id": "1", "name": "Personal Banking Customer", "description": "A customer of the bank.", "tags": "Element,Person",
+       "relationships": [{"id": "10", "sourceId": "1", "destinationId": "3", "description": "Views balances and makes payments using", "tags": "Relationship"}]}
+    ],
+    "softwareSystems": [
+      {"id": "2", "name": "Mainframe Banking System", "description": "Stores all of the core banking information.", "tags": "Element,Software System,External"},
+      {"id": "3", "name": "Internet Banking System", "description": "Lets customers view their accounts and make payments.", "tags": "Element,Software System",
+       "relationships": [{"id": "11", "sourceId": "3", "destinationId": "2", "description": "Gets account information from", "technology": "XML/HTTPS"}],
+       "containers": [
+         {"id": "4", "name": "Web Application", "description": "Delivers the static content.", "technology": "Java and Spring MVC", "tags": "Element,Container",
+          "relationships": [{"id": "12", "sourceId": "4", "destinationId": "5", "description": "Makes API calls to", "technology": "JSON/HTTPS"}]},
+         {"id": "5", "name": "API Application", "description": "Provides the banking functionality | over JSON.", "technology": "Java and Spring MVC", "tags": "Element,Container",
+          "properties": {"owner": "Platform team"},
+          "perspectives": [{"name": "Security", "description": "All calls need a token."}],
+          "relationships": [
+            {"id": "13", "sourceId": "5", "destinationId": "6", "description": "Reads from and writes to", "technology": "JDBC"},
+            {"id": "14", "sourceId": "5", "destinationId": "2", "description": "Gets account information from", "technology": "XML/HTTPS", "linkedRelationshipId": "11"}],
+          "components": [
+            {"id": "7", "name": "Sign In Controller", "description": "Lets users sign in.", "technology": "Spring MVC Rest Controller", "tags": "Element,Component"}]},
+         {"id": "6", "name": "Database", "description": "Stores user registration information.", "technology": "Oracle", "tags": "Element,Container"}
+       ]}
+    ],
+    "deploymentNodes": [
+      {"id": "20", "name": "Big Bank plc", "environment": "Live", "technology": "Big Bank plc data center",
+       "children": [{"id": "21", "name": "bigbank-api001", "environment": "Live", "technology": "Ubuntu 16.04 LTS",
+                     "containerInstances": [{"id": "22", "containerId": "5", "environment": "Live"}],
+                     "infrastructureNodes": [{"id": "23", "name": "Load balancer", "technology": "nginx", "description": "Spreads load."}]}]}
+    ]
+  },
+  "views": {
+    "systemContextViews": [{"key": "SystemContext", "title": "System Context for Internet Banking", "description": "The big picture.", "softwareSystemId": "3",
+                            "elements": [{"id": "1"}, {"id": "2"}, {"id": "3"}]}],
+    "containerViews": [{"key": "Containers", "title": "Containers", "softwareSystemId": "3", "elements": [{"id": "4"}, {"id": "5"}, {"id": "6"}]}],
+    "componentViews": [{"key": "Components", "title": "API components", "containerId": "5", "elements": [{"id": "7"}]}],
+    "dynamicViews": [{"key": "SignIn", "title": "Sign in", "softwareSystemId": "3", "elements": [{"id": "4"}, {"id": "5"}],
+                      "relationships": [{"id": "12", "order": "1", "description": "Submits credentials to"}, {"id": "13", "order": "2", "description": "Validates credentials using"}]}],
+    "deploymentViews": [{"key": "Live", "title": "Live deployment", "environment": "Live", "softwareSystemId": "3", "elements": [{"id": "20"}]}]
+  },
+  "documentation": {
+    "sections": [{"title": "Context", "content": "Why the bank needs this system.", "format": "Markdown", "order": 1}],
+    "decisions": [{"id": "1", "title": "1. Record architecture decisions", "content": "We record decisions in ADRs.", "format": "Markdown", "status": "Accepted"}]
+  }
+}

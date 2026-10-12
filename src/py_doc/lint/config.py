@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 
 from py_doc.files import DEFAULT_EXCLUDE_DIRS
+
+from .vale_config import ValeSettings
 
 DEFAULT_GLOSSARY: dict[str, list[str]] = {
     "LwM2M": ["lwm2m", "LWM2M", "Lw2m"],
@@ -38,6 +42,17 @@ DEFAULT_ALLOWED_ACRONYMS = frozenset(
 RULE_GLOSSARY = "DOC001"
 RULE_REDUNDANT = "DOC002"
 RULE_ACRONYM = "DOC003"
+RULE_DIRECTIVE = "DOC004"
+C4_RULES = {"C4001": "warning", "C4002": "warning", "C4003": "warning", "C4004": "info"}  # see py_doc.c4.check
+
+
+@dataclass
+class MarkdownlintSettings:
+    """markdownlint, run in the container: a config file or an inline mapping, and how serious a finding is."""
+
+    config: Path | None = None
+    inline: dict[str, Any] | None = None
+    severity: str = "warning"
 
 
 @dataclass
@@ -49,5 +64,10 @@ class LintConfig:
     exclude_dirs: frozenset[str] = DEFAULT_EXCLUDE_DIRS
     disabled_rules: frozenset[str] = frozenset()
     severities: dict[str, str] = field(
-        default_factory=lambda: {RULE_GLOSSARY: "warning", RULE_REDUNDANT: "warning", RULE_ACRONYM: "info"}
+        default_factory=lambda: {RULE_GLOSSARY: "warning", RULE_REDUNDANT: "warning", RULE_ACRONYM: "info", RULE_DIRECTIVE: "error", **C4_RULES}
     )
+    structure: list = field(default_factory=list)  # StructureRule entries, see lint.structure
+    markdownlint: MarkdownlintSettings | None = None
+    vale: ValeSettings = field(default_factory=ValeSettings)
+    root: Path = field(default_factory=Path.cwd)  # the project folder: where the managed Vale folder lives
+    documents: dict[str, list[Path]] = field(default_factory=dict)  # document id -> its source files, in order

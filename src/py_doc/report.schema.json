@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "py-doc build report",
+  "type": "object",
+  "required": ["schema", "py_doc", "status", "error", "image", "tools", "documents", "diagrams", "templates", "warnings"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": 1},
+    "py_doc": {"type": "string"},
+    "status": {"enum": ["ok", "failed"]},
+    "error": {"type": ["string", "null"]},
+    "generated": {"type": "string", "description": "UTC time, only with --timestamps"},
+    "image": {
+      "type": "object",
+      "properties": {"tag": {"type": "string"}, "id": {"type": ["string", "null"]}},
+      "additionalProperties": false
+    },
+    "tools": {"type": "object", "additionalProperties": {"type": ["string", "null"]}},
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "status", "sources", "outputs"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string"},
+          "status": {"enum": ["ok", "failed"]},
+          "error": {"type": "string"},
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["file", "words", "sentences", "paragraphs"],
+              "additionalProperties": false,
+              "properties": {
+                "file": {"type": "string"},
+                "words": {"type": "integer", "minimum": 0},
+                "sentences": {"type": "integer", "minimum": 0},
+                "paragraphs": {"type": "integer", "minimum": 0}
+              }
+            }
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["format", "path", "bytes", "sha256"],
+              "additionalProperties": false,
+              "properties": {
+                "format": {"enum": ["docx", "pptx", "pdf", "html"]},
+                "path": {"type": "string"},
+                "bytes": {"type": "integer", "minimum": 0},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "diagrams": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["document", "format", "type", "file", "line", "kind", "status", "cached"],
+        "additionalProperties": false,
+        "properties": {
+          "document": {"type": "string"},
+          "format": {"type": "string"},
+          "type": {"type": "string"},
+          "file": {"type": "string"},
+          "line": {"type": "integer", "minimum": 1},
+          "kind": {"enum": ["png", "svg"]},
+          "status": {"enum": ["ok", "failed"]},
+          "cached": {"type": "boolean"},
+          "seconds": {"type": "number", "description": "only with --timestamps"},
+          "error": {"type": "string"}
+        }
+      }
+    },
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["document", "path", "failures", "warnings"],
+        "additionalProperties": false,
+        "properties": {
+          "document": {"type": "string"},
+          "path": {"type": "string"},
+          "failures": {"type": "array", "items": {"type": "string"}},
+          "warnings": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["level", "message"],
+        "additionalProperties": false,
+        "properties": {
+          "level": {"enum": ["warning", "error", "critical"]},
+          "message": {"type": "string"},
+          "file": {"type": "string"},
+          "line": {"type": "integer"}
+        }
+      }
+    }
+  }
+}

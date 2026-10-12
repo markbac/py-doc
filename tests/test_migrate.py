@@ -114,16 +114,15 @@ def test_the_same_source_in_two_documents_is_reported_and_kept_in_both(repo):
 def test_unsupported_settings_are_reported_not_dropped_silently(repo):
     result = migrate([repo / "docs"], repo)
     messages = {(f.file.name, f.message) for f in result.findings if f.level == "warning"}
-    assert ("GU-1.yaml", "PDF output is not supported yet and was not carried over") in messages
-    assert ("GU-1.yaml", "cli.plantuml-jar-path was left out: PlantUML diagrams are not rendered") in messages
-    assert ("GU-1.yaml", "createdocs chose the template from the status. py-doc uses one template per output") in messages
+    assert ("GU-1.yaml", "cli.plantuml-jar-path was left out: the tool container supplies PlantUML") in messages
     assert ("big.yaml", "entries[3].extra_key has no equivalent and was left out") in messages
-    assert ("big.yaml", "variables are kept in the file but py-doc does not apply them yet") in messages
 
 
-def test_versioned_file_names_are_flagged_as_a_behaviour_change(repo):
+def test_the_version_in_the_file_name_and_the_status_templates_are_carried_over(repo):
     result = migrate([repo / "docs"], repo)
-    assert any("added the version to the output file name" in f.message for f in result.findings)
+    outputs = result.config["documents"]["GU-1"]["outputs"]
+    assert all(o["name"] == "{name}-{version_safe}" for o in outputs.values())
+    assert not any("status" in f.message or "file name" in f.message for f in result.findings)
 
 
 def test_missing_source_is_a_warning(repo):
@@ -146,12 +145,30 @@ def test_document_ids_stay_unique(repo):
     assert ids == ["doc", "b-doc"]
 
 
-def test_pdf_only_document_still_gets_a_word_output_with_a_warning(tmp_path):
+def test_pdf_only_document_gets_a_pdf_output_and_no_word_file(tmp_path):
     write(tmp_path / "a.md", "# A\n")
-    write(tmp_path / "a.yaml", "cli: {emit-pdf: true, output: out/a.pdf}\nentries: [{file: a.md}]\n")
+    write(tmp_path / "a.yaml", "cli: {emit-pdf: true, output: out/a.pdf, template: t.docx}\nentries: [{file: a.md}]\n")
+    result = migrate([tmp_path], tmp_path)
+    assert result.config["documents"]["a"]["outputs"] == {"pdf": {"path": "out/a.pdf", "name": "{name}-{version_safe}"}}
+    assert not any(f.level == "warning" for f in result.findings)
+
+
+def test_html_keeps_its_stylesheet(tmp_path):
+    write(tmp_path / "a.md", "# A\n")
+    write(tmp_path / "a.yaml", "cli: {emit-docx: true, emit-html: true, output: out/a.docx, css: s.css}\nentries: [{file: a.md}]\n")
+    outputs = migrate([tmp_path], tmp_path).config["documents"]["a"]["outputs"]
+    assert outputs == {
+        "docx": {"path": "out/a.docx", "name": "{name}-{version_safe}"},
+        "html": {"path": "out/a.html", "template": "s.css", "name": "{name}-{version_safe}"},
+    }
+
+
+def test_a_document_that_builds_only_processed_markdown_gets_a_word_output_with_a_warning(tmp_path):
+    write(tmp_path / "a.md", "# A\n")
+    write(tmp_path / "a.yaml", "cli: {emit-md: true, output: out/a.md}\nentries: [{file: a.md}]\n")
     result = migrate([tmp_path], tmp_path)
     assert result.config["documents"]["a"]["outputs"]["docx"]["path"] == "out/a.docx"
-    assert any("built no Word file" in f.message for f in result.findings)
+    assert any("built no Word, PDF or HTML file" in f.message for f in result.findings)
 
 
 def test_output_extension_decides_the_format_when_no_emit_flag_is_set(tmp_path):
@@ -176,14 +193,16 @@ def test_unknown_meta_key_is_reported(tmp_path):
 
 
 def test_generated_file_loads_and_builds_the_same_document(repo):
-    from py_doc.build import merge_document
+    from py_doc.build import _combine_metadata
+    from py_doc.pandoc.source import join_sources
 
     result = migrate([repo / "docs"], repo)
     (repo / "py-doc.yml").write_text(render(result.config), encoding="utf-8")
     config = load_config(repo / "py-doc.yml")
-    merged = merge_document(config.documents["big"])
-    assert merged.metadata.title == "Big"
-    assert config.output_path(config.documents["big"], "docx") == repo / "build" / "guides" / "big.docx"
+    doc = config.documents["big"]
+    joined = join_sources(doc.sources, doc.variables, doc.conditions, doc.id)
+    assert _combine_metadata(doc, joined.metadata, joined.first_heading).title == "Big"
+    assert config.output_path(config.documents["big"], "docx", "2.0") == repo / "build" / "guides" / "big-2_0.docx"
     assert config.outputs["docx"].template == repo / "templates" / "T.docx"
 
 
@@ -209,17 +228,17 @@ class TestCommand:
         code, out, _ = self.run(monkeypatch, capsys, "docs", "--check")
         assert code == 0
         assert "migrated  docs/guidelines/GU-1.yaml -> documents.GU-1" in out
-        assert "2 files: PDF output" not in out and "Check only: nothing was written" in out
+        assert "files: processed Markdown" not in out and "Check only: nothing was written" in out
         assert not (repo / "py-doc.yml").exists()
 
     def test_repeated_findings_are_grouped(self, repo, monkeypatch, capsys):
         for index in range(4):
             write(repo / "docs" / f"x{index}" / "x.md", "# X\n")
-            write(repo / "docs" / f"x{index}" / "x.yaml", "cli: {emit-pdf: true, output: x.pdf}\nentries: [{file: x.md}]\n")
+            write(repo / "docs" / f"x{index}" / "x.yaml", "cli: {emit-md: true, output: x.md}\nentries: [{file: x.md}]\n")
         monkeypatch.chdir(repo)
         _, out, _ = self.run(monkeypatch, capsys, "docs", "--check")
-        assert "5 files: PDF output is not supported yet" in out
-        assert out.count("PDF output is not supported yet") == 1
+        assert "4 files: processed Markdown output is not supported yet" in out
+        assert out.count("processed Markdown output is not supported yet") == 1
 
     def test_writes_a_config_that_loads(self, repo, monkeypatch, capsys):
         monkeypatch.chdir(repo)

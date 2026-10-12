@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from py_doc.lint.config import C4_RULES
 from py_doc.config import ConfigError, find_config, load_config, parse_config
 
 
@@ -101,7 +102,7 @@ documents:
         ("documents:\n  g: {sources: [{title: x}]}", "documents.g.sources[0] needs a 'file'"),
         ("documents:\n  g: {sources: [{file: a.md, heading_offset: x}]}", "heading_offset must be int"),
         ("documents:\n  g: {sources: [{file: a.md, heading_offset: true}]}", "heading_offset must be int"),
-        ("documents:\n  g: {sources: [a.md], outputs: {pdf: {}}}", "unknown key 'pdf'"),
+        ("documents:\n  g: {sources: [a.md], outputs: {epub: {}}}", "unknown key 'epub'"),
         ("documents:\n  g: {sources: [a.md], outputs: {pptx: {split_level: 9}}}", "split_level must be 1 to 6"),
         ("outputs:\n  docx: {path: x.docx}", "takes 'dir', not 'path'"),
         ("lint:\n  rules: {DOC999: error}", "unknown rule 'DOC999'"),
@@ -135,7 +136,7 @@ class TestLint:
 
     def test_rule_severity_and_off(self, tmp_path):
         lint = self.load(tmp_path, "  rules:\n    DOC001: error\n    DOC002: off\n    DOC003: warning\n")
-        assert lint.severities == {"DOC001": "error", "DOC002": "warning", "DOC003": "warning"}
+        assert lint.severities == {"DOC001": "error", "DOC002": "warning", "DOC003": "warning", "DOC004": "error"} | C4_RULES
         assert lint.disabled_rules == {"DOC002"}
 
     def test_glossary_and_phrases_extend_the_defaults(self, tmp_path):
@@ -176,7 +177,7 @@ def test_the_example_in_the_readme_loads(tmp_path):
     import re
 
     readme = Path(__file__).parent.parent / "README.md"
-    block = re.search(r"```yaml\n(.*?)```", readme.read_text(encoding="utf-8"), re.S).group(1)
+    block = re.search(r"```yaml\n(project:.*?)```", readme.read_text(encoding="utf-8"), re.S).group(1)
     config = load_config(write(tmp_path, block))
     assert list(config.documents) == ["c4-guide"]
     assert config.lint.severities["DOC001"] == "error"

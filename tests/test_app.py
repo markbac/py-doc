@@ -7,6 +7,9 @@ from docx_helpers import texts
 from py_doc.app import main
 
 
+pytestmark = pytest.mark.usefixtures("pandoc_runtime")
+
+
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     (tmp_path / "a.md").write_text("# Alpha\n\nrun in order to test\n", encoding="utf-8")

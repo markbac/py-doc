@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import functools
 import logging
 import os
 import shutil
@@ -16,10 +18,16 @@ from ._logging import configure_logging
 from .build import build_document
 from .cli import run_docx
 from .config import FORMATS, ConfigError, find_config, load_config
-from .errors import ConversionError
+from .errors import ConversionError, exit_status
 from .lint.cli import run as run_lint
 from .migrate import LEGACY_FORMATS, Migration, migrate, render
+from .report import BuildReport
+from .runtime import connect
 from .slides_cli import run_slides
+from .c4.cli import run_c4
+from .import_cli import run_import
+from .template_cli import run_template
+from .tools_cli import run_doctor, run_tools
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +36,11 @@ _DELEGATES = {
     "docx": ("Convert Markdown to Word (.docx)", run_docx),
     "slides": ("Convert Markdown to PowerPoint (.pptx)", run_slides),
     "lint": ("Check Markdown for writing style and glossary use", run_lint),
+    "tools": ("Build and inspect the tool container image", run_tools),
+    "c4": ("Check, export and draw Structurizr workspaces", run_c4),
+    "import": ("Convert a Word document (.docx) to Markdown", run_import),
+    "template": ("Check and inspect Word and PowerPoint templates", run_template),
+    "doctor": ("Check that the tool container works", run_doctor),
 }
 
 
@@ -46,6 +59,13 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("documents", nargs="*", metavar="DOCUMENT", help="Documents to build (default: all)")
     build.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
     build.add_argument("-f", "--format", action="append", choices=sorted(FORMATS), help="Build only this format")
+    build.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
+    build.add_argument(
+        "--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a [[IF:]] condition"
+    )
+    build.add_argument("--report", metavar="FILE", help="Write a JSON report of the build (default: reports.path in py-doc.yml)")
+    build.add_argument("--timestamps", action="store_true", help="Put the time and the render times in the report")
+    build.add_argument("--keep-going", action="store_true", help="Report every broken diagram, not just the first")
     noise = build.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -57,6 +77,9 @@ def build_parser() -> argparse.ArgumentParser:
     move.add_argument("--check", action="store_true", help="Only report what would be migrated")
     move.add_argument("--backup", action="store_true", help="Keep copies (.bak) of the legacy files and any old output")
     move.add_argument("--force", action="store_true", help="Overwrite an existing output file without a backup")
+    move_noise = move.add_mutually_exclusive_group()
+    move_noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
+    move_noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
     return parser
 
 
@@ -72,6 +95,19 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 # --- build ---------------------------------------------------------------------------------------
+
+
+def _assignment(text: str) -> tuple[str, str]:
+    name, sep, value = text.partition("=")
+    if not sep or not name.strip():
+        raise argparse.ArgumentTypeError(f"'{text}' is not NAME=VALUE")
+    return name.strip(), value
+
+
+def _conditions(pairs: list[tuple[str, str]]) -> dict:
+    """Command line conditions: true and false become booleans, anything else stays text."""
+    words = {"true": True, "false": False}
+    return {name: words.get(value.lower(), value) for name, value in pairs}
 
 
 def _build(args: argparse.Namespace) -> int:
@@ -93,22 +129,49 @@ def _build(args: argparse.Namespace) -> int:
         _error(f"Unknown document(s): {', '.join(unknown)}. Defined: {', '.join(config.documents)}")
         return 1
 
+    connected = functools.cache(lambda: connect(config.runtime))  # the container is only needed to run a tool
+    used: list = []
+
+    def runtime():
+        used.append(connected())
+        return used[-1]
+
+    report_path = Path(args.report).resolve() if args.report else config.report
+    report = BuildReport(config.root, args.timestamps) if report_path else None
     failed = 0
+    status = 0
     names = args.documents or list(config.documents)
-    for name in names:
+    with report.recording() if report else contextlib.nullcontext():
+        for name in names:
+            try:
+                build_document(
+                    config, config.documents[name], args.format, dict(args.var), _conditions(args.condition), runtime,
+                    args.keep_going, report,
+                )
+            except (FileNotFoundError, ConversionError) as exc:
+                _error(f"{name}: {exc}")
+                failed += 1
+                status = max(status, exit_status(exc))
+                if report:
+                    report.failed(name, exc)
+            except Exception as exc:  # one document must not stop the others
+                logger.debug("Unexpected failure", exc_info=True)
+                _error(f"{name}: {type(exc).__name__}: {exc}")
+                failed += 1
+                status = max(status, 1)
+                if report:
+                    report.failed(name, exc)
+        if len(names) > 1 or failed:
+            summary = f"{len(names) - failed} of {len(names)} document(s) built" + (f", {failed} failed" if failed else "")
+            (logger.error if failed else logger.info)(summary)
+    if report:
+        report.describe_runtime(used[-1] if used else None)
         try:
-            build_document(config, config.documents[name], args.format)
-        except (FileNotFoundError, ConversionError) as exc:
-            _error(f"{name}: {exc}")
-            failed += 1
-        except Exception as exc:  # one document must not stop the others
-            logger.debug("Unexpected failure", exc_info=True)
-            _error(f"{name}: {type(exc).__name__}: {exc}")
-            failed += 1
-    if len(names) > 1 or failed:
-        summary = f"{len(names) - failed} of {len(names)} document(s) built" + (f", {failed} failed" if failed else "")
-        (logger.error if failed else logger.info)(summary)
-    return 1 if failed else 0
+            logger.info(f"Wrote {report.write(report_path)}")
+        except OSError as exc:
+            _error(f"Cannot write the report {report_path}: {exc.strerror or exc}")
+            status = max(status, 1)
+    return status
 
 
 # --- migrate -------------------------------------------------------------------------------------
@@ -149,7 +212,7 @@ def _report(result: Migration) -> None:
 
 
 def _migrate(args: argparse.Namespace) -> int:
-    configure_logging()
+    configure_logging(quiet=args.quiet, verbose=args.verbose)
     paths = [Path(p) for p in args.paths]
     missing = [p for p in paths if not p.exists()]
     if missing:
