@@ -40,7 +40,7 @@ Programs that are not Python (pandoc, TeX, PlantUML, Mermaid, Graphviz and the r
 py-doc setup             # install Docker Engine (Ubuntu or Debian: in the WSL distro on Windows, or here on Linux)
 py-doc doctor            # check the platform, WSL, Docker, the image and a trivial run
 py-doc tools lock        # only after changing a tool version in tools.lock (the shipped checksums are already recorded)
-py-doc tools build       # build the image here (several GB, 10 to 30 minutes the first time)
+py-doc tools build       # build the image here (several GB, 10 to 30 minutes the first time; prints each step and a note every minute)
 py-doc tools status      # image tag, and the version of each tool inside it
 py-doc tools prune       # remove images left by older py-doc versions
 ```
