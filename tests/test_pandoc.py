@@ -233,7 +233,8 @@ def test_the_command_mounts_resources_read_only_and_translates_paths(tmp_path, m
     config, doc = project(tmp_path, "      html: {}\n")
     with pytest.raises(ConversionError, match="wrote no html file"):
         build_document(config, doc, ["html"], runtime=lambda: runtime)
-    (run,) = engine.runs()
+    (run,) = [r for r in engine.runs() if "--version" not in r]  # the other run asks pandoc for its version
+    assert "--syntax-highlighting" in run and "--highlight-style" not in run
     mounts = [word.replace("\\", "/") for word in run if word.startswith("type=bind")]
     assert any("pandoc/resources" in m and m.endswith("readonly") for m in mounts)
     assert any(f"source={tmp_path.as_posix()}," in m and m.endswith("readonly") for m in mounts)
@@ -324,3 +325,19 @@ def test_marker_filter_makes_captions_and_drops_word_only_markers(tmp_path):
         assert f"<figcaption>{caption}</figcaption>" in html or f"<figcaption aria-hidden=\"true\">{caption}</figcaption>" in html
     assert "<caption>Requirements</caption>" in html and "<caption>After the table</caption>" in html
     assert "Alone" in html
+
+
+@pytest.mark.parametrize(("banner", "option"), [
+    ("pandoc 3.8.2.1", "--syntax-highlighting"), ("pandoc 3.8", "--syntax-highlighting"),
+    ("pandoc 3.1.3", "--highlight-style"), ("nonsense", "--syntax-highlighting"),
+])  # fmt: skip
+def test_the_highlight_option_follows_the_pandoc_version(banner, option):
+    from py_doc.pandoc.engine import _highlight_option
+
+    class Fake:
+        def run(self, argv, **kwargs):
+            from py_doc.runtime import ToolResult
+
+            return ToolResult(0, banner + "\nFeatures: x\n", "")
+
+    assert _highlight_option(Fake()) == option

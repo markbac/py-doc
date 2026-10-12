@@ -45,14 +45,14 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 | `templates/sensor_Draft.docx` | The same template with a red "DRAFT" header. A document with `status: Draft` uses it without being told to |
 | `templates/sensor.pptx`, `sensor_Draft.pptx` | The PowerPoint template, and the one a `status: Draft` deck uses. Coloured titles and a `{{VERSION}}` shape on the master, filled in when the deck is built |
 | `templates/datasheet.docx` | A Word template with its own placeholder prefix (`@@Title`) and body marker (`<<BODY>>`) |
-| `templates/report.tex` | A LaTeX template for PDF output, with its own colours |
-| `templates/doc.css` | The stylesheet for HTML output: `py-doc`'s own plus company colours |
+| `templates/report.tex`, `report_Draft.tex` | A LaTeX template for PDF output with its own colours, and a twin with a DRAFT watermark for `status: Draft` |
+| `templates/doc.css`, `doc_Draft.css` | The stylesheet for HTML output (`py-doc`'s own plus company colours), and the red-banner one a `status: Draft` document uses |
 | `templates/make_templates.py` | Regenerates the templates, the logo and `word/design_review.docx` |
 | `architecture/workspace.dsl`, `workspace.json` | The same Structurizr model twice. The JSON needs no Java or Docker |
 | `structure-rules.yaml`, `vale-rules.yml`, `.markdownlint.yaml` | Rule files used by `py-doc lint` |
 | `word/design_review.docx` | A Word file to try `py-doc import` on |
 
-Together the guide and the datasheet show every fenced diagram type. `graphviz` and `puml` are accepted as other names for `dot` and `plantuml`. See the Diagrams section of the main README.
+The datasheet is also the last appendix of the guide, so `py-doc build guide` draws every diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega, vega-lite, Graphviz, Mermaid and PlantUML. All of them are installed in the tool image. `graphviz` and `puml` are accepted as other names for `dot` and `plantuml`. See the Diagrams section of the main README.
 
 ## Quick start
 
@@ -182,7 +182,7 @@ py-doc c4 up                                    # view the model in a browser
 py-doc c4 down
 ```
 
-Pictures are drawn with Structurizr Local (`structurizr/structurizr local`, which replaces Structurizr Lite). The first picture pulls the image, which can take a while. `diagrams: {engine: source, format: plantuml}` in `py-doc.yml` is the other route: `structurizr-cli` writes PlantUML text from `architecture/workspace.dsl`, and it is drawn like any other diagram. Both routes need Docker. Without it, `py-doc c4 export architecture/workspace.json -f markdown` still writes the model as Markdown pages.
+Structurizr Local only answers requests for `localhost`, so the browser that draws the pictures shares Local's network and opens `http://localhost:8080`. Pictures are drawn with Structurizr Local (`structurizr/structurizr local`, which replaces Structurizr Lite). The first picture pulls the image, which can take a while. `diagrams: {engine: source, format: plantuml}` in `py-doc.yml` is the other route: `structurizr-cli` writes PlantUML text from `architecture/workspace.dsl`, and it is drawn like any other diagram. Both routes need Docker. Without it, `py-doc c4 export architecture/workspace.json -f markdown` still writes the model as Markdown pages.
 
 > **Note:** Generated pages and the export cache live in `.py-doc/` at the project root. It is ignored by Git.
 

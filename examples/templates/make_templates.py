@@ -196,6 +196,13 @@ def report_tex() -> None:
     custom = built_in.replace("003C64", "1B5E20").replace("0072B2", "2E7D32")
     note = "% Report template for the example datasheet. Copied from py-doc's own LaTeX template with the brand colours\n% lgblue and lgaccent changed. Change the colours, fonts and page layout here.\n"
     (HERE / "report.tex").write_text(note + custom, encoding="utf-8", newline="\n")
+    # The Draft twin: a grey DRAFT across every page. `status: Draft` chooses it, as for Word and PowerPoint.
+    watermark = (
+        "\\usepackage{eso-pic}\n"
+        "\\AddToShipoutPictureBG{\\AtPageCenter{\\makebox(0,0){\\rotatebox{55}{\\fontsize{110}{110}\\selectfont\\textcolor[gray]{0.88}{DRAFT}}}}}\n"
+    )
+    draft = custom.replace("\\begin{document}", watermark + "\\begin{document}", 1)
+    (HERE / "report_Draft.tex").write_text(note + "% The Draft twin: the same plus a DRAFT watermark.\n" + draft, encoding="utf-8", newline="\n")
 
 
 def sensor_pptx() -> None:
@@ -234,6 +241,14 @@ def doc_css() -> None:
         "figcaption, caption { color: #555; font-style: italic; }\n"
     )
     (HERE / "doc.css").write_text(built_in.rstrip() + "\n" + brand, encoding="utf-8", newline="\n")
+    draft = (
+        "\n/* Draft twin: `status: Draft` chooses this file. A red bar and a DRAFT mark on top of the company look. */\n"
+        "body::before { content: 'DRAFT'; display: block; background: #c62828; color: white; text-align: center; font-weight: bold; letter-spacing: 0.3em; padding: 0.3em; }\n"
+        "h1, h2, h3 { color: #c62828; }\n"
+        "h1 { border-bottom-color: #c62828; }\n"
+        "th { background: #c62828; }\n"
+    )
+    (HERE / "doc_Draft.css").write_text(built_in.rstrip() + "\n" + brand + draft, encoding="utf-8", newline="\n")
 
 
 def logo() -> None:
@@ -278,4 +293,4 @@ if __name__ == "__main__":
     sensor_pptx()
     doc_css()
     design_review()
-    print("Wrote sensor.docx, sensor_Draft.docx, datasheet.docx, report.tex, sensor.pptx, sensor_Draft.pptx, doc.css, logo.png, docs/guide/images/logo.png and word/design_review.docx")
+    print("Wrote sensor.docx, sensor_Draft.docx, datasheet.docx, report.tex, report_Draft.tex, doc_Draft.css, sensor.pptx, sensor_Draft.pptx, doc.css, logo.png, docs/guide/images/logo.png and word/design_review.docx")

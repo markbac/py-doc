@@ -28,16 +28,17 @@ READY_SECONDS = 300  # the first start of the Java server can take minutes on a 
 POLL_SECONDS = 3
 NOTE_SECONDS = 30  # how often the wait says it is still waiting
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
-# Exits 0 once the page answers. It runs in the tool container on the same network, which is how the pictures are
-# fetched, so it also proves the route that matters and does not depend on the host reaching the published port.
+# Structurizr Local only answers requests for ``localhost`` (any other host name gets a 400, so its scripts and
+# styles fail to load). The tool container therefore shares Local's network namespace, where ``localhost`` is Local.
+# The probe exits 0 once the diagrams page answers properly, on that same route, so it proves what the pictures need.
 PROBE = (
-    "const r = require('http').get(process.argv[1], x => process.exit(x.statusCode < 500 ? 0 : 1));"
+    "const r = require('http').get(process.argv[1], x => process.exit(x.statusCode < 400 ? 0 : 1));"
     "r.on('error', () => process.exit(1)); r.setTimeout(5000, () => process.exit(1));"
 )
 
 
 class Stack:
-    network: str | bool = NETWORK  # what the tool container joins to reach Local
+    network: str | bool = f"container:{SERVER}"  # the tool container shares Local's network, so Local is localhost
 
     def __init__(self, runtime: Runtime, workspace: Path, *, image: str = SERVER_IMAGE, port: int = SERVER_PORT) -> None:
         """``workspace`` is the ``.dsl`` or ``workspace.json`` file. Local is given its folder."""
@@ -51,7 +52,7 @@ class Stack:
     @property
     def url(self) -> str:
         """Where the tool container reaches Local, on the shared network."""
-        return f"http://{SERVER}:{SERVER_PORT}/workspace/diagrams"
+        return f"http://localhost:{SERVER_PORT}/workspace/diagrams"
 
     def status(self) -> str:
         """``running``, ``stopped`` or ``absent``."""
@@ -94,7 +95,7 @@ class Stack:
         return folder
 
     def _wait(self) -> None:
-        url = f"http://{SERVER}:{SERVER_PORT}/workspace"
+        url = self.url
         started = time.monotonic()
         next_note = NOTE_SECONDS
         logger.info("Waiting for Structurizr Local to start (up to %d seconds)", READY_SECONDS)
@@ -102,7 +103,7 @@ class Stack:
             elapsed = time.monotonic() - started
             if self.status() != "running":
                 self._fail("Structurizr Local stopped while starting.")
-            if self.runtime.run(["node", "-e", PROBE, url], network=NETWORK, check=False, timeout=60).returncode == 0:
+            if self.runtime.run(["node", "-e", PROBE, url], network=self.network, check=False, timeout=60).returncode == 0:
                 logger.info("Structurizr Local is ready after %d seconds", elapsed)
                 return
             if elapsed >= READY_SECONDS:

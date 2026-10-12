@@ -4,7 +4,7 @@ subtitle: Architecture and operation
 author: A. Writer
 date: 2026-01-15
 version: "{{version}}"
-status: Released
+status: Draft
 ---
 
 # Introduction
