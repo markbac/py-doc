@@ -24,6 +24,8 @@ def definition(tmp_path, monkeypatch) -> Path:
     shutil.copytree(REAL, copy)
     monkeypatch.setattr(image, "IMAGE_DIR", copy)
     monkeypatch.setattr(image, "LOCK_FILE", copy / "tools.lock")
+    lock = copy / "tools.lock"  # the shipped file has its checksums, so the tests start from an unrecorded one
+    lock.write_text(re.sub(r" [0-9a-f]{64}$", " -", lock.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
     return copy
 
 
@@ -92,10 +94,10 @@ def test_the_tag_is_the_same_after_a_windows_checkout(definition):
 # --- tools.lock ----------------------------------------------------------------------------------
 
 
-def test_the_shipped_lock_file_lists_the_tools_and_records_nothing_invented():
+def test_the_shipped_lock_file_lists_the_tools_with_their_checksums():
     entries = image.read_lock(REAL / "tools.lock")
     assert [e.name for e in entries] == ["pandoc", "plantuml", "ditaa", "vale", "structurizr-cli"]
-    assert all(not e.recorded for e in entries)
+    assert all(e.recorded and re.fullmatch(r"[0-9a-f]{64}", e.sha256) for e in entries)
     assert next(e for e in entries if e.name == "pandoc").version == "3.8.2.1"
 
 
@@ -215,7 +217,7 @@ def cli(engine, monkeypatch):
     return engine
 
 
-def test_tools_status_reports_versions_from_inside_the_image(cli, capsys):
+def test_tools_status_reports_versions_from_inside_the_image(cli, definition, capsys):
     cli.configure(images=["tools:test"], stdout="v1.2.3\n")
     assert main(["tools", "status"]) == 0
     out = capsys.readouterr().out

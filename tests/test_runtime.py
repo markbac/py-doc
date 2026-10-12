@@ -13,7 +13,7 @@ from fake_engine import install
 
 from py_doc.errors import EnvironmentProblem, ToolFailed, ToolTimeout, exit_status
 from py_doc.runtime import Mount, Runtime
-from py_doc.runtime.engine import decode_wsl
+from py_doc.runtime.engine import ToolResult, decode_wsl
 
 IMAGE = "tools:test"
 
@@ -216,3 +216,10 @@ def test_the_runner_refuses_to_start_on_an_unsupported_platform(monkeypatch):
     monkeypatch.setattr(sys, "platform", "darwin")
     with pytest.raises(EnvironmentProblem, match="Linux and Windows"):
         Runtime(IMAGE)
+
+
+def test_docker_missing_inside_wsl_says_how_to_install_it():
+    runtime = Runtime(IMAGE, platform_name="windows")
+    result = ToolResult(1, "", "<3>WSL (823 - Relay) ERROR: CreateProcessCommon:875: execvpe(docker) failed: No such file or directory")
+    with pytest.raises(EnvironmentProblem, match="not installed inside the WSL distro"):
+        runtime._raise_environment(result, running=True)

@@ -10,7 +10,7 @@ A small project to try every part of `py-doc` on: Markdown sources, a `py-doc.ym
     pip install -e .
     ```
 
-1. Build the tool image once. It holds pandoc, Mermaid, PlantUML, Graphviz, xelatex, Inkscape and Structurizr, so nothing else needs installing. Docker must be running (on Windows, Docker in WSL).
+1. Build the tool image once. It holds pandoc, Mermaid, PlantUML, Graphviz, xelatex, Inkscape and Structurizr, so nothing else needs installing. Docker must be running. On Windows that means Docker Engine installed inside a WSL 2 distribution (`wsl --install`, then the steps at https://docs.docker.com/engine/install/ubuntu/ inside it), not Docker Desktop; `py-doc doctor` tells you what is missing.
 
     ```bash
     py-doc tools build        # slow the first time

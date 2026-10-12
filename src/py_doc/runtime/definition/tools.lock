@@ -1,8 +1,8 @@
 # Downloaded tools: name, version, url, sha256. A "-" checksum has not been recorded yet.
 # `py-doc tools lock` downloads each file, records its checksum here, and refuses a change to one
 # that is already recorded. A build refuses to run while any checksum is "-".
-pandoc 3.8.2.1 https://github.com/jgm/pandoc/releases/download/3.8.2.1/pandoc-3.8.2.1-1-amd64.deb -
-plantuml 1.2025.4 https://github.com/plantuml/plantuml/releases/download/v1.2025.4/plantuml-1.2025.4.jar -
-ditaa 0.11.0 https://github.com/stathissideris/ditaa/releases/download/v0.11.0/ditaa-0.11.0-standalone.jar -
-vale 3.24.0 https://github.com/errata-ai/vale/releases/download/v3.24.0/vale_3.24.0_Linux_64-bit.tar.gz -
-structurizr-cli 2025.11.09 https://github.com/structurizr/cli/releases/download/v2025.11.09/structurizr-cli.zip -
+pandoc 3.8.2.1 https://github.com/jgm/pandoc/releases/download/3.8.2.1/pandoc-3.8.2.1-1-amd64.deb 5d4ecbf9c616360a9046e14685389ff2898088847e5fb260eedecd023453995a
+plantuml 1.2025.4 https://github.com/plantuml/plantuml/releases/download/v1.2025.4/plantuml-1.2025.4.jar 26518e14a3a04100cd76c0d96cab2d1171f36152215edd9790a28d20268200c1
+ditaa 0.11.0 https://github.com/stathissideris/ditaa/releases/download/v0.11.0/ditaa-0.11.0-standalone.jar 9418aa63ff6d89c5d2318396f59836e120e75bea7a5930c4d34aa10fe7a196a9
+vale 3.24.0 https://github.com/errata-ai/vale/releases/download/v3.24.0/vale_3.24.0_Linux_64-bit.tar.gz 867534ddb678abca7f214bc4706ead0922bd5252ffe8035fc227013f66c8b214
+structurizr-cli 2025.11.09 https://github.com/structurizr/cli/releases/download/v2025.11.09/structurizr-cli.zip f5365a463fc44d539ed19bec00c48ba1e1ecda0ccfd1ba40d2e7472d264eb79a
