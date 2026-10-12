@@ -17,7 +17,7 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl git unzip \
  && update-ca-certificates \
  && apt-get install -y --no-install-recommends \
-      fontconfig fonts-dejavu fonts-liberation fonts-noto-core lmodern \
+      fontconfig fonts-dejavu fonts-liberation fonts-noto-core fonts-crosextra-caladea fonts-crosextra-carlito lmodern \
       texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended \
       texlive-pictures texlive-plain-generic \
       default-jre-headless graphviz inkscape librsvg2-bin chromium \

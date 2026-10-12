@@ -110,3 +110,11 @@ def check_ast_golden():
         assert outline_text == golden.read_text(encoding="utf-8")
 
     return _check
+
+
+@pytest.fixture(autouse=True)
+def _posix_ids(monkeypatch):
+    """Windows has no os.getuid. The tests that pretend to be on Linux (a fake docker on the host) need one."""
+    if not hasattr(os, "getuid"):
+        monkeypatch.setattr(os, "getuid", lambda: 1000, raising=False)
+        monkeypatch.setattr(os, "getgid", lambda: 1000, raising=False)

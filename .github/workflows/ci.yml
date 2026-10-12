@@ -44,7 +44,7 @@ jobs:
           allow-prereleases: true
       - name: Pandoc, XeLaTeX and Graphviz (the tests run them on the host in place of the container)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc texlive-xetex texlive-latex-recommended texlive-fonts-recommended graphviz
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc texlive-xetex texlive-latex-recommended texlive-fonts-recommended fonts-crosextra-caladea fonts-crosextra-carlito graphviz
       - name: Vale (for the end-to-end test)
         if: runner.os == 'Linux'
         run: |
@@ -60,7 +60,7 @@ jobs:
           python -m pytest -v -rf --tb=short > pytest.log 2>&1
           code=$?
           if [ $code -ne 0 ]; then
-            grep -E "^(FAILED|ERROR)|Error" pytest.log | head -15 | cut -c1-400 | while IFS= read -r line; do echo "::error::$line"; done
+            { grep -E "^(FAILED|ERROR) " pytest.log; grep -E "^E  " pytest.log; } | head -10 | cut -c1-400 | while IFS= read -r line; do echo "::error::$line"; done
           fi
           tail -5 pytest.log
           exit $code
