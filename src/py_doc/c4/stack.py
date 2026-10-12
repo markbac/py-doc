@@ -9,11 +9,10 @@ started it.
 from __future__ import annotations
 
 import logging
+import re
 import shutil
 import tempfile
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 from py_doc.errors import ConversionError, ToolFailed
@@ -25,7 +24,16 @@ NETWORK = "py-doc-c4"
 SERVER = "py-doc-c4-local"
 SERVER_IMAGE = "structurizr/structurizr"
 SERVER_PORT = 8080
-READY_SECONDS = 120
+READY_SECONDS = 300  # the first start of the Java server can take minutes on a busy machine
+POLL_SECONDS = 3
+NOTE_SECONDS = 30  # how often the wait says it is still waiting
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+# Exits 0 once the page answers. It runs in the tool container on the same network, which is how the pictures are
+# fetched, so it also proves the route that matters and does not depend on the host reaching the published port.
+PROBE = (
+    "const r = require('http').get(process.argv[1], x => process.exit(x.statusCode < 500 ? 0 : 1));"
+    "r.on('error', () => process.exit(1)); r.setTimeout(5000, () => process.exit(1));"
+)
 
 
 class Stack:
@@ -86,22 +94,29 @@ class Stack:
         return folder
 
     def _wait(self) -> None:
-        url = f"http://127.0.0.1:{self.port}/workspace"
-        deadline = time.monotonic() + READY_SECONDS
-        while time.monotonic() < deadline:
-            try:
-                with urllib.request.urlopen(url, timeout=5) as reply:  # noqa: S310
-                    if reply.status < 500:
-                        logger.info("Structurizr Local is ready")
-                        return
-            except (urllib.error.URLError, OSError):
-                pass
-            time.sleep(2)
-        logs = self.runtime.engine(["logs", "--tail", "30", SERVER], check=False)
+        url = f"http://{SERVER}:{SERVER_PORT}/workspace"
+        started = time.monotonic()
+        next_note = NOTE_SECONDS
+        logger.info("Waiting for Structurizr Local to start (up to %d seconds)", READY_SECONDS)
+        while True:
+            elapsed = time.monotonic() - started
+            if self.status() != "running":
+                self._fail("Structurizr Local stopped while starting.")
+            if self.runtime.run(["node", "-e", PROBE, url], network=NETWORK, check=False, timeout=60).returncode == 0:
+                logger.info("Structurizr Local is ready after %d seconds", elapsed)
+                return
+            if elapsed >= READY_SECONDS:
+                self._fail(f"Structurizr Local did not answer within {READY_SECONDS} seconds.")
+            if elapsed >= next_note:
+                logger.info("Still waiting for Structurizr Local (%d of %d seconds)", elapsed, READY_SECONDS)
+                next_note += NOTE_SECONDS
+            time.sleep(POLL_SECONDS)
+
+    def _fail(self, message: str) -> None:
+        logs = self.runtime.engine(["logs", "--tail", "15", SERVER], check=False)
+        text = _ANSI.sub("", logs.stdout + logs.stderr).strip()
         self.down()
-        raise ConversionError(
-            f"Structurizr Local did not answer within {READY_SECONDS} seconds.\n{(logs.stdout + logs.stderr).strip()}"
-        )
+        raise ConversionError(f"{message}\n{text}" if text else message)
 
     def down(self) -> None:
         self.runtime.engine(["rm", "-f", SERVER], check=False)

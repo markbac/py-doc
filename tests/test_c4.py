@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from py_doc.errors import ConversionError
+
 from py_doc.app import main
 from py_doc.c4 import stack as stack_module
 from py_doc.c4.check import check_model
@@ -620,3 +622,58 @@ def test_lint_runs_the_model_rules_for_the_documents_workspaces(patched, tmp_pat
     out = capsys.readouterr().out
     assert "C4001" in out and "workspace.json:1:" in out and "C4004" not in out
     assert main(["lint", str(tmp_path), "--engine", "builtin", "--strict"]) == 1
+
+
+# --- waiting for Structurizr Local --------------------------------------------------------------------
+
+
+class _Waiting:
+    """A runtime whose probe fails a set number of times, and whose container may stop."""
+
+    def __init__(self, failures=0, running=True, logs="x"):
+        self.failures, self.running, self.logs, self.calls = failures, running, logs, []
+
+    def engine(self, args, **kwargs):
+        self.calls.append(args[0])
+        if args[0] == "inspect":
+            return ToolResult(0, "true\n" if self.running else "false\n", "")
+        if args[0] == "logs":
+            return ToolResult(0, self.logs, "")
+        return ToolResult(0, "", "")
+
+    def run(self, argv, **kwargs):
+        assert argv[:2] == ["node", "-e"] and kwargs["network"] == "py-doc-c4"  # probed from the network the pictures use
+        self.calls.append("probe")
+        self.failures -= 1
+        return ToolResult(1 if self.failures >= 0 else 0, "", "")
+
+
+@pytest.fixture
+def quick(monkeypatch):
+    from py_doc.c4 import stack as stack_module
+
+    monkeypatch.setattr(stack_module.time, "sleep", lambda s: None)
+    clock = iter(range(0, 10_000, 40))  # each look at the clock is 40 seconds later
+    monkeypatch.setattr(stack_module.time, "monotonic", lambda: next(clock))
+    return stack_module
+
+
+def test_the_wait_ends_when_the_probe_answers(quick, tmp_path, caplog):
+    runtime = _Waiting(failures=2)
+    with caplog.at_level("INFO"):
+        Stack(runtime, tmp_path / "workspace.json")._wait()
+    assert runtime.calls.count("probe") == 3
+    assert "ready after" in caplog.text and "Still waiting" in caplog.text
+
+
+def test_the_wait_fails_at_once_when_the_container_stops(quick, tmp_path):
+    runtime = _Waiting(running=False, logs="\x1b[31mERROR\x1b[0m port in use")
+    with pytest.raises(ConversionError, match="stopped while starting.\nERROR port in use"):
+        Stack(runtime, tmp_path / "workspace.json")._wait()
+    assert "probe" not in runtime.calls and runtime.calls[-2:] == ["rm", "network"]
+
+
+def test_the_wait_gives_up_after_the_limit_with_clean_logs(quick, tmp_path):
+    runtime = _Waiting(failures=10_000, logs="\x1b[34mINFO\x1b[0;39m Themes:")
+    with pytest.raises(ConversionError, match=r"did not answer within 300 seconds.\nINFO Themes:"):
+        Stack(runtime, tmp_path / "workspace.json")._wait()

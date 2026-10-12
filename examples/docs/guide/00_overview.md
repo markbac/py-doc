@@ -28,7 +28,7 @@ This guide describes version {{version}}. It is an example for trying out `py-do
 [[ENDIF]]
 
 [[CAPTION:Figure]] The company logo
-![Example Ltd](../images/logo.png)
+![Example Ltd](images/logo.png)
 
 ## What the node does
 

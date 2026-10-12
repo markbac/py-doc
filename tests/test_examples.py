@@ -111,7 +111,9 @@ def test_the_guide_builds_as_word_and_html(examples, pandoc_runtime):
     html = (examples / "build" / "guide.html").read_text(encoding="utf-8")
     assert "#0b4f8a" in html, "the stylesheet from templates/doc.css is used"
     assert "<figcaption" in html and "<caption>Node requirements</caption>" in html
-    assert "[[CAPTION" not in html
+    assert "[[" not in html, "no marker is printed in HTML"
+    assert 'src="data:image/png' in html and 'src="images/logo.png"' not in html, "the logo is embedded"
+    assert "<figcaption>Data flow through the node</figcaption>" in html
 
 
 def test_the_conditions_choose_the_text(examples, pandoc_runtime):
@@ -123,7 +125,12 @@ def test_the_conditions_choose_the_text(examples, pandoc_runtime):
 @needs_xelatex
 def test_the_guide_builds_as_pdf_with_task_lists_and_captions(examples, pandoc_runtime):
     assert main(["build", "guide", "-f", "pdf"]) == 0
-    assert (examples / "build" / "guide.pdf").read_bytes().startswith(b"%PDF")
+    pdf = examples / "build" / "guide.pdf"
+    assert pdf.read_bytes().startswith(b"%PDF")
+    if shutil.which("pdftotext"):
+        text = subprocess.run(["pdftotext", str(pdf), "-"], capture_output=True, text=True, check=True).stdout
+        assert "[[" not in text, "no marker is printed in the PDF"
+        assert "Data flow through the node" in text and "Figure 1" in text
 
 
 def test_the_datasheet_builds_with_a_version_in_the_name(examples, pandoc_runtime):

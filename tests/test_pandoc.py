@@ -288,31 +288,39 @@ def test_latex_template_defines_task_list_boxes():
 def test_pdf_html_and_pptx_turn_caption_markers_into_captions():
     from py_doc.pandoc.engine import FILTERS
 
-    assert "captions.lua" in FILTERS["pdf"]
-    assert "captions.lua" in FILTERS["html"]
-    assert "captions.lua" in FILTERS["pptx"]
-    assert "captions.lua" not in FILTERS["docx"]  # Word numbers the marker itself
+    assert "markers.lua" in FILTERS["pdf"]
+    assert "markers.lua" in FILTERS["html"]
+    assert "markers.lua" in FILTERS["pptx"]
+    assert "markers.lua" not in FILTERS["docx"]  # Word numbers the marker itself
 
 
 @pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc is not installed")
-def test_caption_filter_makes_table_and_figure_captions(tmp_path):
+def test_marker_filter_makes_captions_and_drops_word_only_markers(tmp_path):
     import subprocess
 
     from py_doc.pandoc.engine import INPUT_FORMAT, RESOURCES
 
     md = tmp_path / "c.md"
     md.write_text(
+        "[[STYLE:Lead Paragraph]] A lead\n\n"
         "[[CAPTION:Figure]] The logo\n![Logo](logo.png)\n\n"
+        "[[CAPTION:Figure]] A diagram\n\n::: {style=\"text-align:center;\"}\n![dot diagram](d.png)\n:::\n\n"
         "[[CAPTION:Table]] Requirements\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n"
+        "[[LANDSCAPE]]\n\n"
+        "| C | D |\n|---|---|\n| 3 | 4 |\n\n[[CAPTION:Table]] After the table\n\n"
+        "[[PORTRAIT]]\n\n"
+        "[[CAPTION:Figure]] The code\n```c\nint x;\n```\n\n"
         "[[CAPTION:Table]] Alone\n",
         encoding="utf-8",
     )
     done = subprocess.run(
-        ["pandoc", str(md), f"--from={INPUT_FORMAT}", f"--lua-filter={RESOURCES / 'captions.lua'}", "--to=html5"],
+        ["pandoc", str(md), f"--from={INPUT_FORMAT}", f"--lua-filter={RESOURCES / 'markers.lua'}", "--to=html5"],
         capture_output=True, text=True, check=True, cwd=tmp_path,
     )  # fmt: skip
     html = done.stdout
-    assert "[[CAPTION" not in html
-    assert "<figcaption" in html and "The logo" in html
-    assert "<caption>Requirements</caption>" in html
+    assert "[[" not in html
+    assert "A lead" in html
+    for caption in ("The logo", "A diagram", "The code"):
+        assert f"<figcaption>{caption}</figcaption>" in html or f"<figcaption aria-hidden=\"true\">{caption}</figcaption>" in html
+    assert "<caption>Requirements</caption>" in html and "<caption>After the table</caption>" in html
     assert "Alone" in html

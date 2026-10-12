@@ -37,7 +37,7 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 |---|---|
 | `py-doc.yml` | Four documents, output defaults, per-document variables and conditions, file naming, the build report, C4 and lint settings. Every setting has a comment |
 | `docs/guide/` | The guide, in four chapters: front matter, variables, conditions, includes, both callout spellings, captions, lists, task lists, footnotes, definition lists, maths, code includes, a landscape table, page breaks, links between chapters. `DRAFT.md` is listed with `include: false` |
-| `docs/datasheet.md` | One example of each diagram type that needs only the container: blockdiag, ditaa, wavedrom, packetdiag, nwdiag, seqdiag, pikchr and vega-lite |
+| `docs/datasheet.md` | One example of every diagram type that needs only the container: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega and vega-lite. Graphviz, Mermaid and PlantUML are in `docs/guide/02_design.md` |
 | `docs/slides.md` | The deck: slides at second-level headings, speaker notes, a diagram, a table, a page break |
 | `docs/includes/` | Files pulled in with `[[INCLUDE:]]` and `[[INCLUDE-CODE:]]` |
 | `templates/sensor.docx` | The Word template: logo, title page with `Replace-with-*` placeholders, header, footer with page numbers, callout styles, a `Lead Paragraph` style, `[[INSERTCONTENT]]` where the body goes |
@@ -49,7 +49,22 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 | `structure-rules.yaml`, `vale-rules.yml`, `.markdownlint.yaml` | Rule files used by `py-doc lint` |
 | `word/design_review.docx` | A Word file to try `py-doc import` on |
 
-The diagram types that are not shown here (`bytefield-svg`, `railroad`, `wireviz`, `actdiag`) work the same way. See the Diagrams section of the main README.
+Together the guide and the datasheet show every fenced diagram type. `graphviz` and `puml` are accepted as other names for `dot` and `plantuml`. See the Diagrams section of the main README.
+
+## Quick start
+
+Run these in order from this folder. Each line says what it makes.
+
+```bash
+py-doc build guide                                   # build/guide-v1.0.docx, guide.pdf, guide.html
+py-doc build datasheet                               # build/datasheet-1_0.docx and datasheet.pdf
+py-doc build deck                                    # build/deck.pptx
+py-doc build architecture                            # build/architecture.docx and architecture.html
+py-doc import word/design_review.docx -o imported    # imported/design_review.md and imported/design_review/
+py-doc docx imported/design_review.md                # imported/design_review.docx: the round trip
+```
+
+`py-doc import` needs the Word file as its argument, so a bare `py-doc import` prints a usage error. The sample file is `word/design_review.docx`.
 
 ## Which command makes which output
 
@@ -130,10 +145,15 @@ py-doc lint --check-engines
 
 ## Import a Word file
 
+`py-doc import` turns a Word file into Markdown. Headings, lists, tables, bold and italic text, pictures and captions are kept, and a caption becomes a `[[CAPTION:Figure]]` or `[[CAPTION:Table]]` line.
+
 ```bash
 py-doc import word/design_review.docx -o imported
 # writes imported/design_review.md and imported/design_review/ (pictures)
+py-doc docx imported/design_review.md        # builds it again: imported/design_review.docx
 ```
+
+Without `-o`, the Markdown is written next to the Word file. `--force` replaces an existing `.md` file, and `--no-defloat-images` leaves floating pictures out instead of placing them inline.
 
 ## Structurizr and C4
 

@@ -11,7 +11,8 @@ What it writes:
 - ``sensor_Draft.docx``  the same with a red header. A document with ``status: Draft`` uses it automatically
 - ``sensor.pptx``        the PowerPoint template: coloured titles and a version footer
 - ``doc.css``            the stylesheet for HTML output
-- ``../docs/images/logo.png`` and ``../word/design_review.docx`` (a plain Word file to try ``py-doc import`` on)
+- ``logo.png`` (also copied to ``../docs/guide/images/``, because pictures are looked up in the folder of the
+  Markdown file that uses them) and ``../word/design_review.docx`` (a plain Word file to try ``py-doc import`` on)
 """
 
 from __future__ import annotations
@@ -35,7 +36,7 @@ from pptx.oxml.ns import nsdecls
 from py_doc.pandoc.reference import add_styles
 
 HERE = Path(__file__).resolve().parent
-DOCS = HERE.parent / "docs"
+GUIDE_IMAGES = HERE.parent / "docs" / "guide" / "images"
 BLUE = RGBColor(0x0B, 0x4F, 0x8A)
 GREY = RGBColor(0x55, 0x55, 0x55)
 RED = RGBColor(0xC6, 0x28, 0x28)
@@ -111,7 +112,7 @@ def title_page(document) -> None:
     styles = document.styles
     logo = document.add_paragraph(style=find(styles, "Normal"))
     logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    logo.add_run().add_picture(str(DOCS / "images" / "logo.png"), width=Cm(5))
+    logo.add_run().add_picture(str(HERE / "logo.png"), width=Cm(5))
     document.add_paragraph("", style="Normal")
     title = document.add_paragraph("Replace-with-Title", style=find(styles, "Title"))
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -204,8 +205,9 @@ def doc_css() -> None:
 def logo() -> None:
     image = Image.new("RGB", (240, 80), (11, 79, 138))
     ImageDraw.Draw(image).text((20, 30), COMPANY, fill="white")
-    (DOCS / "images").mkdir(parents=True, exist_ok=True)
-    image.save(DOCS / "images" / "logo.png")
+    GUIDE_IMAGES.mkdir(parents=True, exist_ok=True)
+    image.save(HERE / "logo.png")
+    image.save(GUIDE_IMAGES / "logo.png")
 
 
 def design_review() -> None:
@@ -238,4 +240,4 @@ if __name__ == "__main__":
     sensor_pptx()
     doc_css()
     design_review()
-    print("Wrote sensor.docx, sensor_Draft.docx, sensor.pptx, doc.css, docs/images/logo.png and word/design_review.docx")
+    print("Wrote sensor.docx, sensor_Draft.docx, sensor.pptx, doc.css, logo.png, docs/guide/images/logo.png and word/design_review.docx")
