@@ -52,6 +52,12 @@ jobs:
           py-doc2docx --version
           py-doc2slides --version
           py-doclint --help
+          py-doc --version
+          py-doc docx --help
+          py-doc slides --help
+          py-doc lint --help
+          py-doc build --help
+          py-doc migrate --help
 
   build:
     name: Build package

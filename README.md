@@ -52,8 +52,8 @@ Environment problems (no engine, no image, an unsupported platform) exit with st
 ## Installation
 
 ```bash
-git clone https://github.com/markbac/py-doc2docx.git
-cd py-doc2docx
+git clone https://github.com/markbac/py-doc.git
+cd py-doc
 
 # Needs Python 3.10 or later. ctxlogkit is installed from GitHub automatically.
 pip install -e .
@@ -341,8 +341,8 @@ Failures raise `py_doc.ConversionError` (unreadable or unsupported input, bad te
 src/
 ├── py_doc/
 │   ├── app.py            # the py-doc command
-│   ├── cli.py            # py-doc2docx and py-doc docx
-│   ├── slides_cli.py     # py-doc2slides and py-doc slides
+│   ├── cli.py            # py-doc docx (and the old py-doc2docx)
+│   ├── slides_cli.py     # py-doc slides (and the old py-doc2slides)
 │   ├── _cli.py           # options, output paths and batch conversion shared by both
 │   ├── convert.py        # DocxConverter and SlidesConverter, one file through pandoc
 │   ├── pandoc/           # the pandoc command, Word and PowerPoint finishing, Lua filters

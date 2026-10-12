@@ -3,15 +3,15 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "py-doc2docx"
+name = "py-doc"
 dynamic = ["version"]
-description = "Convert Markdown Technical Documentation to Word (.docx) Documents"
+description = "Markdown technical documentation to Word, PowerPoint, PDF and HTML, with a style linter"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [{ name = "Mark Bacon" }]
-keywords = ["markdown", "docx", "word", "documentation"]
+keywords = ["markdown", "docx", "pptx", "pdf", "html", "pandoc", "documentation", "lint"]
 classifiers = [
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
@@ -33,6 +33,7 @@ dependencies = [
     "docxcompose>=1.4.0",
     "setuptools<81",  # docxcompose imports pkg_resources, which setuptools 81 no longer ships
     "PyYAML>=6.0",
+    # Pinned to a commit because py-logkit has no tagged release yet. Move to the first tag when there is one.
     "ctxlogkit @ git+https://github.com/markbac/py-logkit@96453b403015ed762bcc5b3ffd5adbea3ef4fb0c",
 ]
 
