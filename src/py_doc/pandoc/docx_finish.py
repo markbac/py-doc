@@ -37,6 +37,17 @@ _FIELDS = (  # placeholder name, and how the metadata is read
 )  # fmt: skip
 
 
+_TITLE_BLOCK = {"Title", "Subtitle", "Author", "Date"}
+
+
+def _drop_title_block(body) -> None:
+    """Remove pandoc's title, subtitle, author and date lines: the template's title page shows them already."""
+    for paragraph in list(body.paragraphs):
+        if paragraph.style is None or paragraph.style.name not in _TITLE_BLOCK:
+            break
+        paragraph._element.getparent().remove(paragraph._element)
+
+
 def finish_docx(body_path: Path, template: Path | None, metadata: Metadata, options: dict[str, Any]) -> None:
     """Rewrite ``body_path`` in place. Without a template pandoc's own output is only tidied.
 
@@ -59,6 +70,8 @@ def finish_docx(body_path: Path, template: Path | None, metadata: Metadata, opti
         post.replace_placeholders(base, replacements)
         index = post.find_and_remove_marker(base, options.get("marker", DEFAULT_MARKER))
         body = Document(str(body_path))
+        if present:
+            _drop_title_block(body)
         if index is not None:
             composer.insert(index, body)
         else:

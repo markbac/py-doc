@@ -1,0 +1,41 @@
+{
+  "id": 1,
+  "name": "Meter Gateway",
+  "description": "Reads meters and reports to the head-end.",
+  "properties": {"version": "1.0"},
+  "model": {
+    "people": [
+      {"id": "1", "name": "Installer", "description": "Installs and commissions gateways.", "tags": "Element,Person",
+       "relationships": [{"id": "20", "sourceId": "1", "destinationId": "3", "description": "Commissions using", "technology": "USB"}]}
+    ],
+    "softwareSystems": [
+      {"id": "2", "name": "Head-end System", "description": "Collects readings from all gateways.", "tags": "Element,Software System,External"},
+      {"id": "3", "name": "Meter Gateway", "description": "Reads meters and sends readings to the head-end.", "tags": "Element,Software System",
+       "relationships": [{"id": "21", "sourceId": "3", "destinationId": "2", "description": "Sends readings to", "technology": "LwM2M over DTLS"}],
+       "containers": [
+         {"id": "4", "name": "Reader", "description": "Polls the meter.", "technology": "C, FreeRTOS", "tags": "Element,Container",
+          "relationships": [{"id": "22", "sourceId": "4", "destinationId": "5", "description": "Stores readings in", "technology": "SQL"}]},
+         {"id": "5", "name": "Buffer", "description": "Keeps readings while the network is down.", "technology": "SQLite on flash", "tags": "Element,Container",
+          "relationships": [{"id": "23", "sourceId": "5", "destinationId": "6", "description": "Hands batches to", "technology": "Queue"}]},
+         {"id": "6", "name": "Uplink", "description": "Sends readings.", "technology": "C, LwM2M over DTLS", "tags": "Element,Container",
+          "relationships": [{"id": "24", "sourceId": "6", "destinationId": "2", "description": "Sends readings to", "technology": "LwM2M over DTLS", "linkedRelationshipId": "21"}],
+          "components": [{"id": "7", "name": "Session Manager", "description": "Keeps the DTLS session alive.", "technology": "C", "tags": "Element,Component"}]}
+       ]}
+    ],
+    "deploymentNodes": [
+      {"id": "30", "name": "Gateway hardware", "environment": "Field", "technology": "Cortex-M4",
+       "containerInstances": [
+         {"id": "31", "containerId": "4", "environment": "Field"},
+         {"id": "32", "containerId": "5", "environment": "Field"},
+         {"id": "33", "containerId": "6", "environment": "Field"}]}
+    ]
+  },
+  "views": {
+    "systemContextViews": [{"key": "SystemContext", "softwareSystemId": "3", "elements": [{"id": "1"}, {"id": "2"}, {"id": "3"}]}],
+    "containerViews": [{"key": "Containers", "softwareSystemId": "3", "elements": [{"id": "2"}, {"id": "4"}, {"id": "5"}, {"id": "6"}]}],
+    "componentViews": [{"key": "Components", "containerId": "6", "elements": [{"id": "2"}, {"id": "7"}]}],
+    "dynamicViews": [{"key": "Reading", "title": "How one reading travels.", "softwareSystemId": "3", "elements": [{"id": "4"}, {"id": "5"}, {"id": "6"}, {"id": "2"}],
+                      "relationships": [{"id": "22", "order": "1", "description": "Stores reading"}, {"id": "23", "order": "2", "description": "Hands over batch"}, {"id": "24", "order": "3", "description": "Sends batch"}]}],
+    "deploymentViews": [{"key": "FieldDeployment", "softwareSystemId": "3", "environment": "Field", "elements": [{"id": "30"}]}]
+  }
+}

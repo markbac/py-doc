@@ -18,7 +18,8 @@ from .check import check_model
 from .generate import LEVELS, generate
 from .model import load_workspace
 from .render import render_views
-from .stack import LITE_IMAGE, LITE_PORT, ExternalStack, Stack
+from .lock import LOCK, lock_lite, resolve_lite
+from .stack import LITE_PORT, ExternalStack, Stack
 from .structurizr import TEXT_FORMATS, StructurizrCli, find_workspaces, workspace_json
 
 logger = logging.getLogger(__name__)
@@ -50,17 +51,22 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--url", help="A Structurizr Lite or server that is already running, as the tool container can reach it")
     export.add_argument("--dry-run", action="store_true", help="List what would be written and write nothing")
 
+    lock = actions.add_parser("lock", help="Pin the Structurizr Lite image by digest in c4-images.lock")
+    common(lock)
+    lock.add_argument("--tag", default="latest", help="The Lite tag to pin (default: latest)")
+
     for name, text in (("up", "Start Structurizr Lite for a workspace"), ("down", "Stop Structurizr Lite"), ("status", "Say whether Lite is running")):
         common(actions.add_parser(name, help=text))
     return parser
 
 
-def _settings(args: argparse.Namespace) -> tuple[C4Settings, RuntimeSettings, LintConfig]:
+def _settings(args: argparse.Namespace) -> tuple[C4Settings, RuntimeSettings, LintConfig, Path]:
+    """The settings, and the project folder that holds the ``.py-doc`` cache (the folder of py-doc.yml, else here)."""
     path = Path(args.config) if args.config else find_config(Path.cwd())
     if path is None:
-        return C4Settings(), RuntimeSettings(), LintConfig()
+        return C4Settings(), RuntimeSettings(), LintConfig(), Path.cwd()
     project = load_config(path)
-    return project.c4, project.runtime, project.lint
+    return project.c4, project.runtime, project.lint, project.root
 
 
 def _find(target: str) -> list[Path]:
@@ -78,19 +84,23 @@ def run_c4(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     configure_logging(quiet=args.quiet, verbose=args.verbose)
     try:
-        c4, runtime_settings, lint = _settings(args)
-        files = _find(args.workspace)
+        c4, runtime_settings, lint, root = _settings(args)
+        cache = root / ".py-doc" / "c4" / "json"
         box = [None]
 
         def runtime():
             box[0] = box[0] or connect(runtime_settings)
             return box[0]
 
+        if args.action == "lock":
+            print(f"Pinned {lock_lite(runtime(), root, args.tag)} in {root / LOCK}")
+            return 0
+        files = _find(args.workspace)
         if args.action in ("up", "down", "status"):
-            return _stack(args.action, files, runtime, c4)
+            return _stack(args.action, files, runtime, c4, root)
         if args.action == "check":
-            return _check(files, runtime, c4, lint, args.strict)
-        return _export(args, files, runtime, c4)
+            return _check(files, runtime, c4, lint, args.strict, cache)
+        return _export(args, files, runtime, c4, cache, root)
     except ConfigError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
@@ -99,10 +109,10 @@ def run_c4(argv: Sequence[str] | None = None) -> int:
         return exit_status(exc)
 
 
-def _stack(action: str, files: list[Path], runtime, c4: C4Settings) -> int:
+def _stack(action: str, files: list[Path], runtime, c4: C4Settings, root: Path) -> int:
     if len(files) != 1:
         raise ConversionError(f"{len(files)} workspaces found. Name one: {', '.join(str(f) for f in files)}")
-    stack = Stack(runtime(), files[0], image=c4.lite_image or LITE_IMAGE, port=c4.port or LITE_PORT)
+    stack = Stack(runtime(), files[0], image=resolve_lite(c4.lite_image, root), port=c4.port or LITE_PORT)
     if action == "status":
         print(stack.status())
     elif action == "up":
@@ -114,10 +124,10 @@ def _stack(action: str, files: list[Path], runtime, c4: C4Settings) -> int:
     return 0
 
 
-def _check(files: list[Path], runtime, c4: C4Settings, lint: LintConfig, strict: bool) -> int:
+def _check(files: list[Path], runtime, c4: C4Settings, lint: LintConfig, strict: bool, cache: Path) -> int:
     worst = 0
     for file in files:
-        ws = load_workspace(workspace_json(file, Path(".py-doc") / "c4" / "json", runtime, c4.cli))
+        ws = load_workspace(workspace_json(file, cache, runtime, c4.cli))
         issues = check_model(ws, file, lint)
         for issue in issues:
             print(issue)
@@ -131,13 +141,13 @@ def _check(files: list[Path], runtime, c4: C4Settings, lint: LintConfig, strict:
     return worst
 
 
-def _export(args: argparse.Namespace, files: list[Path], runtime, c4: C4Settings) -> int:
+def _export(args: argparse.Namespace, files: list[Path], runtime, c4: C4Settings, cache: Path, root: Path) -> int:
     failures: list[str] = []
     out_root = Path(args.output)
     for file in files:
         out = out_root / file.parent.name if len(files) > 1 else out_root
         try:
-            _export_one(args, file, out, runtime, c4)
+            _export_one(args, file, out, runtime, c4, cache, root)
         except ConversionError as exc:
             if exit_status(exc) == 2:
                 raise
@@ -149,10 +159,10 @@ def _export(args: argparse.Namespace, files: list[Path], runtime, c4: C4Settings
     return 0
 
 
-def _export_one(args: argparse.Namespace, file: Path, out: Path, runtime, c4: C4Settings) -> None:
+def _export_one(args: argparse.Namespace, file: Path, out: Path, runtime, c4: C4Settings, cache: Path, root: Path) -> None:
     formats = list(dict.fromkeys(args.formats))
     cli = StructurizrCli(runtime, c4.cli)
-    ws = load_workspace(workspace_json(file, Path(".py-doc") / "c4" / "json", runtime, c4.cli))
+    ws = load_workspace(workspace_json(file, cache, runtime, c4.cli))
     from .render import plan
 
     if args.dry_run:
@@ -164,7 +174,7 @@ def _export_one(args: argparse.Namespace, file: Path, out: Path, runtime, c4: C4
     drawn = tuple(f for f in formats if f in DRAWN)
     pictures: dict[str, str] = {}
     if drawn:
-        stack = ExternalStack(args.url) if args.url else Stack(runtime(), file, image=c4.lite_image or LITE_IMAGE, port=c4.port or LITE_PORT)
+        stack = ExternalStack(args.url) if args.url else Stack(runtime(), file, image=resolve_lite(c4.lite_image, root), port=c4.port or LITE_PORT)
         files = render_views(ws, file, out, runtime(), formats=drawn, keys=args.views, stack=stack)
         pictures = {p.stem: p.name for p in files if p.suffix == f".{drawn[0]}"}
     for fmt in (f for f in formats if f in TEXT_FORMATS):

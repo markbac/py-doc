@@ -1,0 +1,6 @@
+# Shared Vale rules: several projects can point lint.vale.rules_file at one file like this.
+rules:
+  PyDoc.SentenceLength: {level: warning, max: 35}
+  PyDoc.WeaselWords: warning
+avoid:
+  - {pattern: "\\bsimply\\b", message: "Do not say 'simply'.", level: warning}

@@ -76,7 +76,9 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
     config.exclude_dirs = config.exclude_dirs | frozenset(args.exclude)
-    linter = DocLinter(config=config, runtime=lambda: connect(settings), engine=args.engine)
+    linter = DocLinter(
+        config=config, runtime=lambda: connect(settings), engine=args.engine, extra_checks=_model_checks(args, config, settings)
+    )
     try:
         if args.show_vale_config or args.check_engines or args.sync:
             return _vale_command(args, linter)
@@ -85,6 +87,43 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
     return _print(report, strict=args.strict)
+
+
+def _model_checks(args: argparse.Namespace, config: LintConfig, settings: RuntimeSettings) -> list:
+    """Checks of the Structurizr workspaces the documents use (rules C4001 to C4004), when py-doc.yml names any."""
+    path = Path(args.config) if args.config else find_config(Path(args.target).resolve())
+    if path is None:
+        return []
+    project = load_config(path)
+    files = sorted({s.file for d in project.documents.values() for s in d.sources if s.structurizr is not None})
+    if not files:
+        return []
+
+    def check() -> list[LintIssue]:
+        from py_doc.c4.check import check_model
+        from py_doc.c4.model import load_workspace
+        from py_doc.c4.structurizr import workspace_json
+        from py_doc.errors import EnvironmentProblem
+
+        found: list[LintIssue] = []
+        box: list = []
+
+        def runtime():
+            box[:] = box or [connect(settings)]
+            return box[0]
+
+        for file in files:
+            try:
+                ws = load_workspace(workspace_json(file, project.root / ".py-doc" / "c4" / "json", runtime, project.c4.cli))
+            except EnvironmentProblem as exc:
+                logger.warning("The model rules for %s were skipped: %s", file.name, exc)
+                continue
+            found += [
+                LintIssue(file.resolve(), 1, i.rule, "C4 model", i.message, i.severity) for i in check_model(ws, file, config)
+            ]
+        return found
+
+    return [check]
 
 
 def _vale_command(args: argparse.Namespace, linter: DocLinter) -> int:
@@ -130,7 +169,8 @@ def _load_config(args: argparse.Namespace) -> tuple[LintConfig, RuntimeSettings]
         target = Path(args.target).resolve()
         path = find_config(target if target.is_dir() else target.parent)
     if path is None:
-        return LintConfig(), RuntimeSettings()
+        target = Path(args.target).resolve()
+        return LintConfig(root=target if target.is_dir() else target.parent), RuntimeSettings()
     logger.info(f"Using configuration {path}")
     project = load_config(path)
     return project.lint, project.runtime

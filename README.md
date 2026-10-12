@@ -24,6 +24,10 @@ Pandoc, run in the tool container, writes every output. The linter reads the Mar
 
 The old commands `py-doc2docx`, `py-doc2slides` and `py-doclint` still work and print a one-line note naming their replacement. `-q` hides the note. The old import names `pydoc2docx`, `pydoc2slides` and `pydoclint` also still work.
 
+## Examples
+
+The `examples/` folder has Markdown sources, a `py-doc.yml`, Word and PowerPoint templates and a Structurizr workspace to run every command against. See `examples/README.md`. The notes on the original scripts are in `docs/bundle-audit.md`.
+
 ## Supported platforms
 
 Linux and Windows. The tool runner (see below) refuses to start on any other platform, with exit status `2` and a message that names the two supported ones. Commands that run no external tool work wherever Python does.
@@ -173,11 +177,14 @@ With `engine: source`, the views are put in the text as `plantuml` or `mermaid` 
 | --- | --- |
 | `py-doc c4 check PATH` | Reads each workspace and checks the model: `C4001` element without description, `C4002` container without technology, `C4003` relationship without description, `C4004` element with no relationships. Severities are set under `lint.rules`. `--strict` fails on warnings |
 | `py-doc c4 export PATH -o DIR -f FORMAT...` | Writes `png`, `svg`, `plantuml`, `c4plantuml`, `mermaid`, `dot`, `static` and `markdown`. `--views KEY...` limits the pictures, `--levels` the pages, `--dry-run` lists the files and writes nothing, `--url` uses a Lite that is already running (reachable from the container) |
+| `py-doc c4 lock [--tag TAG]` | Pulls the Structurizr Lite image and records its digest in `c4-images.lock`, so builds use the same image everywhere. Without a lock file, `py-doc` warns and uses the tag |
 | `py-doc c4 up`, `down`, `status` | Start, stop and inspect the Structurizr Lite container for a workspace, so authors can edit live at `http://127.0.0.1:8080/workspace` |
 
 `PATH` is a `.dsl` or `workspace.json` file, or a folder: workspaces below it are found in sorted order, skipping hidden and vendor folders and files that are only `!include`d.
 
 Lite is given the workspace folder as a bind mount, so the layout it saves lands in `workspace.json` beside the DSL and no copying in or out is needed. This replaces the `sync` step of the old scripts.
+
+`py-doc lint` also runs the model rules for each `structurizr:` source in `py-doc.yml`. The export cache lives in `.py-doc/c4/json` at the project root, whatever the working folder.
 
 `py-c4-exporter` still works. It prints a rename note and runs `py-doc c4 export` with the same flags.
 

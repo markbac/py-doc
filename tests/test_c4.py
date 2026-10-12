@@ -546,3 +546,60 @@ def test_a_build_joins_generated_chapters_pictures_and_hand_written_text(tmp_pat
     with zipfile.ZipFile(docx) as archive:
         assert len([n for n in archive.namelist() if n.startswith("word/media/")]) == 1  # the only view the levels show
     assert len(document.tables) == 3
+
+
+# --- the lock file, the cache root and the model rules in py-doc lint ---------------------------------
+
+
+DIGEST = "structurizr/lite@sha256:" + "a" * 64
+
+
+def test_lock_pins_lite_and_builds_use_it(tmp_path, box):
+    from py_doc.c4.lock import LOCK, lock_lite, read_lock, resolve_lite
+
+    box.engine = lambda args, **kw: ToolResult(0, DIGEST + "\n" if args[0] == "image" else "", "")
+    assert lock_lite(box, tmp_path) == DIGEST
+    assert read_lock(tmp_path) == {"structurizr/lite": DIGEST}
+    assert resolve_lite(None, tmp_path) == DIGEST
+    assert resolve_lite("structurizr/lite:2025", tmp_path) == "structurizr/lite:2025"  # py-doc.yml wins
+    (tmp_path / LOCK).write_text("structurizr/lite nonsense\n")
+    with pytest.raises(Exception, match=r"c4-images.lock:1: expected"):
+        read_lock(tmp_path)
+
+
+def test_an_unpinned_image_warns(tmp_path, caplog):
+    from py_doc.c4.lock import resolve_lite
+
+    assert resolve_lite(None, tmp_path) == "structurizr/lite"
+    assert "py-doc c4 lock" in caplog.text
+
+
+def test_the_lock_command(patched, tmp_path, capsys):
+    patched.engine = lambda args, **kw: ToolResult(0, DIGEST + "\n" if args[0] == "image" else "", "")
+    assert main(["c4", "lock"]) == 0
+    assert DIGEST in capsys.readouterr().out and (tmp_path / "c4-images.lock").exists()
+
+
+def test_the_cache_goes_to_the_project_folder_not_the_working_folder(patched, project, tmp_path, monkeypatch):
+    (tmp_path / "py-doc.yml").write_text("documents: {}\n", encoding="utf-8")
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    monkeypatch.chdir(sub)
+    assert main(["c4", "check", str(project / "workspace.dsl")]) == 0
+    assert list((tmp_path / ".py-doc" / "c4" / "json").glob("workspace-*.json")) and not (sub / ".py-doc").exists()
+
+
+def test_lint_runs_the_model_rules_for_the_documents_workspaces(patched, tmp_path, capsys):
+    data = json.loads(FIXTURE.read_text())
+    data["model"]["people"][0].pop("description")
+    (tmp_path / "workspace.json").write_text(json.dumps(data))
+    (tmp_path / "a.md").write_text("# A\n\nText.\n", encoding="utf-8")
+    (tmp_path / "py-doc.yml").write_text(
+        "documents:\n  d:\n    sources:\n      - file: a.md\n      - structurizr: workspace.json\n"
+        "lint:\n  rules:\n    C4004: off\n",
+        encoding="utf-8",
+    )
+    assert main(["lint", str(tmp_path), "--engine", "builtin"]) == 0
+    out = capsys.readouterr().out
+    assert "C4001" in out and "workspace.json:1:" in out and "C4004" not in out
+    assert main(["lint", str(tmp_path), "--engine", "builtin", "--strict"]) == 1

@@ -41,6 +41,7 @@ class DocLinter:
         config: LintConfig | None = None,
         runtime: Callable[[], Runtime] | None = None,
         engine: str = "auto",
+        extra_checks: list[Callable[[], list[LintIssue]]] | None = None,
     ) -> None:
         """Args:
         glossary: Canonical terms and known misspellings. It replaces the built-in glossary.
@@ -51,6 +52,7 @@ class DocLinter:
         """
         self.runtime = runtime
         self.engine = engine
+        self.extra_checks = list(extra_checks or [])  # checks of things other than Markdown, such as a Structurizr model
         self.config = config or LintConfig()
         if glossary is not None:
             self.config.glossary = glossary
@@ -112,6 +114,8 @@ class DocLinter:
         self._whole_document_rules(report)
         self._markdownlint(report)
         self._vale(report, target)
+        for check in self.extra_checks:
+            report.add(check())
         return report
 
     def vale_folder(self) -> Path:

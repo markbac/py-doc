@@ -16,7 +16,8 @@ from py_doc.runtime import Runtime
 from .generate import generate
 from .model import load_workspace
 from .render import render_views
-from .stack import LITE_IMAGE, LITE_PORT, Stack
+from .lock import resolve_lite
+from .stack import LITE_PORT, Stack
 from .structurizr import StructurizrCli, workspace_hash, workspace_json
 
 logger = logging.getLogger(__name__)
@@ -50,8 +51,9 @@ def build_pages(
     dsl = source.file
     if not dsl.is_file():
         raise ConversionError(f"The Structurizr workspace '{dsl}' does not exist")
+    image = resolve_lite(settings.lite_image, cache.parent.parent)
     key = hashlib.sha256(
-        json.dumps([workspace_hash(dsl) if dsl.suffix == ".dsl" else dsl.read_text("utf-8"), spec.levels, spec.systems, spec.engine, spec.format, settings.lite_image]).encode()
+        json.dumps([workspace_hash(dsl) if dsl.suffix == ".dsl" else dsl.read_text("utf-8"), spec.levels, spec.systems, spec.engine, spec.format, image]).encode()
     ).hexdigest()[:16]
     marker = out / ".hash"
     listed = sorted(out.glob("*.md")) if out.is_dir() else []
@@ -69,7 +71,7 @@ def build_pages(
         if runtime is None:
             raise ConversionError("Drawing the views needs the tool container, but no runtime was given")
         box = runtime()
-        stack = Stack(box, dsl, image=settings.lite_image or LITE_IMAGE, port=settings.port or LITE_PORT)
+        stack = Stack(box, dsl, image=image, port=settings.port or LITE_PORT)
         files = render_views(ws, dsl, out / "images", box, formats=(spec.format,), stack=stack)
         images = {p.stem: f"images/{p.name}" for p in files}
     else:
