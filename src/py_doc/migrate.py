@@ -145,14 +145,6 @@ def migrate(paths: list[Path], config_dir: Path, source_format: str = "createdoc
                 result.note("warning", yaml_path, f"meta.{key} has no equivalent and was left out")
         if "toc-depth" in cli and "toc_depth" not in doc:
             doc["toc_depth"] = cli["toc-depth"]
-        if doc.get("version"):
-            result.note(
-                "info", yaml_path, "createdocs added the version to the output file name. py-doc writes the exact path"
-            )
-        if doc.get("status"):
-            result.note(
-                "warning", yaml_path, "createdocs chose the template from the status. py-doc uses one template per output"
-            )
 
         # sources
         doc_sources = []
@@ -203,6 +195,8 @@ def migrate(paths: list[Path], config_dir: Path, source_format: str = "createdoc
         elif cli.get("template") and "docx" in outputs:
             template = (base / cli["template"]).resolve()
             outputs["docx"]["template"] = rel(template)
+        for settings in outputs.values():
+            settings["name"] = "{name}-{version_safe}"  # createdocs always added the version to the file name
         doc["outputs"] = outputs
         templates[doc_id] = template
 

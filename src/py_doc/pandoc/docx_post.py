@@ -390,6 +390,21 @@ def replace_placeholders(doc: Document, replacements: dict[str, str]) -> None:
                 log.warning("Header/footer replacement failed: %s", exc)
 
 
+def find_placeholders(doc: Document, prefix: str) -> set[str]:
+    """Every ``<prefix>Name`` still written in the body, tables, headers and footers of ``doc``."""
+    pattern = re.compile(re.escape(prefix) + r"[A-Za-z][A-Za-z0-9-]*")
+    roots = [doc.element.body]
+    for section in doc.sections:
+        roots += [section.header._element, section.footer._element,
+                  section.first_page_header._element, section.first_page_footer._element]  # fmt: skip
+    found: set[str] = set()
+    for root in roots:
+        for paragraph in root.iter(qn("w:p")):
+            text = "".join(t.text or "" for t in paragraph.iter(qn("w:t")))
+            found.update(m.rstrip("-") for m in pattern.findall(text))
+    return found
+
+
 # ---------------------------------------------------------------------------
 # Explicit style / caption markers
 # ---------------------------------------------------------------------------
@@ -773,13 +788,13 @@ def update_core_properties(
         if not value:
             return
         if len(value) > MAX_LEN:
+            log.warning("The document property '%s' is longer than Word allows (%d characters), so it was cut",
+                        attr, MAX_LEN)
             value = value[:MAX_LEN - 1] + "…"
         setattr(props, attr, value)
 
-    if title:
-        props.title = title
-    if author:
-        props.author = author
+    _set_capped("title", title)
+    _set_capped("author", author)
     with _correct_cp_namespace():
         _set_capped("subject",  subject)
         _set_capped("keywords", keywords)
@@ -798,6 +813,7 @@ def update_core_properties(
 
     comments = " ".join(" | ".join(parts).split())
     if len(comments) > MAX_LEN:
+        log.warning("The document comments are longer than Word allows (%d characters), so they were cut", MAX_LEN)
         comments = comments[:MAX_LEN - 1] + "…"
     try:
         props.comments = comments

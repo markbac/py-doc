@@ -236,6 +236,11 @@ outputs:
 ```
 
 - **Word** is written by pandoc with the template as its reference document. When a template is set, the result is merged into it: `Replace-with-Title`, `-Author`, `-Version`, `-Document-Number`, `-Date`, `-Description` and `-Classification` are filled in, and the body goes where `[[INSERTCONTENT]]` stands (at the end if there is no marker). `[[LANDSCAPE]]`, `[[PORTRAIT]]`, `[[STYLE:Name]]` and `[[CAPTION:Figure]]` lines are applied afterwards.
+- **Placeholders** are filled in the template body, tables, headers and footers. `placeholder_prefix` (default `Replace-with-`) and `marker` (default `[[INSERTCONTENT]]`) can be changed. A placeholder the document has no value for is emptied with a warning, and one that no property can fill (`Replace-with-Mystery`) is left and named in a warning.
+- **Status templates**: with `status: Draft` and `template: Template.docx`, `Template_Draft.docx` (then `Template_draft.docx`) is used when it exists, else the base template, and the log says which. The same rule applies to PowerPoint templates.
+- **File names**: the default is exactly the path given. `name: "{name}-{version_safe}"` on any output makes `guide-1_2_3.docx`; the fields are `{name}` (the file name it would have had), `{version}` (an error when there is no version) and `{version_safe}` (dots become underscores, no version gives `x_x_x`).
+- **Version from git**: `version: git` (in the configuration or the front matter) is `git describe --tags --always` of the project folder. Outside a repository, or without a commit, the build fails instead of inventing a version.
+- **Document properties** (title, author, subject, keywords, category, comments) are capped at Word's 255 characters, with a warning when a value is cut.
 - **Callouts** are drawn as boxes in every format, in both spellings: `> [!NOTE]` and `> **Note:** text`. The kinds are NOTE, TIP, IMPORTANT, WARNING and CAUTION.
 - **Page breaks**: `::: {.pagebreak}` followed by `:::`, or `page_break: true` on a source.
 - **Code** is highlighted with the built-in theme. Headings in `heading_offset` and `title` are found outside code blocks only, and must use `#` markers.

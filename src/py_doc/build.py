@@ -14,6 +14,7 @@ from .diagrams import render_parts
 from .errors import ConversionError
 from .markdown import FrontMatterError, Metadata, ParseError, parse, plain_text, read_metadata
 from .markdown import nodes as n
+from .naming import git_version, status_template
 from .pandoc import PandocJob, convert
 from .pandoc.source import join_sources
 from .runtime import Runtime
@@ -58,8 +59,11 @@ def _retitle(blocks: list, title: str) -> list:
     return [n.Heading(1, 1, 1, [n.Text(1, title)]), *blocks]
 
 
-def _combine_metadata(doc: DocumentConfig, first: Metadata, heading: str | None) -> Metadata:
-    """Properties from the configuration, then the first source's front matter, then its first heading."""
+def _combine_metadata(doc: DocumentConfig, first: Metadata, heading: str | None, root: Path | None = None) -> Metadata:
+    """Properties from the configuration, then the first source's front matter, then its first heading.
+
+    A version of ``git`` is replaced by ``git describe`` for the repository of ``root``.
+    """
     configured = doc.metadata()
     merged = Metadata(
         **{
@@ -68,7 +72,11 @@ def _combine_metadata(doc: DocumentConfig, first: Metadata, heading: str | None)
         },
         extra={**first.extra, **configured.extra},
     )
-    return replace(merged, title=heading or doc.id) if merged.title is None else merged
+    if merged.title is None:
+        merged = replace(merged, title=heading or doc.id)
+    if merged.version == "git":
+        merged = replace(merged, version=git_version(root or doc.sources[0].file.parent))
+    return merged
 
 
 def merge_document(doc: DocumentConfig, variables: dict | None = None, conditions: dict | None = None) -> Merged:
@@ -170,13 +178,14 @@ def build_document(
 def _pandoc_output(config, doc, fmt, template, settings, joined, runtime, keep_going) -> Path:
     if runtime is None:
         raise ConversionError(f"Building {fmt} needs the tool container, but no runtime was given")
+    metadata = _combine_metadata(doc, joined.metadata, joined.first_heading, config.root)
+    template = status_template(template, metadata.status)
     if template is not None and not template.is_file() and settings.get("allow_missing_template", False):
         logger.warning(f"Template {template} not found, so {doc.id}.{fmt} is built without it")
         template = None
-    metadata = _combine_metadata(doc, joined.metadata, joined.first_heading)
     drawn = render_parts(joined.parts, fmt, runtime, keep_going)
     job = PandocJob(
-        fmt, drawn.markdown, metadata, config.output_path(doc, fmt),
+        fmt, drawn.markdown, metadata, config.output_path(doc, fmt, metadata.version),
         sorted({s.file.parent for s in doc.sources if s.include}), template, settings, drawn.pictures,
     )  # fmt: skip
     return convert(runtime(), job)

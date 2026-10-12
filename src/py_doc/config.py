@@ -16,6 +16,7 @@ import yaml
 from .files import DEFAULT_EXCLUDE_DIRS
 from .lint.config import DEFAULT_ALLOWED_ACRONYMS, LintConfig
 from .markdown.frontmatter import Metadata
+from .naming import check_name_pattern, expand_name
 from .runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
@@ -34,13 +35,22 @@ _META_KEYS = (
     "classification", "subject", "keywords", "category", "company", "toc_depth",
 )  # fmt: skip
 _OUTPUT_OPTIONS = {
-    "docx": ("path", "template", "engine", "keep_template_body", "allow_missing_template"),
+    "docx": (
+        "path", "template", "engine", "keep_template_body", "allow_missing_template", "name", "placeholder_prefix",
+        "marker",
+    ),
     "pptx": (
         "path", "template", "engine", "keep_template_slides", "allow_missing_template", "split_level",
-        "title_layout", "content_layout",
+        "title_layout", "content_layout", "name",
     ),
-    "pdf": ("path", "template", "toc"),
-    "html": ("path", "template", "toc"),
+    "pdf": ("path", "template", "toc", "name"),
+    "html": ("path", "template", "toc", "name"),
+}  # fmt: skip
+
+
+_OPTION_TYPES = {
+    "split_level": int, "engine": str, "title_layout": str, "content_layout": str,
+    "name": str, "placeholder_prefix": str, "marker": str,
 }  # fmt: skip
 
 
@@ -103,13 +113,17 @@ class ProjectConfig:
     build: dict[str, Any] = field(default_factory=dict)
     reserved: dict[str, Any] = field(default_factory=dict)
 
-    def output_path(self, document: DocumentConfig, fmt: str) -> Path:
+    def output_path(self, document: DocumentConfig, fmt: str, version: str | None = None) -> Path:
+        """Where an output goes. With a ``name`` pattern the file name is the pattern, else exactly the path given."""
         settings = document.outputs.get(fmt)
-        if settings and settings.path:
-            return settings.path
         default = self.outputs.get(fmt)
-        folder = default.path if default and default.path else self.root / DEFAULT_OUTPUT_DIR
-        return folder / f"{document.id}{FORMATS[fmt]}"
+        if settings and settings.path:
+            path = settings.path
+        else:
+            folder = default.path if default and default.path else self.root / DEFAULT_OUTPUT_DIR
+            path = folder / f"{document.id}{FORMATS[fmt]}"
+        pattern = {**(default.options if default else {}), **(settings.options if settings else {})}.get("name")
+        return path.with_name(expand_name(pattern, path.stem, version) + path.suffix) if pattern else path
 
     def output_formats(self, document: DocumentConfig) -> list[str]:
         """Formats a document builds: the ones it lists, else docx."""
@@ -234,10 +248,14 @@ def _parse_outputs(data: dict, root: Path, where: str, defaults: bool = False) -
         for option in _OUTPUT_OPTIONS[fmt]:
             if option in ("path", "template") or option not in raw:
                 continue
-            kind = int if option == "split_level" else str if option.endswith(("layout", "engine")) else bool
-            settings.options[option] = _typed(raw, option, kind, place)
+            settings.options[option] = _typed(raw, option, _OPTION_TYPES.get(option, bool), place)
         if settings.options.get("engine", "native") not in ENGINES:
             raise ConfigError(f"{place}.engine must be one of {', '.join(ENGINES)}")
+        if "name" in settings.options:
+            try:
+                check_name_pattern(settings.options["name"], f"{place}.name")
+            except ValueError as exc:
+                raise ConfigError(str(exc)) from None
         if "split_level" in settings.options and not 1 <= settings.options["split_level"] <= 6:
             raise ConfigError(f"{place}.split_level must be 1 to 6")
         result[fmt] = settings
