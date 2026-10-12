@@ -11,7 +11,7 @@ outputs:
     template: templates/sensor.docx    # `status: Draft` picks templates/sensor_Draft.docx when it exists
     dir: build
   pptx:
-    template: templates/sensor.pptx
+    template: templates/sensor.pptx    # `status: Draft` picks templates/sensor_Draft.pptx
     dir: build
   pdf:
     dir: build
@@ -29,6 +29,10 @@ documents:
       - file: docs/guide/02_design.md
         page_break: true               # start this file on a new page
       - docs/guide/03_operations.md
+      - file: docs/guide/04_change_history.md
+        heading_offset: 1              # shift every heading one level down (kept within 1 to 6)
+        title: "Appendix: Change history"   # replaces the first heading of the file
+        page_break: true
       - {file: docs/guide/DRAFT.md, include: false}   # listed, but no build uses it
     keywords: [IoT, sensor, MQTT]
     variables:                         # {{version}} and {{status_text}} in the Markdown
@@ -47,11 +51,30 @@ documents:
     sources: [docs/datasheet.md]
     variables: {version: "1.0"}
     outputs:
-      docx: {name: "{name}-{version_safe}"}           # build/datasheet-1_0.docx
-      pdf: {toc: false}
+      docx:
+        template: templates/datasheet.docx            # a template with its own placeholder style
+        placeholder_prefix: "@@"                      # @@Title, @@Version ... instead of Replace-with-Title
+        marker: "<<BODY>>"                            # where the body goes, instead of [[INSERTCONTENT]]
+        name: "{name}-{version_safe}"                 # build/datasheet-1_0.docx
+        # allow_missing_template: true                # warn and use a blank document if the template is missing
+      pdf:
+        toc: false                                    # no contents list
+        template: templates/report.tex                # a LaTeX template with its own colours
+
+  release-notes:
+    # `version: git` is `git describe --tags --always` of this folder. Outside a repository, or
+    # without a commit, the build fails instead of inventing a version.
+    title: Sensor Node Release Notes
+    author: A. Writer
+    version: git
+    sources: [docs/release-notes.md]
+    outputs:
+      docx: {name: "{name}-{version_safe}"}           # for example build/release-notes-v1_2_3.docx
 
   deck:
-    sources: [docs/slides.md]
+    sources: [docs/deck/slides.md]
+    variables: {version: "1.0"}        # {{version}} in the slides and in the footer pattern
+    conditions: {internal: false}      # the [[IF: internal]] slide is left out
     outputs:
       pptx:
         split_level: 2                 # a new slide at each heading up to level 2

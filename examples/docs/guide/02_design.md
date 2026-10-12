@@ -64,3 +64,20 @@ The register map is wider than a portrait page, so it sits in a landscape sectio
 | `INTERVAL` | 0x0106 | 16 | Seconds between measurements | RW | 300 |
 
 [[PORTRAIT]]
+
+## A wide picture
+
+A diagram in a landscape section is drawn wider, up to the width of the landscape page.
+
+[[LANDSCAPE]]
+
+[[CAPTION:Figure]] The whole chain in one row
+```dot
+digraph chain {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  Sensors -> Driver -> Buffer -> Uplink -> Broker -> Rules -> Storage -> Dashboard;
+}
+```
+
+[[PORTRAIT]]

@@ -12,6 +12,10 @@ Staff can reach the console on the service port.
 Customers see only the public build.
 [[ENDIF]]
 
+[[IF: audience != staff]]
+This paragraph is shown to everyone except staff.
+[[ENDIF]]
+
 ## Glossary
 
 [[INCLUDE: ../includes/glossary.md]]
@@ -24,4 +28,4 @@ Customers see only the public build.
 
 ## Contacts
 
-Questions go to the platform team.
+[[INCLUDE: ../includes/support.md]]

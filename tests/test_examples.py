@@ -48,16 +48,21 @@ def examples(tmp_path, monkeypatch):
 
 def test_the_config_loads_and_names_every_part():
     config = load_config(EXAMPLES / "py-doc.yml")
-    assert sorted(config.documents) == ["architecture", "datasheet", "deck", "guide"]
+    assert sorted(config.documents) == ["architecture", "datasheet", "deck", "guide", "release-notes"]
     assert config.documents["architecture"].sources[1].structurizr is not None
     assert config.lint.vale.rules["PyDoc.SentenceLength"].options == {"max": 35}
     assert config.lint.structure
     assert config.report is not None
 
 
-@pytest.mark.parametrize("name", ["sensor.docx", "sensor_Draft.docx", "sensor.pptx"])
+@pytest.mark.parametrize("name", ["sensor.docx", "sensor_Draft.docx", "sensor.pptx", "sensor_Draft.pptx"])
 def test_the_templates_pass_the_check(name, capsys):
     assert main(["template", "check", str(EXAMPLES / "templates" / name), "--strict"]) == 0
+
+
+def test_the_datasheet_template_passes_with_its_own_prefix_and_marker(capsys):
+    path = str(EXAMPLES / "templates" / "datasheet.docx")
+    assert main(["template", "check", path, "--strict", "--prefix", "@@", "--marker", "<<BODY>>"]) == 0
 
 
 def test_the_draft_template_differs_from_the_base_one(capsys):
@@ -133,17 +138,71 @@ def test_the_guide_builds_as_pdf_with_task_lists_and_captions(examples, pandoc_r
         assert "Data flow through the node" in text and "Figure 1" in text
 
 
-def test_the_datasheet_builds_with_a_version_in_the_name(examples, pandoc_runtime):
+def test_the_datasheet_builds_with_its_own_placeholders_and_a_version_in_the_name(examples, pandoc_runtime):
     assert main(["build", "datasheet", "-f", "docx"]) == 0
-    assert (examples / "build" / "datasheet-1_0.docx").is_file()
+    docx = examples / "build" / "datasheet-1_0.docx"
+    document = Document(docx)
+    text = "\n".join(p.text for p in document.paragraphs)
+    assert "@@" not in text and "<<BODY>>" not in text
+    assert "@@" not in "".join(s.footer.paragraphs[0].text for s in document.sections)
 
 
-def test_the_deck_builds_one_slide_per_second_level_heading(examples, pandoc_runtime):
+def test_the_release_notes_take_their_version_from_git(examples, pandoc_runtime):
+    def git(*args):
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args], cwd=examples, check=True, capture_output=True)
+
+    git("init", "-q")
+    git("add", "-A")
+    git("commit", "-q", "-m", "x")
+    git("tag", "v1.2.3")
+    assert main(["build", "release-notes"]) == 0
+    assert (examples / "build" / "release-notes-v1_2_3.docx").is_file()
+
+
+def test_the_guide_shows_the_word_features(examples, pandoc_runtime):
+    assert main(["build", "guide", "-f", "docx"]) == 0
+    document = Document(examples / "build" / "guide-v1.0.docx")
+    styles = {p.style.name for p in document.paragraphs}
+    assert {"Heading 4", "Block Text", "Lead Paragraph"} <= styles
+    xml = document.element.xml
+    assert "m:oMath" in xml, "maths becomes Word equations"
+    assert "footnoteReference" in xml
+    assert 'w:orient="landscape"' in xml, "a landscape section"
+    assert "SEQ" in xml, "captions are numbered with fields"
+    with zipfile.ZipFile(examples / "build" / "guide-v1.0.docx") as archive:
+        core = archive.read("docProps/core.xml").decode("utf-8")
+    assert "Integrating the SN-100" in core and "Technical documentation" in core and "IoT, sensor, MQTT" in core
+
+
+def test_the_deck_uses_the_layouts_notes_and_footer(examples, pandoc_runtime):
     assert main(["build", "deck"]) == 0
-    slides = Presentation(next((examples / "build").glob("*.pptx"))).slides
-    assert len(slides) >= 4
+    presentation = Presentation(examples / "build" / "deck.pptx")
+    slides = presentation.slides
+    assert len(slides) >= 15
+    layouts = {slide.slide_layout.name for slide in slides}
+    assert {"Title Slide", "Section Header", "Two Content", "Title and Content"} <= layouts
+    assert sum(1 for slide in slides if slide.has_notes_slide and slide.notes_slide.notes_text_frame.text.strip()) >= 3
     xml = "".join(slide.part.blob.decode("utf-8") for slide in slides)
-    assert "CAPTION" not in xml
+    assert "CAPTION" not in xml and "[[" not in xml and "{{" not in xml
+    assert "Sensor Node" in xml and "v1.0" in xml, "the footer pattern is applied"
+    assert "<a:tbl>" in xml, "a table"
+    assert any(shape.shape_type == 13 for slide in slides for shape in slide.shapes), "a picture"
+    master = "".join(m.part.blob.decode("utf-8") for m in presentation.slide_masters)
+    assert "{{VERSION}}" not in master
+
+
+def test_a_draft_deck_uses_the_draft_template(examples, pandoc_runtime):
+    slides = examples / "docs" / "deck" / "slides.md"
+    slides.write_text(slides.read_text(encoding="utf-8").replace("status: Released", "status: Draft"), encoding="utf-8")
+    assert main(["build", "deck"]) == 0
+    master = "".join(m.part.blob.decode("utf-8") for m in Presentation(examples / "build" / "deck.pptx").slide_masters)
+    assert "DRAFT" in master
+
+
+@needs_xelatex
+def test_the_datasheet_builds_as_pdf_with_its_own_latex_template(examples, pandoc_runtime):
+    assert main(["build", "datasheet", "-f", "pdf"]) == 0
+    assert (examples / "build" / "datasheet.pdf").read_bytes().startswith(b"%PDF")
 
 
 def test_the_word_sample_imports_and_builds_again(examples, pandoc_runtime, tmp_path):

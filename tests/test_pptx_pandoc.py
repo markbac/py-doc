@@ -96,6 +96,21 @@ def test_the_version_token_in_a_template_shape_is_replaced(make, tmp_path):
     assert "Issue 2.1" in texts(out)
 
 
+def test_the_version_token_on_the_master_and_layouts_is_replaced(make):
+    from py_doc.markdown import Metadata
+    from py_doc.pandoc.pptx_finish import finish_pptx
+
+    out = make()
+    presentation = Presentation(str(out))
+    next(x for x in presentation.slide_masters[0].shapes if x.has_text_frame).text_frame.text = "Master {{VERSION}}"
+    next(x for x in presentation.slide_layouts[0].shapes if x.has_text_frame).text_frame.text = "Layout {{VERSION}}"
+    presentation.save(str(out))
+    finish_pptx(out, Metadata(version="3.4"), {})
+    with zipfile.ZipFile(out) as archive:
+        xml = "".join(archive.read(n).decode("utf-8") for n in archive.namelist() if n.endswith(".xml"))
+    assert "Master 3.4" in xml and "Layout 3.4" in xml and "{{VERSION}}" not in xml
+
+
 def test_footer_is_set_from_title_and_version(make, tmp_path):
     out = make("footer: '{title} v{version}'", template=reference(tmp_path).name)
     footers = [

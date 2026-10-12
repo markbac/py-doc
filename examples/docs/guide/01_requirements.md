@@ -12,6 +12,18 @@ The node shall meet the requirements in the table.
 | R4 | Update firmware over the air | Should |
 | R5 | Run for 3 years on one battery | Should |
 
+## Alignment
+
+Columns can be aligned, and cells can have formatting.
+
+[[CAPTION:Table]] Alignment of columns
+
+| Left | Centre | Right |
+|:-----|:------:|------:|
+| `a` | **bold** | 1 |
+| *b* | text | 22 |
+| c | [link](https://github.com/markbac/py-doc) | 333 |
+
 ## Open points
 
 - Confirm the buffer size with the flash vendor

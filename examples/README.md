@@ -35,14 +35,17 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 
 | Path | What it shows |
 |---|---|
-| `py-doc.yml` | Four documents, output defaults, per-document variables and conditions, file naming, the build report, C4 and lint settings. Every setting has a comment |
-| `docs/guide/` | The guide, in four chapters: front matter, variables, conditions, includes, both callout spellings, captions, lists, task lists, footnotes, definition lists, maths, code includes, a landscape table, page breaks, links between chapters. `DRAFT.md` is listed with `include: false` |
+| `py-doc.yml` | Five documents, output defaults, per-document variables and conditions, file naming, the build report, C4 and lint settings. Every setting has a comment |
+| `docs/guide/` | The guide, in five files: front matter and document properties, variables, conditions, nested includes, every callout style, all heading levels, block quotes, captions, lists, task lists, footnotes, definition lists, maths, code includes, a landscape section, page breaks, an appendix with a shifted heading level, links between chapters. `DRAFT.md` is listed with `include: false` |
 | `docs/datasheet.md` | One example of every diagram type that needs only the container: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega and vega-lite. Graphviz, Mermaid and PlantUML are in `docs/guide/02_design.md` |
-| `docs/slides.md` | The deck: slides at second-level headings, speaker notes, a diagram, a table, a page break |
+| `docs/release-notes.md` | A short document whose version comes from Git (`version: git`) |
+| `docs/deck/slides.md` | The deck: section slides, bullets, columns, incremental lists, both kinds of speaker notes, diagrams, a picture, a table, maths, callouts, code, an include, a condition, a page break |
 | `docs/includes/` | Files pulled in with `[[INCLUDE:]]` and `[[INCLUDE-CODE:]]` |
 | `templates/sensor.docx` | The Word template: logo, title page with `Replace-with-*` placeholders, header, footer with page numbers, callout styles, a `Lead Paragraph` style, `[[INSERTCONTENT]]` where the body goes |
 | `templates/sensor_Draft.docx` | The same template with a red "DRAFT" header. A document with `status: Draft` uses it without being told to |
-| `templates/sensor.pptx` | The PowerPoint template: coloured titles and a `{{VERSION}}` footer shape |
+| `templates/sensor.pptx`, `sensor_Draft.pptx` | The PowerPoint template, and the one a `status: Draft` deck uses. Coloured titles and a `{{VERSION}}` shape on the master, filled in when the deck is built |
+| `templates/datasheet.docx` | A Word template with its own placeholder prefix (`@@Title`) and body marker (`<<BODY>>`) |
+| `templates/report.tex` | A LaTeX template for PDF output, with its own colours |
 | `templates/doc.css` | The stylesheet for HTML output: `py-doc`'s own plus company colours |
 | `templates/make_templates.py` | Regenerates the templates, the logo and `word/design_review.docx` |
 | `architecture/workspace.dsl`, `workspace.json` | The same Structurizr model twice. The JSON needs no Java or Docker |
@@ -59,6 +62,7 @@ Run these in order from this folder. Each line says what it makes.
 py-doc build guide                                   # build/guide-v1.0.docx, guide.pdf, guide.html
 py-doc build datasheet                               # build/datasheet-1_0.docx and datasheet.pdf
 py-doc build deck                                    # build/deck.pptx
+py-doc build release-notes                           # build/release-notes-<git version>.docx, needs a Git commit
 py-doc build architecture                            # build/architecture.docx and architecture.html
 py-doc import word/design_review.docx -o imported    # imported/design_review.md and imported/design_review/
 py-doc docx imported/design_review.md                # imported/design_review.docx: the round trip
@@ -71,8 +75,8 @@ py-doc docx imported/design_review.md                # imported/design_review.do
 | Command | Reads | Writes |
 |---|---|---|
 | `py-doc build guide` | `docs/guide/*.md`, `docs/includes/`, `templates/sensor.docx` (or `sensor_Draft.docx`), `templates/doc.css` | `build/guide-v1.0.docx`, `build/guide.pdf`, `build/guide.html` |
-| `py-doc build datasheet` | `docs/datasheet.md` | `build/datasheet-1_0.docx`, `build/datasheet.pdf` |
-| `py-doc build deck` | `docs/slides.md`, `templates/sensor.pptx` | `build/deck.pptx` |
+| `py-doc build datasheet` | `docs/datasheet.md`, `templates/datasheet.docx`, `templates/report.tex` | `build/datasheet-1_0.docx`, `build/datasheet.pdf` |
+| `py-doc build deck` | `docs/deck/slides.md`, `templates/sensor.pptx` (or `sensor_Draft.pptx`) | `build/deck.pptx` |
 | `py-doc build architecture` | `architecture/workspace.json`, `docs/includes/audience.md` | `build/architecture.docx`, `build/architecture.html` (chapters generated from the model) |
 | `py-doc import` | `word/design_review.docx` | Markdown and pictures in `imported/` |
 
@@ -100,7 +104,7 @@ py-doc build guide -f html --condition audience=staff
 # The datasheet, with all its diagram types
 py-doc build datasheet
 
-# PowerPoint deck, one slide per second-level heading
+# PowerPoint deck: a section slide per first-level heading, a slide per second-level heading
 py-doc build deck                 # build/deck.pptx
 
 # Architecture chapters generated from the C4 model
@@ -114,7 +118,7 @@ To convert a single file without `py-doc.yml`:
 
 ```bash
 py-doc docx docs/guide/00_overview.md -o build/overview.docx --template templates/sensor.docx
-py-doc slides docs/slides.md -o build/slides.pptx --template templates/sensor.pptx
+py-doc slides docs/deck/slides.md -o build/slides.pptx --template templates/sensor.pptx --split-level 1
 ```
 
 ## Templates
@@ -124,12 +128,24 @@ The Word template is pandoc's reference document, so its styles decide how every
 ```bash
 py-doc template check templates/sensor.docx --strict
 py-doc template check templates/sensor.pptx --strict
+py-doc template check templates/datasheet.docx --strict --prefix "@@" --marker "<<BODY>>"
 py-doc template show templates/sensor.docx
 py-doc template diff templates/sensor.docx templates/sensor_Draft.docx
 py-doc template usage word/design_review.docx
 ```
 
 The placeholders the title page can use are `Replace-with-Title`, `-Author`, `-Version`, `-Document-Number`, `-Date`, `-Description` and `-Classification`. They are filled from the front matter of the first source, in the body, tables, headers and footers.
+
+## Features by format
+
+Every feature each format supports appears at least once in these files.
+
+| Format | Features and where to see them |
+|---|---|
+| Word | Title page placeholders, status template, header and footer fields, contents list (`toc`, `toc_depth`), numbered captions, every callout style, heading levels 1 to 4, block quotes, footnotes, maths as Word equations, landscape and portrait sections, page breaks, `[[STYLE:]]`, document properties (subject, category, keywords), own placeholder prefix and body marker (`datasheet.docx`), file name patterns. See `docs/guide/` and `docs/datasheet.md` |
+| PowerPoint | Title, section and two-column layouts, nested bullets, incremental lists, speaker notes in both spellings, footer pattern, version shape, Draft template, diagrams with captions, picture, table, maths, callouts, code, include, condition, empty-title slide from a page break. See `docs/deck/slides.md` |
+| PDF | Contents list on or off, the built-in LaTeX template with title page fields, a custom `.tex` template (`report.tex`), captions, task lists, callouts, maths, footnotes, every diagram type. See `docs/guide/` and `docs/datasheet.md` |
+| HTML | Stylesheet template, embedded pictures, captions, contents list, callouts |
 
 ## Lint
 
@@ -177,7 +193,7 @@ Pictures are drawn with Structurizr Local (`structurizr/structurizr local`, whic
 - **Templates:** the front matter in `docs/guide/00_overview.md` fills the `Replace-with-*` placeholders on the title page. The body goes where `[[INSERTCONTENT]]` stands.
 - **Callouts, captions, page breaks, orientation, styles:** see `docs/guide/00_overview.md` and `docs/guide/02_design.md`. `[[STYLE:Lead Paragraph]]` applies a style the template defines.
 - **Diagrams:** `docs/guide/02_design.md` has Graphviz, Mermaid and PlantUML blocks and a code include. `docs/datasheet.md` has the rest.
-- **File names:** the guide is `guide-v1.0.docx` (`name: "{name}-v{version}"`) and the datasheet is `datasheet-1_0.docx` (`{version_safe}`). `version: git` would take the version from `git describe`.
+- **File names:** the guide is `guide-v1.0.docx` (`name: "{name}-v{version}"`) and the datasheet is `datasheet-1_0.docx` (`{version_safe}`). `py-doc build release-notes` takes its version from `git describe --tags --always` (`version: git`), so it needs a commit in this folder's repository.
 - **Your own template:** edit `templates/make_templates.py` and run `python templates/make_templates.py`, or point `outputs.docx.template` in `py-doc.yml` at your own file and run `py-doc template check YOUR.docx --strict`.
 - **Your own documents:** add Markdown files to `docs/`, list them under a new entry in `documents:` in `py-doc.yml`, and run `py-doc build NAME`.
 

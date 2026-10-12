@@ -9,9 +9,12 @@ What it writes:
 
 - ``sensor.docx``        the Word template: title page, header, footer, fonts, colours and the callout boxes
 - ``sensor_Draft.docx``  the same with a red header. A document with ``status: Draft`` uses it automatically
+- ``datasheet.docx``     a second Word template, with ``@@Name`` placeholders and a ``<<BODY>>`` marker
+- ``report.tex``         a LaTeX template for PDF output with a green brand colour
 - ``sensor.pptx``        the PowerPoint template: coloured titles and a version footer
+- ``sensor_Draft.pptx``  the same with a red title colour and "DRAFT" in the version shape
 - ``doc.css``            the stylesheet for HTML output
-- ``logo.png`` (also copied to ``../docs/guide/images/``, because pictures are looked up in the folder of the
+- ``logo.png`` (also copied to ``../docs/guide/images/`` and ``../docs/deck/images/``, because pictures are looked up in the folder of the
   Markdown file that uses them) and ``../word/design_review.docx`` (a plain Word file to try ``py-doc import`` on)
 """
 
@@ -37,6 +40,7 @@ from py_doc.pandoc.reference import add_styles
 
 HERE = Path(__file__).resolve().parent
 GUIDE_IMAGES = HERE.parent / "docs" / "guide" / "images"
+DECK_IMAGES = HERE.parent / "docs" / "deck" / "images"
 BLUE = RGBColor(0x0B, 0x4F, 0x8A)
 GREY = RGBColor(0x55, 0x55, 0x55)
 RED = RGBColor(0xC6, 0x28, 0x28)
@@ -166,21 +170,51 @@ def sensor_docx() -> None:
     document.save(HERE / "sensor_Draft.docx")
 
 
+def datasheet_docx() -> None:
+    """A second Word template with its own conventions: ``@@Name`` placeholders and a ``<<BODY>>`` marker.
+    ``py-doc.yml`` names them with ``placeholder_prefix`` and ``marker``."""
+    document = Document(io.BytesIO(pandoc_file("reference.docx")))
+    set_styles(document)
+    for paragraph in list(document.paragraphs):
+        paragraph._element.getparent().remove(paragraph._element)
+    document.add_paragraph("@@Title", style="Title")
+    document.add_paragraph("@@Description", style="Lead Paragraph")
+    document.add_paragraph("Version @@Version, @@Date", style="Normal")
+    document.add_paragraph("<<BODY>>", style="Normal")
+    section = document.sections[0]
+    section.header.paragraphs[0].text = f"{COMPANY} datasheet"
+    section.footer.paragraphs[0].text = "@@Document-Number"
+    document.save(HERE / "datasheet.docx")
+
+
+def report_tex() -> None:
+    """A LaTeX template for PDF output: py-doc's own with a green brand colour. Name it with ``template`` under
+    ``pdf`` in ``py-doc.yml``. Everything else in the file is the built-in template, so it keeps working."""
+    import py_doc.pandoc as pandoc_package
+
+    built_in = (Path(pandoc_package.__file__).parent / "resources" / "latex_template.tex").read_text(encoding="utf-8")
+    custom = built_in.replace("003C64", "1B5E20").replace("0072B2", "2E7D32")
+    note = "% Report template for the example datasheet. Copied from py-doc's own LaTeX template with the brand colours\n% lgblue and lgaccent changed. Change the colours, fonts and page layout here.\n"
+    (HERE / "report.tex").write_text(note + custom, encoding="utf-8", newline="\n")
+
+
 def sensor_pptx() -> None:
-    """A PowerPoint template: pandoc's layouts with a coloured title and a footer shape."""
-    presentation = Presentation(io.BytesIO(pandoc_file("reference.pptx")))
-    for master in presentation.slide_masters:
-        for shape in master.shapes:
-            if shape.has_text_frame and shape.is_placeholder and shape.placeholder_format.type in (1, 3):  # title
-                for paragraph in shape.text_frame.paragraphs:
-                    for run in paragraph.runs:
-                        run.font.color.rgb = PptxColour(0x0B, 0x4F, 0x8A)
-        master.shapes._spTree.append(parse_xml(VERSION_BOX))  # a master has no add_textbox, so the shape is written out
-    ids = presentation.slides._sldIdLst  # pandoc's reference deck has sample slides: a template needs none
-    for slide_id in list(ids):
-        presentation.part.drop_rel(slide_id.rId)
-        ids.remove(slide_id)
-    presentation.save(HERE / "sensor.pptx")
+    """PowerPoint templates: pandoc's layouts with a coloured title and a version shape. ``sensor_Draft.pptx`` is
+    chosen when the deck says ``status: Draft``."""
+    for name, label, colour in (("sensor.pptx", "Version {{VERSION}}", (0x0B, 0x4F, 0x8A)), ("sensor_Draft.pptx", "DRAFT, version {{VERSION}}", (0xC6, 0x28, 0x28))):
+        presentation = Presentation(io.BytesIO(pandoc_file("reference.pptx")))
+        for master in presentation.slide_masters:
+            for shape in master.shapes:
+                if shape.has_text_frame and shape.is_placeholder and shape.placeholder_format.type in (1, 3):  # title
+                    for paragraph in shape.text_frame.paragraphs:
+                        for run in paragraph.runs:
+                            run.font.color.rgb = PptxColour(*colour)
+            master.shapes._spTree.append(parse_xml(VERSION_BOX.replace("Version {{VERSION}}", label)))  # a master has no add_textbox
+        ids = presentation.slides._sldIdLst  # pandoc's reference deck has sample slides: a template needs none
+        for slide_id in list(ids):
+            presentation.part.drop_rel(slide_id.rId)
+            ids.remove(slide_id)
+        presentation.save(HERE / name)
 
 
 def doc_css() -> None:
@@ -207,7 +241,9 @@ def logo() -> None:
     ImageDraw.Draw(image).text((20, 30), COMPANY, fill="white")
     GUIDE_IMAGES.mkdir(parents=True, exist_ok=True)
     image.save(HERE / "logo.png")
-    image.save(GUIDE_IMAGES / "logo.png")
+    for folder in (GUIDE_IMAGES, DECK_IMAGES):
+        folder.mkdir(parents=True, exist_ok=True)
+        image.save(folder / "logo.png")
 
 
 def design_review() -> None:
@@ -237,7 +273,9 @@ def design_review() -> None:
 if __name__ == "__main__":
     logo()
     sensor_docx()
+    datasheet_docx()
+    report_tex()
     sensor_pptx()
     doc_css()
     design_review()
-    print("Wrote sensor.docx, sensor_Draft.docx, sensor.pptx, doc.css, logo.png, docs/guide/images/logo.png and word/design_review.docx")
+    print("Wrote sensor.docx, sensor_Draft.docx, datasheet.docx, report.tex, sensor.pptx, sensor_Draft.pptx, doc.css, logo.png, docs/guide/images/logo.png and word/design_review.docx")

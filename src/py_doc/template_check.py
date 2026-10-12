@@ -124,7 +124,7 @@ def _language(style) -> str | None:
     return lang.get(qn("w:val")) if lang is not None else None
 
 
-def _check_word(document, report: TemplateReport) -> None:
+def _check_word(document, report: TemplateReport, prefix: str = "Replace-with-", marker_text: str = "[[INSERTCONTENT]]") -> None:
     styles = styles_of(document)
     counts = {kind: sum(1 for k, _ in styles.values() if k == kind) for kind in ("paragraph", "character", "table")}
     report.add(
@@ -193,12 +193,12 @@ def _check_word(document, report: TemplateReport) -> None:
 
     from .pandoc.docx_post import find_placeholders
 
-    found = sorted(find_placeholders(document, "Replace-with-"))
-    marker = any("[[INSERTCONTENT]]" in p.text for p in document.paragraphs)
-    report.add("INFO", "Placeholders", f"Replace-with-* placeholders: {', '.join(found) if found else 'none'}")
+    found = sorted(find_placeholders(document, prefix))
+    marker = any(marker_text in p.text for p in document.paragraphs)
+    report.add("INFO", "Placeholders", f"{prefix}* placeholders: {', '.join(found) if found else 'none'}")
     report.add(
         "INFO" if marker else "WARN", "Content marker",
-        "[[INSERTCONTENT]] found" if marker else "No [[INSERTCONTENT]] line, so the document goes at the end of the template",
+        f"{marker_text} found" if marker else f"No {marker_text} line, so the document goes at the end of the template",
     )  # fmt: skip
 
 
@@ -251,13 +251,19 @@ def _audit_slides(deck, report: TemplateReport) -> None:
 # --- public ----------------------------------------------------------------------------------------
 
 
-def check_template(path: Path) -> TemplateReport:
-    """Check one template. Raises FileNotFoundError, or ConversionError for a file that is not a template."""
+def check_template(path: Path, prefix: str = "Replace-with-", marker: str = "[[INSERTCONTENT]]") -> TemplateReport:
+    """Check one template. Raises FileNotFoundError, or ConversionError for a file that is not a template.
+
+    ``prefix`` and ``marker`` are the ``placeholder_prefix`` and ``marker`` options of the Word output, for a
+    template that does not use the defaults."""
     path = Path(path)
     kind = kind_of(path)
     report = TemplateReport(path)
     opened = _opened(path, kind)
-    (_check_word if kind == "word" else _check_deck)(opened, report)
+    if kind == "word":
+        _check_word(opened, report, prefix, marker)
+    else:
+        _check_deck(opened, report)
     return report
 
 
