@@ -135,7 +135,7 @@ class TestLint:
 
     def test_rule_severity_and_off(self, tmp_path):
         lint = self.load(tmp_path, "  rules:\n    DOC001: error\n    DOC002: off\n    DOC003: warning\n")
-        assert lint.severities == {"DOC001": "error", "DOC002": "warning", "DOC003": "warning"}
+        assert lint.severities == {"DOC001": "error", "DOC002": "warning", "DOC003": "warning", "DOC004": "error"}
         assert lint.disabled_rules == {"DOC002"}
 
     def test_glossary_and_phrases_extend_the_defaults(self, tmp_path):

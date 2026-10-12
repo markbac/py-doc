@@ -203,7 +203,6 @@ def migrate(paths: list[Path], config_dir: Path, source_format: str = "createdoc
         for key in ("variables", "conditions"):
             if data.get(key):
                 doc[key] = data[key]
-                result.note("warning", yaml_path, f"{key} are kept in the file but py-doc does not apply them yet")
 
         documents[doc_id] = doc
         result.migrated.append((yaml_path, doc_id))

@@ -5,11 +5,12 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+from py_doc import directives
 from py_doc.files import MARKDOWN_SUFFIXES, find_markdown
 from py_doc.markdown import ParseError, parse
 
 from . import rules
-from .config import RULE_ACRONYM, RULE_GLOSSARY, RULE_REDUNDANT, LintConfig
+from .config import RULE_ACRONYM, RULE_DIRECTIVE, RULE_GLOSSARY, RULE_REDUNDANT, LintConfig
 from .model import FileResult, LintIssue, LintReport
 from .text import segments
 
@@ -50,6 +51,12 @@ class DocLinter:
             issues += [
                 LintIssue(i.file, i.line, i.rule, i.category, i.message, severity, i.suggestion)
                 for i in check(file, prose, self.config)
+            ]
+        if RULE_DIRECTIVE not in self.config.disabled_rules:
+            severity = self.config.severities.get(RULE_DIRECTIVE, "error")
+            issues += [
+                LintIssue(file, p.line, RULE_DIRECTIVE, "Directive", p.message, severity)
+                for p in directives.check(text, file)
             ]
         return sorted(issues, key=lambda issue: (issue.line, issue.rule))
 

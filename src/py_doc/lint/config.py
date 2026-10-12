@@ -38,6 +38,7 @@ DEFAULT_ALLOWED_ACRONYMS = frozenset(
 RULE_GLOSSARY = "DOC001"
 RULE_REDUNDANT = "DOC002"
 RULE_ACRONYM = "DOC003"
+RULE_DIRECTIVE = "DOC004"
 
 
 @dataclass
@@ -49,5 +50,5 @@ class LintConfig:
     exclude_dirs: frozenset[str] = DEFAULT_EXCLUDE_DIRS
     disabled_rules: frozenset[str] = frozenset()
     severities: dict[str, str] = field(
-        default_factory=lambda: {RULE_GLOSSARY: "warning", RULE_REDUNDANT: "warning", RULE_ACRONYM: "info"}
+        default_factory=lambda: {RULE_GLOSSARY: "warning", RULE_REDUNDANT: "warning", RULE_ACRONYM: "info", RULE_DIRECTIVE: "error"}
     )

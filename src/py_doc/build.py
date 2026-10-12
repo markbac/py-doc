@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from . import directives
 from .config import DocumentConfig, ProjectConfig
 from .errors import ConversionError
 from .markdown import FrontMatterError, Metadata, ParseError, parse, plain_text, read_metadata
@@ -52,8 +53,13 @@ def _retitle(blocks: list, title: str) -> list:
     return [n.Heading(1, 1, 1, [n.Text(1, title)]), *blocks]
 
 
-def merge_document(doc: DocumentConfig) -> Merged:
-    """Join the included sources of ``doc`` into one document, with the configured properties applied."""
+def merge_document(doc: DocumentConfig, variables: dict | None = None, conditions: dict | None = None) -> Merged:
+    """Join the included sources of ``doc`` into one document, with the configured properties applied.
+
+    ``variables`` and ``conditions`` are added to the document's own, and win over them.
+    """
+    variables = {**doc.variables, **(variables or {})}
+    conditions = {**doc.conditions, **(conditions or {})}
     blocks: list = []
     first_metadata = Metadata()
     included = [source for source in doc.sources if source.include]
@@ -64,6 +70,7 @@ def merge_document(doc: DocumentConfig) -> Merged:
         if not source.file.is_file():
             raise FileNotFoundError(f"Source for document '{doc.id}' not found: {source.file}")
         text = DocxConverter._read_markdown(source.file)
+        text = directives.expand(text, source.file, variables, conditions)
         try:
             parsed = parse(text)
             metadata = read_metadata(parsed)
@@ -95,9 +102,15 @@ def merge_document(doc: DocumentConfig) -> Merged:
     return Merged(n.Document(None, blocks), merged)
 
 
-def build_document(config: ProjectConfig, doc: DocumentConfig, formats: list[str] | None = None) -> list[Path]:
+def build_document(
+    config: ProjectConfig,
+    doc: DocumentConfig,
+    formats: list[str] | None = None,
+    variables: dict | None = None,
+    conditions: dict | None = None,
+) -> list[Path]:
     """Build one document in each of ``formats`` (default: the ones it lists). Returns the files written."""
-    merged = merge_document(doc)
+    merged = merge_document(doc, variables, conditions)
     written: list[Path] = []
     base = doc.sources[0].file.parent
     for fmt in formats or config.output_formats(doc):

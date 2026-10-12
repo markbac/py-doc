@@ -148,6 +148,7 @@ py-doc lint . --exclude drafts
 | `DOC001` | Glossary | warning | A glossary term written differently from its canonical form, in any capitalisation (`mQTT`), plus listed misspellings (`Lw2m`) |
 | `DOC002` | Style | warning | Wordy phrases such as "in order to", also when wrapped over two lines, with a shorter wording suggested |
 | `DOC003` | Acronym | info | The first use of an all-capitals acronym that is never defined, or is defined only later |
+| `DOC004` | Directive | error | An `[[ENDIF]]` with nothing open, an `[[IF:]]` never closed, or an include whose file does not exist |
 
 - **Acronym definitions** are recognised in both orders, `Pre-Shared Key (PSK)` and `PSK (Pre-Shared Key)`, including mixed-case forms such as `LwM2M` and `IoT`. The words must spell out the acronym. Words in the built-in allow-list and glossary terms need no definition.
 - **Directories**: hidden directories and `node_modules`, `venv`, `env`, `site-packages`, `__pycache__`, `dist`, `build` and `vendor` are skipped. `.md` and `.markdown` files are found in any capitalisation. Paths are printed relative to the working directory.
@@ -214,12 +215,42 @@ lint:
 - **Documents** join their sources in order. Properties come from the configuration, then from the first source's front matter. A document builds the formats listed under `outputs`, or Word if none is listed.
 - **Output options** per format: `template`, `allow_missing_template`, `keep_template_body` (docx), `keep_template_slides`, `split_level`, `title_layout`, `content_layout` (pptx). A document's value overrides the default.
 - **Lint** settings extend the built-in glossary, phrases and allowed acronyms. An issue whose rule is set to `error` fails `py-doc lint` even without `--strict`.
-- **Reserved**: `collections`, `bundles`, `content` and `site` are accepted and kept, with a warning, because nothing uses them yet. `variables` and `conditions` on a document are also kept but not applied.
+- **Reserved**: `collections`, `bundles`, `content` and `site` are accepted and kept, with a warning, because nothing uses them yet.
 
 ```bash
 py-doc build                      # every document
 py-doc build c4-guide -f pptx     # one document, one format
+py-doc build --var version=2.1 --condition internal=true
 ```
+
+### Includes, conditions and variables
+
+These lines are applied to each source before it is parsed. They are only recognised outside code, so a document can show the syntax in a fenced block or in backticks.
+
+```markdown
+[[INCLUDE: shared/legal.md]]        <!-- another Markdown file, expanded in turn -->
+[[INCLUDE-CODE: src/server.py]]     <!-- a file as a fenced code block; the language comes from the extension -->
+
+[[IF: internal]]                    <!-- also [[IF: audience == staff]] and [[NOT: internal]] -->
+Internal notes.
+[[ENDIF]]
+
+This is version {{version}}.
+```
+
+Set values under a document in `py-doc.yml`, or for one build with `--var` and `--condition`, which win over the file:
+
+```yaml
+documents:
+  guide:
+    sources: [guide.md]
+    variables: {version: "2.1"}
+    conditions: {internal: false}
+```
+
+- **Paths** start at the file that holds the directive. Image paths in an included file are relative to the file that includes it, not to the included file.
+- **Mistakes are errors** that name the file and line: a missing or circular include, an `[[IF:]]` that is never closed, an `[[ENDIF]]` with nothing open, or a condition that is not defined. An undefined `{{variable}}` is left as written and reported as a warning, because the braces are ordinary text in many documents.
+- **Truth**: `false`, `no`, `off`, `0` and an empty value are false; anything else is true. `==` and `!=` compare as text.
 
 ## Migrating from createdocs
 
@@ -235,7 +266,7 @@ The report lists what has no equivalent yet, so nothing is lost quietly:
 
 - PDF, HTML and processed Markdown output, PlantUML and ditaa rendering, and the other build switches for them.
 - The template chosen from the document status, and the version added to the output file name. `py-doc` writes exactly the path you give.
-- Unknown `meta` and `entries` keys. `variables` and `conditions` are kept but not applied.
+- Unknown `meta` and `entries` keys.
 
 ## Python API
 

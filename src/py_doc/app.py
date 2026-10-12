@@ -49,6 +49,10 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("documents", nargs="*", metavar="DOCUMENT", help="Documents to build (default: all)")
     build.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
     build.add_argument("-f", "--format", action="append", choices=sorted(FORMATS), help="Build only this format")
+    build.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
+    build.add_argument(
+        "--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a [[IF:]] condition"
+    )
     noise = build.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -80,6 +84,19 @@ def main(argv: Sequence[str] | None = None) -> int:
 # --- build ---------------------------------------------------------------------------------------
 
 
+def _assignment(text: str) -> tuple[str, str]:
+    name, sep, value = text.partition("=")
+    if not sep or not name.strip():
+        raise argparse.ArgumentTypeError(f"'{text}' is not NAME=VALUE")
+    return name.strip(), value
+
+
+def _conditions(pairs: list[tuple[str, str]]) -> dict:
+    """Command line conditions: true and false become booleans, anything else stays text."""
+    words = {"true": True, "false": False}
+    return {name: words.get(value.lower(), value) for name, value in pairs}
+
+
 def _build(args: argparse.Namespace) -> int:
     configure_logging(quiet=args.quiet, verbose=args.verbose)
     path = Path(args.config) if args.config else find_config(Path.cwd())
@@ -104,7 +121,9 @@ def _build(args: argparse.Namespace) -> int:
     names = args.documents or list(config.documents)
     for name in names:
         try:
-            build_document(config, config.documents[name], args.format)
+            build_document(
+                config, config.documents[name], args.format, dict(args.var), _conditions(args.condition)
+            )
         except (FileNotFoundError, ConversionError) as exc:
             _error(f"{name}: {exc}")
             failed += 1

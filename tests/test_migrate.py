@@ -118,7 +118,6 @@ def test_unsupported_settings_are_reported_not_dropped_silently(repo):
     assert ("GU-1.yaml", "cli.plantuml-jar-path was left out: PlantUML diagrams are not rendered") in messages
     assert ("GU-1.yaml", "createdocs chose the template from the status. py-doc uses one template per output") in messages
     assert ("big.yaml", "entries[3].extra_key has no equivalent and was left out") in messages
-    assert ("big.yaml", "variables are kept in the file but py-doc does not apply them yet") in messages
 
 
 def test_versioned_file_names_are_flagged_as_a_behaviour_change(repo):
