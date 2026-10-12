@@ -37,7 +37,8 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 |---|---|
 | `py-doc.yml` | Five documents, output defaults, per-document variables and conditions, file naming, the build report, C4 and lint settings. Every setting has a comment |
 | `docs/guide/` | The guide, in five files: front matter and document properties, variables, conditions, nested includes, every callout style, all heading levels, block quotes, captions, lists, task lists, footnotes, definition lists, maths, code includes, a landscape section, page breaks, an appendix with a shifted heading level, links between chapters. `DRAFT.md` is listed with `include: false` |
-| `docs/datasheet.md` | One example of every diagram type that needs only the container: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega and vega-lite. Graphviz, Mermaid and PlantUML are in `docs/guide/02_design.md` |
+| `docs/guide/05_diagram_types.md` | One example of every other diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega and vega-lite. Graphviz, Mermaid and PlantUML are in `docs/guide/02_design.md` |
+| `docs/datasheet.md` | A short datasheet that includes the diagram chapter, to try the datasheet template (`@@` placeholders) and the LaTeX template |
 | `docs/release-notes.md` | A short document whose version comes from Git (`version: git`) |
 | `docs/deck/slides.md` | The deck: section slides, bullets, columns, incremental lists, both kinds of speaker notes, diagrams, a picture, a table, maths, callouts, code, an include, a condition, a page break |
 | `docs/includes/` | Files pulled in with `[[INCLUDE:]]` and `[[INCLUDE-CODE:]]` |
@@ -52,7 +53,7 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 | `structure-rules.yaml`, `vale-rules.yml`, `.markdownlint.yaml` | Rule files used by `py-doc lint` |
 | `word/design_review.docx` | A Word file to try `py-doc import` on |
 
-The datasheet is also the last appendix of the guide, so `py-doc build guide` draws every diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega, vega-lite, Graphviz, Mermaid and PlantUML. All of them are installed in the tool image. `graphviz` and `puml` are accepted as other names for `dot` and `plantuml`. See the Diagrams section of the main README.
+The diagram chapter is part of the guide (`docs/guide/05_diagram_types.md`) and of the datasheet, so `py-doc build guide` draws every diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega, vega-lite, Graphviz, Mermaid and PlantUML. All of them are installed in the tool image. `graphviz` and `puml` are accepted as other names for `dot` and `plantuml`. See the Diagrams section of the main README.
 
 ## Quick start
 
@@ -192,7 +193,7 @@ Structurizr Local only answers requests for `localhost`, so the browser that dra
 - **Status templates:** the guide says `status: Draft`, so its Word file has a red "DRAFT" header. Change the status to `Released` in `docs/guide/00_overview.md` and the base template is used.
 - **Templates:** the front matter in `docs/guide/00_overview.md` fills the `Replace-with-*` placeholders on the title page. The body goes where `[[INSERTCONTENT]]` stands.
 - **Callouts, captions, page breaks, orientation, styles:** see `docs/guide/00_overview.md` and `docs/guide/02_design.md`. `[[STYLE:Lead Paragraph]]` applies a style the template defines.
-- **Diagrams:** `docs/guide/02_design.md` has Graphviz, Mermaid and PlantUML blocks and a code include. `docs/datasheet.md` has the rest.
+- **Diagrams:** `docs/guide/02_design.md` has Graphviz, Mermaid and PlantUML blocks and a code include. `docs/guide/05_diagram_types.md` has the rest.
 - **File names:** the guide is `guide-v1.0.docx` (`name: "{name}-v{version}"`) and the datasheet is `datasheet-1_0.docx` (`{version_safe}`). `py-doc build release-notes` takes its version from `git describe --tags --always` (`version: git`), so it needs a commit in this folder's repository.
 - **Your own template:** edit `templates/make_templates.py` and run `python templates/make_templates.py`, or point `outputs.docx.template` in `py-doc.yml` at your own file and run `py-doc template check YOUR.docx --strict`.
 - **Your own documents:** add Markdown files to `docs/`, list them under a new entry in `documents:` in `py-doc.yml`, and run `py-doc build NAME`.
