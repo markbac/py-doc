@@ -1,0 +1,6 @@
+extends: occurrence
+message: "Paragraph is %s words long. Consider splitting it."
+level: suggestion
+scope: paragraph
+max: 150
+token: '\b(\w+)\b'

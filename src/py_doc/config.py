@@ -16,6 +16,7 @@ import yaml
 from .files import DEFAULT_EXCLUDE_DIRS
 from .lint.config import DEFAULT_ALLOWED_ACRONYMS, LintConfig, MarkdownlintSettings
 from .lint.structure import StructureRuleError, load_rules, parse_rules
+from .lint.vale_config import ValeConfigError, parse_vale
 from .markdown.frontmatter import Metadata
 from .naming import check_name_pattern, expand_name
 from .runtime import RuntimeSettings
@@ -329,7 +330,7 @@ def _parse_markdownlint(data: dict, root: Path) -> MarkdownlintSettings:
 
 
 def _parse_lint(data: dict, root: Path) -> LintConfig:
-    _only(data, ("exclude", "rules", "glossary", "phrases", "acronyms", "structure", "markdownlint"), "lint")
+    _only(data, ("exclude", "rules", "glossary", "phrases", "acronyms", "structure", "markdownlint", "vale"), "lint")
     config = LintConfig()
 
     if "exclude" in data:
@@ -356,6 +357,12 @@ def _parse_lint(data: dict, root: Path) -> LintConfig:
         try:
             config.structure = load_rules(_path(root, raw, "lint.structure")) if isinstance(raw, str) else parse_rules(raw)
         except StructureRuleError as exc:
+            raise ConfigError(str(exc)) from None
+    config.root = root
+    if "vale" in data:
+        try:
+            config.vale = parse_vale(data["vale"], root)
+        except ValeConfigError as exc:
             raise ConfigError(str(exc)) from None
     if "markdownlint" in data:
         config.markdownlint = _parse_markdownlint(_mapping(data["markdownlint"], "lint.markdownlint"), root)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from py_doc._cli import deprecation_notice
@@ -30,9 +31,7 @@ def _display(path: Path) -> Path:
 
 
 def _shown(issue: LintIssue) -> LintIssue:
-    return LintIssue(
-        _display(issue.file), issue.line, issue.rule, issue.category, issue.message, issue.severity, issue.suggestion
-    )
+    return replace(issue, file=_display(issue.file))
 
 
 def run(argv: list[str] | None = None, legacy: bool = False) -> int:
@@ -50,6 +49,13 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         "--exclude", action="append", default=[], metavar="DIR", help="Also skip directories with this name"
     )
     parser.add_argument("--config", metavar="FILE", help="py-doc.yml to read (default: the nearest one above the target)")
+    parser.add_argument(
+        "--engine", choices=("auto", "builtin", "vale"), default="auto",
+        help="auto runs the built-in rules and Vale when it is installed, builtin skips Vale, vale uses Vale for the text rules",
+    )  # fmt: skip
+    parser.add_argument("--show-vale-config", action="store_true", help="Print the Vale configuration py-doc would use and exit")
+    parser.add_argument("--check-engines", action="store_true", help="Report whether Vale is found, its version and its folder")
+    parser.add_argument("--sync", action="store_true", help="Download the Vale packages in lint.vale.packages (vale sync)")
     parser.add_argument(
         "--print-example-rules", action="store_true", help="Print an example set of structure rules and exit"
     )
@@ -70,12 +76,50 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
     config.exclude_dirs = config.exclude_dirs | frozenset(args.exclude)
+    linter = DocLinter(config=config, runtime=lambda: connect(settings), engine=args.engine)
     try:
-        report = DocLinter(config=config, runtime=lambda: connect(settings)).lint_path(args.target)
+        if args.show_vale_config or args.check_engines or args.sync:
+            return _vale_command(args, linter)
+        report = linter.lint_path(args.target)
     except (LintTargetError, ConversionError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
     return _print(report, strict=args.strict)
+
+
+def _vale_command(args: argparse.Namespace, linter: DocLinter) -> int:
+    from . import vale
+
+    folder = linter.vale_folder()
+    target = Path(args.target).resolve()
+    base = target if target.is_dir() else target.parent
+    if args.show_vale_config:
+        settings = linter.config.vale
+        if settings.config is not None:
+            print(f"# lint.vale.config is set, so {settings.config} is used as it is")
+            print(settings.config.read_text(encoding="utf-8"), end="")
+            return 0
+        workspace = vale.build_workspace(settings, linter.config, folder)
+        print(f"# {workspace.ini}")
+        print(workspace.ini.read_text(encoding="utf-8"), end="")
+        print("# Rules written: " + ", ".join(workspace.files))
+        return 0
+    runner = linter.vale_runner(base)
+    if args.check_engines:
+        print("builtin: available (DOC001 to DOC004)")
+        if runner is None:
+            print("vale: not used (off, or not installed)")
+            print(f"  {vale.INSTALL_HELP}")
+            return 0
+        version = ".".join(map(str, vale.check_version(runner)))
+        print(f"vale: {version} ({type(runner).__name__}), styles in {folder / 'styles'}")
+        return 0
+    if runner is None:
+        raise ConversionError(f"--sync needs Vale. {vale.INSTALL_HELP}")
+    ini = vale.build_workspace(linter.config.vale, linter.config, folder).ini
+    vale.check_version(runner)
+    print(vale.sync(runner, ini) or "Vale packages are up to date")
+    return 0
 
 
 def _load_config(args: argparse.Namespace) -> tuple[LintConfig, RuntimeSettings]:

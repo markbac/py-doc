@@ -4,3 +4,4 @@
 pandoc 3.8.2.1 https://github.com/jgm/pandoc/releases/download/3.8.2.1/pandoc-3.8.2.1-1-amd64.deb -
 plantuml 1.2025.4 https://github.com/plantuml/plantuml/releases/download/v1.2025.4/plantuml-1.2025.4.jar -
 ditaa 0.11.0 https://github.com/stathissideris/ditaa/releases/download/v0.11.0/ditaa-0.11.0-standalone.jar -
+vale 3.24.0 https://github.com/errata-ai/vale/releases/download/v3.24.0/vale_3.24.0_Linux_64-bit.tar.gz -

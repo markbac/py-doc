@@ -1,0 +1,11 @@
+extends: existence
+message: "Replace the placeholder '%s' before publishing."
+ignorecase: false
+level: warning
+tokens:
+  - TODO
+  - FIXME
+  - TBD
+  - TBC
+  - XXX
+  - '(?i)lorem ipsum'

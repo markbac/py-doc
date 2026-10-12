@@ -1,0 +1,17 @@
+extends: existence
+message: "'%s' is a weasel word. Say what you mean exactly."
+ignorecase: true
+level: suggestion
+tokens:
+  - very
+  - really
+  - quite
+  - fairly
+  - extremely
+  - various
+  - several
+  - a number of
+  - simply
+  - basically
+  - obviously
+  - clearly

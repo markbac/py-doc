@@ -184,6 +184,66 @@ lint:
 - **Cross-file anchors** work on the documents of `py-doc.yml`. All the files of a document share one set of heading anchors, as they do in pandoc, so a repeated heading gets `-1`, `-2` and so on, and a `[x](#anchor)` link is checked against that set. Files pulled in with `[[INCLUDE:]]` count. A broken link and a repeated heading are reported with file and line.
 - **markdownlint** runs in the tool container (`markdownlint-cli2`), only when `lint.markdownlint` is set, and its findings appear with rules `MD001` and so on. Without it, lint needs no container.
 
+### Vale
+
+`py-doc lint` can run [Vale](https://vale.sh) beside the built-in rules, and shows one list sorted by file and line. Vale is found on the `PATH` (or at `lint.vale.binary`). With `--engine vale` and no Vale on the host, the tool container's copy is used. If Vale is installed and `lint.vale.enabled` is `auto` (the default), both engines run. If it is not installed, one warning says so and the built-in rules run alone.
+
+| Option | Effect |
+| --- | --- |
+| `--engine auto` | Built-in rules and Vale, when Vale is installed (default) |
+| `--engine builtin` | No Vale |
+| `--engine vale` | Vale replaces the text rules `DOC001` to `DOC003`. Structure rules and markdownlint still run. Missing Vale exits with status 2 |
+| `--show-vale-config` | Print the `.vale.ini` py-doc generates, and the rules it wrote |
+| `--check-engines` | Say whether Vale is found, its version (3.0 or newer is needed) and its folder |
+| `--sync` | Run `vale sync` for `lint.vale.packages`. This is the only step that uses the network |
+
+A Vale alert that is an `error` fails the command, and `--strict` fails on warnings, as for the built-in rules. `suggestion` becomes `info`. A Vale crash, bad output or a missing package is an error on every file (exit status 2), never a clean result. Vale's `PyDoc.Terms` and `PyDoc.Wordy` rules repeat `DOC001` and `DOC002`, so the Vale copy is dropped when the built-in rule reports the same line.
+
+```yaml
+lint:
+  vale:
+    enabled: auto             # auto, true or false
+    binary: vale              # if not on the PATH
+    min_alert_level: suggestion
+    packages: [write-good]    # downloaded by `py-doc lint --sync`
+    spelling: en-GB           # en-GB, en-US or off
+    rules:
+      PyDoc.SentenceLength: {level: warning, max: 30}
+      PyDoc.PassiveVoice: off
+      write-good.Weasel: error
+    terms:                    # added to lint.glossary
+      Kubernetes: [k8s, kube]
+    avoid:
+      - {pattern: "\\bsimply\\b", message: "Do not say 'simply'.", level: warning}
+    ignore: ["CHANGELOG.md", "docs/generated/**"]
+    rules_file: [vale-rules.yml]  # shared rules; later files override earlier ones, inline keys override all
+    config: .vale.ini         # use your own file instead: the keys above are then ignored
+```
+
+py-doc writes the configuration, the `PyDoc` style and a vocabulary of your glossary terms into `.py-doc/vale` (it ignores itself in git). `lint.glossary` and `lint.phrases` feed both engines. Every key is checked when `py-doc.yml` loads, and a bad rule id, level or pattern is named by its place (`lint.vale.rules.PyDoc.Typo`). `src/py_doc/lint/vale.schema.json` is a JSON schema for the section.
+
+Rules in the `PyDoc` style:
+
+| Rule | Default | Why |
+| --- | --- | --- |
+| `SentenceLength` (`max` 30) | warning | Long sentences are hard to follow |
+| `ParagraphLength` (`max` 150) | info | Long paragraphs hide the point |
+| `PassiveVoice` | info | Say who does the action |
+| `WeaselWords` | info | Vague words weaken a statement |
+| `Repeated` | error | "the the" is always a typing slip |
+| `DoubleSpace` | warning | One space between words |
+| `HeadingPunctuation` | warning | No full stop at the end of a heading |
+| `HeadingCase` | info | Sentence case in headings |
+| `Placeholders` | warning | `TODO`, `FIXME`, `TBD` and lorem ipsum must not reach a release |
+| `Spelling` | warning | British spelling by default, American with `en-US` |
+| `Terms`, `Wordy`, `Redundant` | warning | Generated from `lint.glossary` and `lint.phrases` |
+| `Acronyms` | info | Spell out an acronym at first use |
+| `Avoid1`, `Avoid2`, ... | as set | Generated from `lint.vale.avoid` |
+
+Skipped heading levels and duplicate headings are not Vale's job. Use the structure rules and markdownlint above (`MD001`, `MD024`). Vale's Markdown handling skips code, front matter and link destinations, and py-doc tells it to ignore `[[directives]]` and `{{variables}}`. The built-in rules also skip code and front matter, so the two agree. Other well-known styles (`Microsoft`, `Google`, `write-good`, `proselint`) can be added by name under `packages`.
+
+Installing Vale: `brew install vale`, `winget install errata-ai.Vale` or `scoop install vale` on Windows, or a release from the Vale site. The py-doc CI installs it and runs the end-to-end test. To move an existing `.vale.ini`, put its `MinAlertLevel`, `Packages` and per-rule levels under `lint.vale` as shown, or keep the file and point `config:` at it.
+
 ## Project configuration (`py-doc.yml`)
 
 One file describes documents, outputs and lint policy. `py-doc build` and `py-doc lint` find the nearest `py-doc.yml` above the current folder (or take `--config`). Paths are relative to the file. Every key is checked, so a typo is an error that names its place, such as `documents.guide.sources[1].page_brek`.

@@ -23,9 +23,11 @@ class LintIssue:
     message: str
     severity: str = "warning"
     suggestion: str | None = None
+    column: int | None = None  # only Vale gives one
 
     def __str__(self) -> str:
-        text = f"{self.file}:{self.line}: {self.severity} {self.rule} [{self.category}] {self.message}"
+        where = f"{self.line}:{self.column}" if self.column else str(self.line)
+        text = f"{self.file}:{where}: {self.severity} {self.rule} [{self.category}] {self.message}"
         return f"{text} (suggestion: {self.suggestion})" if self.suggestion else text
 
 

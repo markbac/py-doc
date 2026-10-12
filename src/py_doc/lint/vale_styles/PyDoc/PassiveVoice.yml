@@ -1,0 +1,6 @@
+extends: existence
+message: "'%s' may be passive voice. Say who does the action."
+ignorecase: true
+level: suggestion
+tokens:
+  - '\b(?:am|are|were|being|is|been|was|be)\s+\w+ed\b'

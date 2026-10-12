@@ -1,0 +1,7 @@
+extends: existence
+message: "Do not end a heading with '%s'."
+nonword: true
+level: warning
+scope: heading
+tokens:
+  - '[.,;:!]$'

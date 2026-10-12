@@ -61,7 +61,7 @@ version = {attr = "py_doc.__version__"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-py_doc = ["runtime/definition/*", "runtime/definition/extra-ca/*", "pandoc/resources/*", "diagrams/tools/*", "report.schema.json", "lint/examples/*"]
+py_doc = ["runtime/definition/*", "runtime/definition/extra-ca/*", "pandoc/resources/*", "diagrams/tools/*", "report.schema.json", "lint/examples/*", "lint/vale_styles/PyDoc/*", "lint/vale.schema.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

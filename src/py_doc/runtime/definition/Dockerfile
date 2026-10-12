@@ -29,10 +29,12 @@ RUN sh /tmp/build/fetch.sh pandoc /tmp/pandoc.deb \
  && apt-get install -y --no-install-recommends /tmp/pandoc.deb \
  && sh /tmp/build/fetch.sh plantuml /opt/plantuml.jar \
  && sh /tmp/build/fetch.sh ditaa /opt/ditaa.jar \
+ && sh /tmp/build/fetch.sh vale /tmp/vale.tar.gz \
+ && tar -xzf /tmp/vale.tar.gz -C /usr/local/bin vale \
  && printf '#!/bin/sh\nexec java -Djava.awt.headless=true -jar /opt/plantuml.jar "$@"\n' > /usr/local/bin/plantuml \
  && printf '#!/bin/sh\nexec java -Djava.awt.headless=true -jar /opt/ditaa.jar "$@"\n' > /usr/local/bin/ditaa \
  && chmod +x /usr/local/bin/plantuml /usr/local/bin/ditaa \
- && rm -f /tmp/pandoc.deb
+ && rm -f /tmp/pandoc.deb /tmp/vale.tar.gz
 
 # Python and Node diagram tools, at the versions pinned beside this file.
 RUN python3 -m venv /opt/venv \

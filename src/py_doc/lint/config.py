@@ -8,6 +8,8 @@ from typing import Any
 
 from py_doc.files import DEFAULT_EXCLUDE_DIRS
 
+from .vale_config import ValeSettings
+
 DEFAULT_GLOSSARY: dict[str, list[str]] = {
     "LwM2M": ["lwm2m", "LWM2M", "Lw2m"],
     "DTLS": ["dtls", "Dtls"],
@@ -65,4 +67,6 @@ class LintConfig:
     )
     structure: list = field(default_factory=list)  # StructureRule entries, see lint.structure
     markdownlint: MarkdownlintSettings | None = None
+    vale: ValeSettings = field(default_factory=ValeSettings)
+    root: Path = field(default_factory=Path.cwd)  # the project folder: where the managed Vale folder lives
     documents: dict[str, list[Path]] = field(default_factory=dict)  # document id -> its source files, in order

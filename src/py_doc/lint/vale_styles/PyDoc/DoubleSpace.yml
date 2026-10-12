@@ -1,0 +1,6 @@
+extends: existence
+message: "Use one space between words."
+nonword: true
+level: warning
+tokens:
+  - '\S {2,}\S'
