@@ -16,6 +16,7 @@ from py_doc.errors import ConversionError
 from py_doc.markdown import Metadata
 from py_doc.runtime import Mount, Runtime
 
+from .pptx_finish import notes_to_divs
 from .reference import default_reference, missing_callout_styles
 
 logger = logging.getLogger(__name__)
@@ -122,7 +123,8 @@ def convert(runtime: Runtime, job: PandocJob) -> Path:
         _required(job.template, "template")
     with tempfile.TemporaryDirectory(prefix="py-doc-") as folder:
         work = Path(folder)
-        (work / "combined.md").write_text(job.markdown, encoding="utf-8", newline="\n")
+        markdown = notes_to_divs(job.markdown) if job.fmt == "pptx" else job.markdown
+        (work / "combined.md").write_text(markdown, encoding="utf-8", newline="\n")
         copy_pictures(job.pictures, work)
         (work / "metadata.yaml").write_text(
             yaml.safe_dump(_metadata_file(job.metadata), allow_unicode=True, sort_keys=False), encoding="utf-8"
@@ -149,6 +151,10 @@ def convert(runtime: Runtime, job: PandocJob) -> Path:
             from .docx_finish import finish_docx
 
             finish_docx(produced, job.template, job.metadata, job.options)
+        elif job.fmt == "pptx":
+            from .pptx_finish import finish_pptx
+
+            finish_pptx(produced, job.metadata, job.options)
         job.output.parent.mkdir(parents=True, exist_ok=True)
         try:
             shutil.move(produced, job.output)

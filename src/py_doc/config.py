@@ -41,7 +41,7 @@ _OUTPUT_OPTIONS = {
     ),
     "pptx": (
         "path", "template", "engine", "keep_template_slides", "allow_missing_template", "split_level",
-        "title_layout", "content_layout", "name",
+        "title_layout", "content_layout", "name", "footer",
     ),
     "pdf": ("path", "template", "toc", "name"),
     "html": ("path", "template", "toc", "name"),
@@ -50,7 +50,7 @@ _OUTPUT_OPTIONS = {
 
 _OPTION_TYPES = {
     "split_level": int, "engine": str, "title_layout": str, "content_layout": str,
-    "name": str, "placeholder_prefix": str, "marker": str,
+    "name": str, "placeholder_prefix": str, "marker": str, "footer": str,
 }  # fmt: skip
 
 
