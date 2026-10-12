@@ -45,6 +45,7 @@ dev = [
     "twine>=5.0",
     "railroad-diagrams>=3.0",  # run by the railroad tool test
     "pypikchr>=0.2.0",  # run by the pikchr tool test
+    "jsonschema>=4.0",  # checks the build report against its schema
 ]
 
 [project.scripts]
@@ -60,7 +61,7 @@ version = {attr = "py_doc.__version__"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-py_doc = ["runtime/definition/*", "runtime/definition/extra-ca/*", "pandoc/resources/*", "diagrams/tools/*"]
+py_doc = ["runtime/definition/*", "runtime/definition/extra-ca/*", "pandoc/resources/*", "diagrams/tools/*", "report.schema.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

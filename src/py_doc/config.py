@@ -115,6 +115,7 @@ class ProjectConfig:
     outputs: dict[str, OutputSettings] = field(default_factory=dict)
     lint: LintConfig = field(default_factory=LintConfig)
     runtime: RuntimeSettings = field(default_factory=RuntimeSettings)
+    report: Path | None = None  # reports.path: where `py-doc build` writes its JSON report
     build: dict[str, Any] = field(default_factory=dict)
     reserved: dict[str, Any] = field(default_factory=dict)
 
@@ -205,7 +206,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -220,6 +221,10 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     config.lint = _parse_lint(_mapping(top.get("lint", {}), "lint"))
     config.build = _mapping(top.get("build", {}), "build")
     config.runtime = _parse_runtime(_mapping(top.get("runtime", {}), "runtime"))
+    reports = _mapping(top.get("reports", {}), "reports")
+    _only(reports, ("path",), "reports")
+    if "path" in reports:
+        config.report = _path(root, reports["path"], "reports.path")
 
     for name in RESERVED_SECTIONS:
         if name in top:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import functools
 import logging
 import os
@@ -20,6 +21,7 @@ from .config import FORMATS, ConfigError, find_config, load_config
 from .errors import ConversionError, exit_status
 from .lint.cli import run as run_lint
 from .migrate import LEGACY_FORMATS, Migration, migrate, render
+from .report import BuildReport
 from .runtime import connect
 from .slides_cli import run_slides
 from .template_cli import run_template
@@ -57,6 +59,8 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument(
         "--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a [[IF:]] condition"
     )
+    build.add_argument("--report", metavar="FILE", help="Write a JSON report of the build (default: reports.path in py-doc.yml)")
+    build.add_argument("--timestamps", action="store_true", help="Put the time and the render times in the report")
     build.add_argument("--keep-going", action="store_true", help="Report every broken diagram, not just the first")
     noise = build.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
@@ -121,27 +125,48 @@ def _build(args: argparse.Namespace) -> int:
         _error(f"Unknown document(s): {', '.join(unknown)}. Defined: {', '.join(config.documents)}")
         return 1
 
-    runtime = functools.cache(lambda: connect(config.runtime))  # the container is only needed for pandoc outputs
+    connected = functools.cache(lambda: connect(config.runtime))  # the container is only needed to run a tool
+    used: list = []
+
+    def runtime():
+        used.append(connected())
+        return used[-1]
+
+    report_path = Path(args.report).resolve() if args.report else config.report
+    report = BuildReport(config.root, args.timestamps) if report_path else None
     failed = 0
     status = 0
     names = args.documents or list(config.documents)
-    for name in names:
+    with report.recording() if report else contextlib.nullcontext():
+        for name in names:
+            try:
+                build_document(
+                    config, config.documents[name], args.format, dict(args.var), _conditions(args.condition), runtime,
+                    args.keep_going, report,
+                )
+            except (FileNotFoundError, ConversionError) as exc:
+                _error(f"{name}: {exc}")
+                failed += 1
+                status = max(status, exit_status(exc))
+                if report:
+                    report.failed(name, exc)
+            except Exception as exc:  # one document must not stop the others
+                logger.debug("Unexpected failure", exc_info=True)
+                _error(f"{name}: {type(exc).__name__}: {exc}")
+                failed += 1
+                status = max(status, 1)
+                if report:
+                    report.failed(name, exc)
+        if len(names) > 1 or failed:
+            summary = f"{len(names) - failed} of {len(names)} document(s) built" + (f", {failed} failed" if failed else "")
+            (logger.error if failed else logger.info)(summary)
+    if report:
+        report.describe_runtime(used[-1] if used else None)
         try:
-            build_document(
-                config, config.documents[name], args.format, dict(args.var), _conditions(args.condition), runtime, args.keep_going
-            )
-        except (FileNotFoundError, ConversionError) as exc:
-            _error(f"{name}: {exc}")
-            failed += 1
-            status = max(status, exit_status(exc))
-        except Exception as exc:  # one document must not stop the others
-            logger.debug("Unexpected failure", exc_info=True)
-            _error(f"{name}: {type(exc).__name__}: {exc}")
-            failed += 1
+            logger.info(f"Wrote {report.write(report_path)}")
+        except OSError as exc:
+            _error(f"Cannot write the report {report_path}: {exc.strerror or exc}")
             status = max(status, 1)
-    if len(names) > 1 or failed:
-        summary = f"{len(names) - failed} of {len(names)} document(s) built" + (f", {failed} failed" if failed else "")
-        (logger.error if failed else logger.info)(summary)
     return status
 
 

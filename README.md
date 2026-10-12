@@ -247,6 +247,10 @@ Word layout features:
 - **Callouts**: `> [!NOTE]` and `> **Note:**` (note, tip, important, warning, caution) become boxes in the `Div.note` ... `Div.caution` styles. The built-in reference document defines them. If your template lacks a style that the document uses, one warning says so and those callouts are plain paragraphs.
 - **Pages**: `[[LANDSCAPE]]` and `[[PORTRAIT]]` start a section of that orientation. `[[STYLE:Name]]` applies a named style, and warns once if the template has none of that name.
 
+### Build report
+
+`py-doc build --report build.json` (or `reports: {path: build.json}` in `py-doc.yml`) writes a JSON report: the py-doc version, the image tag and id, the version of each tool used, each document with its sources (words, sentences, paragraphs), its outputs (size and SHA-256), every diagram (type, file, line, whether the cache served it), template problems, and every warning with file and line. Keys are in a fixed order and there are no times unless you pass `--timestamps`, which also adds the render time of each diagram. The report is written when the build fails too, with `status: failed` and the error. Word and PowerPoint files contain the time they were written, so their checksums differ between builds. The schema is `py_doc/report.schema.json`.
+
 ### Diagrams
 
 A fenced block whose language is a diagram type becomes a picture in the pandoc outputs:

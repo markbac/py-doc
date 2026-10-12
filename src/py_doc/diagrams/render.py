@@ -9,6 +9,7 @@ import re
 import shutil
 import sys
 import tempfile
+import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -94,15 +95,21 @@ def _draw(runtime: Runtime, renderer: Renderer, job_text: str, kind: str, landsc
         return picture.read_bytes()
 
 
-def draw_cached(runtime: Runtime, renderer: Renderer, text: str, kind: str, landscape: bool, source_dir: Path) -> Path:
-    """The picture for a diagram: from the cache when the same one was drawn before."""
+def draw_cached(
+    runtime: Runtime, renderer: Renderer, text: str, kind: str, landscape: bool, source_dir: Path, info: dict | None = None
+) -> Path:
+    """The picture for a diagram: from the cache when the same one was drawn before. ``info`` gets ``cached``."""
     key = _key(runtime, renderer, Job(Path(), Path(), kind, landscape), text)
     folder = cache_dir()
     cached = folder / f"{key}.{kind}"
     use_cache = renderer.cacheable(text)
     if use_cache and cached.is_file() and cached.stat().st_size:
         logger.info(f"Diagram {renderer.name} {key[:8]}: reused from the cache")
+        if info is not None:
+            info["cached"] = True
         return cached
+    if info is not None:
+        info["cached"] = False
     picture = _draw(runtime, renderer, text, kind, landscape, source_dir)
     if not use_cache:
         folder = Path(tempfile.mkdtemp(prefix="py-doc-diagram-out-"))
@@ -134,6 +141,7 @@ def render_parts(
     fmt: str,
     runtime: Callable[[], Runtime],
     keep_going: bool = False,
+    events: list[dict] | None = None,
 ) -> Rendered:
     """Replace the diagram fences of each ``(file, text)`` part by pictures, and join the parts.
 
@@ -160,10 +168,18 @@ def render_parts(
                     landscape = name == "LANDSCAPE"
             renderer = BY_FENCE[block.fence]
             kind = "svg" if fmt == "html" and "svg" in renderer.kinds else "png"
+            event: dict = {"type": renderer.name, "file": str(file), "line": block.line, "kind": kind}
+            started = time.monotonic()
             try:
-                picture = draw_cached(runtime(), renderer, block.body, kind, landscape, file.parent)
+                picture = draw_cached(runtime(), renderer, block.body, kind, landscape, file.parent, event)
+                event.update(status="ok", seconds=round(time.monotonic() - started, 3))
+                if events is not None:
+                    events.append(event)
             except (ToolFailed, DiagramError) as exc:
                 message = f"{file}:{block.line}: {block.fence} diagram failed: {_reason(exc)}"
+                event.update(status="failed", cached=False, seconds=round(time.monotonic() - started, 3), error=_reason(exc))
+                if events is not None:
+                    events.append(event)
                 if not keep_going:
                     raise DiagramError(message) from exc
                 failures.append(message)

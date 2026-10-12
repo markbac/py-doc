@@ -35,7 +35,7 @@ def test_nothing_imports_colorama_or_configures_logging_itself():
         text = path.read_text(encoding="utf-8")
         if re.search(r"^\s*(import|from)\s+colorama", text, re.M):
             offenders.append(f"{path.name}: colorama")
-        if path.name != "_logging.py" and re.search(r"logging\.basicConfig|setup_logging\(|addHandler\(", text):
+        if path.name not in ("_logging.py", "report.py") and re.search(r"logging\.basicConfig|setup_logging\(|addHandler\(", text):
             offenders.append(f"{path.name}: configures logging")
     assert offenders == []
 
