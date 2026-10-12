@@ -24,6 +24,7 @@ NETWORK = "py-doc-c4"
 SERVER = "py-doc-c4-local"
 SERVER_IMAGE = "structurizr/structurizr"
 SERVER_PORT = 8080
+WORKSPACE_ID = 1  # Local numbers its workspaces: /workspace/diagrams is an error ("diagrams" is not a number)
 READY_SECONDS = 300  # the first start of the Java server can take minutes on a busy machine
 POLL_SECONDS = 3
 NOTE_SECONDS = 30  # how often the wait says it is still waiting
@@ -52,7 +53,7 @@ class Stack:
     @property
     def url(self) -> str:
         """Where the tool container reaches Local, on the shared network."""
-        return f"http://localhost:{SERVER_PORT}/workspace/diagrams"
+        return f"http://localhost:{SERVER_PORT}/workspace/{WORKSPACE_ID}/diagrams"
 
     def status(self) -> str:
         """``running``, ``stopped`` or ``absent``."""
@@ -134,7 +135,7 @@ class ExternalStack:
 
     def __init__(self, url: str) -> None:
         base = url.rstrip("/")
-        self.url = base if base.endswith("/diagrams") else f"{base}/workspace/diagrams"
+        self.url = base if base.endswith("/diagrams") else f"{base}/workspace/{WORKSPACE_ID}/diagrams"
 
     def up(self) -> bool:
         return False

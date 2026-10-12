@@ -117,7 +117,7 @@ class TestRegistry:
 
     def test_svg_tools_are_followed_by_inkscape_for_png_only(self):
         wavedrom = BY_FENCE["wavedrom"]
-        assert [c[0] for c in wavedrom.commands(self.job("png"))] == ["wavedrom-cli", "inkscape"]
+        assert [c[0] for c in wavedrom.commands(self.job("png"))] == ["wavedrom-cli", "sh"]
         assert [c[0] for c in wavedrom.commands(self.job("svg"))] == ["wavedrom-cli"]
 
     def test_mermaid_is_wider_on_a_landscape_page(self):
@@ -301,3 +301,23 @@ def test_a_pikchr_syntax_error_fails_loudly(tmp_path):
 
 def test_the_package_exports():
     assert diagrams.render_parts is render_parts
+
+
+def test_the_svg_to_png_step_falls_back_to_librsvg_when_inkscape_writes_nothing(tmp_path):
+    import os
+    import subprocess
+
+    from py_doc.diagrams.registry import _SVG_TO_PNG
+
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "inkscape").write_text("#!/bin/sh\nexit 0\n")  # finishes, writes nothing
+    (bin_dir / "rsvg-convert").write_text('#!/bin/sh\nwhile [ $# -gt 0 ]; do if [ "$1" = -o ]; then echo png > "$2"; fi; shift; done\n')
+    for tool in bin_dir.iterdir():
+        tool.chmod(0o755)
+    target = tmp_path / "diagram.png"
+    done = subprocess.run(
+        ["sh", "-c", _SVG_TO_PNG, "x", str(tmp_path / "diagram.svg"), str(target)],
+        env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"}, capture_output=True, text=True,
+    )
+    assert done.returncode == 0 and target.read_text() == "png\n" and "librsvg" in done.stderr
