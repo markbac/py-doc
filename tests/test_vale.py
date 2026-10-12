@@ -209,3 +209,27 @@ def test_end_to_end_with_the_real_vale(project, capsys):
     out = capsys.readouterr().out
     assert "PyDoc.WeaselWords" in out and "PyDoc.Placeholders" in out
     assert out.count("PyDoc.Placeholders") == 1  # the code block is not prose
+
+
+def test_the_placeholder_words_are_not_in_the_accepted_vocabulary(project, tmp_path):
+    from py_doc.lint.config import LintConfig
+    from py_doc.lint.vale import build_workspace
+
+    folder = tmp_path / "vale"
+    config = LintConfig()
+    build_workspace(config.vale, config, folder)
+    accepted = (folder / "styles" / "config" / "vocabularies" / "PyDoc" / "accept.txt").read_text(encoding="utf-8").split()
+    assert "API" in accepted and not {"TODO", "FIXME", "TBD"} & set(accepted)
+
+
+def test_rules_turned_off_in_the_config_are_not_written_for_vale(tmp_path):
+    from dataclasses import replace
+
+    from py_doc.lint.config import RULE_ACRONYM, RULE_GLOSSARY, RULE_REDUNDANT, LintConfig
+    from py_doc.lint.vale import build_workspace
+
+    config = replace(LintConfig(), disabled_rules=frozenset({RULE_GLOSSARY, RULE_REDUNDANT, RULE_ACRONYM}))
+    build_workspace(config.vale, config, tmp_path)
+    written = {path.stem for path in (tmp_path / "styles" / "PyDoc").glob("*.yml")}
+    assert not written & {"Terms", "Wordy", "Redundant", "Acronyms"}
+    assert "WeaselWords" in written

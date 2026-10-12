@@ -24,7 +24,7 @@ import yaml
 from py_doc.errors import ConversionError, EnvironmentProblem, ToolFailed
 from py_doc.runtime import Mount, Runtime
 
-from .config import LintConfig
+from .config import RULE_ACRONYM, RULE_GLOSSARY, RULE_REDUNDANT, LintConfig
 from .model import LintIssue
 from .vale_config import BUNDLED_RULES, INFO_LEVELS, ValeSettings
 
@@ -38,6 +38,7 @@ INSTALL_HELP = (
     "Or set lint.vale.enabled to false, or run with --engine builtin."
 )
 # Spellings that differ between British and American English. British on the left.
+PLACEHOLDER_WORDS = frozenset({"TODO", "FIXME", "TBD", "TBC", "XXX"})  # the tokens of PyDoc.Placeholders
 SPELLINGS = {
     "colour": "color", "behaviour": "behavior", "favour": "favor", "honour": "honor", "neighbour": "neighbor",
     "centre": "center", "metre": "meter", "litre": "liter", "fibre": "fiber", "theatre": "theater",
@@ -133,9 +134,17 @@ def build_workspace(settings: ValeSettings, config: LintConfig, folder: Path) ->
         (style / name).write_text(text, encoding="utf-8")
         written.append(f"PyDoc.{Path(name).stem}")
 
+    # DOC001 to DOC003 turned off in py-doc.yml also turn off their Vale rules.
+    off = {
+        stem
+        for stem, rule in (("Terms", RULE_GLOSSARY), ("Wordy", RULE_REDUNDANT), ("Redundant", RULE_REDUNDANT), ("Acronyms", RULE_ACRONYM))
+        if rule in config.disabled_rules
+    }
     for name, text in _bundled():
         if name == "meta.json":
             (style / name).write_text(text, encoding="utf-8")
+            continue
+        if Path(name).stem in off:
             continue
         rule = settings.rules.get(f"PyDoc.{Path(name).stem}")
         data = yaml.safe_load(text)
@@ -145,15 +154,15 @@ def build_workspace(settings: ValeSettings, config: LintConfig, folder: Path) ->
 
     terms = {**{t: list(v) for t, v in config.glossary.items()}, **settings.terms}
     swap = {wrong: right for right, wrongs in terms.items() for wrong in wrongs}
-    if swap:
+    if swap and "Terms" not in off:
         put("Terms.yml", {"extends": "substitution", "message": "Use '%s' instead of '%s'.", "level": "warning",
                           "ignorecase": False, "swap": swap})  # fmt: skip
     wordy = {p: s for p, s in config.redundant_phrases.items() if s}
-    if wordy:
+    if wordy and "Wordy" not in off:
         put("Wordy.yml", {"extends": "substitution", "message": "Use '%s' instead of '%s'.", "level": "warning",
                           "ignorecase": True, "swap": wordy})  # fmt: skip
     empty = [p for p, s in config.redundant_phrases.items() if not s]
-    if empty:
+    if empty and "Redundant" not in off:
         put("Redundant.yml", {"extends": "existence", "message": "Delete '%s'.", "level": "warning",
                               "ignorecase": True, "tokens": empty})  # fmt: skip
     if settings.spelling != "off":
@@ -161,18 +170,20 @@ def build_workspace(settings: ValeSettings, config: LintConfig, folder: Path) ->
         put("Spelling.yml", {"extends": "substitution", "message": f"Use the {settings.spelling} spelling '%s' instead of '%s'.",
                              "level": "warning", "ignorecase": True, "swap": pairs})  # fmt: skip
     allowed = sorted(config.allowed_acronyms)
-    put("Acronyms.yml", {
-        "extends": "conditional", "message": "Spell out '%s' the first time it is used.", "level": "suggestion",
-        "first": rf"\b([A-Z]{{{config.acronym_min_length},}})\b", "second": rf"(?:\b[A-Z][a-z]+ )+\(([A-Z]{{{config.acronym_min_length},}})\)",
-        "exceptions": allowed,
-    })  # fmt: skip
+    if "Acronyms" not in off:
+        put("Acronyms.yml", {
+            "extends": "conditional", "message": "Spell out '%s' the first time it is used.", "level": "suggestion",
+            "first": rf"\b([A-Z]{{{config.acronym_min_length},}})\b", "second": rf"(?:\b[A-Z][a-z]+ )+\(([A-Z]{{{config.acronym_min_length},}})\)",
+            "exceptions": allowed,
+        })  # fmt: skip
     for number, item in enumerate(settings.avoid, 1):
         put(f"Avoid{number}.yml", {"extends": "existence", "message": item.message, "level": item.level,
                                    "nonword": True, "tokens": [item.pattern]})  # fmt: skip
 
     vocab = folder / "styles" / "config" / "vocabularies" / "PyDoc"
     vocab.mkdir(parents=True, exist_ok=True)
-    accepted = sorted({*terms, *config.allowed_acronyms})
+    # Vale exempts accepted words from every rule, so the words PyDoc.Placeholders reports must not be in the list.
+    accepted = sorted({*terms, *config.allowed_acronyms} - PLACEHOLDER_WORDS)
     (vocab / "accept.txt").write_text("\n".join(accepted) + "\n", encoding="utf-8")
 
     ini = folder / ".vale.ini"
