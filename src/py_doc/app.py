@@ -20,6 +20,7 @@ from .errors import ConversionError, exit_status
 from .lint.cli import run as run_lint
 from .migrate import LEGACY_FORMATS, Migration, migrate, render
 from .slides_cli import run_slides
+from .tools_cli import run_doctor
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ _DELEGATES = {
     "docx": ("Convert Markdown to Word (.docx)", run_docx),
     "slides": ("Convert Markdown to PowerPoint (.pptx)", run_slides),
     "lint": ("Check Markdown for writing style and glossary use", run_lint),
+    "doctor": ("Check that the tool container works", run_doctor),
 }
 
 

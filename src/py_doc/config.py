@@ -16,6 +16,7 @@ import yaml
 from .files import DEFAULT_EXCLUDE_DIRS
 from .lint.config import DEFAULT_ALLOWED_ACRONYMS, LintConfig
 from .markdown.frontmatter import Metadata
+from .runtime import RuntimeSettings
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,7 @@ class ProjectConfig:
     documents: dict[str, DocumentConfig] = field(default_factory=dict)
     outputs: dict[str, OutputSettings] = field(default_factory=dict)
     lint: LintConfig = field(default_factory=LintConfig)
+    runtime: RuntimeSettings = field(default_factory=RuntimeSettings)
     build: dict[str, Any] = field(default_factory=dict)
     reserved: dict[str, Any] = field(default_factory=dict)
 
@@ -181,7 +183,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -195,12 +197,20 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
 
     config.lint = _parse_lint(_mapping(top.get("lint", {}), "lint"))
     config.build = _mapping(top.get("build", {}), "build")
+    config.runtime = _parse_runtime(_mapping(top.get("runtime", {}), "runtime"))
 
     for name in RESERVED_SECTIONS:
         if name in top:
             config.reserved[name] = top[name]
             logger.warning(f"The '{name}' section is accepted but not used yet")
     return config
+
+
+def _parse_runtime(data: dict) -> RuntimeSettings:
+    _only(data, ("docker", "wsl_distro"), "runtime")
+    return RuntimeSettings(
+        docker=_typed(data, "docker", str, "runtime"), wsl_distro=_typed(data, "wsl_distro", str, "runtime")
+    )
 
 
 def _parse_outputs(data: dict, root: Path, where: str, defaults: bool = False) -> dict[str, OutputSettings]:
