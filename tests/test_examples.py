@@ -144,6 +144,7 @@ def test_the_datasheet_builds_with_its_own_placeholders_and_a_version_in_the_nam
     document = Document(docx)
     text = "\n".join(p.text for p in document.paragraphs)
     assert "@@" not in text and "<<BODY>>" not in text
+    assert "Block diagram" in text and "Packet layout" in text, "the included diagram chapter is in the datasheet"
     assert "@@" not in "".join(s.footer.paragraphs[0].text for s in document.sections)
 
 
@@ -164,6 +165,8 @@ def test_the_guide_shows_the_word_features(examples, pandoc_runtime):
     document = Document(examples / "build" / "guide-v1.0.docx")
     styles = {p.style.name for p in document.paragraphs}
     assert {"Heading 4", "Block Text", "Lead Paragraph"} <= styles
+    headings = [p.text for p in document.paragraphs if p.style.name == "Heading 1"]
+    assert "Diagram types" in headings
     xml = document.element.xml
     assert "m:oMath" in xml, "maths becomes Word equations"
     assert "footnoteReference" in xml
