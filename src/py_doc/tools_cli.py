@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
+from dataclasses import replace
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -14,6 +16,7 @@ from .config import ConfigError, find_config, load_config
 from .errors import ConversionError, EnvironmentProblem, exit_status
 from .runtime import RuntimeSettings, image
 from .runtime.doctor import diagnose, failed, render
+from .runtime import setup as docker_setup
 from .runtime.engine import Runtime
 
 logger = logging.getLogger(__name__)
@@ -140,3 +143,85 @@ def run_doctor(argv: Sequence[str] | None = None) -> int:
     checks = diagnose(runtime)
     print(render(checks))
     return 2 if failed(checks) else 0
+
+
+NEXT_AFTER_SETUP = "Next: `py-doc tools build`, then `py-doc doctor`"
+
+
+def run_setup(argv: Sequence[str] | None = None, *, run=None, ask=input) -> int:
+    """``py-doc setup``: install Docker Engine for the tool runner, after showing the steps and asking."""
+    import subprocess
+
+    run = run or subprocess.run
+    parser = argparse.ArgumentParser(
+        prog="py-doc setup",
+        description="Install Docker Engine (Ubuntu or Debian) in the WSL distro on Windows, or on this Linux machine",
+    )
+    parser.add_argument("-y", "--yes", action="store_true", help="Do not ask first")
+    parser.add_argument("--dry-run", action="store_true", help="Show the script that would run, and run nothing")
+    parser.add_argument("--distro", help="The WSL distribution to set up (default: runtime.wsl_distro, else the default one)")
+    _common(parser)
+    args = parser.parse_args(argv)
+    configure_logging(quiet=args.quiet, verbose=args.verbose)
+    try:
+        settings = settings_from_config(args.config)
+        if args.distro:
+            settings = replace(settings, wsl_distro=args.distro)
+        runtime = make_runtime(settings)
+        return _setup(runtime, args, run, ask)
+    except ConfigError as exc:
+        _error(str(exc))
+        return 1
+    except ConversionError as exc:
+        _error(str(exc))
+        return exit_status(exc)
+
+
+def _setup(runtime: Runtime, args: argparse.Namespace, run, ask) -> int:
+    where = f"the WSL distribution {runtime.wsl_distro or 'that is the default'}" if runtime.windows else "this machine"
+    state = docker_setup.probe(runtime)
+    if state.name == "ready":
+        print(f"Docker Engine already works on {where}. {NEXT_AFTER_SETUP}")
+        return 0
+    if state.name == "stopped" and not args.dry_run:
+        print(f"Docker Engine is installed on {where} but not running. Starting it.")
+        docker_setup.start_service(runtime, run)
+        if docker_setup.probe(runtime).name == "ready":
+            print(f"Docker Engine is running. {NEXT_AFTER_SETUP}")
+            return 0
+    try:
+        user = docker_setup.target_user(runtime, run)
+    except EnvironmentProblem:
+        if not args.dry_run:
+            raise
+        user = "YOUR_USER"
+    print(f"Docker Engine will be set up on {where} for the user '{user}':")
+    for number, step in enumerate(docker_setup.describe(runtime), 1):
+        print(f"  {number}. {step}")
+    if args.dry_run:
+        print("\nThe script (run as root):\n")
+        print(docker_setup.script(user, runtime.windows))
+        return 0
+    if not runtime.windows and os.geteuid() != 0:
+        print("sudo will ask for your password.")
+    if not args.yes and ask("Run these steps as root? [y/N] ").strip().lower() not in ("y", "yes"):
+        print("Nothing was changed.")
+        return 1
+    docker_setup.install(runtime, user, run)
+    docker_setup.restart(runtime, run)
+    if runtime.windows:
+        docker_setup.start_service(runtime, run)
+    state = docker_setup.probe(runtime)
+    if state.name == "ready":
+        print(f"Docker Engine works. {NEXT_AFTER_SETUP}")
+        return 0
+    if runtime.windows:
+        _error(
+            "Docker is installed but not usable yet"
+            + (f": {state.detail}" if state.detail else "")
+            + ". Close every WSL window, run `wsl --shutdown`, and run `py-doc doctor`"
+        )
+    else:
+        print("Docker is installed. Log out and in again so the docker group applies (or run `newgrp docker`), then run `py-doc doctor`.")
+        return 0
+    return 2
