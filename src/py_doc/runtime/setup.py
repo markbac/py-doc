@@ -37,14 +37,24 @@ case "$ID" in
   *) echo "py-doc setup supports Ubuntu and Debian, not '$ID'" >&2; exit 3 ;;
 esac
 CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-}}"
-apt-get update
-apt-get install -y ca-certificates curl
+# A fresh distro often runs unattended-upgrades, which holds apt's locks for a few minutes: wait, then retry.
+apt() {
+  n=0
+  until apt-get -o DPkg::Lock::Timeout=300 "$@"; do
+    n=$((n + 1))
+    [ "$n" -ge 5 ] && return 1
+    echo "apt-get did not finish (another package manager may be running). Trying again in 20 seconds ($n of 5)"
+    sleep 20
+  done
+}
+apt update
+apt install -y ca-certificates curl
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL "https://download.docker.com/linux/$ID/gpg" -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/$ID $CODENAME stable" > /etc/apt/sources.list.d/docker.list
-apt-get update
-apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+apt update
+apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin
 usermod -aG docker __USER__
 """
 
