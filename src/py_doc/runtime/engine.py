@@ -35,6 +35,7 @@ _DAEMON_DOWN = (
     "failed to connect to the docker api",
     "is the docker daemon running",
 )
+_NO_DOCKER = ("execvpe(docker) failed", "docker: command not found", 'executable file not found in $path')
 _IMAGE_MISSING = ("unable to find image", "no such image", "pull access denied")
 _MISSING_BIND = "bind source path does not exist"
 
@@ -184,6 +185,12 @@ class Runtime:
     def _raise_environment(self, result: ToolResult, running: bool = False) -> None:
         """Turn the engine's own failures into environment problems, with what to do about them."""
         low = result.stderr.lower()
+        if any(marker in low for marker in _NO_DOCKER):
+            where = "inside the WSL distro (`wsl -d <distro>`, then follow https://docs.docker.com/engine/install/ubuntu/)" if self.windows else "(https://docs.docker.com/engine/install/)"
+            raise EnvironmentProblem(
+                f"Docker Engine is not installed {where}. "
+                "Set runtime.wsl_distro in py-doc.yml if Docker is in a distro other than the default"
+            )
         if any(marker in low for marker in _DAEMON_DOWN):
             hint = (
                 "Start it inside the WSL distro, for example `sudo service docker start`"
