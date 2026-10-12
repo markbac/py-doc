@@ -240,7 +240,7 @@ def test_the_command_mounts_resources_read_only_and_translates_paths(tmp_path, m
     assert any("py-doc-" in m and not m.endswith("readonly") for m in mounts)
     resource_path = next(w for w in run if w.startswith("--resource-path=")).replace("\\", "/")
     assert tmp_path.as_posix() in resource_path
-    assert run.count("--lua-filter") == 2 and "--embed-resources" in run
+    assert run.count("--lua-filter") == 3 and "--embed-resources" in run
 
 
 def test_pdf_and_html_need_a_runtime(tmp_path):
@@ -283,3 +283,35 @@ def test_latex_template_defines_task_list_boxes():
     """pandoc writes \\boxtimes and \\square for `- [x]` items, so the PDF template must load amssymb."""
     template = (Path(source.__file__).parent / "resources" / "latex_template.tex").read_text(encoding="utf-8")
     assert "\\usepackage{amssymb}" in template
+
+
+def test_pdf_and_html_turn_caption_markers_into_captions():
+    from py_doc.pandoc.engine import FILTERS
+
+    assert "captions.lua" in FILTERS["pdf"]
+    assert "captions.lua" in FILTERS["html"]
+    assert "captions.lua" not in FILTERS["docx"]  # Word numbers the marker itself
+
+
+@pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc is not installed")
+def test_caption_filter_makes_table_and_figure_captions(tmp_path):
+    import subprocess
+
+    from py_doc.pandoc.engine import INPUT_FORMAT, RESOURCES
+
+    md = tmp_path / "c.md"
+    md.write_text(
+        "[[CAPTION:Figure]] The logo\n![Logo](logo.png)\n\n"
+        "[[CAPTION:Table]] Requirements\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n"
+        "[[CAPTION:Table]] Alone\n",
+        encoding="utf-8",
+    )
+    done = subprocess.run(
+        ["pandoc", str(md), f"--from={INPUT_FORMAT}", f"--lua-filter={RESOURCES / 'captions.lua'}", "--to=html5"],
+        capture_output=True, text=True, check=True, cwd=tmp_path,
+    )  # fmt: skip
+    html = done.stdout
+    assert "[[CAPTION" not in html
+    assert "<figcaption" in html and "The logo" in html
+    assert "<caption>Requirements</caption>" in html
+    assert "Alone" in html

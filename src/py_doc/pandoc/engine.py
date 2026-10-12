@@ -31,8 +31,8 @@ INPUT_FORMAT = "markdown+fenced_divs+raw_html+raw_attribute+table_captions+strik
 FILTERS = {
     "docx": ("admonitions.lua", "pagebreak.lua"),
     "pptx": ("admonitions.lua", "pagebreak.lua"),
-    "html": ("admonitions.lua", "pagebreak.lua"),
-    "pdf": ("admonitions.lua", "pagebreak.lua", "center-div.lua"),
+    "html": ("admonitions.lua", "pagebreak.lua", "captions.lua"),
+    "pdf": ("admonitions.lua", "pagebreak.lua", "center-div.lua", "captions.lua"),
 }
 THEME = RESOURCES / "createdocs.theme"
 

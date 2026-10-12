@@ -4,7 +4,6 @@ The gateway shall meet the requirements in the table.
 
 [[CAPTION:Table]] Gateway requirements
 
-[[CAPTION:Table]] Requirements
 | ID | Requirement | Priority |
 |---|---|---|
 | R1 | Read a meter every 15 minutes | Must |
