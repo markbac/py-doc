@@ -47,8 +47,11 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         "--exclude", action="append", default=[], metavar="DIR", help="Also skip directories with this name"
     )
     parser.add_argument("--config", metavar="FILE", help="py-doc.yml to read (default: the nearest one above the target)")
+    noise = parser.add_mutually_exclusive_group()
+    noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
+    noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
     args = parser.parse_args(argv)
-    configure_logging()
+    configure_logging(quiet=args.quiet, verbose=args.verbose)
     if legacy:
         logger.info(deprecation_notice("py-doclint", "py-doc lint"))
 

@@ -60,6 +60,9 @@ def build_parser() -> argparse.ArgumentParser:
     move.add_argument("--check", action="store_true", help="Only report what would be migrated")
     move.add_argument("--backup", action="store_true", help="Keep copies (.bak) of the legacy files and any old output")
     move.add_argument("--force", action="store_true", help="Overwrite an existing output file without a backup")
+    move_noise = move.add_mutually_exclusive_group()
+    move_noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
+    move_noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
     return parser
 
 
@@ -155,7 +158,7 @@ def _report(result: Migration) -> None:
 
 
 def _migrate(args: argparse.Namespace) -> int:
-    configure_logging()
+    configure_logging(quiet=args.quiet, verbose=args.verbose)
     paths = [Path(p) for p in args.paths]
     missing = [p for p in paths if not p.exists()]
     if missing:
