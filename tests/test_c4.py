@@ -642,7 +642,7 @@ class _Waiting:
         return ToolResult(0, "", "")
 
     def run(self, argv, **kwargs):
-        assert argv[3] == "http://localhost:8080/workspace/diagrams"
+        assert argv[3] == "http://localhost:8080/workspace/1/diagrams"
         assert argv[:2] == ["node", "-e"] and kwargs["network"] == "container:py-doc-c4-local"  # probed as localhost, the only name Local answers to
         self.calls.append("probe")
         self.failures -= 1

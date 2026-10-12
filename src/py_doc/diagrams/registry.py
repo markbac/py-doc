@@ -30,12 +30,18 @@ class Job:
 Command = list
 
 
+# Inkscape draws the picture. It can finish without writing one (a quiet failure in a container), so librsvg,
+# which is also in the tool image, draws it instead and says so.
+_SVG_TO_PNG = (
+    'inkscape "$1" --export-type=png --export-filename="$2" --export-dpi=' + str(DPI) + " --export-background=white"
+    ' --export-background-opacity=1 --export-area-drawing;'
+    ' test -s "$2" || { echo "inkscape wrote no picture, so librsvg draws it" >&2;'
+    ' rsvg-convert --dpi-x=' + str(DPI) + " --dpi-y=" + str(DPI) + ' --background-color=white -o "$2" "$1"; }'
+)
+
+
 def _svg_to_png(job: Job) -> Command:
-    svg = job.output.with_suffix(".svg")
-    return [
-        "inkscape", svg, "--export-type=png", f"--export-filename={job.output}", f"--export-dpi={DPI}",
-        "--export-background=white", "--export-background-opacity=1", "--export-area-drawing",
-    ]  # fmt: skip
+    return ["sh", "-c", _SVG_TO_PNG, "svg-to-png", job.output.with_suffix(".svg"), job.output]
 
 
 @dataclass(frozen=True)
