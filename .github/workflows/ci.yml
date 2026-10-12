@@ -62,6 +62,9 @@ jobs:
           if [ $code -ne 0 ]; then
             grep -E "^(FAILED|ERROR) " pytest.log | cut -c1-300 | awk '{ level = (NR <= 10) ? "error" : (NR <= 20) ? "warning" : "notice"; if (NR <= 30) print "::" level "::" $0 }'
           fi
+          if [ $code -ne 0 ] && ! grep -qE "^(FAILED|ERROR) " pytest.log; then
+            tail -12 pytest.log | cut -c1-300 | sed 's/^/::error::/'
+          fi
           tail -5 pytest.log
           exit $code
       - name: Commands start

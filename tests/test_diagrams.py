@@ -224,7 +224,7 @@ class TestOtherTools:
         rendered = render_parts(part(tmp_path, text), "pdf", runtime)
         call = json.loads((tmp_path / "stub.log").read_text(encoding="utf-8").splitlines()[0])
         assert call["argv"][:3] == ["-charset", "UTF-8", "-tpng"]
-        assert call["java"] == f"-Dplantuml.include.path={tmp_path}"
+        assert call["java"].replace("\\", "/") == f"-Dplantuml.include.path={tmp_path.as_posix()}"
         assert len(rendered.pictures) == 1
 
     def test_plantuml_with_an_include_is_drawn_every_time(self, tmp_path, host, monkeypatch):
