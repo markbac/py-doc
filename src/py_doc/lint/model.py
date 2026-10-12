@@ -59,6 +59,19 @@ class LintReport:
     def errors(self) -> list[FileResult]:
         return [result for result in self.results if result.error is not None]
 
+    def add(self, issues: list[LintIssue]) -> None:
+        """Put issues from another check with their files, in line order. A file not scanned gets its own result."""
+        by_file = {result.file: result for result in self.results}
+        for issue in issues:
+            result = by_file.get(issue.file)
+            if result is None:
+                result = by_file[issue.file] = FileResult(issue.file)
+                self.results.append(result)
+            if issue not in result.issues:
+                result.issues.append(issue)
+        for result in self.results:
+            result.issues.sort(key=lambda i: (i.line, i.rule))
+
     def count(self, threshold: str = "info") -> int:
         """Number of issues at or above ``threshold``."""
         return sum(1 for issue in self.issues if at_least(issue.severity, threshold))

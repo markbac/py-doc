@@ -10,12 +10,15 @@ from pathlib import Path
 from py_doc._cli import deprecation_notice
 from py_doc._logging import configure_logging
 from py_doc.config import ConfigError, find_config, load_config
+from py_doc.errors import ConversionError
+from py_doc.runtime import RuntimeSettings, connect
 
 from .config import LintConfig
 from .linter import DocLinter, LintTargetError
 from .model import FileResult, LintIssue, LintReport
 
 logger = logging.getLogger(__name__)
+EXAMPLE_RULES = Path(__file__).with_name("examples") / "structure-rules.yaml"
 
 
 def _display(path: Path) -> Path:
@@ -47,6 +50,9 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         "--exclude", action="append", default=[], metavar="DIR", help="Also skip directories with this name"
     )
     parser.add_argument("--config", metavar="FILE", help="py-doc.yml to read (default: the nearest one above the target)")
+    parser.add_argument(
+        "--print-example-rules", action="store_true", help="Print an example set of structure rules and exit"
+    )
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -55,31 +61,35 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
     if legacy:
         logger.info(deprecation_notice("py-doclint", "py-doc lint"))
 
+    if args.print_example_rules:
+        print(EXAMPLE_RULES.read_text(encoding="utf-8"), end="")
+        return 0
     try:
-        config = _load_config(args)
+        config, settings = _load_config(args)
     except ConfigError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
     config.exclude_dirs = config.exclude_dirs | frozenset(args.exclude)
     try:
-        report = DocLinter(config=config).lint_path(args.target)
-    except LintTargetError as exc:
+        report = DocLinter(config=config, runtime=lambda: connect(settings)).lint_path(args.target)
+    except (LintTargetError, ConversionError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
     return _print(report, strict=args.strict)
 
 
-def _load_config(args: argparse.Namespace) -> LintConfig:
-    """The lint settings of the chosen or nearest py-doc.yml, or the built-in ones."""
+def _load_config(args: argparse.Namespace) -> tuple[LintConfig, RuntimeSettings]:
+    """The lint and container settings of the chosen or nearest py-doc.yml, or the built-in ones."""
     if args.config:
         path = Path(args.config)
     else:
         target = Path(args.target).resolve()
         path = find_config(target if target.is_dir() else target.parent)
     if path is None:
-        return LintConfig()
+        return LintConfig(), RuntimeSettings()
     logger.info(f"Using configuration {path}")
-    return load_config(path).lint
+    project = load_config(path)
+    return project.lint, project.runtime
 
 
 def _print(report: LintReport, strict: bool) -> int:

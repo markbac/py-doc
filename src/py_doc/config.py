@@ -14,7 +14,8 @@ from typing import Any
 import yaml
 
 from .files import DEFAULT_EXCLUDE_DIRS
-from .lint.config import DEFAULT_ALLOWED_ACRONYMS, LintConfig
+from .lint.config import DEFAULT_ALLOWED_ACRONYMS, LintConfig, MarkdownlintSettings
+from .lint.structure import StructureRuleError, load_rules, parse_rules
 from .markdown.frontmatter import Metadata
 from .naming import check_name_pattern, expand_name
 from .runtime import RuntimeSettings
@@ -218,7 +219,10 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     for doc_id, raw in _mapping(top.get("documents", {}), "documents").items():
         config.documents[str(doc_id)] = _parse_document(str(doc_id), raw, root)
 
-    config.lint = _parse_lint(_mapping(top.get("lint", {}), "lint"))
+    config.lint = _parse_lint(_mapping(top.get("lint", {}), "lint"), root)
+    config.lint.documents = {
+        doc_id: [source.file for source in doc.sources if source.include] for doc_id, doc in config.documents.items()
+    }
     config.build = _mapping(top.get("build", {}), "build")
     config.runtime = _parse_runtime(_mapping(top.get("runtime", {}), "runtime"))
     reports = _mapping(top.get("reports", {}), "reports")
@@ -308,8 +312,24 @@ def _parse_document(doc_id: str, raw: Any, root: Path) -> DocumentConfig:
     return doc
 
 
-def _parse_lint(data: dict) -> LintConfig:
-    _only(data, ("exclude", "rules", "glossary", "phrases", "acronyms"), "lint")
+def _parse_markdownlint(data: dict, root: Path) -> MarkdownlintSettings:
+    _only(data, ("config", "severity"), "lint.markdownlint")
+    settings = MarkdownlintSettings()
+    raw = data.get("config")
+    if isinstance(raw, str):
+        settings.config = _path(root, raw, "lint.markdownlint.config")
+    elif isinstance(raw, dict):
+        settings.inline = raw
+    elif raw is not None:
+        raise ConfigError("lint.markdownlint.config must be a file name or a mapping of markdownlint settings")
+    settings.severity = data.get("severity", "warning")
+    if settings.severity not in SEVERITIES:
+        raise ConfigError(f"lint.markdownlint.severity must be one of {', '.join(SEVERITIES)}")
+    return settings
+
+
+def _parse_lint(data: dict, root: Path) -> LintConfig:
+    _only(data, ("exclude", "rules", "glossary", "phrases", "acronyms", "structure", "markdownlint"), "lint")
     config = LintConfig()
 
     if "exclude" in data:
@@ -330,6 +350,15 @@ def _parse_lint(data: dict) -> LintConfig:
             raise ConfigError(f"lint.rules.{rule} must be one of {', '.join(SEVERITIES)} or off, not {level!r}")
     config.severities = severities
     config.disabled_rules = frozenset(disabled)
+
+    if "structure" in data:
+        raw = data["structure"]
+        try:
+            config.structure = load_rules(_path(root, raw, "lint.structure")) if isinstance(raw, str) else parse_rules(raw)
+        except StructureRuleError as exc:
+            raise ConfigError(str(exc)) from None
+    if "markdownlint" in data:
+        config.markdownlint = _parse_markdownlint(_mapping(data["markdownlint"], "lint.markdownlint"), root)
 
     if "glossary" in data:
         glossary = _mapping(data["glossary"], "lint.glossary")

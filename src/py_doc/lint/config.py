@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 
 from py_doc.files import DEFAULT_EXCLUDE_DIRS
 
@@ -42,6 +44,15 @@ RULE_DIRECTIVE = "DOC004"
 
 
 @dataclass
+class MarkdownlintSettings:
+    """markdownlint, run in the container: a config file or an inline mapping, and how serious a finding is."""
+
+    config: Path | None = None
+    inline: dict[str, Any] | None = None
+    severity: str = "warning"
+
+
+@dataclass
 class LintConfig:
     glossary: dict[str, list[str]] = field(default_factory=lambda: {k: list(v) for k, v in DEFAULT_GLOSSARY.items()})
     redundant_phrases: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_PHRASES))
@@ -52,3 +63,6 @@ class LintConfig:
     severities: dict[str, str] = field(
         default_factory=lambda: {RULE_GLOSSARY: "warning", RULE_REDUNDANT: "warning", RULE_ACRONYM: "info", RULE_DIRECTIVE: "error"}
     )
+    structure: list = field(default_factory=list)  # StructureRule entries, see lint.structure
+    markdownlint: MarkdownlintSettings | None = None
+    documents: dict[str, list[Path]] = field(default_factory=dict)  # document id -> its source files, in order
