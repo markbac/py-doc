@@ -19,7 +19,32 @@ status: Draft
 
 <!-- notes: Keep this to one minute. The buffer is the main reason for the design. -->
 
-## What is in the box
+## One column
+
+A slide with no `columns` block has a single column, which is the Title and Content layout.
+
+- Text and bullets fill the full width
+- Use it for lists, short paragraphs and code
+- Use a second column when two things sit side by side
+
+## Two columns of text
+
+:::: columns
+::: column
+**Before**
+
+- Readings kept on the node
+- Pulled by a gateway
+:::
+::: column
+**After**
+
+- Readings published over MQTT
+- Pushed to the cloud
+:::
+::::
+
+## Two columns: text and picture
 
 :::: columns
 ::: column

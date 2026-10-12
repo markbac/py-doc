@@ -186,6 +186,10 @@ def test_the_deck_uses_the_layouts_notes_and_footer(examples, pandoc_runtime):
     assert "CAPTION" not in xml and "[[" not in xml and "{{" not in xml
     assert "Sensor Node" in xml and "v1.0" in xml, "the footer pattern is applied"
     assert "<a:tbl>" in xml, "a table"
+    titles = {slide.shapes.title.text: slide.slide_layout.name for slide in slides if slide.shapes.title is not None}
+    assert titles["One column"] == "Title and Content"
+    assert titles["Two columns of text"] in ("Two Content", "Comparison")
+    assert titles["Two columns: text and picture"] in ("Two Content", "Comparison")
     assert any(shape.shape_type == 13 for slide in slides for shape in slide.shapes), "a picture"
     master = "".join(m.part.blob.decode("utf-8") for m in presentation.slide_masters)
     assert "{{VERSION}}" not in master

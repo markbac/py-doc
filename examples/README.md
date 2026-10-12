@@ -143,7 +143,7 @@ Every feature each format supports appears at least once in these files.
 | Format | Features and where to see them |
 |---|---|
 | Word | Title page placeholders, status template, header and footer fields, contents list (`toc`, `toc_depth`), numbered captions, every callout style, heading levels 1 to 4, block quotes, footnotes, maths as Word equations, landscape and portrait sections, page breaks, `[[STYLE:]]`, document properties (subject, category, keywords), own placeholder prefix and body marker (`datasheet.docx`), file name patterns. See `docs/guide/` and `docs/datasheet.md` |
-| PowerPoint | Title, section and two-column layouts, nested bullets, incremental lists, speaker notes in both spellings, footer pattern, version shape, Draft template, diagrams with captions, picture, table, maths, callouts, code, include, condition, empty-title slide from a page break. See `docs/deck/slides.md` |
+| PowerPoint | Title, section, one-column and two-column layouts (text and text, text and picture), nested bullets, incremental lists, speaker notes in both spellings, footer pattern, version shape, Draft template, diagrams with captions, picture, table, maths, callouts, code, include, condition, empty-title slide from a page break. See `docs/deck/slides.md` |
 | PDF | Contents list on or off, the built-in LaTeX template with title page fields, a custom `.tex` template (`report.tex`), captions, task lists, callouts, maths, footnotes, every diagram type. See `docs/guide/` and `docs/datasheet.md` |
 | HTML | Stylesheet template, embedded pictures, captions, contents list, callouts |
 
