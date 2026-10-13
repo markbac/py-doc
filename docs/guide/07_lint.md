@@ -44,7 +44,7 @@ lint:
 ```
 
 - **Structure rules** are project conventions as data. The rule types are `manifest-file-exists`, `regex-line`, `blank-line-between`, `path-exists`, `balanced-markers`, `requires-caption` and `cross-file-anchors`. Code blocks and inline code are never searched. Each rule has an `id`, a `severity` and a `message`, and `enabled: false` switches it off. A mistake in a rule is a configuration error that names the rule. `py-doc lint --print-example-rules` prints an example set.
-- **Cross-file anchors** work on the documents of `py-doc.yml`. All the files of a document share one set of heading anchors, as they do in pandoc, so a repeated heading gets `-1`, `-2` and so on, and a `[x](#anchor)` link is checked against that set. Files pulled in with `[[INCLUDE:]]` count. A broken link and a repeated heading are reported with file and line.
+- **Cross-file anchors** work on the documents of `py-doc.yml`. All the files of a document share one set of heading anchors, as they do in pandoc. A repeated heading gets `-1`, `-2` and so on, and a `[x](#anchor)` link is checked against that set. Files pulled in with `[[INCLUDE:]]` count. A broken link and a repeated heading are reported with file and line.
 - **markdownlint** runs in the tool container (`markdownlint-cli2`), only when `lint.markdownlint` is set, and its findings appear with rules `MD001` and so on. Without it, lint needs no container.
 
 ## Vale

@@ -25,7 +25,7 @@ title: Quality requirements
 
 | ID | Requirement | Priority | Status |
 |---|---|---|---|
-| QR-040 | A tool shall run in a fresh container as the calling user, with no capabilities, no privilege escalation, no network unless the step needs it, and only the folders it needs, read-only unless it writes there. | Must | Met |
+| QR-040 | A tool shall run in a fresh container as the calling user, with no capabilities and no privilege escalation. It gets no network unless the step needs it, and only the folders it needs, read-only unless it writes there. | Must | Met |
 | QR-041 | Commands shall be argument lists, never shell strings built from user input. | Must | Met |
 | QR-042 | Downloaded tools shall be checked against recorded SHA-256 checksums when the image is built. | Must | Met |
 | QR-043 | Steps that change the machine (`py-doc setup`) shall show what they will run and ask first. | Must | Met |

@@ -37,7 +37,7 @@ title: Functional requirements
 | ID | Requirement | Priority | Status |
 |---|---|---|---|
 | FR-040 | py-doc shall build Word documents from a template: styles, a title page filled from placeholders, the body at a marker, a contents list on request. | Must | Met |
-| FR-041 | py-doc shall build PowerPoint decks from a template: a slide per heading up to a chosen level, section slides, columns, speaker notes, pictures with captions, a footer and the version on the master. | Must | Met |
+| FR-041 | py-doc shall build PowerPoint decks from a template. They have a slide per heading up to a chosen level, section slides, columns, speaker notes, pictures with captions, a footer and the version. | Must | Met |
 | FR-042 | py-doc shall build PDF with XeLaTeX, from a built-in or a project LaTeX template. | Must | Met |
 | FR-043 | py-doc shall build one self-contained HTML file per document, with a project stylesheet. | Must | Met |
 | FR-044 | A document with `status: Draft` shall use the `_Draft` twin of its template when one exists. | Should | Met |
@@ -45,14 +45,14 @@ title: Functional requirements
 | FR-046 | `py-doc build` shall write a JSON report of the tools, sources, outputs with checksums, diagrams and warnings of a build, also when the build fails. | Should | Met |
 | FR-047 | `py-doc template` shall check, list, compare and count the styles of Word and PowerPoint templates. | Should | Met |
 | FR-048 | `py-doc docx` and `py-doc slides` shall convert single files and folders without a `py-doc.yml`. | Must | Met |
-| FR-049 | Section numbers written in headings shall be left out where the output numbers its headings itself (a Word template with numbered heading styles, or numbered PDF and HTML sections), so no section is numbered twice. A setting shall force or prevent it. | Must | Met |
+| FR-049 | Where the output numbers its headings itself, the section numbers written in headings shall be left out, so no section is numbered twice. That is a Word template with numbered heading styles, or numbered PDF and HTML sections. A setting shall force or prevent it. | Must | Met |
 
 ## Importing
 
 | ID | Requirement | Priority | Status |
 |---|---|---|---|
 | FR-060 | `py-doc import` shall turn a Word document into Markdown that builds again: headings, lists, tables, code, quotes, callouts, captions, links, emphasis, pictures and properties. | Must | Met |
-| FR-061 | `py-doc import` shall turn a PowerPoint deck into Markdown that `py-doc slides` builds into the same slides: title slide, section and slide headings, nested bullets, columns, tables, pictures with captions, code, callouts and speaker notes. | Should | Met |
+| FR-061 | `py-doc import` shall turn a PowerPoint deck into Markdown that `py-doc slides` builds into the same slides. It keeps the title slide, headings, nested bullets, columns, tables, pictures with captions, code, callouts and speaker notes. | Should | Met |
 | FR-062 | What an import cannot carry over shall be counted in a warning, never dropped quietly. | Must | Met |
 | FR-063 | An import shall not replace an existing Markdown file unless told to. | Must | Met |
 
@@ -64,7 +64,7 @@ title: Functional requirements
 | FR-081 | py-doc shall write Markdown chapters from a model, one per C4 level, with an element catalogue, and join them with hand-written chapters in a document. | Must | Met |
 | FR-082 | py-doc shall draw the views as Structurizr draws them, and fail with the view's name when one cannot be drawn. | Must | Met |
 | FR-083 | `py-doc c4 check` and `py-doc lint` shall check a model for elements and relationships that lack the text a document needs. | Should | Met |
-| FR-084 | `py-doc c4 up` shall open a workspace in Structurizr Local for viewing and arranging its views, show changes to the DSL on reload, save arranged layouts in the project beside the DSL, and stop Local on Ctrl+C. | Should | Met |
+| FR-084 | `py-doc c4 up` shall open a workspace in Structurizr Local to view and arrange its views. It shall show changes to the DSL on reload, save layouts in the project beside the DSL, and stop Local on Ctrl+C. | Should | Met |
 | FR-085 | Builds shall draw views with the layouts saved in the project. | Should | Met |
 | FR-086 | `py-doc c4 lock` shall pin the Structurizr Local image by digest. | Could | Met |
 
@@ -86,7 +86,7 @@ title: Functional requirements
 |---|---|---|---|
 | FR-120 | `py-doc site` shall build a web site of the documents with MkDocs or Astro + Starlight, from the same sources as the other outputs. | Should | Met |
 | FR-121 | `py-doc site init` shall make a site project when none exists, and leave an existing one as it is. | Should | Met |
-| FR-122 | py-doc shall write the site navigation from the documents of `py-doc.yml`, in a file of its own that the site's configuration takes in, so a hand-made navigation is kept. | Should | Met |
+| FR-122 | py-doc shall write the site navigation from the documents of `py-doc.yml`. It goes in a file of its own that the site's configuration takes in, so a hand-made navigation is kept. | Should | Met |
 | FR-123 | py-doc shall never replace a site file it did not write, and shall remove pages whose sources are gone. | Must | Met |
 | FR-124 | Site pages shall keep callouts, diagrams, pictures, captions and links between chapters. | Should | Met |
 

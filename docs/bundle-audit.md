@@ -83,7 +83,7 @@ Defects in the original:
 
 Not needed: tools come from the Docker image (`py-doc tools build`). Defects in the original:
 
-- It re-launches itself elevated for Graphviz, Inkscape and MiKTeX, and `exit $LASTEXITCODE` after `Start-Process` does not carry the elevated child's exit status, so a failed or cancelled install can look like success.
+- It re-launches itself elevated for Graphviz, Inkscape and MiKTeX. `exit $LASTEXITCODE` after `Start-Process` does not carry the elevated child's exit status, so a failed or cancelled install can look like success.
 - It installs the global `@mermaid-js/mermaid-cli` without a version, so builds differ between machines.
 - The minimum Pandoc version is `3.8.2.1`, which is not enforced anywhere else in the toolchain. `py-doc` pins the version in `tools.lock`.
 

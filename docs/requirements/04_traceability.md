@@ -54,7 +54,7 @@ The 91 closed issues, checked on 13 October 2026 against the code, the tests and
 | Issues | Outcome |
 |---|---|
 | #1, #5, #6, #10, #13, #45, #46, #50, #51, #62 to #64, #69 to #71, #73 to #84, #92, #94, #95, #97 to #100, #102, #103, #105 to #116, #118 | Done as described, with tests |
-| #2, #7, #8, #9, #58, #59, #66, #67, #75 | Done for the native renderers, which #117 removed. The same behaviour now comes from pandoc and was checked: fences, headings, numbers in text, the byte order mark, invalid UTF-8, vertical tabs, code style, heading levels 5 and 6 |
+| #2, #7, #8, #9, #58, #59, #66, #67, #75 | Done for the native renderers, which #117 removed. The same behaviour now comes from pandoc. Checked: fences, headings, numbers in text, the byte order mark, invalid UTF-8, vertical tabs, code style, heading levels 5 and 6 |
 | #20, #65 | Done, with two changes of plan: the heavy tools moved into the container instead of optional Python extras, and macOS was dropped from CI by #102 |
 | #49, #72 | The code of an unclosed fence was kept, but as text and without the warning the issues asked for. A warning that names the file and line is added |
 | #53 | Seven or more `#` became a level 7 heading under pandoc. Such a line is now text, as in CommonMark |

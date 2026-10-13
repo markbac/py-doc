@@ -70,4 +70,4 @@ python -m pytest
 ruff check .
 ```
 
-The tests run pandoc, Graphviz and XeLaTeX on the host in place of the container when they are installed, and skip what they cannot run. CI runs on Linux with Python 3.10 to 3.14, and on Windows with the oldest and newest. macOS is not supported.
+The tests run pandoc, Graphviz and XeLaTeX on the host in place of the container when they are installed, and skip what they cannot run. CI runs on Linux and Windows with Python 3.10 and 3.14, the oldest and newest supported. macOS is not supported.
