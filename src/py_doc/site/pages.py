@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 MANIFEST = ".py-doc-site.json"
 FILTERS = ("admonitions.lua", "pagebreak.lua", "markers.lua", "site.lua")
-OUTPUT_FORMAT = "gfm-tex_math_gfm+tex_math_dollars"  # pipe tables, task lists, raw HTML and $maths$
+OUTPUT_FORMAT = "gfm"  # pipe tables, task lists and raw HTML. site.lua writes the maths
 TIMEOUT = 900
 _LINK = re.compile(r"(?P<lead>!?\[(?:[^\]\\]|\\.)*\]\()(?P<target><[^>]*>|[^)\s]+)(?P<rest>[^)]*\))")
 _HTML_SRC = re.compile(r'(?P<lead><img\b[^>]*?\bsrc=")(?P<target>[^"]+)(?P<rest>")')

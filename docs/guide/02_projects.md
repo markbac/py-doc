@@ -80,7 +80,7 @@ lint:
 ```
 
 - **Documents** join their sources in order. Properties come from the configuration, then from the first source's front matter, then from its first heading. A document builds the formats listed under `outputs`, or Word if none is listed.
-- **Output options** per format: `template`, `allow_missing_template`, `name`, `placeholder_prefix`, `marker` and `toc` for Word, `split_level` and `footer` for PowerPoint, `template`, `toc` and `name` for PDF and HTML. A document's value overrides the default. The [outputs chapter](04_outputs.md) has the details.
+- **Output options** per format: `template`, `allow_missing_template`, `name`, `placeholder_prefix`, `marker` and `toc` for Word, `split_level` and `footer` for PowerPoint, `template`, `toc`, `name` and `number_sections` for PDF and HTML, and `heading_numbers` for every format. A document's value overrides the default. The [outputs chapter](04_outputs.md) has the details.
 - **Lint** settings extend the built-in glossary, phrases and allowed acronyms. The [linting chapter](07_lint.md) has every setting.
 - **C4**: `c4.cli`, `c4.image` and `c4.port` say how Structurizr runs. See the [C4 chapter](06_c4.md).
 - **Reports**: `reports.path` writes the JSON build report of every build.

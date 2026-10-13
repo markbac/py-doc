@@ -20,6 +20,7 @@ Pandoc writes the document with the template as its reference document, so the t
 
 - **Merging**: when a template is set, the result is merged into it. The body goes where `[[INSERTCONTENT]]` stands, or at the end if there is no marker. `[[LANDSCAPE]]`, `[[PORTRAIT]]`, `[[STYLE:Name]]` and `[[CAPTION:Figure]]` lines are applied afterwards.
 - **Placeholders**: `Replace-with-Title`, `-Author`, `-Version`, `-Document-Number`, `-Date`, `-Description` and `-Classification` are filled in the template body, tables, headers and footers. `placeholder_prefix` (default `Replace-with-`) and `marker` (default `[[INSERTCONTENT]]`) can be changed. A placeholder the document has no value for is emptied with a warning, and one that no property can fill (`Replace-with-Mystery`) is left and named in a warning.
+- **Heading numbers**: when the template's heading styles are numbered (a `Heading 1` with list numbering), the numbers written in the headings would show twice, so py-doc leaves them out: `## 2.1 Design` becomes `## Design`, numbered by Word. `heading_numbers: strip` or `keep` decides it for any template. See [Heading numbers](#heading-numbers).
 - **Contents list**: `docx: {toc: true}` adds a table of contents to the depth of `toc_depth` (front matter). Word fills in the page numbers when the file is opened and asks to update fields.
 - **Document properties** (title, author, subject, keywords, category, comments) are capped at Word's 255 characters, with a warning when a value is cut.
 - **Code** is highlighted with the built-in theme.
@@ -40,6 +41,25 @@ Slides start at headings up to `split_level` (`--split-level`, default 2) and at
 
 - **PDF** is written by XeLaTeX with a built-in template that has a title page, or the `.tex` file named by `template`. `toc` is on by default. Callouts are coloured boxes, maths is typeset, and task lists keep their boxes.
 - **HTML** is one self-contained file with pictures embedded. `template` is the stylesheet (py-doc's own by default), `toc: true` adds a contents list, and maths is MathML.
+
+## Heading numbers
+
+Write headings with or without their section numbers. Where the output numbers its headings itself, py-doc takes the written numbers off, so a section is never numbered twice.
+
+```yaml
+outputs:
+  docx: {template: templates/Numbered.docx}   # auto: the template numbers its headings, so 2.1 is left out
+  pdf: {number_sections: true}                # pandoc numbers the sections, and 2.1 is left out
+  html: {heading_numbers: keep}               # the numbers stay as written
+```
+
+| `heading_numbers` | Effect |
+|---|---|
+| `auto` (default) | Strip in Word when the template's `Heading 1` style is numbered, and in PDF and HTML with `number_sections: true`. Keep otherwise |
+| `strip` | Always take the written numbers off |
+| `keep` | Always leave the headings as written |
+
+These are taken off: `2.1`, `2.1.3`, `3.` and `A.1`, with or without a final full stop. A bare number such as `1 Introduction` comes off only when every heading of that level starts with one and they count 1, 2, 3 in order, so `2024 roadmap` stays. A heading that is only a number stays as written. The log says when numbers were taken off.
 
 ## Templates
 

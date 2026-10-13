@@ -90,7 +90,8 @@ def test_the_command_writes_the_project_and_the_next_steps(tmp_path, capsys, mon
 
 
 def test_the_new_project_lints_clean(tmp_path, monkeypatch, capsys):
-    make_project(tmp_path, Choices("Pump", c4=True), runtime=_no_container)
+    # Without the C4 model: linting a DSL model needs structurizr-cli from the tool image
+    make_project(tmp_path, Choices("Pump"), runtime=_no_container)
     monkeypatch.chdir(tmp_path)
     assert main(["lint", "docs", "--strict"]) == 0
     assert "0 issue(s)" in capsys.readouterr().out

@@ -117,7 +117,7 @@ def project(tmp_path):
     (docs / "01_overview.md").write_text(
         "---\ntitle: Sensor guide\n---\n\n# Overview\n\nVersion {{version}}. See [the design](02_design.md#flow).\n\n"
         "Write `[text](02_design.md)` or `![](images/none.png)` to link.\n\n"
-        "> [!NOTE]\n> Read this first.\n\n![The board](images/board.png)\n\n[[CAPTION:Table]] Pins\n\n| Pin | Use |\n|---|---|\n| 1 | Power |\n",
+        "Energy $E = mc^2$ and\n\n$$t = C/I$$\n\n> [!NOTE]\n> Read this first.\n\n![The board](images/board.png)\n\n[[CAPTION:Table]] Pins\n\n| Pin | Use |\n|---|---|\n| 1 | Power |\n",
         encoding="utf-8",
     )
     (docs / "02_design.md").write_text("# Design\n\n## Flow\n\nBack to the [overview](01_overview.md).\n\n::: {.pagebreak}\n:::\n\nDone.\n", encoding="utf-8")
@@ -147,6 +147,7 @@ def test_mkdocs_pages_have_admonitions_links_pictures_and_captions(project, pand
     assert "Version 1.0. See [the design](02-design.md#flow)." in overview
     assert "`[text](02_design.md)` or `![](images/none.png)`" in overview, "code is shown as written"
     assert "!!! note\n\n    Read this first." in overview
+    assert "Energy $E = mc^2$ and" in overview and "$$t = C/I$$" in overview
     assert "*Pins*" in overview
     (picture,) = (docs / "media").iterdir()
     assert picture.name.endswith("-board.png") and f"](media/{picture.name})" in overview

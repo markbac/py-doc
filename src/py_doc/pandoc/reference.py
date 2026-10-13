@@ -96,3 +96,25 @@ def missing_callout_styles(template: Path, markdown: str) -> list[str]:
     """The callout styles ``markdown`` needs that a template does not define."""
     have = {style.name for style in Document(str(template)).styles}
     return [PREFIX + kind for kind in CALLOUTS if kind in used_callouts(markdown) and PREFIX + kind not in have]
+
+
+def numbers_headings(template: Path) -> bool:
+    """Whether a Word template numbers its headings itself: a ``Heading 1`` style (or one it is based on) has
+    list numbering. Hand-written numbers would then show twice."""
+    from py_doc.template_check import _opened
+
+    try:
+        document = _opened(Path(template), "word")  # a .dotx too
+    except Exception:  # noqa: BLE001 - a template that cannot be read is reported elsewhere
+        return False
+    for style in document.styles:
+        if style.type != WD_STYLE_TYPE.PARAGRAPH or not re.fullmatch(r"[Hh]eading 1", style.name or ""):
+            continue
+        current, seen = style, set()
+        while current is not None and current.style_id not in seen:
+            seen.add(current.style_id)
+            ppr = current.element.pPr
+            if ppr is not None and ppr.numPr is not None:
+                return True
+            current = current.base_style
+    return False

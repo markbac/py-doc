@@ -47,20 +47,21 @@ _META_KEYS = (
 )  # fmt: skip
 _OUTPUT_OPTIONS = {
     "docx": (
-        "path", "template", "allow_missing_template", "name", "placeholder_prefix", "marker", "toc",
+        "path", "template", "allow_missing_template", "name", "placeholder_prefix", "marker", "toc", "heading_numbers",
     ),
     "pptx": (
-        "path", "template", "allow_missing_template", "split_level", "name", "footer",
+        "path", "template", "allow_missing_template", "split_level", "name", "footer", "heading_numbers",
     ),
-    "pdf": ("path", "template", "toc", "name"),
-    "html": ("path", "template", "toc", "name"),
+    "pdf": ("path", "template", "toc", "name", "number_sections", "heading_numbers"),
+    "html": ("path", "template", "toc", "name", "number_sections", "heading_numbers"),
 }  # fmt: skip
 
 
 _OPTION_TYPES = {
     "split_level": int,
-    "name": str, "placeholder_prefix": str, "marker": str, "footer": str,
+    "name": str, "placeholder_prefix": str, "marker": str, "footer": str, "heading_numbers": str,
 }  # fmt: skip
+HEADING_NUMBERS = ("auto", "strip", "keep")
 
 
 class ConfigError(Exception):
@@ -329,6 +330,8 @@ def _parse_outputs(data: dict, root: Path, where: str, defaults: bool = False) -
                 check_name_pattern(settings.options["name"], f"{place}.name")
             except ValueError as exc:
                 raise ConfigError(str(exc)) from None
+        if settings.options.get("heading_numbers", "auto") not in HEADING_NUMBERS:
+            raise ConfigError(f"{place}.heading_numbers must be one of {', '.join(HEADING_NUMBERS)}")
         if "split_level" in settings.options and not 1 <= settings.options["split_level"] <= 6:
             raise ConfigError(f"{place}.split_level must be 1 to 6")
         result[fmt] = settings

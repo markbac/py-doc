@@ -62,6 +62,13 @@ function Table(table)
   return { table, pandoc.Para({ pandoc.Emph(inlines) }) }
 end
 
+-- Maths in the dollar form both sites read (MkDocs arithmatex, Starlight remark-math), written here so the
+-- page needs no maths extension of the Markdown writer, which older pandoc versions do not have.
+function Math(math)
+  local mark = math.mathtype == "DisplayMath" and "$$" or "$"
+  return pandoc.RawInline("markdown", mark .. math.text .. mark)
+end
+
 function Pandoc(doc)
   if engine == "starlight" and #doc.blocks > 0 and doc.blocks[1].t == "Header" and doc.blocks[1].level == 1 then
     doc.blocks:remove(1)
@@ -69,4 +76,4 @@ function Pandoc(doc)
   return doc
 end
 
-return { { Meta = Meta }, { Div = Div, Figure = Figure, Table = Table }, { Pandoc = Pandoc } }
+return { { Meta = Meta }, { Div = Div, Figure = Figure, Table = Table, Math = Math }, { Pandoc = Pandoc } }

@@ -45,6 +45,7 @@ title: Functional requirements
 | FR-046 | `py-doc build` shall write a JSON report of the tools, sources, outputs with checksums, diagrams and warnings of a build, also when the build fails. | Should | Met |
 | FR-047 | `py-doc template` shall check, list, compare and count the styles of Word and PowerPoint templates. | Should | Met |
 | FR-048 | `py-doc docx` and `py-doc slides` shall convert single files and folders without a `py-doc.yml`. | Must | Met |
+| FR-049 | Section numbers written in headings shall be left out where the output numbers its headings itself (a Word template with numbered heading styles, or numbered PDF and HTML sections), so no section is numbered twice. A setting shall force or prevent it. | Must | Met |
 
 ## Importing
 

@@ -84,6 +84,42 @@ def keep_deep_hashes_as_text(text: str) -> str:
     return "\n".join(out) + ("\n" if text.endswith("\n") else "")
 
 
+# A section number before a heading's text: 2.1, 2.1.3, 3. or A.1 (with an optional full stop), or a bare 1.
+_SECTION_NUMBER = re.compile(r"^(?P<number>(?:\d+(?:\.\d+)+|[A-Z](?:\.\d+)+|\d+)\.?)[ \t]+(?=\S)")
+
+
+def strip_heading_numbers(text: str) -> str:
+    """Take hand-written section numbers off the headings, for an output that numbers its headings itself.
+
+    ``## 2.1 Design`` becomes ``## Design``. A bare number (``# 1 Introduction``) counts only when every
+    heading of that level starts with one and they count 1, 2, 3 in order, so ``## 2024 roadmap`` stays.
+    A heading that would be left empty, such as ``## 2.1``, stays as written.
+    """
+    fence, lines = Fence(), text.splitlines()
+    found: list[tuple[int, int, re.Match]] = []  # line index, level, number match
+    levels: dict[int, list[str | None]] = {}
+    for index, line in enumerate(lines):
+        heading = None if fence.inside(line) else _HEADING.match(line)
+        if not heading:
+            continue
+        level = len(heading["hashes"])
+        number = _SECTION_NUMBER.match(heading["rest"].strip())
+        levels.setdefault(level, []).append(number["number"].rstrip(".") if number else None)
+        if number:
+            found.append((index, level, number))
+    counted = {
+        level: all(n is not None and n.isdigit() for n in numbers) and [int(n) for n in numbers] == list(range(1, len(numbers) + 1))
+        for level, numbers in levels.items()
+    }
+    for index, level, number in found:
+        if number["number"].rstrip(".").isdigit() and not number["number"].endswith(".") and not counted[level]:
+            continue  # a bare number that is not a count of the sections: part of the title
+        heading = _HEADING.match(lines[index])
+        title = heading["rest"].strip()[number.end():]
+        lines[index] = f"{heading['indent']}{heading['hashes']} {title}"
+    return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
+
+
 def warn_unclosed_fence(text: str, name: str) -> None:
     """A code fence that is never closed is not code to pandoc: it shows the fence and the code as text. Say so."""
     fence, opened = Fence(), None

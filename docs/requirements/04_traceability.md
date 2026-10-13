@@ -13,7 +13,7 @@ title: Traceability
 | FR-008 | `migrate.py` | `test_migrate.py` |
 | FR-020 to FR-025 | `directives.py`, `pandoc/resources/*.lua`, `pandoc/docx_post.py` | `test_directives.py`, `test_pandoc.py`, `test_word_control.py`, `test_word_layout.py` |
 | FR-026, FR-027, QR-080 | `diagrams/` | `test_diagrams.py` |
-| FR-040 to FR-048 | `pandoc/engine.py`, `pandoc/docx_finish.py`, `pandoc/pptx_finish.py`, `naming.py`, `report.py`, `template_check.py`, `convert.py`, `_cli.py` | `test_pandoc.py`, `test_pptx_pandoc.py`, `test_report.py`, `test_template_check.py`, `test_cli.py`, `test_slides_cli.py`, `test_convert.py`, `test_examples.py` |
+| FR-040 to FR-049 | `pandoc/engine.py`, `pandoc/reference.py`, `pandoc/docx_finish.py`, `pandoc/pptx_finish.py`, `naming.py`, `report.py`, `template_check.py`, `convert.py`, `_cli.py` | `test_pandoc.py`, `test_pptx_pandoc.py`, `test_report.py`, `test_template_check.py`, `test_cli.py`, `test_slides_cli.py`, `test_convert.py`, `test_examples.py`, `test_heading_numbers.py` |
 | FR-060, FR-062, FR-063 | `docx_import.py`, `import_cli.py` | `test_docx_import.py` |
 | FR-061 | `pptx_import.py` | `test_pptx_import.py` |
 | FR-080 to FR-086, QR-081 | `c4/` | `test_c4.py` |
