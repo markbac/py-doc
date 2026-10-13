@@ -17,7 +17,7 @@ from . import __version__
 from ._logging import configure_logging
 from .build import build_document
 from .cli import run_docx
-from .config import FORMATS, ConfigError, find_config, load_config
+from .config import FORMATS, ConfigError, find_config, load_config, parse_config
 from .errors import ConversionError, exit_status
 from .lint.cli import run as run_lint
 from .migrate import LEGACY_FORMATS, Migration, migrate, render
@@ -62,7 +62,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     build = commands.add_parser("build", help="Build the documents described in py-doc.yml")
     build.add_argument("documents", nargs="*", metavar="DOCUMENT", help="Documents to build (default: all)")
-    build.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
+    source = build.add_mutually_exclusive_group()
+    source.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
+    source.add_argument("--legacy", metavar="FILE", help="Build from a legacy createdocs build file instead of py-doc.yml")
     build.add_argument("-f", "--format", action="append", choices=sorted(FORMATS), help="Build only this format")
     build.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
     build.add_argument(
@@ -115,14 +117,26 @@ def _conditions(pairs: list[tuple[str, str]]) -> dict:
     return {name: words.get(value.lower(), value) for name, value in pairs}
 
 
+def _load_legacy(path: Path):
+    """The configuration ``py-doc migrate`` would write for one createdocs file, without writing it."""
+    if not path.is_file():
+        raise ConfigError(f"Legacy build file not found: {path}")
+    result = migrate([path], path.resolve().parent)
+    if not result.migrated:
+        raise ConfigError(f"{path} is not a createdocs build file (it needs an 'entries' list of files)")
+    for finding in result.findings:
+        (logger.warning if finding.level == "warning" else logger.info)(f"{_shown(finding.file)}: {finding.message}")
+    return parse_config(result.config, path.resolve().parent)
+
+
 def _build(args: argparse.Namespace) -> int:
     configure_logging(quiet=args.quiet, verbose=args.verbose)
-    path = Path(args.config) if args.config else find_config(Path.cwd())
+    path = Path(args.legacy or args.config) if args.legacy or args.config else find_config(Path.cwd())
     if path is None:
-        _error("No py-doc.yml found here or in a parent folder. Use --config, or `py-doc migrate` to create one")
+        _error("No py-doc.yml found here or in a parent folder. Use --config, --legacy, or `py-doc migrate` to create one")
         return 1
     try:
-        config = load_config(path)
+        config = _load_legacy(path) if args.legacy else load_config(path)
     except ConfigError as exc:
         _error(str(exc))
         return 1

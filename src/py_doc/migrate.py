@@ -24,13 +24,14 @@ _META_KEYS = {
     "title", "subtitle", "author", "date", "version", "status", "document_number", "description",
     "classification", "subject", "keywords", "category", "company", "toc_depth",
 }  # fmt: skip
-_ENTRY_KEYS = {"file", "heading_offset", "title", "page_break", "include"}
+_ENTRY_KEYS = {"file", "heading_offset", "title", "section", "page_break", "include"}
 # What createdocs can build that py-doc cannot (yet), and the cli keys that only matter to those.
 _UNSUPPORTED_EMIT = {"emit-md": "processed Markdown"}
 _UNUSED_CLI = {
     "plantuml-jar-path": "the tool container supplies PlantUML",
     "ditaa-jar-path": "the tool container supplies ditaa",
     "keep-tmp": "there is no temporary build folder",
+    "keep-temps": "there is no temporary build folder",
     "no-svg-to-png": "pictures are converted for the format that needs them",
     "pdf-from-docx": "PDF is always built with XeLaTeX",
     "verbose": "use -v on the command line",
@@ -101,11 +102,11 @@ def _unique_id(path: Path, taken: set[str]) -> str:
 
 def _emit_formats(cli: dict, output: str | None) -> dict[str, bool]:
     """Which outputs createdocs would build: its emit flags, else what the output file name implies."""
-    flags = {key: bool(cli.get(key)) for key in ("emit-docx", "emit-pdf", "emit-html", "emit-md")}
+    flags = {key: bool(cli.get(key)) for key in ("emit-docx", "emit-pptx", "emit-pdf", "emit-html", "emit-md")}
     if any(flags.values()):
         return flags
     suffix = Path(output).suffix.lower() if output else None
-    guess = {".docx": "emit-docx", ".pdf": "emit-pdf", ".html": "emit-html", ".htm": "emit-html"}
+    guess = {".docx": "emit-docx", ".pptx": "emit-pptx", ".pdf": "emit-pdf", ".html": "emit-html", ".htm": "emit-html"}
     flags[guess.get(suffix, "emit-md")] = True
     return flags
 
@@ -158,8 +159,8 @@ def migrate(paths: list[Path], config_dir: Path, source_format: str = "createdoc
             item: dict[str, Any] = {"file": rel(source_file)}
             if entry.get("heading_offset"):
                 item["heading_offset"] = entry["heading_offset"]
-            if entry.get("title"):
-                item["title"] = entry["title"]
+            if entry.get("title") or entry.get("section"):  # section: the name the slide tool used
+                item["title"] = entry.get("title") or entry["section"]
             if entry.get("page_break"):
                 item["page_break"] = True
             if entry.get("include") is False:
@@ -177,9 +178,9 @@ def migrate(paths: list[Path], config_dir: Path, source_format: str = "createdoc
         for key, reason in _UNUSED_CLI.items():
             if cli.get(key):
                 result.note("warning", yaml_path, f"cli.{key} was left out: {reason}")
-        built = {"docx": flags["emit-docx"], "pdf": flags["emit-pdf"], "html": flags["emit-html"]}
+        built = {"docx": flags["emit-docx"], "pptx": flags["emit-pptx"], "pdf": flags["emit-pdf"], "html": flags["emit-html"]}
         if not any(built.values()):
-            result.note("warning", yaml_path, "createdocs built no Word, PDF or HTML file for this document. py-doc builds a Word file")
+            result.note("warning", yaml_path, "createdocs built no Word, PowerPoint, PDF or HTML file for this document. py-doc builds a Word file")
             built["docx"] = True
         outputs: dict[str, Any] = {}
         for fmt, wanted in built.items():
@@ -190,6 +191,8 @@ def migrate(paths: list[Path], config_dir: Path, source_format: str = "createdoc
         template = None
         if cli.get("template") and cli.get("no-template"):
             result.note("info", yaml_path, "cli.template is ignored because cli.no-template is set")
+        elif cli.get("template") and "pptx" in outputs and str(cli["template"]).lower().endswith(".pptx"):
+            outputs["pptx"]["template"] = rel((base / cli["template"]).resolve())
         elif cli.get("template") and "docx" in outputs:
             template = (base / cli["template"]).resolve()
             outputs["docx"]["template"] = rel(template)

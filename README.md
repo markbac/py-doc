@@ -14,7 +14,7 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | Command | What it does |
 |---|---|
 | `py-doc init` | Start a project: `py-doc.yml`, a first document, and optionally a C4 model, templates and a site |
-| `py-doc build` | Build every document described in `py-doc.yml` |
+| `py-doc build` | Build every document described in `py-doc.yml`, or one legacy `createdocs` file with `--legacy` |
 | `py-doc docx` | Convert Markdown to Word |
 | `py-doc slides` | Convert Markdown to PowerPoint |
 | `py-doc lint` | Check writing style, glossary terms, acronyms and project conventions |
@@ -34,7 +34,8 @@ git clone https://github.com/markbac/py-doc.git
 cd py-doc
 pip install -e .            # Python 3.10 or later
 py-doc setup                # install Docker Engine (in the WSL distro on Windows) if you have not
-py-doc doctor               # check that everything works; the tool image is built on first use
+py-doc tools build          # build the tool image (several GB, 5 to 30 minutes the first time)
+py-doc doctor               # check that everything works
 ```
 
 Linux and Windows are supported. See [Installation](docs/guide/01_install.md) for the tool container, proxies and offline machines.
