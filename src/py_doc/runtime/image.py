@@ -18,7 +18,7 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..errors import ConversionError, EnvironmentProblem
+from ..errors import ConversionError, EnvironmentProblem, ToolTimeout
 from .engine import Runtime
 
 logger = logging.getLogger(__name__)
@@ -116,8 +116,21 @@ def lock(path: Path | None = None, *, opener=urllib.request.urlopen) -> list[str
 # --- building ------------------------------------------------------------------------------------
 
 
+# The first engine call of a run may have to start WSL, systemd and Docker (and the containers Docker
+# restarts), which can take minutes. Later calls find it running.
+STARTUP_TIMEOUT = 300.0
+
+
 def exists(runtime: Runtime) -> bool:
-    return runtime.engine(["image", "inspect", runtime.image], check=False).returncode == 0
+    try:
+        found = runtime.engine(["image", "inspect", runtime.image], check=False, timeout=STARTUP_TIMEOUT)
+    except ToolTimeout as exc:
+        where = "Docker in WSL" if runtime.windows else "Docker"
+        raise EnvironmentProblem(
+            f"{where} did not answer within {STARTUP_TIMEOUT:g} seconds. It may be stuck: "
+            + ("run `wsl --shutdown` and try again" if runtime.windows else "restart it, for example `sudo systemctl restart docker`")
+        ) from exc
+    return found.returncode == 0
 
 
 _BUILDKIT_STEP = re.compile(r"^#(\d+) \[(?:[\w.-]+\s+)?\s*(\d+)/(\d+)\]\s+(.*)")

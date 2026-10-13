@@ -11,7 +11,7 @@ from fake_engine import install
 
 from py_doc import tools_cli
 from py_doc.app import main
-from py_doc.errors import ConversionError, EnvironmentProblem
+from py_doc.errors import ConversionError, EnvironmentProblem, ToolTimeout
 from py_doc.runtime import Runtime, image
 
 REAL = image.IMAGE_DIR
@@ -192,6 +192,20 @@ def test_ensure_with_no_build_says_what_to_run(definition, engine):
     with pytest.raises(EnvironmentProblem, match="py-doc tools build"):
         image.ensure(runtime_for(engine, "py-doc-tools:new"), allow_build=False)
     assert engine.builds() == []
+
+
+def test_the_first_check_waits_for_a_slow_start_then_says_docker_is_not_answering(engine, monkeypatch):
+    runtime = runtime_for(engine)
+    timeouts = []
+
+    def slow(args, *, timeout=60, **kwargs):
+        timeouts.append(timeout)
+        raise ToolTimeout("docker " + args[0], timeout)
+
+    monkeypatch.setattr(runtime, "engine", slow)
+    with pytest.raises(EnvironmentProblem, match="Docker did not answer within 300 seconds"):
+        image.ensure(runtime)
+    assert timeouts == [image.STARTUP_TIMEOUT]
 
 
 def test_a_failed_build_shows_the_builders_output(definition, engine):
