@@ -10,11 +10,14 @@ title: Reference
 py-doc migrate docs/ --check      # report only
 py-doc migrate docs/              # write py-doc.yml
 py-doc migrate docs/ --backup     # also keep .bak copies of the originals and any old py-doc.yml
+py-doc build --legacy docs/guide.yaml         # build one createdocs file as it is, without writing py-doc.yml
 ```
 
 Each `createdocs` YAML file becomes one document, so folders, sources, templates and shared chapters keep their relations. A template used by every Word document is set once under `outputs`. YAML files that are not build files (such as `mkdocs.yml`) are listed as skipped, and the originals are never changed or deleted. An existing output file is not replaced unless you pass `--backup` or `--force`.
 
-The `Setup-DocTools.ps1` script that installed pandoc, TeX and the diagram tools on Windows is no longer needed: the tools run in the tool container. Use `py-doc setup` (Docker Engine in WSL), then `py-doc doctor`, which builds the image on first use.
+`py-doc build --legacy FILE` reads one `createdocs` file the same way and builds it straight away, so old build files keep working while you move over. The findings `migrate` would report are shown as warnings. The output format comes from the `emit-*` switches, else from the extension of `cli.output` (`.docx`, `.pptx`, `.pdf` or `.html`). `cli.template` goes to the PowerPoint output when it is a `.pptx` file, else to the Word output. An entry's `section` is taken as its `title`: it replaces the first heading of that file.
+
+The `Setup-DocTools.ps1` script that installed pandoc, TeX and the diagram tools on Windows is no longer needed: the tools run in the tool container. Use `py-doc setup` (Docker Engine in WSL), then `py-doc tools build` and `py-doc doctor`.
 
 The report lists what has no equivalent yet, so nothing is lost quietly:
 

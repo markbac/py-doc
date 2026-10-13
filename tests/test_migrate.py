@@ -168,13 +168,28 @@ def test_a_document_that_builds_only_processed_markdown_gets_a_word_output_with_
     write(tmp_path / "a.yaml", "cli: {emit-md: true, output: out/a.md}\nentries: [{file: a.md}]\n")
     result = migrate([tmp_path], tmp_path)
     assert result.config["documents"]["a"]["outputs"]["docx"]["path"] == "out/a.docx"
-    assert any("built no Word, PDF or HTML file" in f.message for f in result.findings)
+    assert any("built no Word, PowerPoint, PDF or HTML file" in f.message for f in result.findings)
 
 
 def test_output_extension_decides_the_format_when_no_emit_flag_is_set(tmp_path):
     write(tmp_path / "a.md", "# A\n")
     write(tmp_path / "a.yaml", "cli: {output: out/a.docx}\nentries: [{file: a.md}]\n")
     result = migrate([tmp_path], tmp_path)
+    assert not any(f.level == "warning" for f in result.findings)
+
+
+def test_a_slide_deck_keeps_its_powerpoint_template_and_section_names(tmp_path):
+    write(tmp_path / "a.md", "# A\n")
+    write(tmp_path / "b.md", "# B\n")
+    write(
+        tmp_path / "deck.yaml",
+        "cli: {output: out/deck.pptx, template: T.pptx, keep-temps: false}\n"
+        "entries: [{file: a.md}, {file: b.md, section: Second, heading_offset: 1}]\n",
+    )
+    result = migrate([tmp_path], tmp_path)
+    doc = result.config["documents"]["deck"]
+    assert doc["outputs"] == {"pptx": {"path": "out/deck.pptx", "template": "T.pptx", "name": "{name}-{version_safe}"}}
+    assert doc["sources"][1] == {"file": "b.md", "heading_offset": 1, "title": "Second"}
     assert not any(f.level == "warning" for f in result.findings)
 
 

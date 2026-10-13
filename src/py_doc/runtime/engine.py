@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import subprocess
 import threading
 import uuid
@@ -64,6 +65,13 @@ def decode_wsl(data: bytes) -> str:
 
 def _command(value: str | Sequence[str]) -> list[str]:
     return [value] if isinstance(value, str) else list(value)
+
+
+def _drive_path(text: str) -> str | None:
+    """``C:\\x\\y`` as WSL mounts it by default (``/mnt/c/x/y``), or None for any other kind of path."""
+    if re.match(r"^[A-Za-z]:[\\/]", text):
+        return f"/mnt/{text[0].lower()}/" + text[3:].replace("\\", "/")
+    return None
 
 
 def _csv_field(text: str) -> str:
@@ -231,7 +239,10 @@ class Runtime:
             code, out, err = self._execute(["wslpath", "-a", "-u", text], timeout=30)
             converted = out.decode("utf-8", errors="replace").strip()
             if code != 0 or not converted:
-                raise EnvironmentProblem(f"WSL cannot see '{text}': {err.decode('utf-8', errors='replace').strip()}")
+                converted = _drive_path(text)  # some distros cannot start wslpath ("Exec format error")
+                if converted is None:
+                    raise EnvironmentProblem(f"WSL cannot see '{text}': {err.decode('utf-8', errors='replace').strip()}")
+                logger.debug("wslpath failed (%s), so '%s' is taken as %s", err.decode("utf-8", errors="replace").strip(), text, converted)
         else:
             converted = Path(text).resolve().as_posix()
         self._paths[text] = converted

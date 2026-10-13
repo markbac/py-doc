@@ -83,6 +83,29 @@ class TestBuild:
         assert main(["build", "beta"]) == 1
         assert "beta: Source for document 'beta' not found" in capsys.readouterr().err
 
+    def test_legacy_build_file_builds_without_a_config(self, project, capsys):
+        (project / "deck.yaml").write_text(
+            "meta: {title: Deck, version: 2.0.0}\n"
+            "cli: {output: out/Deck.pptx, verbose: false, keep-temps: false}\n"
+            "entries: [{file: a.md}, {file: b.md, section: Second, heading_offset: 1}]\n",
+            encoding="utf-8",
+        )
+        (project / "paper.yaml").write_text(
+            "meta: {title: Paper, version: 0.1.0}\n"
+            "cli: {emit-docx: true, output: Paper.docx, plantuml-jar-path: x.jar}\n"
+            "entries: [{file: a.md, heading_offset: 0, page_break: false}]\n",
+            encoding="utf-8",
+        )
+        assert main(["build", "--legacy", "deck.yaml"]) == 0
+        assert (project / "out" / "Deck-2_0_0.pptx").exists()
+        assert main(["build", "--legacy", "paper.yaml"]) == 0
+        assert "Alpha" in texts(project / "Paper-0_1_0.docx")
+        assert "cli.plantuml-jar-path was left out" in capsys.readouterr().err
+
+    def test_legacy_option_refuses_other_yaml(self, project, capsys):
+        assert main(["build", "--legacy", "py-doc.yml"]) == 1
+        assert "is not a createdocs build file" in capsys.readouterr().err
+
     def test_quiet_hides_progress(self, project, capsys):
         assert main(["build", "alpha", "-q"]) == 0
         assert capsys.readouterr().err == ""

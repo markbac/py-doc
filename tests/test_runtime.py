@@ -195,6 +195,16 @@ def test_a_path_wsl_cannot_see_is_an_error_naming_it(engine):
         windows(engine).container_path(r"\\server\share\x.md")
 
 
+def test_drive_paths_are_translated_without_wslpath_when_it_cannot_start(engine):
+    runtime = windows(engine)
+    broken = b"execvpe(wslpath) failed: Exec format error"
+    real = runtime._execute
+    runtime._execute = lambda args, **kw: (1, b"", broken) if args[0] == "wslpath" else real(args, **kw)
+    assert runtime.container_path(r"C:\Users\me\Temp\context") == "/mnt/c/Users/me/Temp/context"
+    with pytest.raises(EnvironmentProblem, match="Exec format error"):
+        runtime.container_path(r"\\server\share\x.md")
+
+
 def test_a_windows_run_goes_through_wsl_with_the_distro_and_translated_mounts(engine):
     runtime = windows(engine, wsl_distro="Ubuntu")
     runtime.run(["pandoc", PureWindowsPath(r"D:\my docs\a.md")], mounts=[Mount(PureWindowsPath(r"D:\my docs"))])
