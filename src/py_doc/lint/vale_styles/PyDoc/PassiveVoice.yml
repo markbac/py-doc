@@ -3,4 +3,5 @@ message: "'%s' may be passive voice. Say who does the action."
 ignorecase: true
 level: suggestion
 tokens:
-  - '\b(?:am|are|were|being|is|been|was|be)\s+\w+ed\b'
+  # a form of "to be", then a regular past participle or one of the common irregular ones
+  - '\b(?:am|are|were|being|is|been|was|be)\s+(?:\w+ed|written|built|made|given|shown|done|run|set|kept|sent|found|taken|known|drawn|seen|chosen|held|left|put|read|told|brought|bought|thought|caught|taught|sold|paid|led|meant|begun|broken|driven|forgotten|hidden|spoken|stolen|thrown|won|understood)\b'

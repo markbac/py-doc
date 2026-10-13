@@ -5,3 +5,4 @@ dist/
 build/
 .vscode/
 .py-doc/
+.structurizr/

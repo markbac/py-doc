@@ -71,6 +71,70 @@ def shift_headings(text: str, offset: int, name: str) -> str:
     return "\n".join(out) + "\n"
 
 
+_TOO_DEEP = re.compile(r"^(?P<indent> {0,3})(?P<hashes>#{7,})(?=[ \t]|$)")
+
+
+def keep_deep_hashes_as_text(text: str) -> str:
+    """A line of seven or more ``#`` outside code is text, as in CommonMark. Pandoc would make it a heading below 6."""
+    fence, out = Fence(), []
+    for line in text.splitlines():
+        if not fence.inside(line):
+            line = _TOO_DEEP.sub(lambda m: f"{m['indent']}\\{m['hashes']}", line)
+        out.append(line)
+    return "\n".join(out) + ("\n" if text.endswith("\n") else "")
+
+
+# A section number before a heading's text: 2.1, 2.1.3, 3. or A.1 (with an optional full stop), or a bare 1.
+_SECTION_NUMBER = re.compile(r"^(?P<number>(?:\d+(?:\.\d+)+|[A-Z](?:\.\d+)+|\d+)\.?)[ \t]+(?=\S)")
+
+
+def strip_heading_numbers(text: str) -> str:
+    """Take hand-written section numbers off the headings, for an output that numbers its headings itself.
+
+    ``## 2.1 Design`` becomes ``## Design``. A bare number (``# 1 Introduction``) counts only when every
+    heading of that level starts with one and they count 1, 2, 3 in order, so ``## 2024 roadmap`` stays.
+    A heading that would be left empty, such as ``## 2.1``, stays as written.
+    """
+    fence, lines = Fence(), text.splitlines()
+    found: list[tuple[int, int, re.Match]] = []  # line index, level, number match
+    levels: dict[int, list[str | None]] = {}
+    for index, line in enumerate(lines):
+        heading = None if fence.inside(line) else _HEADING.match(line)
+        if not heading:
+            continue
+        level = len(heading["hashes"])
+        number = _SECTION_NUMBER.match(heading["rest"].strip())
+        levels.setdefault(level, []).append(number["number"].rstrip(".") if number else None)
+        if number:
+            found.append((index, level, number))
+    counted = {
+        level: all(n is not None and n.isdigit() for n in numbers) and [int(n) for n in numbers] == list(range(1, len(numbers) + 1))
+        for level, numbers in levels.items()
+    }
+    for index, level, number in found:
+        if number["number"].rstrip(".").isdigit() and not number["number"].endswith(".") and not counted[level]:
+            continue  # a bare number that is not a count of the sections: part of the title
+        heading = _HEADING.match(lines[index])
+        title = heading["rest"].strip()[number.end():]
+        lines[index] = f"{heading['indent']}{heading['hashes']} {title}"
+    return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
+
+
+def warn_unclosed_fence(text: str, name: str) -> None:
+    """A code fence that is never closed is not code to pandoc: it shows the fence and the code as text. Say so."""
+    fence, opened = Fence(), None
+    for number, line in enumerate(text.splitlines(), start=1):
+        was_inside = fence.marker is not None
+        fence.inside(line)
+        if fence.marker is not None and not was_inside:
+            opened = number
+    if fence.marker is not None:
+        logger.warning(
+            f"{name}:{opened}: the code fence {fence.marker} opened here is never closed, so its lines are shown as "
+            "text, not code. Add the closing fence"
+        )
+
+
 def retitle(text: str, title: str) -> str:
     """Replace the text of the first heading with ``title``, or put a level 1 heading first if there is none."""
     fence, lines = Fence(), text.splitlines()
@@ -110,13 +174,14 @@ def join_sources(sources, variables: dict, conditions: dict, doc_id: str) -> Joi
         except UnicodeDecodeError as exc:
             raise ConversionError(f"Cannot read '{source.file}': it is not valid UTF-8 ({exc.reason})") from exc
         text = directives.expand(text, source.file, variables, conditions)
+        warn_unclosed_fence(text, str(source.file))
         front, body = split_front_matter(text)
         metadata = read_front_matter(front, source.file)
         if index == 0:
             first = metadata
         if source.title:
             body = retitle(body, source.title)
-        body = shift_headings(body, source.heading_offset, source.file.name)
+        body = shift_headings(keep_deep_hashes_as_text(body), source.heading_offset, source.file.name)
         text = body.rstrip("\n") + "\n"
         parts.append((source.file, f"{PAGE_BREAK}\n{text}" if index and source.page_break else text))
     joined = Joined(parts, first, None)

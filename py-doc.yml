@@ -1,0 +1,94 @@
+# py-doc's own documentation, built with py-doc.
+#   py-doc lint docs --strict     check the writing
+#   py-doc build                  Word, HTML and PDF of each document in build/docs
+#   py-doc site build             the web site, in site/build
+#   py-doc c4 up docs/architecture/workspace.dsl    arrange the C4 views
+
+project:
+  name: py-doc
+
+outputs:
+  docx:
+    dir: build/docs
+  html:
+    dir: build/docs
+  pdf:
+    dir: build/docs
+
+documents:
+  user-guide:
+    # Title, version and status come from the front matter of the first file.
+    sources:
+      - docs/guide/00_introduction.md
+      - docs/guide/01_install.md
+      - docs/guide/02_projects.md
+      - docs/guide/03_writing.md
+      - docs/guide/04_outputs.md
+      - docs/guide/05_import.md
+      - docs/guide/06_c4.md
+      - docs/guide/07_lint.md
+      - docs/guide/08_sites.md
+      - docs/guide/09_reference.md
+    outputs:
+      docx: {toc: true}
+      html: {toc: true}
+      pdf: {toc: true}
+
+  requirements:
+    sources:
+      - docs/requirements/00_introduction.md
+      - docs/requirements/01_functional.md
+      - docs/requirements/02_quality.md
+      - docs/requirements/03_constraints.md
+      - docs/requirements/04_traceability.md
+    outputs:
+      docx: {toc: true}
+      html: {toc: true}
+
+  architecture:
+    sources:
+      - docs/architecture/00_introduction.md
+      - structurizr: docs/architecture/workspace.dsl   # context, containers, components, build, deployment, catalogue
+        heading_offset: 1
+        diagrams: {engine: browser, format: png}
+      - docs/architecture/02_pipeline.md
+      - docs/architecture/03_runtime.md
+      - docs/architecture/04_sites_and_imports.md
+      - docs/architecture/05_decisions.md
+    outputs:
+      docx: {toc: true}
+      html: {toc: true}
+
+  bundle-audit:
+    sources: [docs/bundle-audit.md]
+    outputs:
+      html: {}
+
+reports:
+  path: build/docs/report.json
+
+# The web site of the three main documents: py-doc site build, then open site/build/index.html.
+site:
+  engine: mkdocs
+  dir: site
+  documents: [user-guide, requirements, architecture]
+
+lint:
+  exclude: [build, site]
+  glossary:
+    py-doc: [pydoc, Py-doc, PyDoc]
+    PowerPoint: [Powerpoint, powerpoint]
+    MkDocs: [Mkdocs, mkdocs]
+    Starlight: [starlight]
+  acronyms:
+    min_length: 3
+    # Formats and tools, the status words of `template check`, the CON- identifiers of the constraints,
+    # and the marker names, which are not acronyms to spell out
+    allowed: [CLI, WSL, DSL, SVG, PNG, PDF, EMF, WMF, CSV, SARIF, ADR, TLS, SHA, NPM, LTS, TOC, YAML, JSON, HTML, CSS, URL, API, UTF, GIF, JPEG, SEQ,
+              JAR, MIT, CON, FAIL, WARN, INFO, NOTE, TIP, IMPORTANT, WARNING, CAUTION, CAPTION, STYLE, LANDSCAPE, PORTRAIT]
+  vale:
+    enabled: auto
+    spelling: off            # product and tool names would swamp it
+    rules:
+      PyDoc.PassiveVoice: off   # requirements are written as "shall be ...", which is the convention
+      PyDoc.HeadingCase: off    # headings name products, files and decision numbers (Structurizr Local, AD-01)

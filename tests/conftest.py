@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -118,3 +119,14 @@ def _posix_ids(monkeypatch):
     if not hasattr(os, "getuid"):
         monkeypatch.setattr(os, "getuid", lambda: 1000, raising=False)
         monkeypatch.setattr(os, "getgid", lambda: 1000, raising=False)
+
+
+def tex_packages_found(*packages: str) -> bool:
+    """xelatex, and ``kpsewhich`` finds ``packages``. MiKTeX can stop to ask about installing a package, so a slow answer is no."""
+    if shutil.which("xelatex") is None or shutil.which("kpsewhich") is None:
+        return False
+    try:
+        found = subprocess.run(["kpsewhich", *packages], capture_output=True, text=True, timeout=15).stdout.split()
+    except subprocess.TimeoutExpired:
+        return False
+    return len(found) == len(packages)

@@ -150,6 +150,8 @@ def build_workspace(settings: ValeSettings, config: LintConfig, folder: Path) ->
         data = yaml.safe_load(text)
         if rule is not None:
             data.update(rule.options)
+        if "max" in data:  # the length rules name their limit, which py-doc.yml can change
+            data["message"] = data["message"].replace("{max}", str(data["max"]))
         put(name, data)
 
     terms = {**{t: list(v) for t, v in config.glossary.items()}, **settings.terms}

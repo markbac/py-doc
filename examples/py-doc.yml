@@ -141,3 +141,10 @@ lint:
     rules_file: vale-rules.yml
     packages: []                       # for example [write-good], then `py-doc lint --sync`
     ignore: ["build/**"]
+
+# A web site of the documents: `py-doc site init` makes site/ once, `py-doc site build` fills and builds it.
+# Each source file becomes a page, in a folder per document. mkdocs.yml in site/ is yours to change.
+site:
+  engine: mkdocs                       # or starlight (Astro + Starlight)
+  dir: site
+  documents: [guide, datasheet, architecture]

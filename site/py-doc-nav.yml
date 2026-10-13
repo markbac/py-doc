@@ -1,0 +1,33 @@
+# Written by py-doc site from py-doc.yml. mkdocs.yml takes it in with INHERIT: py-doc-nav.yml
+nav:
+- Home: index.md
+- py-doc user guide:
+  - Introduction: user-guide/00-introduction.md
+  - Installation: user-guide/01-install.md
+  - Projects: user-guide/02-projects.md
+  - Writing: user-guide/03-writing.md
+  - Outputs: user-guide/04-outputs.md
+  - Importing Word and PowerPoint files: user-guide/05-import.md
+  - C4 architecture with Structurizr: user-guide/06-c4.md
+  - Linting: user-guide/07-lint.md
+  - Web sites with MkDocs or Astro + Starlight: user-guide/08-sites.md
+  - Reference: user-guide/09-reference.md
+- py-doc requirements specification:
+  - Introduction: requirements/00-introduction.md
+  - Functional requirements: requirements/01-functional.md
+  - Quality requirements: requirements/02-quality.md
+  - Constraints: requirements/03-constraints.md
+  - Traceability: requirements/04-traceability.md
+- py-doc architecture:
+  - Introduction: architecture/00-introduction.md
+  - py-doc: architecture/01-context.md
+  - Containers: architecture/02-containers.md
+  - Components: architecture/03-components.md
+  - Relationships: architecture/04-relationships.md
+  - Deployment: architecture/05-deployment.md
+  - Dynamic behaviour: architecture/06-dynamic.md
+  - Element catalogue: architecture/07-catalogue.md
+  - The build pipeline: architecture/02-pipeline.md
+  - The tool runtime: architecture/03-runtime.md
+  - Sites, imports and scaffolding: architecture/04-sites-and-imports.md
+  - Architecture decisions: architecture/05-decisions.md

@@ -26,6 +26,8 @@ from .runtime import connect
 from .slides_cli import run_slides
 from .c4.cli import run_c4
 from .import_cli import run_import
+from .init import run_init
+from .site.cli import run_site
 from .template_cli import run_template
 from .tools_cli import run_doctor, run_setup, run_tools
 
@@ -33,13 +35,15 @@ logger = logging.getLogger(__name__)
 
 # Commands that hand the rest of the command line to the single-purpose tool.
 _DELEGATES = {
+    "init": ("Start a documentation project: py-doc.yml, a first document and more", run_init),
     "docx": ("Convert Markdown to Word (.docx)", run_docx),
     "slides": ("Convert Markdown to PowerPoint (.pptx)", run_slides),
     "lint": ("Check Markdown for writing style and glossary use", run_lint),
     "tools": ("Build and inspect the tool container image", run_tools),
     "c4": ("Check, export and draw Structurizr workspaces", run_c4),
-    "import": ("Convert a Word document (.docx) to Markdown", run_import),
+    "import": ("Convert a Word (.docx) or PowerPoint (.pptx) file to Markdown", run_import),
     "template": ("Check and inspect Word and PowerPoint templates", run_template),
+    "site": ("Make and build a web site of the documents (MkDocs or Astro + Starlight)", run_site),
     "doctor": ("Check that the tool container works", run_doctor),
     "setup": ("Install Docker Engine for the tool runner", run_setup),
 }

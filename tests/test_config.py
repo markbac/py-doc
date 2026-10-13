@@ -157,9 +157,22 @@ class TestLint:
 
 
 def test_reserved_sections_are_kept_with_a_warning(tmp_path, caplog):
-    config = load_config(write(tmp_path, "site: {name: x}\n"))
-    assert config.reserved == {"site": {"name": "x"}}
-    assert "'site' section is accepted but not used yet" in caplog.text
+    config = load_config(write(tmp_path, "bundles: {name: x}\n"))
+    assert config.reserved == {"bundles": {"name": "x"}}
+    assert "'bundles' section is accepted but not used yet" in caplog.text
+
+
+def test_the_site_section(tmp_path):
+    docs = "project: {name: Sensor}\ndocuments:\n  guide: {sources: [a.md]}\n  notes: {sources: [b.md]}\n"
+    config = load_config(write(tmp_path, docs + "site: {engine: starlight, documents: [guide]}\n"))
+    assert config.site.engine == "starlight" and config.site.dir == tmp_path.resolve() / "site"
+    assert config.site.title == "Sensor" and config.site.documents == ["guide"]
+    with pytest.raises(ConfigError, match="site.engine must be one of mkdocs, starlight"):
+        load_config(write(tmp_path, docs + "site: {engine: hugo}\n"))
+    with pytest.raises(ConfigError, match="site.documents names 'other'"):
+        load_config(write(tmp_path, docs + "site: {engine: mkdocs, documents: [other]}\n"))
+    with pytest.raises(ConfigError, match="unknown key 'theme' in site"):
+        load_config(write(tmp_path, docs + "site: {engine: mkdocs, theme: x}\n"))
 
 
 def test_find_config_walks_up(tmp_path):
@@ -173,10 +186,10 @@ def test_parse_config_accepts_a_dict():
     assert parse_config({"project": {"name": "X"}}, Path(".")).name == "X"
 
 
-def test_the_example_in_the_readme_loads(tmp_path):
+def test_the_example_in_the_user_guide_loads(tmp_path):
     import re
 
-    readme = Path(__file__).parent.parent / "README.md"
+    readme = Path(__file__).parent.parent / "docs" / "guide" / "02_projects.md"  # the configuration example of the user guide
     block = re.search(r"```yaml\n(project:.*?)```", readme.read_text(encoding="utf-8"), re.S).group(1)
     config = load_config(write(tmp_path, block))
     assert list(config.documents) == ["c4-guide"]

@@ -167,6 +167,8 @@ def _command(job: PandocJob, runtime: Runtime, work: Path, reference: Path | Non
         argv += ["--template", job.template if job.template is not None else _required(RESOURCES / "latex_template.tex", "LaTeX template")]
         if options.get("toc", True):
             argv.append("--toc")
+    if fmt in ("pdf", "html") and options.get("number_sections", False):
+        argv.append("--number-sections")
     return argv, mounts
 
 

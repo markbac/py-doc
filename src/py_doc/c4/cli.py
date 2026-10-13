@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+import time
+import webbrowser
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -19,12 +21,13 @@ from .generate import LEVELS, generate
 from .model import load_workspace
 from .render import render_views
 from .lock import LOCK, lock_image, resolve_image
-from .stack import SERVER_PORT, ExternalStack, Stack
+from .stack import SERVER, SERVER_PORT, ExternalStack, Stack
 from .structurizr import TEXT_FORMATS, StructurizrCli, find_workspaces, workspace_json
 
 logger = logging.getLogger(__name__)
 DRAWN = ("png", "svg")
 FORMATS = (*DRAWN, *TEXT_FORMATS, "markdown")
+WATCH_SECONDS = 2  # how often a running `c4 up` checks that Local is still there
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -55,7 +58,11 @@ def build_parser() -> argparse.ArgumentParser:
     common(lock)
     lock.add_argument("--tag", default="latest", help="The structurizr/structurizr tag to pin (default: latest)")
 
-    for name, text in (("up", "Start Structurizr Local for a workspace"), ("down", "Stop Structurizr Local"), ("status", "Say whether Local is running")):
+    up = actions.add_parser("up", help="Open a workspace in Structurizr Local to view it and edit its layouts")
+    common(up)
+    up.add_argument("--detach", action="store_true", help="Leave Local running and return. `py-doc c4 down` stops it")
+    up.add_argument("--no-browser", action="store_true", help="Do not open the diagrams in a browser")
+    for name, text in (("down", "Stop Structurizr Local"), ("status", "Say whether Local is running")):
         common(actions.add_parser(name, help=text))
     return parser
 
@@ -97,7 +104,7 @@ def run_c4(argv: Sequence[str] | None = None) -> int:
             return 0
         files = _find(args.workspace)
         if args.action in ("up", "down", "status"):
-            return _stack(args.action, files, runtime, c4, root)
+            return _stack(args, files, runtime, c4, root)
         if args.action == "check":
             return _check(files, runtime, c4, lint, args.strict, cache)
         return _export(args, files, runtime, c4, cache, root)
@@ -109,19 +116,48 @@ def run_c4(argv: Sequence[str] | None = None) -> int:
         return exit_status(exc)
 
 
-def _stack(action: str, files: list[Path], runtime, c4: C4Settings, root: Path) -> int:
+def _stack(args: argparse.Namespace, files: list[Path], runtime, c4: C4Settings, root: Path) -> int:
     if len(files) != 1:
         raise ConversionError(f"{len(files)} workspaces found. Name one: {', '.join(str(f) for f in files)}")
-    stack = Stack(runtime(), files[0], image=resolve_image(c4.image, root), port=c4.port or SERVER_PORT)
-    if action == "status":
+    stack = Stack(
+        runtime(), files[0], image=resolve_image(c4.image, root), port=c4.port or SERVER_PORT, live=True, state=root / ".py-doc"
+    )
+    if args.action == "status":
         print(stack.status())
-    elif action == "up":
-        print("started" if stack.up() else "already running")
-        print(f"Structurizr Local: http://127.0.0.1:{stack.port}/workspace")
-    else:
+        return 0
+    if args.action == "down":
         stack.down()
         print("stopped")
-    return 0
+        return 0
+    if not stack.up():
+        print(f"Structurizr Local is already running: {stack.browser_url}")
+        return 0
+    print(f"Structurizr Local: {stack.browser_url}")
+    print(f"Changes to {files[0].name} show when the page is reloaded. Layouts saved in the browser go to "
+          f"{files[0].parent / 'workspace.json'}")  # fmt: skip
+    if not args.no_browser:
+        webbrowser.open(stack.browser_url)
+    if args.detach:
+        stack.detach()
+        print("Stop it with: py-doc c4 down")
+        return 0
+    return _serve(stack)
+
+
+def _serve(stack: Stack) -> int:
+    """Keep Local running until Ctrl+C, then stop it. Status 1 if it stops by itself."""
+    print("Press Ctrl+C to stop")
+    try:
+        while stack.status() == "running":
+            time.sleep(WATCH_SECONDS)
+    except KeyboardInterrupt:
+        stack.down()
+        print("stopped")
+        return 0
+    logs = stack.runtime.engine(["logs", "--tail", "15", SERVER], check=False)
+    stack.down()
+    print(f"Error: Structurizr Local stopped by itself.\n{(logs.stdout + logs.stderr).strip()}", file=sys.stderr)
+    return 1
 
 
 def _check(files: list[Path], runtime, c4: C4Settings, lint: LintConfig, strict: bool, cache: Path) -> int:

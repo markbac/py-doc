@@ -75,7 +75,16 @@ def finish_docx(body_path: Path, template: Path | None, metadata: Metadata, opti
         if index is not None:
             composer.insert(index, body)
         else:
-            logger.info(f"The template has no {options.get('marker', DEFAULT_MARKER)} line, so the document goes at the end")
+            marker = options.get("marker", DEFAULT_MARKER)
+            kept = [p.text.strip() for p in base.paragraphs if p.text.strip()]
+            if kept or base.tables:  # template text in a deliverable must never pass unnoticed (#60)
+                shown = f"'{kept[0][:60]}'" + (f" and {len(kept) - 1} more paragraph(s)" if len(kept) > 1 else "") if kept else "a table"
+                logger.warning(
+                    f"The template {template.name} has text in its body ({shown}) and no {marker} line, so that text "
+                    f"comes before the document. Put {marker} where the document goes, or remove the text"
+                )
+            else:
+                logger.info(f"The template has no {marker} line, so the document goes at the end")
             composer.append(body)
         post.mark_for_toc_update(base)
         composer.save(str(body_path))

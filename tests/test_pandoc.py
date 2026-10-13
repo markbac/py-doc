@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 from docx import Document
+from conftest import tex_packages_found
 from fake_engine import install
 from pptx import Presentation
 
@@ -19,7 +20,7 @@ from py_doc.pandoc import source
 from py_doc.runtime import Runtime
 
 needs_pandoc = pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc is not installed")
-needs_xelatex = pytest.mark.skipif(shutil.which("xelatex") is None, reason="xelatex is not installed")
+needs_xelatex = pytest.mark.skipif(not tex_packages_found("ulem.sty", "tcolorbox.sty"), reason="xelatex or one of its packages is not installed")
 
 
 def png(path: Path) -> Path:
@@ -51,6 +52,17 @@ class TestSource:
     def test_headings_are_kept_within_six_levels(self, caplog):
         assert source.shift_headings("##### A\n", 3, "x.md") == "###### A\n"
         assert "would be level 8" in caplog.text
+
+    def test_an_unclosed_fence_is_named_in_a_warning(self, caplog):
+        source.warn_unclosed_fence("# T\n\n```python\nx = 1\n", "doc.md")
+        assert "doc.md:3: the code fence ``` opened here is never closed" in caplog.text
+        caplog.clear()
+        source.warn_unclosed_fence("```\na\n```\n", "doc.md")
+        assert caplog.text == ""
+
+    def test_seven_hashes_are_text_outside_code(self):
+        text = "####### seven\n###### six\n```\n####### code\n```\n"
+        assert source.keep_deep_hashes_as_text(text) == "\\####### seven\n###### six\n```\n####### code\n```\n"
 
     def test_retitle_replaces_the_first_heading_or_adds_one(self):
         assert source.retitle("# Old\n\nText\n", "New") == "# New\n\nText\n"
@@ -341,3 +353,23 @@ def test_the_highlight_option_follows_the_pandoc_version(banner, option):
             return ToolResult(0, banner + "\nFeatures: x\n", "")
 
     assert _highlight_option(Fake()) == option
+
+
+def test_markers_shown_as_code_or_within_a_sentence_are_text():
+    from docx import Document as NewDocument
+    from docx.enum.style import WD_STYLE_TYPE
+
+    from py_doc.pandoc.docx_post import apply_explicit_styles
+
+    doc = NewDocument()
+    doc.styles.add_style("Verbatim Char", WD_STYLE_TYPE.CHARACTER)
+    doc.styles.add_style("Lead Paragraph", WD_STYLE_TYPE.PARAGRAPH)
+    shown = doc.add_paragraph()
+    shown.add_run("[[STYLE:Name]] text").style = "Verbatim Char"
+    shown.add_run(" applies a named style.")
+    mentioned = doc.add_paragraph("Write [[CAPTION:Figure]] before a picture.")
+    real = doc.add_paragraph("[[STYLE:Lead Paragraph]] The lead.")
+    apply_explicit_styles(doc)
+    assert shown.text == "[[STYLE:Name]] text applies a named style." and shown.style.name == "Normal"
+    assert mentioned.text == "Write [[CAPTION:Figure]] before a picture."
+    assert real.text == "The lead." and real.style.name == "Lead Paragraph"

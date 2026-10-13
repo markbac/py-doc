@@ -14,7 +14,7 @@ from .errors import ConversionError
 from .markdown import Metadata
 from .naming import git_version, status_template
 from .pandoc import PandocJob, convert
-from .pandoc.source import join_sources
+from .pandoc.source import join_sources, strip_heading_numbers
 from .runtime import Runtime
 from .report import BuildReport
 from .template_check import log_problems
@@ -107,8 +107,32 @@ def render_output(
             report.want_tool("xelatex")
         for event in events:
             report.want_tool(_first_word(event["type"]))
-    job = PandocJob(fmt, drawn.markdown, metadata, output, source_dirs, template, settings, drawn.pictures)
+    markdown = drawn.markdown
+    if _numbers_headings_itself(fmt, template, settings):
+        stripped = strip_heading_numbers(markdown)
+        if stripped != markdown:
+            logger.info(f"{name}.{fmt} numbers its headings itself, so the numbers written in the headings are left out")
+        markdown = stripped
+    job = PandocJob(fmt, markdown, metadata, output, source_dirs, template, settings, drawn.pictures)
     return convert(runtime(), job)
+
+
+def _numbers_headings_itself(fmt: str, template: Path | None, settings: dict) -> bool:
+    """Whether the output numbers its headings, so numbers written in the headings would show twice.
+
+    ``heading_numbers: strip`` or ``keep`` says so. Otherwise (``auto``) a Word template whose heading styles
+    are numbered does, and so does PDF or HTML with ``number_sections: true``.
+    """
+    choice = settings.get("heading_numbers", "auto")
+    if choice != "auto":
+        return choice == "strip"
+    if fmt in ("pdf", "html"):
+        return bool(settings.get("number_sections", False))
+    if fmt == "docx" and template is not None and template.is_file():
+        from .pandoc.reference import numbers_headings
+
+        return numbers_headings(template)
+    return False
 
 
 def _settings(config: ProjectConfig, doc: DocumentConfig, fmt: str):

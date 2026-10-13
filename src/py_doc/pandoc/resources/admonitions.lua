@@ -118,7 +118,7 @@ end
 
 -- Word merges two boxes with nothing between them, so a zero-width paragraph keeps them apart.
 function Pandoc(doc)
-  if FORMAT:match("latex") or FORMAT:match("html") then return nil end
+  if FORMAT:match("latex") or FORMAT:match("html") or FORMAT:match("markdown") or FORMAT:match("gfm") then return nil end
   local out = {}
   for i, block in ipairs(doc.blocks) do
     table.insert(out, block)
