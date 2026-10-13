@@ -71,6 +71,34 @@ def shift_headings(text: str, offset: int, name: str) -> str:
     return "\n".join(out) + "\n"
 
 
+_TOO_DEEP = re.compile(r"^(?P<indent> {0,3})(?P<hashes>#{7,})(?=[ \t]|$)")
+
+
+def keep_deep_hashes_as_text(text: str) -> str:
+    """A line of seven or more ``#`` outside code is text, as in CommonMark. Pandoc would make it a heading below 6."""
+    fence, out = Fence(), []
+    for line in text.splitlines():
+        if not fence.inside(line):
+            line = _TOO_DEEP.sub(lambda m: f"{m['indent']}\\{m['hashes']}", line)
+        out.append(line)
+    return "\n".join(out) + ("\n" if text.endswith("\n") else "")
+
+
+def warn_unclosed_fence(text: str, name: str) -> None:
+    """A code fence that is never closed is not code to pandoc: it shows the fence and the code as text. Say so."""
+    fence, opened = Fence(), None
+    for number, line in enumerate(text.splitlines(), start=1):
+        was_inside = fence.marker is not None
+        fence.inside(line)
+        if fence.marker is not None and not was_inside:
+            opened = number
+    if fence.marker is not None:
+        logger.warning(
+            f"{name}:{opened}: the code fence {fence.marker} opened here is never closed, so its lines are shown as "
+            "text, not code. Add the closing fence"
+        )
+
+
 def retitle(text: str, title: str) -> str:
     """Replace the text of the first heading with ``title``, or put a level 1 heading first if there is none."""
     fence, lines = Fence(), text.splitlines()
@@ -110,13 +138,14 @@ def join_sources(sources, variables: dict, conditions: dict, doc_id: str) -> Joi
         except UnicodeDecodeError as exc:
             raise ConversionError(f"Cannot read '{source.file}': it is not valid UTF-8 ({exc.reason})") from exc
         text = directives.expand(text, source.file, variables, conditions)
+        warn_unclosed_fence(text, str(source.file))
         front, body = split_front_matter(text)
         metadata = read_front_matter(front, source.file)
         if index == 0:
             first = metadata
         if source.title:
             body = retitle(body, source.title)
-        body = shift_headings(body, source.heading_offset, source.file.name)
+        body = shift_headings(keep_deep_hashes_as_text(body), source.heading_offset, source.file.name)
         text = body.rstrip("\n") + "\n"
         parts.append((source.file, f"{PAGE_BREAK}\n{text}" if index and source.page_break else text))
     joined = Joined(parts, first, None)

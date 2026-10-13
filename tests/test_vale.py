@@ -234,3 +234,38 @@ def test_rules_turned_off_in_the_config_are_not_written_for_vale(tmp_path):
     written = {path.stem for path in (tmp_path / "styles" / "PyDoc").glob("*.yml")}
     assert not written & {"Terms", "Wordy", "Redundant", "Acronyms"}
     assert "WeaselWords" in written
+
+
+# Each rule of the PyDoc style: a line it must flag, and a line it must leave alone (#93).
+RULE_CASES = {
+    "SentenceLength": (
+        "This sentence keeps going with word after word after word after word so that it runs on well past the limit of thirty words that the rule sets for any one sentence in a document today.",
+        "This sentence is short.",
+    ),
+    "ParagraphLength": (" ".join(["Each sentence here adds words to one long paragraph."] * 20), "A short paragraph."),
+    "PassiveVoice": ("The file was written by the tool.", "The tool writes the file."),
+    "WeaselWords": ("This is very fast.", "This takes two seconds."),
+    "Repeated": ("Open the the file.", "Open the file."),
+    "DoubleSpace": ("Open  the file.", "Open the file."),
+    "Placeholders": ("Finish this section. TODO", "This section is finished."),
+}
+HEADING_CASES = {
+    "HeadingPunctuation": ("## Install the tool.", "## Install the tool"),
+    "HeadingCase": ("## Install The Tool", "## Install the tool"),
+}
+
+
+@pytest.mark.skipif(shutil.which("vale") is None, reason="Vale is not installed")
+@pytest.mark.parametrize("rule", [*RULE_CASES, *HEADING_CASES])
+def test_each_rule_flags_its_case_and_leaves_good_text(project, capsys, rule):
+    bad, good = RULE_CASES.get(rule) or HEADING_CASES[rule]
+    if rule in HEADING_CASES:
+        bad_text, good_text = f"# Title\n\n{bad}\n\nText.\n", f"# Title\n\n{good}\n\nText.\n"
+    else:
+        bad_text, good_text = f"# Title\n\n{bad}\n", f"# Title\n\n{good}\n"
+    (project / "docs" / "a.md").write_text(bad_text, encoding="utf-8")
+    lint(project, "--engine", "vale")
+    assert f"PyDoc.{rule}" in capsys.readouterr().out, f"{rule} missed: {bad!r}"
+    (project / "docs" / "a.md").write_text(good_text, encoding="utf-8")
+    lint(project, "--engine", "vale")
+    assert f"PyDoc.{rule}" not in capsys.readouterr().out, f"{rule} flagged good text: {good!r}"

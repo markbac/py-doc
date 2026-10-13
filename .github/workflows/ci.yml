@@ -52,6 +52,15 @@ jobs:
       - name: Vale on Windows
         if: runner.os == 'Windows'
         run: choco install vale -y
+      - name: structurizr-cli (for the end-to-end C4 test; the runner has Java 17)
+        if: runner.os == 'Linux'
+        run: |
+          line=$(awk '$1 == "structurizr-cli" { print $3 " " $4 }' src/py_doc/runtime/definition/tools.lock)
+          curl -fsSL "${line% *}" -o /tmp/structurizr-cli.zip
+          echo "${line#* }  /tmp/structurizr-cli.zip" | sha256sum -c -
+          sudo unzip -q /tmp/structurizr-cli.zip -d /opt/structurizr-cli
+          sudo chmod +x /opt/structurizr-cli/structurizr.sh
+          echo "PY_DOC_STRUCTURIZR_CLI=/opt/structurizr-cli/structurizr.sh" >> "$GITHUB_ENV"
       - run: python -m pip install -e ".[dev]"
       - name: Tests
         shell: bash

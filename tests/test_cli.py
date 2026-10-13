@@ -67,6 +67,16 @@ class TestFileMode:
         run_cli(monkeypatch, str(src), "-t", str(template))
         assert [t for t in texts(tmp_path / "spec.docx") if t] == ["Cover", "Spec", "Back page"]
 
+    def test_template_text_without_a_marker_is_named_in_a_warning(self, tmp_path, monkeypatch, capsys):
+        template = tmp_path / "template.docx"
+        doc = Document()
+        doc.add_paragraph("TEMPLATE PLACEHOLDER BODY")
+        doc.save(str(template))
+        src = tmp_path / "spec.md"
+        src.write_text("# Spec\n", encoding="utf-8")
+        run_cli(monkeypatch, str(src), "-t", str(template))
+        assert "'TEMPLATE PLACEHOLDER BODY') and no [[INSERTCONTENT]] line" in capsys.readouterr().err
+
     def test_invalid_utf8_input_exits_with_status_1_and_no_traceback(self, tmp_path, monkeypatch, capsys):
         src = tmp_path / "spec.md"
         src.write_bytes(b"caf\xe9\n")

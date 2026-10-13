@@ -46,3 +46,21 @@ The issues of the repository, as reviewed on 12 October 2026, and the requiremen
 | #44 | Front matter and document metadata | FR-005 | Done: front matter reaches every format and the site pages |
 | #47 | Machine-readable lint and build output | FR-046, FR-104 | Partly done: the JSON build report, CSV and GitHub lint output. JSON and SARIF lint output remain |
 | #48 | Site navigation from document metadata | FR-122 | Done: navigation from the documents and their titles, a hand-made navigation kept. Can be closed |
+
+## Closed issues
+
+The 91 closed issues, checked on 13 October 2026 against the code, the tests and a run of each behaviour through the real pipeline. The 20 duplicates (#21 to #40) point at their originals, which are reviewed above or here.
+
+| Issues | Outcome |
+|---|---|
+| #1, #5, #6, #10, #13, #45, #46, #50, #51, #62 to #64, #69 to #71, #73 to #84, #92, #94, #95, #97 to #100, #102, #103, #105 to #116, #118 | Done as described, with tests |
+| #2, #7, #8, #9, #58, #59, #66, #67, #75 | Done for the native renderers, which #117 removed. The same behaviour now comes from pandoc and was checked: fences, headings, numbers in text, the byte order mark, invalid UTF-8, vertical tabs, code style, heading levels 5 and 6 |
+| #20, #65 | Done, with two changes of plan: the heavy tools moved into the container instead of optional Python extras, and macOS was dropped from CI by #102 |
+| #49, #72 | The code of an unclosed fence was kept, but as text and without the warning the issues asked for. A warning that names the file and line is added |
+| #53 | Seven or more `#` became a level 7 heading under pandoc. Such a line is now text, as in CommonMark |
+| #60 | A template's body text is kept before the document when the template has no `[[INSERTCONTENT]]` line, as #117 decided. That was silent. A warning now names the text and says how to place the document |
+| #93 | Each rule of the `PyDoc` style now has a test that it flags a bad line and leaves a good one, which found the passive-voice rule missing irregular verbs. The repository's documentation lints with no findings |
+| #96 | The end-to-end test with the real `structurizr-cli` was missing. It is added, and CI installs the pinned CLI to run it |
+| #104 | The note that `Setup-DocTools.ps1` is no longer needed is added to the reference chapter |
+| #117 | Done. The template-body choice it made is recorded under #60 |
+| — | Found on the way: a template in the same folder as the Markdown failed with a duplicate mount, now fixed |

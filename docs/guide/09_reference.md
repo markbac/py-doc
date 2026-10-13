@@ -14,6 +14,8 @@ py-doc migrate docs/ --backup     # also keep .bak copies of the originals and a
 
 Each `createdocs` YAML file becomes one document, so folders, sources, templates and shared chapters keep their relations. A template used by every Word document is set once under `outputs`. YAML files that are not build files (such as `mkdocs.yml`) are listed as skipped, and the originals are never changed or deleted. An existing output file is not replaced unless you pass `--backup` or `--force`.
 
+The `Setup-DocTools.ps1` script that installed pandoc, TeX and the diagram tools on Windows is no longer needed: the tools run in the tool container. Use `py-doc setup` (Docker Engine in WSL), then `py-doc doctor`, which builds the image on first use.
+
 The report lists what has no equivalent yet, so nothing is lost quietly:
 
 - processed Markdown output and the build switches for it;

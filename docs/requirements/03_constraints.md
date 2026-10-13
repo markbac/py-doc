@@ -6,7 +6,7 @@ title: Constraints
 
 | ID | Constraint | Why |
 |---|---|---|
-| CON-01 | Pandoc writes every Word, PowerPoint, PDF, HTML and site page. py-doc has no renderer of its own. | One mature converter instead of several partial ones. The earlier native renderers were removed |
+| CON-01 | Pandoc writes every Word, PowerPoint, PDF, HTML and site page. py-doc has no renderer of its own. | One mature converter instead of three partial ones. py-doc removed its native renderers (#117) |
 | CON-02 | Tools that are not Python run in a Docker container. On Windows, Docker Engine runs in a WSL 2 distribution, not Docker Desktop. | Identical tools on every machine and in CI, nothing to install but Python and Docker, and no Docker Desktop licence |
 | CON-03 | Linux and Windows only. | The tool runner depends on Docker on Linux and on WSL on Windows. macOS is not tested |
 | CON-04 | Python 3.10 or later. | The language features and libraries py-doc uses |

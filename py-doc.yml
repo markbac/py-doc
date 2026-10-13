@@ -82,7 +82,13 @@ lint:
     Starlight: [starlight]
   acronyms:
     min_length: 3
-    allowed: [CLI, WSL, DSL, SVG, PNG, PDF, EMF, WMF, CSV, SARIF, ADR, TLS, SHA, NPM, LTS, TOC, YAML, JSON, HTML, CSS, URL, API, UTF, GIF, JPEG, SEQ]
+    # Formats and tools, the status words of `template check`, the CON- identifiers of the constraints,
+    # and the marker names, which are not acronyms to spell out
+    allowed: [CLI, WSL, DSL, SVG, PNG, PDF, EMF, WMF, CSV, SARIF, ADR, TLS, SHA, NPM, LTS, TOC, YAML, JSON, HTML, CSS, URL, API, UTF, GIF, JPEG, SEQ,
+              JAR, MIT, CON, FAIL, WARN, INFO, NOTE, TIP, IMPORTANT, WARNING, CAUTION, CAPTION, STYLE, LANDSCAPE, PORTRAIT]
   vale:
     enabled: auto
     spelling: off            # product and tool names would swamp it
+    rules:
+      PyDoc.PassiveVoice: off   # requirements are written as "shall be ...", which is the convention
+      PyDoc.HeadingCase: off    # headings name products, files and decision numbers (Structurizr Local, AD-01)

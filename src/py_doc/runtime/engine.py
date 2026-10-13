@@ -270,7 +270,13 @@ class Runtime:
         """Run ``argv`` in a fresh container. ``Path`` arguments are translated and must lie under a mount."""
         if not argv:
             raise ValueError("argv is empty")
-        mounted = [(self.container_path(m.source), m.writable) for m in mounts]
+        # One folder given twice (a template beside its Markdown) is one mount, writable if either asks:
+        # Docker refuses a duplicate mount point
+        merged: dict[str, bool] = {}
+        for mount in mounts:
+            root = self.container_path(mount.source)
+            merged[root] = merged.get(root, False) or mount.writable
+        mounted = list(merged.items())
 
         def covered(cpath: str) -> bool:
             return any(cpath == root or cpath.startswith(root.rstrip("/") + "/") for root, _ in mounted)

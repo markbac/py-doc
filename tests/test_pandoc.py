@@ -53,6 +53,17 @@ class TestSource:
         assert source.shift_headings("##### A\n", 3, "x.md") == "###### A\n"
         assert "would be level 8" in caplog.text
 
+    def test_an_unclosed_fence_is_named_in_a_warning(self, caplog):
+        source.warn_unclosed_fence("# T\n\n```python\nx = 1\n", "doc.md")
+        assert "doc.md:3: the code fence ``` opened here is never closed" in caplog.text
+        caplog.clear()
+        source.warn_unclosed_fence("```\na\n```\n", "doc.md")
+        assert caplog.text == ""
+
+    def test_seven_hashes_are_text_outside_code(self):
+        text = "####### seven\n###### six\n```\n####### code\n```\n"
+        assert source.keep_deep_hashes_as_text(text) == "\\####### seven\n###### six\n```\n####### code\n```\n"
+
     def test_retitle_replaces_the_first_heading_or_adds_one(self):
         assert source.retitle("# Old\n\nText\n", "New") == "# New\n\nText\n"
         assert source.retitle("Text\n", "New") == "# New\n\nText\n"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -227,3 +228,22 @@ def test_the_word_sample_imports_and_builds_again(examples, pandoc_runtime, tmp_
     assert main(["docx", str(out / "design_review.md")]) == 0
     with zipfile.ZipFile(out / "design_review.docx") as archive:
         assert any(n.startswith("word/media/") for n in archive.namelist())
+
+
+@pytest.mark.skipif(not os.environ.get("PY_DOC_STRUCTURIZR_CLI"), reason="set PY_DOC_STRUCTURIZR_CLI to a structurizr-cli to run it")
+def test_the_real_structurizr_cli_reads_the_dsl_into_the_same_model(tmp_path):
+    """#96: the DSL through the real structurizr-cli gives the model the hand-made JSON describes."""
+    from py_doc.c4.model import load_workspace
+    from py_doc.c4.structurizr import workspace_json
+
+    shutil.copytree(EXAMPLES / "architecture", tmp_path / "architecture", ignore=shutil.ignore_patterns(".structurizr"))
+    exported = workspace_json(tmp_path / "architecture" / "workspace.dsl", tmp_path / "cache", cli=os.environ["PY_DOC_STRUCTURIZR_CLI"])
+    from_cli = load_workspace(exported)
+    by_hand = load_workspace(EXAMPLES / "architecture" / "workspace.json")
+    assert {e.name for e in from_cli.elements.values()} == {e.name for e in by_hand.elements.values()}
+    def described(ws):
+        return {(ws.elements[r.source_id].name, ws.elements[r.destination_id].name, r.description) for r in ws.relationships}
+
+    # Structurizr adds implied relationships and those of deployment instances, so the CLI's model has more
+    assert described(by_hand) <= described(from_cli)
+    assert {v.key for v in from_cli.views} == {v.key for v in by_hand.views}

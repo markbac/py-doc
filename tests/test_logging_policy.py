@@ -54,6 +54,7 @@ def test_library_modules_do_not_print():
 @pytest.mark.parametrize(
     "command",
     [["docx"], ["slides"], ["lint"], ["build"], ["migrate"], ["doctor"], ["import", "x"], ["c4", "check"], ["c4", "export"], ["template", "check", "x"], ["template", "show", "x"]]
+    + [["init"], ["site", "init"], ["site", "generate"], ["site", "build"], ["c4", "up"], ["c4", "down"], ["c4", "status"]]
     + [["tools", action] for action in ("build", "status", "prune", "lock", "save", "load")],
 )
 def test_every_command_takes_quiet_and_verbose(command, capsys):

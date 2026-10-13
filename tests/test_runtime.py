@@ -88,6 +88,13 @@ def test_a_path_argument_is_translated_to_the_engine_path(engine, tmp_path):
     assert engine.runs()[0][-1] == (tmp_path / "a.md").resolve().as_posix()
 
 
+def test_a_folder_given_twice_is_one_mount_writable_if_either_is(engine, tmp_path):
+    """A template beside its Markdown: Docker refuses the same mount point twice."""
+    linux(engine).run(["tool"], mounts=[Mount(tmp_path), Mount(tmp_path, writable=True), Mount(tmp_path)])
+    bind = [m for m in options(engine.runs()[0], "--mount") if m.startswith("type=bind")]
+    assert len(bind) == 1 and not bind[0].endswith(",readonly")
+
+
 def test_a_folder_name_with_a_comma_is_quoted_for_mount(engine, tmp_path):
     odd = tmp_path / "a,b"
     odd.mkdir()

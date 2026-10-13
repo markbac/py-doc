@@ -29,7 +29,7 @@ Pandoc writes the document with the template as its reference document, so the t
 
 Slides start at headings up to `split_level` (`--split-level`, default 2) and at `::: {.pagebreak}` lines. The title and author in the front matter make the title slide. Pandoc chooses layouts by their standard names (`Title Slide`, `Title and Content`, `Section Header`, `Two Content`, `Comparison`), so a template must start from `pandoc --print-default-data-file reference.pptx` and be edited in PowerPoint. A template that gives an empty deck is reported with that hint.
 
-- **Speaker notes**: `<!-- notes: text -->`, or a `::: notes` block for several paragraphs.
+- **Speaker notes**: `<!-- notes: text -->`, or a `::: notes` block for more than one paragraph.
 - **Columns**: a `:::: columns` block with two `::: column` blocks uses the Two Content layout.
 - **Diagrams and pictures** sit on the slide on their own, with the `[[CAPTION:Figure]]` text under them.
 - **Footer**: `footer: "{title} v{version}"` fills the footer placeholder of every slide (a layout without one is reported), and `{{VERSION}}` in a template shape is replaced by the version.

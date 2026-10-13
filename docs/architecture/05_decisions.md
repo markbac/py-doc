@@ -16,7 +16,7 @@ Each decision records the context, the choice and its consequences.
 
 - **Context**: the toolchain is large (TeX, Java, Chromium, Node, Python tools) and differs between machines.
 - **Decision**: one image built from a definition in the package, tagged by its hash, run as the calling user with only the folders each step needs.
-- **Consequences**: the same results on every machine and in CI, and nothing to install but Python and Docker. The first build takes minutes and several gigabytes. On Windows it needs WSL 2.
+- **Consequences**: the same results on every machine and in CI, and nothing to install but Python and Docker. The first build takes 5 to 30 minutes and about 4 GB. On Windows it needs WSL 2.
 
 ## AD-03 Docker Engine in WSL, not Docker Desktop
 
