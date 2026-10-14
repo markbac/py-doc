@@ -250,6 +250,39 @@ def test_a_diagram_has_one_caption_its_own_or_else_the_tools(tmp_path, pandoc_ru
     assert shown.count(expected) == 1
 
 
+@needs_pandoc
+def test_a_width_on_a_diagram_or_picture_is_a_share_of_the_text_width(tmp_path, pandoc_runtime, monkeypatch):
+    from docx import Document
+    from docx.shared import Cm
+
+    picture = png(tmp_path / "pic.png")
+    monkeypatch.setattr(diagrams.render, "draw_cached", lambda *args, **kwargs: picture)
+    template = Document()
+    section = template.sections[0]
+    section.page_width, section.left_margin, section.right_margin = Cm(21), Cm(2), Cm(2)
+    template.save(tmp_path / "T.docx")
+    (tmp_path / "g.md").write_text(
+        "# G\n\n```dot width=\"100%\"\ndigraph { a -> b }\n```\n\n![half](pic.png){width=50%}\n\n![natural](pic.png)\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "py-doc.yml").write_text(
+        "documents:\n  g:\n    sources: [g.md]\n    outputs: {docx: {template: T.docx, allow_missing_template: true}, html: {}}\n",
+        encoding="utf-8",
+    )
+    config = load_config(tmp_path / "py-doc.yml")
+    docx, html = build_document(config, config.documents["g"], runtime=lambda: pandoc_runtime)
+    widths = [round(shape.width.cm, 1) for shape in Document(str(docx)).inline_shapes]
+    assert widths[:2] == [17.0, 8.5] and widths[2] < 1
+    assert re.findall(r'style="width:([\d.]+)%"', html.read_text(encoding="utf-8")) == ["100.0", "50.0"]
+
+
+def test_a_diagram_width_that_is_not_a_size_is_an_error(tmp_path, monkeypatch):
+    picture = png(tmp_path / "pic.png")
+    monkeypatch.setattr(diagrams.render, "draw_cached", lambda *args, **kwargs: picture)
+    with pytest.raises(DiagramError, match=r"doc.md:1: width=\"wide\" is not a size"):
+        render_parts(part(tmp_path, '```dot width="wide"\ndigraph { a -> b }\n```\n'), "docx", lambda: None)
+
+
 class TestOtherTools:
     """The tools themselves live only in the image, so a stand-in checks the command that is run."""
 

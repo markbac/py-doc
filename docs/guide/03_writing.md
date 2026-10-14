@@ -40,7 +40,7 @@ Word uses the `Div.note` to `Div.caution` paragraph styles. The built-in referen
 
 ## Captions, orientation and styles
 
-- **Captions**: `[[CAPTION:Figure]] Text` (or `Table`) on the line before a picture, diagram, code block or table becomes its caption. In Word the number is a `SEQ` field, shared with the captions pandoc makes itself, so captions renumber when Word updates fields. Cross-references to captions are not supported. On a slide the caption is the text under the picture.
+- **Captions**: `[[CAPTION:Figure]] Text` (or `Table`) on the line before a picture, diagram, code block or table becomes its caption. A diagram also takes one from the line after it. In Word the number is a `SEQ` field, shared with the captions pandoc makes itself, so captions renumber when Word updates fields. Cross-references to captions are not supported. On a slide the caption is the text under the picture.
 - **Orientation**: `[[LANDSCAPE]]` and `[[PORTRAIT]]` start a Word section of that orientation, and widen or narrow pictures in the other formats.
 - **Styles**: `[[STYLE:Name]] text` applies a named Word paragraph style, and warns once if the template has none of that name. Other formats keep the text.
 - **Page breaks**: `[[PAGEBREAK]]` on its own line, `::: {.pagebreak}` followed by `:::`, or `page_break: true` on a source. In a deck it starts a new slide, and on a site it is left out.
@@ -79,7 +79,7 @@ documents:
 A fenced block whose language is a diagram type becomes a picture in every output:
 
 ````markdown
-```plantuml title="System context"
+```plantuml title="System context" width="80%"
 @startuml
 Alice -> Bob : hello
 @enduml
@@ -96,7 +96,8 @@ Alice -> Bob : hello
 - **Format**: HTML and sites keep SVG where the tool can write it. Word, PowerPoint and PDF get PNG at 192 dpi, shrunk to the page width (wider after a `[[LANDSCAPE]]` line, until `[[PORTRAIT]]`).
 - **Alt text** comes from `caption="..."` or `title="..."` after the language, else from a `title` line in the diagram, else the diagram type.
 - **Captions**: a `[[CAPTION:Figure]] text` line directly above or below the diagram is its caption. Without one, the alt text is the caption.
+- **Size**: `width="100%"` after the language makes the diagram that share of the text width (the page less its margins). A length such as `12cm`, `30mm`, `4in` or `600px` is also allowed. Without it, a diagram keeps its drawn size, shrunk to fit the page.
 - **A broken diagram stops the build** with the file, the line and the tool's own message, and no output file is written. `py-doc build --keep-going` draws every diagram first and lists all the failures together.
 - **Pictures are cached** in your user cache folder (`PY_DOC_CACHE` overrides it), keyed by the diagram text, the format and the tool image, so an unchanged diagram is not drawn again. A PlantUML diagram with `!include` is always drawn, because the included file can change on its own.
 - **PlantUML includes** are looked up in the folder of the Markdown file, which is the only source folder the tool can read.
-- **Pictures** in Markdown are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown.
+- **Pictures** in Markdown are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown. `![](images/a.png){width=50%}` makes a picture that share of the text width, in Word too, where py-doc works it out from the template's page and margins.

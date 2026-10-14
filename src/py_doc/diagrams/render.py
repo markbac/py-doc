@@ -27,6 +27,7 @@ MAX_WIDTH_PX = {"portrait": 1200, "landscape": 1800}
 DPI = 192
 _ORIENTATION = re.compile(r"^\s*\[\[(LANDSCAPE|PORTRAIT)\]\]\s*$", re.MULTILINE)
 _CAPTION = re.compile(r"^\s*\[\[CAPTION:(?!\s*Table\s*\]\])[^\]]+\]\]")
+_WIDTH = re.compile(r"^\d+(?:\.\d+)?(?:%|cm|mm|in|px)$")
 _TITLE = re.compile(r"^\s*title(?::|\s)\s*(?P<title>.+?)\s*$", re.MULTILINE | re.IGNORECASE)
 _MAGIC = {"png": b"\x89PNG\r\n\x1a\n", "svg": b"<"}
 
@@ -196,6 +197,11 @@ def render_parts(
             name = f"diagrams/{picture.name}"
             pictures[name] = picture
             picture_line = f"![{_alt_text(block, renderer)}]({name})"
+            width = block.options.get("width")
+            if width:
+                if not _WIDTH.match(width):
+                    raise DiagramError(f"{file}:{block.line}: width=\"{width}\" is not a size such as 100%, 12cm or 4in")
+                picture_line += f"{{width={width}}}"
             if fmt == "docx" and _captioned(lines, block):
                 picture_line += "\\ "  # a no-break space: not alone in its paragraph, so pandoc adds no caption
             if fmt == "pptx":  # pandoc's PowerPoint writer drops a picture inside a div and prints its alt text instead
