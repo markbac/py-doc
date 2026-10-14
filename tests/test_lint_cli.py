@@ -246,3 +246,21 @@ class TestOutputFormats:
         run([str(tree), "--format", "github", "--engine", "builtin"])
         out = capsys.readouterr().out
         assert any(line.startswith("::warning file=") and "title=DOC001" in line for line in out.splitlines())
+
+
+class TestSeveralTargets:
+    def test_files_and_folders_are_one_report_with_each_file_once(self, tree, capsys):
+        report = DocLinter().lint_paths([tree / "guide", tree / "index.md", tree / "guide" / "setup.md"])
+        assert sorted(r.file.name for r in report.results) == ["index.md", "setup.md"]
+        assert run([str(tree / "index.md"), str(tree / "guide"), "--strict"]) == 1
+        assert "Scanned 2 file(s)" in capsys.readouterr().out
+
+    def test_a_bad_target_among_several_is_an_error(self, tree, capsys):
+        assert run([str(tree / "index.md"), str(tree / "nope")]) == 2
+        assert "Path not found" in capsys.readouterr().err
+
+    def test_the_help_names_the_command_and_shows_examples(self, capsys):
+        with pytest.raises(SystemExit):
+            run(["--help"])
+        out = capsys.readouterr().out
+        assert out.startswith("usage: py-doc lint") and "[TARGET ...]" in out and "py-doc lint docs README.md" in out

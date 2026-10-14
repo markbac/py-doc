@@ -9,6 +9,9 @@ A number is ``[PREFIX-][TYPE-]NNN``. The prefix (``G460``) is set once in the re
 (``TN``) is asked each time; both may be empty. ``NNN`` is one counter for every type: one more than the
 highest in the register, or with ``start`` set, the first from there that no document has.
 
+The register may also list the allowed ``prefixes``, ``types`` and ``classifications``. A value must then
+be one of the list (the register's spelling is used); without a list anything goes.
+
 ``--scan`` adds the legacy build files that are not in the register yet, numbers that clash included
 (they are listed), and ``--start N`` sets where new numbers begin. Neither makes a document.
 """
@@ -39,6 +42,7 @@ REGISTER_HEADER = (
 FORMATS = {"docx": "Word", "pptx": "PowerPoint"}
 _SEQUENCE = re.compile(r"(\d+)$")
 _CODE = re.compile(r"^[A-Za-z0-9]*$")
+LISTS = {"prefixes": "G460, G470", "types": "TN, OV, SP", "classifications": "Confidential, Internal"}  # with an example
 
 
 class NewError(Exception):
@@ -58,15 +62,17 @@ class Register:
     prefix: str = ""
     entries: list[Entry] | None = None
     start: int | None = None
+    allowed: dict[str, list[str]] | None = None  # prefixes, types, classifications: the only values allowed
 
-    def next_number(self, kind: str) -> str:
+    def next_number(self, kind: str, prefix: str | None = None) -> str:
         found = [m for m in (_SEQUENCE.search(e.number) for e in self.entries or []) if m]
         used = {int(m[1]) for m in found}
         digits = max([3, *(len(m[1]) for m in found)])
         sequence = self.start if self.start is not None else max(used, default=0) + 1
         while sequence in used:
             sequence += 1
-        return "-".join(part for part in (self.prefix, kind, f"{sequence:0{digits}d}") if part)
+        prefix = self.prefix if prefix is None else prefix
+        return "-".join(part for part in (prefix, kind, f"{sequence:0{digits}d}") if part)
 
     def clashes(self) -> dict[str, list[str]]:
         """Numbers held by more than one file."""
@@ -79,6 +85,7 @@ class Register:
         data: dict = {"prefix": self.prefix}
         if self.start is not None:
             data["start"] = self.start
+        data.update({key: values for key, values in (self.allowed or {}).items() if values})
         data["documents"] = [vars(e) for e in self.entries or []]
         body = yaml.safe_dump(data, sort_keys=False, allow_unicode=True, width=120)
         self.path.write_text(REGISTER_HEADER + body, encoding="utf-8")
@@ -112,7 +119,15 @@ def load_register(root: Path) -> Register:
     start = data.get("start")
     if start is not None and (not isinstance(start, int) or isinstance(start, bool) or start < 1):
         raise NewError(f"{path}: start must be a whole number from 1")
-    return Register(path, str(data.get("prefix") or ""), entries, start)
+    allowed = {}
+    for key in LISTS:
+        values = data.get(key)
+        if values is None:
+            continue
+        if not isinstance(values, list) or not all(isinstance(v, (str, int)) and str(v).strip() for v in values):
+            raise NewError(f"{path}: {key} must be a list of values, such as [{LISTS[key]}]")
+        allowed[key] = [str(v).strip() for v in values]
+    return Register(path, str(data.get("prefix") or ""), entries, start, allowed)
 
 
 def existing_numbers(root: Path) -> list[Entry]:
@@ -151,17 +166,33 @@ def build_file(meta: dict[str, str], output: str, fmt: str, source: str) -> str:
     return "\n".join(lines)
 
 
+NEW_EXAMPLES = """examples:
+  py-doc new                                   ask for everything
+  py-doc new -y --title "Meter Wakeup" --type TN --classification Confidential
+  py-doc new --title "Overview" --type OV --format pptx
+  py-doc new --scan                            add existing build files to the register
+  py-doc new --scan --start 100                and begin new numbers at 100"""
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="py-doc new", description="Start a document here: a legacy build file and its Markdown, with the next number from the register"
+        prog="py-doc new",
+        description="Start a document here: a legacy build file and its Markdown, with the next number from "
+        "doc-numbers.yml at the repository root. What is not given is asked, unless -y is set or there is no terminal",
+        epilog=NEW_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--title", help="The document title")
-    parser.add_argument("--type", dest="kind", help="The type code in the number, such as TN (empty for none)")
+    parser.add_argument("--title", help="The document title (needed)")
+    parser.add_argument("--type", dest="kind", help="The type code in the number, such as TN: one of the register's types when it lists them, else anything or empty")
     parser.add_argument("--format", choices=sorted(FORMATS), help="Word (docx) or PowerPoint (pptx). Default: docx")
     parser.add_argument("--author", help="Default: git config user.name")
-    parser.add_argument("--classification", help="Such as Confidential")
+    parser.add_argument("--classification", help="Such as Confidential: one of the register's classifications when it lists them, else anything")
     parser.add_argument("--description", help="One sentence on what the document covers")
-    parser.add_argument("--prefix", help="The number prefix, such as G460, kept in the register (only when it is made)")
+    parser.add_argument(
+        "--prefix",
+        help="The number prefix, such as G460 (default: the register's prefix). One of its prefixes when it lists them. "
+        "When the register is made, it becomes its default",
+    )
     parser.add_argument("--scan", action="store_true", help="Add the legacy build files not in the register yet (clashes included), and make no document")
     parser.add_argument("--start", type=int, metavar="N", help="New numbers begin at N, skipping any taken (kept in the register), and make no document")
     parser.add_argument("-y", "--yes", action="store_true", help="Ask nothing: take the defaults for what is not given")
@@ -181,6 +212,34 @@ def _asker(ask: Callable[[str], str] | None) -> Callable[[str, str | None, str],
     return value
 
 
+def _chooser(ask: Callable[[str], str] | None):
+    """A value that must be one of ``allowed`` when that is given (any case; the list's spelling is kept).
+
+    A wrong answer is asked again; a wrong option, or a wrong answer with nobody to ask, is an error.
+    """
+    value = _asker(ask)
+
+    def pick(question: str, given: str | None, default: str, allowed: list[str] | None, option: str) -> str:
+        if not allowed:
+            return value(question, given, default).strip()
+        by_key = {item.upper(): item for item in allowed}
+        listed = ", ".join(allowed)
+        if given is not None:
+            if given.strip().upper() not in by_key:
+                raise NewError(f"{option} '{given}' is not in the register's list: {listed}")
+            return by_key[given.strip().upper()]
+        question = f"{question.split(',')[0].split(' (')[0]} ({listed})"
+        while True:
+            answer = value(question, None, default).strip()
+            if answer.upper() in by_key:
+                return by_key[answer.upper()]
+            if ask is None:
+                raise NewError(f"{option} is needed: one of {listed}")
+            print(f"'{answer}' is not one of {listed}" if answer else f"Choose one of {listed}")
+
+    return pick
+
+
 def make(folder: Path, args: argparse.Namespace, ask: Callable[[str], str] | None, today: datetime.date) -> tuple[list[Path], Register, bool]:
     """Write the build file and its Markdown in ``folder`` and record the number. Returns what was written."""
     value = _asker(ask)
@@ -192,20 +251,28 @@ def make(folder: Path, args: argparse.Namespace, ask: Callable[[str], str] | Non
     else:
         register = load_register(root)
 
+    allowed = register.allowed or {}
+    pick = _chooser(ask)
+    prefixes = allowed.get("prefixes")
+    if prefixes:
+        default = register.prefix if register.prefix.upper() in (p.upper() for p in prefixes) else prefixes[0]
+        prefix = pick("Number prefix", args.prefix, default, prefixes, "--prefix")
+    else:
+        prefix = (register.prefix if args.prefix is None or created else args.prefix).strip()
     title = value("Title", args.title, "").strip()
     if not title:
         raise NewError("A title is needed (--title)")
-    kind = value("Type code, such as TN (empty for none)", args.kind, "").strip().upper()
-    if not _CODE.match(kind) or not _CODE.match(register.prefix):
+    kind = pick("Type code, such as TN (empty for none)", args.kind, "", allowed.get("types"), "--type").upper()
+    if not _CODE.match(kind) or not _CODE.match(prefix):
         raise NewError("The prefix and type may only have letters and digits")
     fmt = value("Word or PowerPoint (docx or pptx)", args.format, "docx").strip().lower()
     if fmt not in FORMATS:
         raise NewError(f"'{fmt}' is not docx or pptx")
     author = value("Author", args.author, _git_name()).strip()
-    classification = value("Classification", args.classification, "").strip()
+    classification = pick("Classification", args.classification, "", allowed.get("classifications"), "--classification")
     description = value("Description", args.description, "").strip()
 
-    number = register.next_number(kind)
+    number = register.next_number(kind, prefix)
     stem = _stem(number, title)
     build, source = folder / f"{stem}.yaml", folder / f"{stem}.md"
     for path in (build, source):

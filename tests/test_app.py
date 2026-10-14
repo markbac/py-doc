@@ -140,3 +140,32 @@ class TestDelegation:
         with pytest.raises(SystemExit):
             main(["--version"])
         assert capsys.readouterr().out.strip() == f"py-doc {py_doc.__version__}"
+
+
+@pytest.mark.parametrize(
+    ("command", "usage", "shown"),
+    [
+        (["docx"], "usage: py-doc docx", "py-doc docx guide.md -t Template.docx"),
+        (["slides"], "usage: py-doc slides", "--split-level 1"),
+        (["lint"], "usage: py-doc lint", "py-doc lint docs README.md"),
+        (["build"], "usage: py-doc build", "one legacy createdocs build file"),
+        (["migrate"], "usage: py-doc migrate", "py-doc migrate docs --check"),
+        (["new"], "usage: py-doc new", "py-doc new --scan --start 100"),
+        ([], "usage: py-doc ", "`py-doc COMMAND --help`"),
+    ],
+)
+def test_the_help_names_the_command_and_shows_what_it_does(command, usage, shown, capsys):
+    with pytest.raises(SystemExit):
+        main([*command, "--help"])
+    out = capsys.readouterr().out
+    assert out.startswith(usage) and shown in out
+
+
+def test_the_old_commands_keep_their_own_name_in_the_help(capsys):
+    from py_doc.cli import run_docx
+    from py_doc.slides_cli import run_slides
+
+    for run, name in ((run_docx, "py-doc2docx"), (run_slides, "py-doc2slides")):
+        with pytest.raises(SystemExit):
+            run(["--help"], legacy=True)
+        assert capsys.readouterr().out.startswith(f"usage: {name}")

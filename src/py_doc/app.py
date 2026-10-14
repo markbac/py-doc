@@ -51,18 +51,41 @@ _DELEGATES = {
 }
 
 
+BUILD_EXAMPLES = """examples:
+  py-doc build                               every document in the nearest py-doc.yml
+  py-doc build guide -f docx                 only the guide, only as Word
+  py-doc build --var version=2.1 --condition audience=staff
+  py-doc build --legacy G460-TN-012.yaml     one legacy build file, without py-doc.yml"""
+
+MIGRATE_EXAMPLES = """examples:
+  py-doc migrate docs --check                report what would be migrated, write nothing
+  py-doc migrate docs                        write py-doc.yml from every build file below docs
+  py-doc migrate docs --backup               also keep .bak copies of the build files and any old py-doc.yml"""
+
+
 def _error(message: str) -> None:
     print(f"Error: {message}", file=sys.stderr)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="py-doc", description="Markdown technical documentation tools")
+    parser = argparse.ArgumentParser(
+        prog="py-doc",
+        description="Markdown technical documentation tools",
+        epilog="`py-doc COMMAND --help` describes a command and its options. "
+        "The user guide is docs/guide/ in https://github.com/markbac/py-doc",
+    )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     commands = parser.add_subparsers(dest="command", metavar="command", required=True)
     for name, (help_text, _) in _DELEGATES.items():
         commands.add_parser(name, help=help_text, add_help=False)
 
-    build = commands.add_parser("build", help="Build the documents described in py-doc.yml")
+    build = commands.add_parser(
+        "build",
+        help="Build the documents described in py-doc.yml",
+        description="Build the documents described in py-doc.yml, or one legacy createdocs build file",
+        epilog=BUILD_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     build.add_argument("documents", nargs="*", metavar="DOCUMENT", help="Documents to build (default: all)")
     source = build.add_mutually_exclusive_group()
     source.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
@@ -79,10 +102,18 @@ def build_parser() -> argparse.ArgumentParser:
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
 
-    move = commands.add_parser("migrate", help="Create py-doc.yml from legacy build files")
+    move = commands.add_parser(
+        "migrate",
+        help="Create py-doc.yml from legacy build files",
+        description="Create py-doc.yml from legacy createdocs build files. The legacy files are never changed",
+        epilog=MIGRATE_EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     move.add_argument("paths", nargs="*", default=["."], metavar="PATH", help="Build files or folders to search")
     move.add_argument("-o", "--output", default="py-doc.yml", help="Configuration file to write (default: py-doc.yml)")
-    move.add_argument("--from", dest="source", choices=LEGACY_FORMATS, default=LEGACY_FORMATS[0], help="Legacy format")
+    move.add_argument(
+        "--from", dest="source", choices=LEGACY_FORMATS, default=LEGACY_FORMATS[0], help="Legacy format (default: createdocs, the only one)"
+    )
     move.add_argument("--check", action="store_true", help="Only report what would be migrated")
     move.add_argument("--backup", action="store_true", help="Keep copies (.bak) of the legacy files and any old output")
     move.add_argument("--force", action="store_true", help="Overwrite an existing output file without a backup")
