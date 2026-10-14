@@ -98,6 +98,15 @@ class TestConditions:
             run(tmp_path, "[[INCLUDE: part.md]]\n[[ENDIF]]\n", conditions={"a": True}, files={"part.md": "[[IF: a]]\n"})
 
 
+class TestPageBreak:
+    def test_becomes_a_page_break_block(self, tmp_path):
+        assert run(tmp_path, "a\n[[PAGEBREAK]]\nb\n") == "a\n\n::: {.pagebreak}\n:::\n\nb\n"
+
+    def test_left_alone_in_code(self, tmp_path):
+        text = "```\n[[PAGEBREAK]]\n```\n"
+        assert run(tmp_path, text) == text
+
+
 class TestIncludes:
     def test_file_is_inserted_and_expanded(self, tmp_path):
         out = run(tmp_path, "a\n[[INCLUDE: part.md]]\nb\n", {"v": "1"}, files={"part.md": "part {{v}}\n"})
