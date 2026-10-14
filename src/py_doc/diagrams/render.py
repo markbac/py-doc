@@ -26,6 +26,7 @@ TIMEOUT = 300
 MAX_WIDTH_PX = {"portrait": 1200, "landscape": 1800}
 DPI = 192
 _ORIENTATION = re.compile(r"^\s*\[\[(LANDSCAPE|PORTRAIT)\]\]\s*$", re.MULTILINE)
+_CAPTION = re.compile(r"^\s*\[\[CAPTION:(?!\s*Table\s*\]\])[^\]]+\]\]")
 _TITLE = re.compile(r"^\s*title(?::|\s)\s*(?P<title>.+?)\s*$", re.MULTILINE | re.IGNORECASE)
 _MAGIC = {"png": b"\x89PNG\r\n\x1a\n", "svg": b"<"}
 
@@ -122,6 +123,13 @@ def draw_cached(
     return cached
 
 
+def _captioned(lines: list[str], block: Block) -> bool:
+    """True when a ``[[CAPTION:]]`` line (not a table's) is the nearest text above or below the diagram."""
+    before = next((line for line in reversed(lines[: block.start]) if line.strip()), "")
+    after = next((line for line in lines[block.end + 1 :] if line.strip()), "")
+    return bool(_CAPTION.match(before) or _CAPTION.match(after))
+
+
 def _alt_text(block: Block, renderer: Renderer) -> str:
     text = block.options.get("caption") or block.options.get("title")
     if not text:
@@ -188,6 +196,8 @@ def render_parts(
             name = f"diagrams/{picture.name}"
             pictures[name] = picture
             picture_line = f"![{_alt_text(block, renderer)}]({name})"
+            if fmt == "docx" and _captioned(lines, block):
+                picture_line += "\\ "  # a no-break space: not alone in its paragraph, so pandoc adds no caption
             if fmt == "pptx":  # pandoc's PowerPoint writer drops a picture inside a div and prints its alt text instead
                 replaced += ["", picture_line, ""]
             else:

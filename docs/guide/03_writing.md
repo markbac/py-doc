@@ -95,6 +95,7 @@ Alice -> Bob : hello
 
 - **Format**: HTML and sites keep SVG where the tool can write it. Word, PowerPoint and PDF get PNG at 192 dpi, shrunk to the page width (wider after a `[[LANDSCAPE]]` line, until `[[PORTRAIT]]`).
 - **Alt text** comes from `caption="..."` or `title="..."` after the language, else from a `title` line in the diagram, else the diagram type.
+- **Captions**: a `[[CAPTION:Figure]] text` line directly above or below the diagram is its caption. Without one, the alt text is the caption.
 - **A broken diagram stops the build** with the file, the line and the tool's own message, and no output file is written. `py-doc build --keep-going` draws every diagram first and lists all the failures together.
 - **Pictures are cached** in your user cache folder (`PY_DOC_CACHE` overrides it), keyed by the diagram text, the format and the tool image, so an unchanged diagram is not drawn again. A PlantUML diagram with `!include` is always drawn, because the included file can change on its own.
 - **PlantUML includes** are looked up in the folder of the Markdown file, which is the only source folder the tool can read.

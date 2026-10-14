@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -216,6 +217,37 @@ class TestDot:
         docx, html = build_document(config, config.documents["g"], runtime=runtime)
         assert len(Document(str(docx)).inline_shapes) == 1
         assert "data:image/svg+xml" in html.read_text(encoding="utf-8")
+
+
+DOT_FENCE = "```dot\ndigraph { a -> b }\n```\n"
+
+
+@needs_pandoc
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (f"# G\n\n{DOT_FENCE}\ntext\n", "dot diagram"),
+        (f"# G\n\n[[CAPTION:Figure]] Mine\n\n{DOT_FENCE}\ntext\n", "Mine"),
+        (f"# G\n\n{DOT_FENCE}\n[[CAPTION:Figure]] Mine\n\ntext\n", "Mine"),
+    ],
+    ids=["none", "above", "below"],
+)
+def test_a_diagram_has_one_caption_its_own_or_else_the_tools(tmp_path, pandoc_runtime, monkeypatch, text, expected):
+    from docx import Document
+    from pptx import Presentation
+
+    picture = png(tmp_path / "pic.png")
+    monkeypatch.setattr(diagrams.render, "draw_cached", lambda *args, **kwargs: picture)
+    (tmp_path / "g.md").write_text(text, encoding="utf-8")
+    (tmp_path / "py-doc.yml").write_text("documents:\n  g:\n    sources: [g.md]\n    outputs: {docx: {}, html: {}, pptx: {}}\n", encoding="utf-8")
+    config = load_config(tmp_path / "py-doc.yml")
+    docx, html, pptx = sorted(build_document(config, config.documents["g"], runtime=lambda: pandoc_runtime), key=lambda p: p.suffix)
+    captions = [p.text for p in Document(str(docx)).paragraphs if p.style.name == "Caption" or p.text.startswith("Figure")]
+    assert len(captions) == 1 and captions[0].endswith(expected)
+    body = html.read_text(encoding="utf-8")
+    assert re.findall(r"<figcaption[^>]*>(.*?)</figcaption>", body, re.S) == [expected] and "[[CAPTION" not in body
+    shown = [shape.text_frame.text for slide in Presentation(str(pptx)).slides for shape in slide.shapes if shape.has_text_frame]
+    assert shown.count(expected) == 1
 
 
 class TestOtherTools:
