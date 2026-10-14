@@ -186,3 +186,13 @@ def test_the_file_is_well_formed(built):
 def test_a_picture_in_the_last_paragraph_is_kept(built):
     out = built(sample="# T\n\nText.\n\n![](pic.png)\n")
     assert len(Document(str(out)).inline_shapes) == 1
+
+
+def test_a_caption_below_a_table_stays_on_its_page(built):
+    sample = "# T\n\n| a | b |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |\n\n[[CAPTION:Table]] Sizes\n\nAfter.\n"
+    document = Document(str(built(sample=sample)))
+    (table,) = document.tables
+    caption = table._tbl.getnext()
+    assert caption.tag.endswith("}p") and "Sizes" in "".join(caption.itertext())
+    assert all(p.paragraph_format.keep_with_next for cell in table.rows[-1].cells for p in cell.paragraphs)
+    assert not any(p.paragraph_format.keep_with_next for cell in table.rows[1].cells for p in cell.paragraphs)

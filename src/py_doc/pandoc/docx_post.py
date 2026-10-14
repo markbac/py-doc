@@ -28,6 +28,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import nsmap as _DOCX_NSMAP
 from docx.oxml.ns import qn
 from docx.shared import Cm, RGBColor
+from docx.text.paragraph import Paragraph
 from lxml import etree
 
 
@@ -562,6 +563,13 @@ def format_all_tables(
                 for cell in row.cells:
                     for p in cell.paragraphs:
                         p.paragraph_format.keep_together = True
+
+        # A caption below the table moves to the next page with the last row, never alone
+        after = tbl._tbl.getnext()
+        if tbl.rows and after is not None and after.tag == qn("w:p") and Paragraph(after, tbl._parent).style.name == "Caption":
+            for cell in tbl.rows[-1].cells:
+                for p in cell.paragraphs:
+                    p.paragraph_format.keep_with_next = True
 
 
 # ---------------------------------------------------------------------------
