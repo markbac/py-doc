@@ -42,6 +42,13 @@ def test_sources_are_joined_in_order_with_a_page_break_before_marked_ones(projec
     assert page_breaks(out) == 1
 
 
+def test_the_pagebreak_directive_breaks_the_page(project, tmp_path):
+    (tmp_path / "docs" / "part.md").write_text("# Part\n\none\n\n[[PAGEBREAK]]\n\ntwo\n", encoding="utf-8")
+    [out] = project("documents:\n  g:\n    sources: [docs/part.md]\n")
+    assert page_breaks(out) == 1
+    assert not any("PAGEBREAK" in text for text in texts(out))
+
+
 def test_page_break_on_the_first_source_adds_nothing(project):
     [out] = project("documents:\n  g:\n    sources:\n      - {file: docs/index.md, page_break: true}\n")
     assert page_breaks(out) == 0

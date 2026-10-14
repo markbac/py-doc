@@ -15,7 +15,7 @@ Pandoc reads the Markdown: its own flavour, with fenced divs, raw HTML, table ca
 | `[[CAPTION:Figure]] text` | A numbered caption for the picture, diagram or table that follows |
 | `[[LANDSCAPE]]`, `[[PORTRAIT]]` | A section of that orientation (Word), and picture widths in the other formats |
 | `[[STYLE:Name]] text` | The paragraph in that Word style |
-| `::: {.pagebreak}` and `:::` | A page break, or a new slide |
+| `[[PAGEBREAK]]`, or `::: {.pagebreak}` and `:::` | A page break, or a new slide |
 | Fenced diagram blocks | A picture: see [Diagrams](#diagrams) |
 | Raw HTML | Kept in HTML and sites, dropped elsewhere by pandoc |
 
@@ -43,7 +43,7 @@ Word uses the `Div.note` to `Div.caution` paragraph styles. The built-in referen
 - **Captions**: `[[CAPTION:Figure]] Text` (or `Table`) on the line before a picture, diagram, code block or table becomes its caption. In Word the number is a `SEQ` field, shared with the captions pandoc makes itself, so captions renumber when Word updates fields. Cross-references to captions are not supported. On a slide the caption is the text under the picture.
 - **Orientation**: `[[LANDSCAPE]]` and `[[PORTRAIT]]` start a Word section of that orientation, and widen or narrow pictures in the other formats.
 - **Styles**: `[[STYLE:Name]] text` applies a named Word paragraph style, and warns once if the template has none of that name. Other formats keep the text.
-- **Page breaks**: `::: {.pagebreak}` followed by `:::`, or `page_break: true` on a source. In a deck it starts a new slide, and on a site it is left out.
+- **Page breaks**: `[[PAGEBREAK]]` on its own line, `::: {.pagebreak}` followed by `:::`, or `page_break: true` on a source. In a deck it starts a new slide, and on a site it is left out.
 
 ## Includes, conditions and variables
 

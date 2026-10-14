@@ -6,6 +6,8 @@
     Put a file here as a fenced code block, verbatim. The language comes from the extension.
 ``[[IF: key]]``, ``[[IF: key == value]]``, ``[[NOT: key]]`` ... ``[[ENDIF]]``
     Keep the lines between only when the condition holds. Blocks may be nested.
+``[[PAGEBREAK]]``
+    A page break (a new slide in a deck), the same as a ``::: {.pagebreak}`` block.
 ``{{name}}``
     Replace with the value of a variable.
 
@@ -34,6 +36,7 @@ _INCLUDE = re.compile(r"^\[\[INCLUDE:\s*(?P<path>[^\]]+?)\s*\]\]\s*$")
 _INCLUDE_CODE = re.compile(r"^\[\[INCLUDE-CODE:\s*(?P<path>[^\]]+?)\s*\]\]\s*$")
 _IF = re.compile(r"^\[\[(?P<kind>IF|NOT):\s*(?P<expr>[^\]]+?)\s*\]\]\s*$")
 _ENDIF = re.compile(r"^\[\[ENDIF\]\]\s*$")
+_PAGEBREAK = re.compile(r"^\[\[PAGEBREAK\]\]\s*$")
 _COMPARE = re.compile(r"""^(?P<key>\w+)\s*(?P<op>==|!=)\s*(?P<value>"[^"]*"|'[^']*'|\S+)$""")
 _VARIABLE = re.compile(r"\{\{\s*(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\}\}")
 _FENCE = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})")
@@ -157,6 +160,9 @@ def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], 
             blocks.pop()
             continue
         if not all(held for held, _ in blocks):
+            continue
+        if _PAGEBREAK.match(line):
+            out += ["", "::: {.pagebreak}", ":::", ""]
             continue
         if match := (_INCLUDE_CODE.match(line) or _INCLUDE.match(line)):
             target = (file.parent / match["path"]).resolve()
