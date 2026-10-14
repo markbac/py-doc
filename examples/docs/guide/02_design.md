@@ -9,7 +9,7 @@ title: Design
 The node has four parts: a sensor driver, a buffer, an uplink and an updater.
 
 [[CAPTION:Figure]] Data flow through the node
-```dot
+```dot width="100%"
 digraph sensor {
   rankdir=LR;
   node [shape=box, style=rounded];
@@ -33,8 +33,7 @@ sequenceDiagram
 
 ## Deployment sketch
 
-[[CAPTION:Figure]] Where the parts run
-```plantuml
+```plantuml width="60%"
 @startuml
 node "Sensor node" {
   [Driver] --> [Buffer]
@@ -44,6 +43,8 @@ cloud "Cloud platform" as CP
 [Uplink] --> CP : MQTT over TLS
 @enduml
 ```
+
+[[CAPTION:Figure]] Where the parts run
 
 ## Code
 

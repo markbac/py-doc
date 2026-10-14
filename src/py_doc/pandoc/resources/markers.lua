@@ -87,6 +87,10 @@ function Blocks(blocks)
           if prev.t == "Figure" then out[#out] = caption_figure(prev, rest) else prev.caption.long = caption_of(rest) end
           captioned = #out
           i = i + 1
+        elseif prev and prev.t == "Div" and #prev.content == 1 and prev.content[1].t == "Figure" and not image_at and captioned ~= #out then
+          prev.content[1] = caption_figure(prev.content[1], rest)  -- a diagram above, in its centred Div
+          captioned = #out
+          i = i + 1
         elseif image_at then
           local text = pandoc.List()
           for k = 1, image_at - 1 do text:insert(rest[k]) end

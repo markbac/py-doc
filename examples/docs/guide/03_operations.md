@@ -27,8 +27,7 @@ This paragraph is shown to everyone except staff.
 > [!IMPORTANT]
 > Always check the version before updating. An update to the wrong version cannot be undone.
 
-::: {.pagebreak}
-:::
+[[PAGEBREAK]]
 
 ## Contacts
 

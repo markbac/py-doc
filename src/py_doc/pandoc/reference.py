@@ -10,7 +10,7 @@ from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
-from docx.shared import Cm
+from docx.shared import Cm, Emu
 
 from py_doc.runtime import Mount, Runtime
 
@@ -25,6 +25,17 @@ CALLOUTS = {
     "caution": ("FCE8E8", "C62828"),
 }
 PREFIX = "Div."  # pandoc applies the custom-style of a callout Div by this name
+
+
+DEFAULT_TEXT_WIDTH_CM = 14.82  # the widest pandoc makes a picture when the reference document sets no page
+
+
+def text_width_cm(path: Path) -> float:
+    """The width between the margins of a Word file's main section, in cm."""
+    section = Document(str(path)).sections[-1]
+    if None in (section.page_width, section.left_margin, section.right_margin):
+        return DEFAULT_TEXT_WIDTH_CM
+    return Emu(section.page_width - section.left_margin - section.right_margin).cm
 
 
 def callout_style_names() -> list[str]:

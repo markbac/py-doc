@@ -21,7 +21,7 @@ from py_doc.runtime import Mount, Runtime
 
 from .pptx_finish import notes_to_divs
 from .source import first_heading
-from .reference import default_reference, missing_callout_styles
+from .reference import default_reference, missing_callout_styles, text_width_cm
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ TIMEOUT = 900  # a large document with many pictures can take minutes in XeLaTeX
 DEFAULT_TOC_DEPTH = 3
 INPUT_FORMAT = "markdown+fenced_divs+raw_html+raw_attribute+table_captions+strikeout+task_lists"
 FILTERS = {
-    "docx": ("admonitions.lua", "pagebreak.lua"),
+    "docx": ("admonitions.lua", "pagebreak.lua", "widths.lua"),
     "pptx": ("admonitions.lua", "pagebreak.lua", "markers.lua"),
     "html": ("admonitions.lua", "pagebreak.lua", "markers.lua"),
     "pdf": ("admonitions.lua", "pagebreak.lua", "center-div.lua", "markers.lua"),
@@ -183,12 +183,11 @@ def convert(runtime: Runtime, job: PandocJob) -> Path:
         copy_pictures(job.pictures, work)
         if job.template is not None:
             job = replace(job, template=_as_document(job.template, work))
-        (work / "metadata.yaml").write_text(
-            yaml.safe_dump(_metadata_file(job.metadata, job.fmt, job.markdown), allow_unicode=True, sort_keys=False), encoding="utf-8"
-        )
+        metadata = _metadata_file(job.metadata, job.fmt, job.markdown)
         reference = None
         if job.fmt == "docx":
             reference = job.template if job.template is not None else default_reference(runtime, work)
+            metadata["text-width-cm"] = f"{text_width_cm(reference):.2f}"  # for widths.lua
             if job.template is not None:
                 missing = missing_callout_styles(job.template, job.markdown)
                 if missing:
@@ -196,6 +195,7 @@ def convert(runtime: Runtime, job: PandocJob) -> Path:
                         f"The template {job.template.name} has no style {', '.join(missing)}, so callouts of "
                         "those kinds are plain paragraphs. Add a paragraph style with that name to give them a box"
                     )
+        (work / "metadata.yaml").write_text(yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False), encoding="utf-8")
         argv, mounts = _command(job, runtime, work, reference)
         result = runtime.run(argv, mounts=mounts, workdir=work, timeout=TIMEOUT)
         for line in result.stderr.splitlines():
