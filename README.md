@@ -14,6 +14,7 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | Command | What it does |
 |---|---|
 | `py-doc init` | Start a project: `py-doc.yml`, a first document, and optionally a C4 model, templates and a site |
+| `py-doc new` | Start one document in the legacy build file format, numbered from `doc-numbers.yml` at the repository root |
 | `py-doc build` | Build every document described in `py-doc.yml`, or one legacy `createdocs` file with `--legacy` |
 | `py-doc docx` | Convert Markdown to Word |
 | `py-doc slides` | Convert Markdown to PowerPoint |
@@ -68,6 +69,7 @@ src/
 ├── py_doc/
 │   ├── app.py            # the py-doc command
 │   ├── init.py           # py-doc init
+│   ├── new.py            # py-doc new
 │   ├── cli.py            # py-doc docx (and the old py-doc2docx)
 │   ├── slides_cli.py     # py-doc slides (and the old py-doc2slides)
 │   ├── _cli.py           # options, output paths and batch conversion shared by both

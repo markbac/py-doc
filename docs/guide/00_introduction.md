@@ -20,6 +20,7 @@ This guide is for the people who write and build documentation with py-doc. The 
 | Command | What it does |
 |---|---|
 | `py-doc init` | Starts a project: `py-doc.yml`, a first document, and optionally a C4 model, templates and a site |
+| `py-doc new` | Starts one document in the legacy build file format, numbered from `doc-numbers.yml` at the repository root |
 | `py-doc build` | Builds every document described in `py-doc.yml` |
 | `py-doc docx` | Converts Markdown files to Word |
 | `py-doc slides` | Converts Markdown files to PowerPoint |
