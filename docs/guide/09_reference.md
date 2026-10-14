@@ -17,6 +17,27 @@ Each `createdocs` YAML file becomes one document, so folders, sources, templates
 
 `py-doc build --legacy FILE` reads one `createdocs` file the same way and builds it straight away, so old build files keep working while you move over. The findings `migrate` would report are shown as warnings. The output format comes from the `emit-*` switches, else from the extension of `cli.output` (`.docx`, `.pptx`, `.pdf` or `.html`). `cli.template` goes to the PowerPoint output when it is a `.pptx` file, else to the Word output. An entry's `section` is taken as its `title`: it replaces the first heading of that file.
 
+### New legacy documents
+
+```bash
+py-doc new                                   # asks for the title, type, format, author, classification and description
+py-doc new --title "Build and Release Pipelines" --type TN --format docx -y
+```
+
+`py-doc new` writes a build file and its Markdown in the current folder, named after the number and the title (`G460-TN-013-Build-and-Release-Pipelines.yaml` and `.md`), ready for `py-doc build --legacy`. Every question has an option, and `-y` asks nothing. The author defaults to `git config user.name`, the date to today and the version to `0.1.0`. A file that is already there is never replaced.
+
+The number comes from `doc-numbers.yml` at the repository root, found from any folder below it:
+
+```yaml
+prefix: G460
+documents:
+  - number: G460-TN-012
+    title: Build and Release Pipelines
+    file: docs/notes/G460-TN-012-build-and-release-pipelines.yaml
+```
+
+A number is `[prefix-][type-]NNN`. The prefix is set once in the register and the type is asked each time; either may be empty. `NNN` is one counter for every type, one more than the highest number in the register, so `G460-TN-012` and `G460-OV-012` cannot both be given out. The first `py-doc new` in a repository makes the register from the `document_number` of the legacy build files already there, and asks for the prefix. Commit the register with the new document: two people who take a number on separate branches then get a merge conflict in the register, not two documents with the same number.
+
 The `Setup-DocTools.ps1` script that installed pandoc, TeX and the diagram tools on Windows is no longer needed: the tools run in the tool container. Use `py-doc setup` (Docker Engine in WSL), then `py-doc tools build` and `py-doc doctor`.
 
 The report lists what has no equivalent yet, so nothing is lost quietly:
