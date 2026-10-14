@@ -6,7 +6,11 @@ document makes a clash between branches show as a merge conflict. When there is 
 made from the ``document_number`` of the legacy build files already in the repository.
 
 A number is ``[PREFIX-][TYPE-]NNN``. The prefix (``G460``) is set once in the register and the type
-(``TN``) is asked each time; both may be empty. ``NNN`` is one counter for every type.
+(``TN``) is asked each time; both may be empty. ``NNN`` is one counter for every type: one more than the
+highest in the register, or with ``start`` set, the first from there that no document has.
+
+``--scan`` adds the legacy build files that are not in the register yet, numbers that clash included
+(they are listed), and ``--start N`` sets where new numbers begin. Neither makes a document.
 """
 
 from __future__ import annotations
@@ -53,15 +57,29 @@ class Register:
     path: Path
     prefix: str = ""
     entries: list[Entry] | None = None
+    start: int | None = None
 
     def next_number(self, kind: str) -> str:
         found = [m for m in (_SEQUENCE.search(e.number) for e in self.entries or []) if m]
-        last = max((int(m[1]) for m in found), default=0)
+        used = {int(m[1]) for m in found}
         digits = max([3, *(len(m[1]) for m in found)])
-        return "-".join(part for part in (self.prefix, kind, f"{last + 1:0{digits}d}") if part)
+        sequence = self.start if self.start is not None else max(used, default=0) + 1
+        while sequence in used:
+            sequence += 1
+        return "-".join(part for part in (self.prefix, kind, f"{sequence:0{digits}d}") if part)
+
+    def clashes(self) -> dict[str, list[str]]:
+        """Numbers held by more than one file."""
+        files: dict[str, list[str]] = {}
+        for entry in self.entries or []:
+            files.setdefault(entry.number, []).append(entry.file)
+        return {number: names for number, names in files.items() if len(names) > 1}
 
     def save(self) -> None:
-        data = {"prefix": self.prefix, "documents": [vars(e) for e in self.entries or []]}
+        data: dict = {"prefix": self.prefix}
+        if self.start is not None:
+            data["start"] = self.start
+        data["documents"] = [vars(e) for e in self.entries or []]
         body = yaml.safe_dump(data, sort_keys=False, allow_unicode=True, width=120)
         self.path.write_text(REGISTER_HEADER + body, encoding="utf-8")
 
@@ -91,7 +109,10 @@ def load_register(root: Path) -> Register:
         if not isinstance(item, dict) or not item.get("number"):
             raise NewError(f"{path}: documents[{index}] has no number")
         entries.append(Entry(str(item["number"]), str(item.get("title") or ""), str(item.get("file") or "")))
-    return Register(path, str(data.get("prefix") or ""), entries)
+    start = data.get("start")
+    if start is not None and (not isinstance(start, int) or isinstance(start, bool) or start < 1):
+        raise NewError(f"{path}: start must be a whole number from 1")
+    return Register(path, str(data.get("prefix") or ""), entries, start)
 
 
 def existing_numbers(root: Path) -> list[Entry]:
@@ -141,6 +162,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--classification", help="Such as Confidential")
     parser.add_argument("--description", help="One sentence on what the document covers")
     parser.add_argument("--prefix", help="The number prefix, such as G460, kept in the register (only when it is made)")
+    parser.add_argument("--scan", action="store_true", help="Add the legacy build files not in the register yet (clashes included), and make no document")
+    parser.add_argument("--start", type=int, metavar="N", help="New numbers begin at N, skipping any taken (kept in the register), and make no document")
     parser.add_argument("-y", "--yes", action="store_true", help="Ask nothing: take the defaults for what is not given")
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
@@ -200,11 +223,50 @@ def make(folder: Path, args: argparse.Namespace, ask: Callable[[str], str] | Non
     return [build, source], register, created
 
 
+def update(folder: Path, scan: bool, start: int | None, prefix: str | None) -> tuple[Register, list[Entry]]:
+    """``--scan`` and ``--start``: bring the register up to date. Returns it and the entries added."""
+    if start is not None and start < 1:
+        raise NewError("--start must be 1 or more")
+    root = find_root(folder)
+    if (root / REGISTER).is_file():
+        register = load_register(root)
+    else:
+        register = Register(root / REGISTER, prefix or "", [])
+    added: list[Entry] = []
+    if scan:
+        known = {entry.file for entry in register.entries or []}
+        added = [entry for entry in existing_numbers(root) if entry.file not in known]
+        register.entries = [*(register.entries or []), *added]
+    if start is not None:
+        register.start = start
+    register.save()
+    return register, added
+
+
+def _report_clashes(register: Register) -> None:
+    for number, files in register.clashes().items():
+        print(f"clash     {number} is used by {', '.join(files)}")
+
+
 def run_new(argv: Sequence[str] | None = None) -> int:
     """Exit status: 0 made, 1 nothing made."""
     args = build_parser().parse_args(argv)
     configure_logging(quiet=args.quiet, verbose=args.verbose)
     ask = None if args.yes or not sys.stdin.isatty() else input
+    if args.scan or args.start is not None:
+        try:
+            register, added = update(Path.cwd(), args.scan, args.start, args.prefix)
+        except NewError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        except OSError as exc:
+            print(f"Error: cannot write: {exc.strerror or exc}", file=sys.stderr)
+            return 1
+        for entry in added:
+            print(f"added     {entry.number}  {entry.file}")
+        _report_clashes(register)
+        print(f"register  {os.path.relpath(register.path)}: {len(register.entries or [])} number(s), the next ends in {register.next_number('').rsplit('-', 1)[-1]}")
+        return 0
     try:
         written, register, created = make(Path.cwd(), args, ask, datetime.date.today())
     except NewError as exc:
@@ -216,6 +278,7 @@ def run_new(argv: Sequence[str] | None = None) -> int:
     shown = Path(os.path.relpath(register.path))
     if created:
         print(f"made      {shown} with {len(register.entries) - 1} existing number(s)")
+        _report_clashes(register)
     for path in written:
         print(f"written   {path.name}")
     print(f"number    {register.entries[-1].number}, recorded in {shown}")

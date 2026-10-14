@@ -121,3 +121,37 @@ def test_the_command_reports_what_it_did(repo, capsys):
     assert "with 2 existing number(s)" in out and "number    G460-TN-013" in out and "py-doc build --legacy G460-TN-013-Cmd.yaml" in out
     assert main(["new", "-y"]) == 1
     assert "A title is needed" in capsys.readouterr().err
+
+
+def test_scan_adds_new_build_files_and_keeps_clashing_numbers(repo, capsys):
+    make(["--title", "First", "--type", "TN", "--prefix", "G460"])
+    other = repo / "docs" / "other"
+    other.mkdir()
+    (other / "copy.yaml").write_text('meta:\n  title: "Copy"\n  document_number: "G460-TN-012"\nentries:\n  - file: c.md\n', encoding="utf-8")
+    assert main(["new", "--scan"]) == 0
+    out = capsys.readouterr().out
+    assert "added     G460-TN-012  docs/other/copy.yaml" in out
+    assert "clash     G460-TN-012 is used by docs/notes/G460-TN-012-pipelines.yaml, docs/other/copy.yaml" in out
+    assert [d["file"] for d in register(repo)["documents"]].count("docs/other/copy.yaml") == 1
+    assert main(["new", "--scan"]) == 0  # a second scan adds nothing
+    assert "added" not in capsys.readouterr().out
+
+
+def test_start_sets_where_numbers_begin_and_skips_taken_ones(repo, capsys):
+    assert main(["new", "--scan", "--start", "12", "--prefix", "G460"]) == 0
+    assert "the next ends in 013" in capsys.readouterr().out
+    assert register(repo)["start"] == 12
+    _, reg, _ = make(["--title", "A", "--type", "SP"])
+    assert reg.entries[-1].number == "G460-SP-013"
+    assert main(["new", "--start", "100"]) == 0
+    _, reg, _ = make(["--title", "B", "--type", "TN"])
+    assert reg.entries[-1].number == "G460-TN-100"
+    _, reg, _ = make(["--title", "C", "--type", "TN"])
+    assert reg.entries[-1].number == "G460-TN-101"
+
+
+def test_a_bad_start_is_refused(repo, capsys):
+    assert main(["new", "--start", "0"]) == 1
+    (repo / "doc-numbers.yml").write_text("start: soon\ndocuments: []\n", encoding="utf-8")
+    with pytest.raises(new.NewError, match="start must be a whole number"):
+        make(["--title", "x"])
