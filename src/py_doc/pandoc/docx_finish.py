@@ -99,6 +99,7 @@ def finish_docx(body_path: Path, template: Path | None, metadata: Metadata, opti
     post.rescale_landscape_images(document)
     post.apply_explicit_styles(document)
     post.format_all_tables(document)
+    post.keep_captions_with_tables(document)  # after the [[CAPTION:]] lines are captions
     post.update_core_properties(
         document,
         title=text(metadata.title),

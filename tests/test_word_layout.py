@@ -186,3 +186,32 @@ def test_the_file_is_well_formed(built):
 def test_a_picture_in_the_last_paragraph_is_kept(built):
     out = built(sample="# T\n\nText.\n\n![](pic.png)\n")
     assert len(Document(str(out)).inline_shapes) == 1
+
+
+def test_a_table_caption_stays_on_the_page_of_its_table(convert_text):
+    from docx.oxml.ns import qn
+
+    out = convert_text(
+        "# T\n\n"
+        "| A | B |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |\n\n[[CAPTION:Table]] Below the first\n\nSome text.\n\n"
+        "| C | D |\n|---|---|\n| 5 | 6 |\n\n"
+        "[[CAPTION:Table]] Above the third\n\n| E | F |\n|---|---|\n| 7 | 8 |\n"
+    )
+    body = Document(str(out)).element.body
+    first, second, third = body.findall(qn("w:tbl"))
+
+    def kept(paragraph) -> bool:
+        return paragraph.find(f"{qn('w:pPr')}/{qn('w:keepNext')}") is not None
+
+    def caption_text(element) -> str:
+        return "".join(t.text or "" for t in element.iter(qn("w:t")))
+
+    last_row = first.findall(qn("w:tr"))[-1]
+    assert last_row.find(f"{qn('w:trPr')}/{qn('w:cantSplit')}") is not None
+    assert all(kept(p) for p in last_row.iter(qn("w:p")))
+    assert not any(kept(p) for p in first.findall(qn("w:tr"))[1].iter(qn("w:p")))  # a middle row may still break
+    assert "Below the first" in caption_text(first.getnext())
+    # a caption between two tables is the next one's, as in HTML and PDF
+    assert not any(kept(p) for p in second.findall(qn("w:tr"))[-1].iter(qn("w:p")))
+    above = third.getprevious()
+    assert "Above the third" in caption_text(above) and kept(above)

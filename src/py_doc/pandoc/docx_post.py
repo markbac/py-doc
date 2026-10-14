@@ -28,6 +28,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import nsmap as _DOCX_NSMAP
 from docx.oxml.ns import qn
 from docx.shared import Cm, RGBColor
+from docx.text.paragraph import Paragraph
 from lxml import etree
 
 
@@ -667,6 +668,51 @@ def apply_layout_fixes(doc: Document, max_image_height_cm: float = 20.0) -> None
             p.paragraph_format.keep_together = True
 
     log.debug("apply_layout_fixes: done")
+
+
+_CAPTION_STYLES = ("caption", "table caption")  # [[CAPTION:]] lines, and the captions pandoc writes itself
+
+
+def _is_caption(element, style_names: dict[str, str]) -> bool:
+    """True for a caption paragraph. ``style_names`` maps style ids to the names the template shows."""
+    if element is None or element.tag != qn("w:p"):
+        return False
+    style = element.find(f"{qn('w:pPr')}/{qn('w:pStyle')}")
+    if style is None:
+        return False
+    style_id = style.get(qn("w:val"), "")
+    return style_names.get(style_id, style_id).lower() in _CAPTION_STYLES
+
+
+def _keep_with_next(paragraph) -> None:
+    Paragraph(paragraph, None).paragraph_format.keep_with_next = True  # in the order the schema wants
+
+
+def keep_captions_with_tables(doc: Document) -> None:
+    """A table caption stays on the page of its table.
+
+    Word has no "keep with previous", so a caption below a table is held by keeping the table's last
+    row (which may not split) with the next paragraph. A caption above a table is kept with the table.
+    A caption between two tables is the next one's, as in the other formats (markers.lua).
+    """
+    style_names = {style.style_id: style.name for style in doc.styles}
+    held = 0
+    for table in doc.element.body.iterchildren(qn("w:tbl")):
+        before, after = table.getprevious(), table.getnext()
+        rows = table.findall(qn("w:tr"))
+        below = _is_caption(after, style_names) and (after.getnext() is None or after.getnext().tag != qn("w:tbl"))
+        if rows and below:
+            trPr = rows[-1].get_or_add_trPr()
+            if trPr.find(qn("w:cantSplit")) is None:
+                trPr.append(OxmlElement("w:cantSplit"))
+            for paragraph in rows[-1].iter(qn("w:p")):
+                _keep_with_next(paragraph)
+            held += 1
+        if _is_caption(before, style_names):
+            _keep_with_next(before)
+            held += 1
+    if held:
+        log.debug("keep_captions_with_tables: %d caption(s) kept with their table", held)
 
 
 # ---------------------------------------------------------------------------

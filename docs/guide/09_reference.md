@@ -36,7 +36,7 @@ documents:
     file: docs/notes/G460-TN-012-build-and-release-pipelines.yaml
 ```
 
-A number is `[prefix-][type-]NNN`. The prefix is set once in the register and the type is asked each time; either may be empty. `NNN` is one counter for every type, one more than the highest number in the register, so `G460-TN-012` and `G460-OV-012` cannot both be given out. The first `py-doc new` in a repository makes the register from the `document_number` of the legacy build files already there, and asks for the prefix. Commit the register with the new document: two people who take a number on separate branches then get a merge conflict in the register, not two documents with the same number.
+A number is `[prefix-][type-]NNN`. The prefix is set once in the register and the type is asked each time; either may be empty. `NNN` is one counter for every type, one more than the highest number in the register, so `G460-TN-012` and `G460-OV-012` cannot both be given out. The first `py-doc new` in a repository makes the register from the `document_number` of the legacy build files already there, and asks for the prefix. Commit the register with the new document. If two people take a number on separate branches, they then get a merge conflict in the register, not two documents with one number.
 
 Two options keep the register up to date and make no document:
 
@@ -45,7 +45,7 @@ py-doc new --scan               # add the legacy build files that are not in the
 py-doc new --scan --start 100   # and begin new numbers at 100
 ```
 
-`--scan` adds every legacy build file below the repository root whose file is not in the register, even when its number is already taken, and lists each number used by more than one file as a clash. Fix those by hand: py-doc never renumbers a document. `--start N` is kept in the register as `start: N`. New numbers then begin at `N` and step over any number a document already has, so they stay unique however the old ones were given out. Without it, the next number is one more than the highest.
+`--scan` adds every legacy build file below the repository root that is not in the register yet, even when its number is taken. It lists each number used by more than one file as a clash. Fix those by hand: py-doc never renumbers a document. `--start N` is kept in the register as `start: N`. New numbers then begin at `N` and step over any number a document already has, so they stay unique however the old ones were given out. Without it, the next number is one more than the highest.
 
 The `Setup-DocTools.ps1` script that installed pandoc, TeX and the diagram tools on Windows is no longer needed: the tools run in the tool container. Use `py-doc setup` (Docker Engine in WSL), then `py-doc tools build` and `py-doc doctor`.
 
