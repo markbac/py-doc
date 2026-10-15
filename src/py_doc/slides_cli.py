@@ -11,9 +11,17 @@ from ._cli import add_common_options, deprecation_notice, run
 from .convert import SlidesConverter
 
 
-def build_parser() -> argparse.ArgumentParser:
+EXAMPLES = """examples:
+  py-doc slides talk.md                       talk.pptx next to it (or -o FILE)
+  py-doc slides talk.md -t Template.pptx      with a PowerPoint template
+  py-doc slides talk.md --split-level 1       a new slide only at each # heading"""
+
+
+def build_parser(prog: str = "py-doc slides") -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="py-doc2slides",
+        prog=prog,
+        epilog=EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         description="Convert Markdown to PowerPoint (.pptx) presentations",
     )
     add_common_options(parser, "PowerPoint", ".pptx")
@@ -40,7 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
 def run_slides(argv: Sequence[str] | None = None, legacy: bool = False) -> int:
     """Run the command and return its exit status instead of exiting. ``legacy`` adds the rename notice."""
     return run(
-        build_parser(),
+        build_parser("py-doc2slides" if legacy else "py-doc slides"),
         lambda args: SlidesConverter(
             template_path=Path(args.template) if args.template else None,
             allow_missing_template=args.allow_missing_template,

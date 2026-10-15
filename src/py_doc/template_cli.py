@@ -22,8 +22,9 @@ def build_parser() -> argparse.ArgumentParser:
         sub = commands.add_parser(name, help=help_text, description=help_text)
         sub.add_argument("template", type=Path, help="A .docx, .dotx, .pptx or .potx file")
         noise = sub.add_mutually_exclusive_group()
-        noise.add_argument("-q", "--quiet", action="store_true", help="Only warnings and errors")
-        noise.add_argument("-v", "--verbose", action="store_true", help="Also show INFO findings")
+        noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
+        verbose = "Show debug detail, and the INFO findings too" if name == "check" else "Show debug detail"
+        noise.add_argument("-v", "--verbose", action="store_true", help=verbose)
         if name == "check":
             sub.add_argument("--strict", action="store_true", help="Exit with status 1 for warnings as well as failures")
             sub.add_argument("--prefix", default="Replace-with-", help="The placeholder_prefix of the template (default: Replace-with-)")
@@ -35,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     count.add_argument("document", type=Path, help="A .docx file")
     for sub in (diff, count):
         noise = sub.add_mutually_exclusive_group()
-        noise.add_argument("-q", "--quiet", action="store_true", help="Only warnings and errors")
+        noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
         noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
     return parser
 

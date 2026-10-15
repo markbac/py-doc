@@ -14,9 +14,17 @@ from .convert import DocxConverter
 __all__ = ["ConversionError", "build_parser", "main", "run_docx"]
 
 
-def build_parser() -> argparse.ArgumentParser:
+EXAMPLES = """examples:
+  py-doc docx guide.md                        guide.docx next to it (or -o FILE)
+  py-doc docx guide.md -t Template.docx       with a Word template
+  py-doc docx docs -o build                   every Markdown file in docs, into build/"""
+
+
+def build_parser(prog: str = "py-doc docx") -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="py-doc2docx",
+        prog=prog,
+        epilog=EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
         description="Convert Markdown technical documentation to Word (.docx) documents",
     )
     add_common_options(parser, "Word", ".docx")
@@ -27,7 +35,7 @@ def build_parser() -> argparse.ArgumentParser:
 def run_docx(argv: Sequence[str] | None = None, legacy: bool = False) -> int:
     """Run the command and return its exit status instead of exiting. ``legacy`` adds the rename notice."""
     return run(
-        build_parser(),
+        build_parser("py-doc2docx" if legacy else "py-doc docx"),
         lambda args: DocxConverter(
             template_path=Path(args.template) if args.template else None,
             allow_missing_template=args.allow_missing_template,

@@ -22,6 +22,12 @@ from .model import FileResult, LintIssue, LintReport
 
 logger = logging.getLogger(__name__)
 EXAMPLE_RULES = Path(__file__).with_name("examples") / "structure-rules.yaml"
+EXAMPLES = """examples:
+  py-doc lint                          check every Markdown file below this folder
+  py-doc lint docs README.md           check a folder and a file as one report
+  py-doc lint docs --strict            exit with status 1 on any warning (for CI)
+  py-doc lint docs --format github     annotations for a GitHub Actions run
+  py-doc lint --check-engines          say whether Vale is installed and used"""
 
 
 def _display(path: Path) -> Path:
@@ -39,9 +45,14 @@ def _shown(issue: LintIssue) -> LintIssue:
 def run(argv: list[str] | None = None, legacy: bool = False) -> int:
     """Run the linter and return the exit status: 0 clean, 1 issues found, 2 errors."""
     parser = argparse.ArgumentParser(
-        prog="py-doclint", description="Technical writing style and glossary checks for Markdown"
+        prog="py-doclint" if legacy else "py-doc lint",
+        description="Check Markdown for writing style, glossary terms, acronyms and project conventions",
+        epilog=EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("target", nargs="?", default=".", help="Markdown file or documentation directory")
+    parser.add_argument(
+        "targets", nargs="*", default=["."], metavar="TARGET", help="Markdown files or folders to check (default: .)"
+    )
     parser.add_argument(
         "--strict",
         action="store_true",
@@ -50,7 +61,7 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
     parser.add_argument(
         "--exclude", action="append", default=[], metavar="DIR", help="Also skip directories with this name"
     )
-    parser.add_argument("--config", metavar="FILE", help="py-doc.yml to read (default: the nearest one above the target)")
+    parser.add_argument("--config", metavar="FILE", help="py-doc.yml to read (default: the nearest one above the first target)")
     parser.add_argument(
         "--engine", choices=("auto", "builtin", "vale"), default="auto",
         help="auto runs the built-in rules and Vale when it is installed, builtin skips Vale, vale uses Vale for the text rules",
@@ -88,7 +99,7 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
     try:
         if args.show_vale_config or args.check_engines or args.sync:
             return _vale_command(args, linter)
-        report = linter.lint_path(args.target)
+        report = linter.lint_paths(args.targets)
     except (LintTargetError, ConversionError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
@@ -97,7 +108,7 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
 
 def _model_checks(args: argparse.Namespace, config: LintConfig, settings: RuntimeSettings) -> list:
     """Checks of the Structurizr workspaces the documents use (rules C4001 to C4004), when py-doc.yml names any."""
-    path = Path(args.config) if args.config else find_config(Path(args.target).resolve())
+    path = Path(args.config) if args.config else find_config(Path(args.targets[0]).resolve())
     if path is None:
         return []
     project = load_config(path)
@@ -136,7 +147,7 @@ def _vale_command(args: argparse.Namespace, linter: DocLinter) -> int:
     from . import vale
 
     folder = linter.vale_folder()
-    target = Path(args.target).resolve()
+    target = Path(args.targets[0]).resolve()
     base = target if target.is_dir() else target.parent
     if args.show_vale_config:
         settings = linter.config.vale
@@ -172,10 +183,10 @@ def _load_config(args: argparse.Namespace) -> tuple[LintConfig, RuntimeSettings]
     if args.config:
         path = Path(args.config)
     else:
-        target = Path(args.target).resolve()
+        target = Path(args.targets[0]).resolve()
         path = find_config(target if target.is_dir() else target.parent)
     if path is None:
-        target = Path(args.target).resolve()
+        target = Path(args.targets[0]).resolve()
         return LintConfig(root=target if target.is_dir() else target.parent), RuntimeSettings()
     logger.info(f"Using configuration {path}")
     project = load_config(path)

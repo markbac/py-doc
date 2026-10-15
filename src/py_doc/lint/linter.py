@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 
 from collections.abc import Callable
@@ -102,18 +103,33 @@ class DocLinter:
 
         Raises :class:`LintTargetError` if ``target`` is missing or is not a Markdown file or directory.
         """
-        target = Path(target).resolve()
-        if target.is_dir():
-            report = LintReport([self.lint_file(path) for path in self.find_files(target)])
-        elif target.is_file():
-            if target.suffix.lower() not in MARKDOWN_SUFFIXES:
-                raise LintTargetError(f"Not a Markdown file (expected .md or .markdown): {target}")
-            report = LintReport([self.lint_file(target)])
-        else:
-            raise LintTargetError(f"Path not found: {target}")
+        return self.lint_paths([target])
+
+    def lint_paths(self, targets: list[Path | str]) -> LintReport:
+        """Lint every Markdown file named or below a named directory, each once, as one report.
+
+        Raises :class:`LintTargetError` naming the first target that is missing or not Markdown.
+        """
+        resolved = [Path(target).resolve() for target in targets]
+        files: list[Path] = []
+        for target in resolved:
+            if target.is_dir():
+                files += self.find_files(target)
+            elif target.is_file():
+                if target.suffix.lower() not in MARKDOWN_SUFFIXES:
+                    raise LintTargetError(f"Not a Markdown file (expected .md or .markdown): {target}")
+                files.append(target)
+            else:
+                raise LintTargetError(f"Path not found: {target}")
+        report = LintReport([self.lint_file(path) for path in dict.fromkeys(files)])
+        folders = [target if target.is_dir() else target.parent for target in resolved]
         self._whole_document_rules(report)
         self._markdownlint(report)
-        self._vale(report, target)
+        try:
+            base = Path(os.path.commonpath(folders))
+        except ValueError:  # on different drives (Windows)
+            base = folders[0]
+        self._vale(report, base)
         for check in self.extra_checks:
             report.add(check())
         return report

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 
 import pytest
 import yaml
@@ -155,3 +156,59 @@ def test_a_bad_start_is_refused(repo, capsys):
     (repo / "doc-numbers.yml").write_text("start: soon\ndocuments: []\n", encoding="utf-8")
     with pytest.raises(new.NewError, match="start must be a whole number"):
         make(["--title", "x"])
+
+
+LISTED = "prefix: G460\nprefixes: [G460, G470]\ntypes: [TN, OV]\nclassifications: [Confidential, Internal]\ndocuments: []\n"
+
+
+def test_listed_values_are_the_only_ones_allowed_and_keep_the_registers_spelling(repo):
+    (repo / "doc-numbers.yml").write_text(LISTED, encoding="utf-8")
+    _, reg, _ = make(["--title", "A", "--type", "tn", "--prefix", "g470", "--classification", "internal"])
+    assert reg.entries[-1].number == "G470-TN-001"
+    meta = yaml.safe_load((repo / "docs" / "notes" / "G470-TN-001-A.yaml").read_text(encoding="utf-8"))["meta"]
+    assert meta["classification"] == "Internal"
+    assert register(repo)["types"] == ["TN", "OV"]  # the lists are kept when the register is saved
+
+
+@pytest.mark.parametrize(
+    ("args", "message"),
+    [
+        (["--type", "SP"], "--type 'SP' is not in the register's list: TN, OV"),
+        (["--type", "TN", "--prefix", "G999"], "--prefix 'G999' is not in the register's list: G460, G470"),
+        (["--type", "TN", "--classification", "Secret"], "--classification 'Secret' is not in the register's list"),
+        ([], "--type is needed: one of TN, OV"),
+    ],
+)
+def test_a_value_outside_a_list_is_refused(repo, args, message):
+    (repo / "doc-numbers.yml").write_text(LISTED, encoding="utf-8")
+    with pytest.raises(new.NewError, match=re.escape(message)):
+        make(["--title", "A", *args])
+    assert register(repo)["documents"] == []
+
+
+def test_the_wizard_offers_the_list_and_asks_again(repo, capsys):
+    (repo / "doc-numbers.yml").write_text(LISTED, encoding="utf-8")
+    questions = []
+    replies = iter(["", "Title", "XX", "", "ov", "", "", "nope", "confidential", "About"])
+
+    def ask(question):
+        questions.append(question)
+        return next(replies)
+
+    parsed = new.build_parser().parse_args([])
+    from pathlib import Path
+
+    _, reg, _ = new.make(Path.cwd(), parsed, ask, TODAY)
+    assert reg.entries[-1].number == "G460-OV-001"
+    assert questions[0] == "Number prefix (G460, G470) [G460]: "
+    assert questions[2] == "Type code (TN, OV): " and questions.count("Type code (TN, OV): ") == 3
+    assert "Classification (Confidential, Internal): " in questions
+    out = capsys.readouterr().out
+    assert "'XX' is not one of TN, OV" in out and "Choose one of TN, OV" in out and "'nope' is not one of" in out
+
+
+def test_without_lists_anything_goes_and_prefix_can_change_per_document(repo):
+    make(["--title", "A", "--type", "TN", "--prefix", "G460"])
+    _, reg, _ = make(["--title", "B", "--type", "ZZ9", "--prefix", "X1", "--classification", "Whatever"])
+    assert reg.entries[-1].number == "X1-ZZ9-014"
+    assert register(repo)["prefix"] == "G460"  # the default stays

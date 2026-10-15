@@ -9,11 +9,14 @@ title: Linting
 ```bash
 py-doc lint docs/             # lint a folder (default: the current one)
 py-doc lint docs/Guide.md     # lint one file
+py-doc lint docs/ README.md   # several files and folders, as one report
 py-doc lint docs/ --strict    # exit 1 if any warning or error is reported
 py-doc lint . --exclude drafts
 py-doc lint docs/ --format csv > issues.csv      # a spreadsheet (the summary goes to standard error)
 py-doc lint docs/ --format github                # ::warning file=...,line=... annotations for GitHub Actions
 ```
+
+With several targets, each Markdown file is checked once and the settings come from the `py-doc.yml` nearest the first one, unless `--config` names another.
 
 A `[[CAPTION:Figure]]` or `[[CAPTION:Table]]` marker counts when it is on the line before or after the picture, table or diagram.
 
