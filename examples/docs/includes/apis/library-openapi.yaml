@@ -1,0 +1,538 @@
+openapi: 3.1.0
+info:
+  title: Library Management API
+  description: |
+    This API provides operations for managing books, users, and library activities like book checkouts and returns. It includes features such as pagination, filtering, HATEOAS links, and authentication using OAuth2, JWT, and API Keys.
+  version: 1.0.0
+  license:
+    name: MIT
+servers:
+  - url: https://api.library.com/v1
+    description: Production server for Library Management API
+  - url: https://staging.library.com/v1
+    description: Staging server for testing purposes
+    variables:
+      env:
+        default: v1
+        enum: 
+          - v1
+          - v2
+tags:
+  - name: Books
+    description: Operations for managing books in the library
+  - name: Users
+    description: Operations related to library users
+  - name: Webhooks
+    description: Operations related to handling webhooks
+paths:
+  /books:
+    get:
+      summary: Retrieve a list of books
+      description: Get a paginated list of all books available in the library. You can filter by genre or author.
+      operationId: listBooks
+      tags:
+        - Books
+      parameters:
+        - name: page
+          in: query
+          description: The current page of the paginated books list
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: The number of books per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: filter
+          in: query
+          description: Filter books by genre or author
+          required: false
+          schema:
+            type: string
+          examples:
+            genre:
+              value: fiction
+            author:
+              value: "J.K. Rowling"
+      responses:
+        '200':
+          description: Successful retrieval of books list
+          headers:
+            X-Rate-Limit:
+              description: The number of allowed requests in the current period
+              schema:
+                type: integer
+            X-Rate-Limit-Remaining:
+              description: The number of remaining requests in the current period
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  books:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+              examples:
+                example1:
+                  summary: Example list of books with pagination
+                  value:
+                    books:
+                      - bookId: "1"
+                        title: "The Catcher in the Rye"
+                        author: "J.D. Salinger"
+                        availableCopies: 3
+                      - bookId: "2"
+                        title: "1984"
+                        author: "George Orwell"
+                        availableCopies: 5
+                    pagination:
+                      currentPage: 1
+                      totalPages: 5
+                      totalItems: 100
+        '400':
+          description: Invalid request parameters
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                badRequest:
+                  summary: Invalid pagination parameters
+                  value:
+                    type: "https://api.library.com/errors/invalid-request"
+                    title: "Invalid Request"
+                    status: 400
+                    detail: "The 'page' parameter must be a positive integer."
+                    instance: "/books"
+  /books/{bookId}:
+    get:
+      summary: Retrieve book details
+      description: Get details of a specific book by its ID, including author, genre, and available copies.
+      operationId: getBookById
+      tags:
+        - Books
+      parameters:
+        - name: bookId
+          in: path
+          description: The unique ID of the book to retrieve
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful retrieval of book details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+              examples:
+                example1:
+                  summary: Example of a specific book
+                  value:
+                    bookId: "1"
+                    title: "The Catcher in the Rye"
+                    author: "J.D. Salinger"
+                    genre: "Fiction"
+                    availableCopies: 3
+        '404':
+          description: Book not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                bookNotFound:
+                  summary: Example of book not found error
+                  value:
+                    type: "https://api.library.com/errors/book-not-found"
+                    title: "Book Not Found"
+                    status: 404
+                    detail: "The book with ID '1' was not found."
+                    instance: "/books/1"
+    patch:
+      summary: Update a book's details
+      description: Update an existing book in the library's catalog. Only admins can perform this operation.
+      operationId: updateBook
+      tags:
+        - Books
+      security:
+        - oauth2: [admin]
+      parameters:
+        - name: bookId
+          in: path
+          description: The unique ID of the book to update
+          required: true
+          schema:
+            type: string
+      requestBody:
+        description: The updated details of the book
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+            examples:
+              updateTitle:
+                summary: Update only the title of the book
+                value:
+                  title: "New Book Title"
+              updateAll:
+                summary: Update all fields of the book
+                value:
+                  title: "New Book Title"
+                  author: "New Author"
+                  genre: "Non-Fiction"
+                  availableCopies: 4
+      responses:
+        '200':
+          description: Book updated successfully
+          headers:
+            X-Transaction-ID:
+              description: A unique transaction ID for the request
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+              examples:
+                example1:
+                  summary: Example of updated book details
+                  value:
+                    bookId: "1"
+                    title: "New Book Title"
+                    author: "New Author"
+                    genre: "Non-Fiction"
+                    availableCopies: 4
+        '400':
+          description: Invalid input - Bad request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                invalidInput:
+                  summary: Example of invalid input error
+                  value:
+                    type: "https://api.library.com/errors/invalid-input"
+                    title: "Invalid Input"
+                    status: 400
+                    detail: "The provided book data is invalid."
+                    instance: "/books/1"
+        '403':
+          description: Unauthorized - Only admins can update books
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                notAuthorized:
+                  summary: Example of unauthorized access
+                  value:
+                    type: "https://api.library.com/errors/not-authorized"
+                    title: "Not Authorized"
+                    status: 403
+                    detail: "You are not authorized to update this book."
+                    instance: "/books/1"
+        '404':
+          description: Book not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              examples:
+                bookNotFound:
+                  summary: Example of book not found error
+                  value:
+                    type: "https://api.library.com/errors/book-not-found"
+                    title: "Book Not Found"
+                    status: 404
+                    detail: "The book with ID '1' was not found."
+                    instance: "/books/1"
+  /users:
+    post:
+      summary: Register a new user
+      description: Register a new user in the library system. Users can borrow and return books.
+      operationId: createUser
+      tags:
+        - Users
+      requestBody:
+        description: The details of the user to register
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+            examples:
+              example1:
+                summary: Example of user registration
+                value:
+                  name: "Jane Doe"
+                  email: "jane.doe@example.com"
+                  role: "user"
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                example1:
+                  summary: Example of registered user details
+                  value:
+                    userId: "123"
+                    name: "Jane Doe"
+                    email: "jane.doe@example.com"
+                    role: "user"
+        '400':
+          description: Invalid input - Failed to register user
+  /users/{userId}:
+    get:
+      summary: Retrieve user details
+      description: Retrieve the details of a user by their ID, including name, email, and role.
+      operationId: getUserById
+      tags:
+        - Users
+      parameters:
+        - name: userId
+          in: path
+          description: The unique ID of the user to retrieve
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              examples:
+                example1:
+                  summary: Example of a user's details
+                  value:
+                    userId: "123"
+                    name: "Jane Doe"
+                    email: "jane.doe@example.com"
+                    role: "user"
+        '404':
+          description: User not found
+  /users/{userId}/checkout:
+    post:
+      summary: Checkout a book for a user
+      description: Allow a user to checkout a book from the library. The user must provide a valid user ID and book ID.
+      operationId: checkOutBook
+      tags:
+        - Users
+        - Books
+      security:
+        - oauth2: [user]
+      parameters:
+        - name: userId
+          in: path
+          description: The unique ID of the user checking out the book
+          required: true
+          schema:
+            type: string
+        - name: bookId
+          in: query
+          description: The unique ID of the book to checkout
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Book checked out successfully
+          headers:
+            X-Transaction-ID:
+              description: A unique transaction ID for the request
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+              examples:
+                example1:
+                  summary: Example of checked-out book details
+                  value:
+                    bookId: "1"
+                    title: "The Catcher in the Rye"
+                    author: "J.D. Salinger"
+                    availableCopies: 2
+        '403':
+          description: Unauthorized - Only registered users can checkout books
+        '404':
+          description: User or book not found
+  /webhooks/book-returned:
+    post:
+      summary: Trigger a webhook on book return
+      description: This webhook triggers when a book is returned to the library.
+      operationId: bookReturnedWebhook
+      tags:
+        - Webhooks
+      requestBody:
+        description: Information about the returned book
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookReturn'
+            examples:
+              example1:
+                summary: Example of book return
+                value:
+                  bookId: "1"
+                  userId: "123"
+      responses:
+        '200':
+          description: Webhook processed successfully
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: |
+        OAuth2 flow to secure access to the API. Supports authorization code flow.
+      flows:
+        authorizationCode:
+          authorizationUrl: https://auth.library.com/oauth2/authorize
+          tokenUrl: https://auth.library.com/oauth2/token
+          scopes:
+            admin: Full access to manage the library
+            user: Access to borrow and return books
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key authentication scheme
+    basicAuth:
+      type: http
+      scheme: basic
+      description: Basic HTTP authentication
+    jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT bearer authentication
+    openIdConnect:
+      type: openIdConnect
+      openIdConnectUrl: https://auth.library.com/.well-known/openid-configuration
+  schemas:
+    Book:
+      type: object
+      description: A representation of a book in the library
+      properties:
+        bookId:
+          type: string
+          description: The unique identifier of the book
+        title:
+          type: string
+          description: The title of the book
+        author:
+          type: string
+          description: The author of the book
+        genre:
+          type: string
+          description: The genre of the book
+        availableCopies:
+          type: integer
+          description: The number of available copies
+          minimum: 0
+          default: 1
+      example:
+        bookId: "1"
+        title: "The Catcher in the Rye"
+        author: "J.D. Salinger"
+        genre: "Fiction"
+        availableCopies: 3
+    User:
+      type: object
+      description: A representation of a library user
+      properties:
+        userId:
+          type: string
+          description: The unique identifier of the user
+        name:
+          type: string
+          description: The name of the user
+        email:
+          type: string
+          format: email
+          description: The email address of the user
+        role:
+          type: string
+          description: The role of the user (either user or admin)
+          enum: [user, admin]
+      example:
+        userId: "123"
+        name: "Jane Doe"
+        email: "jane.doe@example.com"
+        role: "user"
+    Pagination:
+      type: object
+      description: Pagination details for API responses
+      properties:
+        currentPage:
+          type: integer
+          description: The current page number
+        totalPages:
+          type: integer
+          description: The total number of pages available
+        totalItems:
+          type: integer
+          description: The total number of items available
+      example:
+        currentPage: 1
+        totalPages: 5
+        totalItems: 100
+    BookReturn:
+      type: object
+      description: Information about a returned book
+      properties:
+        bookId:
+          type: string
+          description: The ID of the returned book
+        userId:
+          type: string
+          description: The ID of the user returning the book
+      example:
+        bookId: "1"
+        userId: "123"
+    ProblemDetails:
+      type: object
+      description: Problem Details object as defined in RFC 9457
+      properties:
+        type:
+          type: string
+          description: A URI reference that identifies the problem type
+        title:
+          type: string
+          description: A short, human-readable summary of the problem type
+        status:
+          type: integer
+          description: The HTTP status code generated by the origin server for this occurrence of the problem
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence of the problem
+        instance:
+          type: string
+          description: A URI reference that identifies the specific occurrence of the problem
+      example:
+        type: "https://api.library.com/errors/book-not-found"
+        title: "Book Not Found"
+        status: 404
+        detail: "The book with ID '1' was not found."
+        instance: "/books/1"

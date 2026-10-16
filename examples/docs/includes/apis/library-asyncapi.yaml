@@ -1,0 +1,260 @@
+asyncapi: 2.0.0
+info:
+  title: Library Management AsyncAPI
+  description: |
+    This AsyncAPI specification describes the communication events that occur in a library management system. Events include book checkouts, returns, updates, and user management. Consumers can subscribe to events such as book checked out or returned, and publishers can publish events like adding or updating books.
+  version: 1.0.0
+  license:
+    name: MIT
+servers:
+  - url: mqtt://library.mqtt.com
+    description: Production MQTT broker
+  - url: mqtt://staging.library.mqtt.com
+    description: Staging MQTT broker for testing
+    protocol: mqtt
+    protocolVersion: '5'
+    variables:
+      env:
+        enum: ['production', 'staging']
+        default: production
+channels:
+  books/added:
+    description: Channel for events when a book is added to the library
+    subscribe:
+      summary: Receive a notification when a book is added
+      operationId: bookAdded
+      message:
+        $ref: '#/components/messages/BookAdded'
+    publish:
+      summary: Publish an event when a new book is added
+      operationId: publishBookAdded
+      message:
+        $ref: '#/components/messages/BookAdded'
+  books/updated:
+    description: Channel for events when a book is updated in the library
+    subscribe:
+      summary: Receive a notification when a book is updated
+      operationId: bookUpdated
+      message:
+        $ref: '#/components/messages/BookUpdated'
+    publish:
+      summary: Publish an event when a book is updated
+      operationId: publishBookUpdated
+      message:
+        $ref: '#/components/messages/BookUpdated'
+  books/checked-out:
+    description: Channel for events when a book is checked out by a user
+    subscribe:
+      summary: Receive a notification when a book is checked out
+      operationId: bookCheckedOut
+      message:
+        $ref: '#/components/messages/BookCheckedOut'
+    publish:
+      summary: Publish an event when a book is checked out
+      operationId: publishBookCheckedOut
+      message:
+        $ref: '#/components/messages/BookCheckedOut'
+  books/returned:
+    description: Channel for events when a book is returned by a user
+    subscribe:
+      summary: Receive a notification when a book is returned
+      operationId: bookReturned
+      message:
+        $ref: '#/components/messages/BookReturned'
+    publish:
+      summary: Publish an event when a book is returned
+      operationId: publishBookReturned
+      message:
+        $ref: '#/components/messages/BookReturned'
+components:
+  messages:
+    BookAdded:
+      contentType: application/json
+      description: Event message sent when a new book is added to the library
+      payload:
+        $ref: '#/components/schemas/Book'
+      examples:
+        example1:
+          summary: Example of book added event
+          value:
+            bookId: "1"
+            title: "The Catcher in the Rye"
+            author: "J.D. Salinger"
+            genre: "Fiction"
+            availableCopies: 3
+    BookUpdated:
+      contentType: application/json
+      description: Event message sent when a book is updated in the library
+      payload:
+        $ref: '#/components/schemas/Book'
+      examples:
+        example1:
+          summary: Example of book updated event
+          value:
+            bookId: "1"
+            title: "The Catcher in the Rye"
+            author: "J.D. Salinger"
+            genre: "Fiction"
+            availableCopies: 2
+    BookCheckedOut:
+      contentType: application/json
+      description: Event message sent when a book is checked out by a user
+      payload:
+        $ref: '#/components/schemas/BookCheckedOut'
+      examples:
+        example1:
+          summary: Example of book checked out event
+          value:
+            bookId: "1"
+            userId: "123"
+            title: "The Catcher in the Rye"
+            author: "J.D. Salinger"
+            dueDate: "2023-10-01"
+    BookReturned:
+      contentType: application/json
+      description: Event message sent when a book is returned to the library
+      payload:
+        $ref: '#/components/schemas/BookReturned'
+      examples:
+        example1:
+          summary: Example of book returned event
+          value:
+            bookId: "1"
+            userId: "123"
+            title: "The Catcher in the Rye"
+            author: "J.D. Salinger"
+            returnDate: "2023-09-15"
+  schemas:
+    Book:
+      type: object
+      description: A book representation for events
+      properties:
+        bookId:
+          type: string
+          description: Unique identifier of the book
+        title:
+          type: string
+          description: Title of the book
+        author:
+          type: string
+          description: Author of the book
+        genre:
+          type: string
+          description: Genre of the book
+        availableCopies:
+          type: integer
+          description: Number of available copies
+          minimum: 0
+        publishedDate:
+          type: string
+          format: date
+          description: The date the book was published
+      example:
+        bookId: "1"
+        title: "The Catcher in the Rye"
+        author: "J.D. Salinger"
+        genre: "Fiction"
+        availableCopies: 3
+    BookCheckedOut:
+      type: object
+      description: Information about a book being checked out
+      properties:
+        bookId:
+          type: string
+          description: Unique identifier of the book
+        userId:
+          type: string
+          description: Unique identifier of the user who checked out the book
+        title:
+          type: string
+          description: Title of the book
+        author:
+          type: string
+          description: Author of the book
+        dueDate:
+          type: string
+          format: date
+          description: Date when the book is due
+      example:
+        bookId: "1"
+        userId: "123"
+        title: "The Catcher in the Rye"
+        author: "J.D. Salinger"
+        dueDate: "2023-10-01"
+    BookReturned:
+      type: object
+      description: Information about a book being returned
+      properties:
+        bookId:
+          type: string
+          description: Unique identifier of the book
+        userId:
+          type: string
+          description: Unique identifier of the user who returned the book
+        title:
+          type: string
+          description: Title of the book
+        author:
+          type: string
+          description: Author of the book
+        returnDate:
+          type: string
+          format: date
+          description: Date when the book was returned
+      example:
+        bookId: "1"
+        userId: "123"
+        title: "The Catcher in the Rye"
+        author: "J.D. Salinger"
+        returnDate: "2023-09-15"
+    ProblemDetails:
+      type: object
+      description: RFC 9457-compliant problem details for error handling
+      properties:
+        type:
+          type: string
+          description: A URI reference that identifies the problem type
+        title:
+          type: string
+          description: A short, human-readable summary of the problem type
+        status:
+          type: integer
+          description: The HTTP status code generated by the origin server for this occurrence of the problem
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence of the problem
+        instance:
+          type: string
+          description: A URI reference that identifies the specific occurrence of the problem
+      example:
+        type: "https://api.library.com/errors/book-not-found"
+        title: "Book Not Found"
+        status: 404
+        detail: "The book with ID '1' was not found."
+        instance: "/books/1"
+securitySchemes:
+  oauth2:
+    type: oauth2
+    description: |
+      OAuth2 flow to secure access to the API. Supports client credentials and authorization code flows.
+    flows:
+      clientCredentials:
+        tokenUrl: https://auth.library.com/oauth2/token
+        scopes:
+          admin: Full access to manage the library
+          user: Borrow and return books
+      authorizationCode:
+        authorizationUrl: https://auth.library.com/oauth2/authorize
+        tokenUrl: https://auth.library.com/oauth2/token
+        scopes:
+          admin: Full access to manage the library
+          user: Borrow and return books
+  apiKeyAuth:
+    type: apiKey
+    in: user
+    name: X-API-Key
+    description: API key used for authentication
+  basicAuth:
+    type: http
+    scheme: basic
+    description: Basic authentication over HTTP

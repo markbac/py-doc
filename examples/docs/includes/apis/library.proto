@@ -1,0 +1,206 @@
+syntax = "proto3";
+
+package library;
+
+// Versioning for the gRPC API
+option go_package = "library/v1";
+option java_package = "com.example.library.v1";
+option java_outer_classname = "LibraryProto";
+option objc_class_prefix = "LIB";
+
+// Import Google’s well-known error handling for Problem Details (RFC 9457 equivalent)
+import "google/rpc/status.proto";
+
+// The main service definition for the Library Management System
+service LibraryService {
+  // Unary RPC to add a new book
+  rpc AddBook(AddBookRequest) returns (AddBookResponse) {
+    option (google.api.http) = {
+      post: "/v1/books"
+      body: "*"
+    };
+  }
+
+  // Unary RPC to update an existing book
+  rpc UpdateBook(UpdateBookRequest) returns (UpdateBookResponse) {
+    option (google.api.http) = {
+      patch: "/v1/books/{book_id}"
+      body: "*"
+    };
+  }
+
+  // Unary RPC to get details of a book
+  rpc GetBook(GetBookRequest) returns (GetBookResponse) {
+    option (google.api.http) = {
+      get: "/v1/books/{book_id}"
+    };
+  }
+
+  // Unary RPC to delete a book
+  rpc DeleteBook(DeleteBookRequest) returns (DeleteBookResponse) {
+    option (google.api.http) = {
+      delete: "/v1/books/{book_id}"
+    };
+  }
+
+  // Unary RPC to allow a user to checkout a book
+  rpc CheckoutBook(CheckoutBookRequest) returns (CheckoutBookResponse) {
+    option (google.api.http) = {
+      post: "/v1/users/{user_id}/checkout"
+      body: "*"
+    };
+  }
+
+  // Unary RPC to return a book
+  rpc ReturnBook(ReturnBookRequest) returns (ReturnBookResponse) {
+    option (google.api.http) = {
+      post: "/v1/users/{user_id}/return"
+      body: "*"
+    };
+  }
+
+  // Server-streaming RPC to list all books with pagination
+  rpc ListBooks(ListBooksRequest) returns (stream ListBooksResponse) {
+    option (google.api.http) = {
+      get: "/v1/books"
+    };
+  }
+}
+
+// Message for adding a book
+message AddBookRequest {
+  string title = 1;
+  string author = 2;
+  string genre = 3;
+  int32 available_copies = 4;
+  string published_date = 5; // In the format YYYY-MM-DD
+}
+
+message AddBookResponse {
+  Book book = 1;
+}
+
+// Message for updating a book
+message UpdateBookRequest {
+  string book_id = 1; // The ID of the book to update
+  string title = 2;
+  string author = 3;
+  string genre = 4;
+  int32 available_copies = 5;
+  string published_date = 6; // In the format YYYY-MM-DD
+}
+
+message UpdateBookResponse {
+  Book book = 1;
+}
+
+// Message for getting a book by its ID
+message GetBookRequest {
+  string book_id = 1;
+}
+
+message GetBookResponse {
+  Book book = 1;
+}
+
+// Message for deleting a book
+message DeleteBookRequest {
+  string book_id = 1;
+}
+
+message DeleteBookResponse {
+  google.rpc.Status status = 1; // Use Google's well-known Status for problem details
+}
+
+// Message for checking out a book by a user
+message CheckoutBookRequest {
+  string user_id = 1;
+  string book_id = 2;
+  string due_date = 3; // In the format YYYY-MM-DD
+}
+
+message CheckoutBookResponse {
+  BookCheckedOut book_checked_out = 1;
+}
+
+// Message for returning a book by a user
+message ReturnBookRequest {
+  string user_id = 1;
+  string book_id = 2;
+}
+
+message ReturnBookResponse {
+  BookReturned book_returned = 1;
+}
+
+// Message for listing books with pagination
+message ListBooksRequest {
+  int32 page = 1;        // Page number for pagination
+  int32 limit = 2;       // Number of books per page
+  string filter = 3;     // Optional filter by author or genre
+}
+
+message ListBooksResponse {
+  repeated Book books = 1;
+  Pagination pagination = 2;
+}
+
+// Data models used across messages
+
+// Model for a book
+message Book {
+  string book_id = 1;             // Unique ID of the book
+  string title = 2;               // Title of the book
+  string author = 3;              // Author of the book
+  string genre = 4;               // Genre of the book
+  int32 available_copies = 5;     // Number of available copies
+  string published_date = 6;      // Date when the book was published (YYYY-MM-DD)
+}
+
+// Model for a book being checked out
+message BookCheckedOut {
+  string book_id = 1;
+  string user_id = 2;
+  string title = 3;
+  string author = 4;
+  string due_date = 5;            // The due date for returning the book
+}
+
+// Model for a book being returned
+message BookReturned {
+  string book_id = 1;
+  string user_id = 2;
+  string title = 3;
+  string author = 4;
+  string return_date = 5;         // The date the book was returned
+}
+
+// Pagination information for listing books
+message Pagination {
+  int32 current_page = 1;         // The current page
+  int32 total_pages = 2;          // Total number of pages
+  int32 total_items = 3;          // Total number of books across all pages
+}
+
+// HATEOAS-like links (optional)
+message Links {
+  string self = 1;                // URL to self resource
+  string next = 2;                // URL to the next resource or page
+  string prev = 3;                // URL to the previous resource or page
+}
+
+// Import Google Status for error handling (RFC 9457 equivalent)
+message ProblemDetails {
+  string type = 1;                // A URI reference that identifies the problem type
+  string title = 2;               // A short, human-readable summary of the problem type
+  int32 status = 3;               // The HTTP status code generated by the server
+  string detail = 4;              // A human-readable explanation of the specific problem
+  string instance = 5;            // A URI reference that identifies the specific occurrence of the problem
+}
+
+// Pagination with HATEOAS-style links in responses
+message PaginatedBooksResponse {
+  repeated Book books = 1;        // The list of books for the current page
+  Pagination pagination = 2;      // Pagination information
+  Links links = 3;                // HATEOAS-like links
+}

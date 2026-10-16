@@ -41,6 +41,7 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 | `docs/guide/05_diagram_types.md` | One example of every other diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega and vega-lite. Graphviz, Mermaid and PlantUML are in `docs/guide/02_design.md` |
 | `docs/datasheet.md` | A short datasheet that includes the diagram chapter, to try the datasheet template (`@@` placeholders) and the LaTeX template |
 | `docs/release-notes.md` | A short document whose version comes from Git (`version: git`) |
+| `docs/interfaces.md` | Interface specifications for a sample library system (OpenAPI, AsyncAPI, gRPC and GraphQL), each included from its own file in `docs/includes/apis/`, and a PlantUML use case diagram |
 | `docs/deck/slides.md` | The deck: section slides, bullets, columns, incremental lists, both kinds of speaker notes, diagrams, a picture, a table, maths, callouts, code, an include, a condition, a page break |
 | `docs/includes/` | Files pulled in with `[[INCLUDE:]]` and `[[INCLUDE-CODE:]]` |
 | `templates/sensor.docx` | The Word template: logo, title page with `Replace-with-*` placeholders, header, footer with page numbers, callout styles, a `Lead Paragraph` style, `[[INSERTCONTENT]]` where the body goes |
@@ -66,6 +67,7 @@ py-doc build datasheet                               # build/datasheet-1_0.docx 
 py-doc build deck                                    # build/deck.pptx
 py-doc build release-notes                           # build/release-notes-<git version>.docx, needs a Git commit
 py-doc build architecture                            # build/architecture.docx and architecture.html
+py-doc build interfaces                              # build/interfaces.docx and interfaces.html
 py-doc import word/design_review.docx -o imported    # imported/design_review.md and imported/design_review/
 py-doc docx imported/design_review.md                # imported/design_review.docx: the round trip
 py-doc import build/deck.pptx -o imported            # imported/deck.md: the deck back as Markdown
@@ -83,6 +85,7 @@ py-doc site build                                    # site/build/index.html: th
 | `py-doc build datasheet` | `docs/datasheet.md`, `templates/datasheet.docx`, `templates/report.tex` | `build/datasheet-1_0.docx`, `build/datasheet.pdf` |
 | `py-doc build deck` | `docs/deck/slides.md`, `templates/sensor.pptx` (or `sensor_Draft.pptx`) | `build/deck.pptx` |
 | `py-doc build architecture` | `architecture/workspace.json`, `docs/includes/audience.md` | `build/architecture.docx`, `build/architecture.html` (chapters generated from the model) |
+| `py-doc build interfaces` | `docs/interfaces.md`, `docs/includes/apis/`, `templates/sensor.docx` (or `sensor_Draft.docx`), `templates/doc.css` | `build/interfaces.docx`, `build/interfaces.html` |
 | `py-doc import` | `word/design_review.docx`, `build/deck.pptx` | Markdown and pictures in `imported/` |
 | `py-doc site build` | The sources of the guide, datasheet and architecture, `site/mkdocs.yml` | Pages in `site/docs/<document>/`, navigation in `site/py-doc-nav.yml`, the site in `site/build` |
 
