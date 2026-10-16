@@ -35,3 +35,27 @@ def require_supported() -> str:
             f"This command needs the tool container, which is supported on Linux and Windows only (this is {shown})"
         )
     return name
+
+
+# Console input modes (Windows): Ctrl+C is a signal, input is read a line at a time, and typed keys are echoed.
+_PROCESSED_INPUT, _LINE_INPUT, _ECHO_INPUT = 0x0001, 0x0002, 0x0004
+
+
+def restore_console_input() -> None:
+    """Put the Windows console back into line mode, with echo and Ctrl+C, before asking questions.
+
+    A program run earlier in the same console (wsl.exe among them) can leave it raw. ``input()`` then never
+    sees the end of a line, nothing typed is shown and Ctrl+C does not stop it. Elsewhere this does nothing.
+    """
+    if sys.platform != "win32":
+        return
+    import ctypes
+
+    kernel32 = ctypes.windll.kernel32
+    handle = kernel32.GetStdHandle(-10)  # standard input
+    mode = ctypes.c_uint32()
+    if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+        return  # not a console
+    wanted = mode.value | _PROCESSED_INPUT | _LINE_INPUT | _ECHO_INPUT
+    if wanted != mode.value:
+        kernel32.SetConsoleMode(handle, wanted)

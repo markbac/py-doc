@@ -34,6 +34,7 @@ from pathlib import Path
 import yaml
 
 from ._logging import configure_logging
+from .platform import restore_console_input
 from .migrate import discover, read_createdocs
 
 REGISTER = "doc-numbers.yml"
@@ -384,6 +385,8 @@ def run_new(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     configure_logging(quiet=args.quiet, verbose=args.verbose)
     ask = None if args.yes or not sys.stdin.isatty() else input
+    if ask:
+        restore_console_input()
     if args.scan or args.start is not None:
         try:
             register, added = update(Path.cwd(), args.scan, args.start, args.prefix)
