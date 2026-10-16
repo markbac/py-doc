@@ -29,6 +29,7 @@ documents:
       - docs/guide/07_lint.md
       - docs/guide/08_sites.md
       - docs/guide/09_reference.md
+      - docs/guide/10_legacy.md
     outputs:
       docx: {toc: true}
       html: {toc: true}

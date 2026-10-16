@@ -212,3 +212,71 @@ def test_without_lists_anything_goes_and_prefix_can_change_per_document(repo):
     _, reg, _ = make(["--title", "B", "--type", "ZZ9", "--prefix", "X1", "--classification", "Whatever"])
     assert reg.entries[-1].number == "X1-ZZ9-014"
     assert register(repo)["prefix"] == "G460"  # the default stays
+
+
+def test_an_existing_markdown_file_gets_a_number_and_a_build_file_beside_it(repo, monkeypatch):
+    notes = repo / "docs" / "pump"
+    notes.mkdir()
+    page = notes / "control.md"
+    text = "---\nauthor: Bea\ndescription: How the pump is controlled.\nclassification: Internal\n---\n# Pump Control\n\nText.\n"
+    page.write_text(text, encoding="utf-8")
+    written, reg, _ = make([str(page), "--type", "TN", "--prefix", "G460"])
+    assert written == [notes / "G460-TN-013-Pump-Control.yaml"]
+    assert page.read_text(encoding="utf-8") == text  # the Markdown is not changed
+    data = yaml.safe_load(written[0].read_text(encoding="utf-8"))
+    assert data["entries"] == [{"file": "control.md", "heading_offset": 0}]
+    assert {k: data["meta"][k] for k in ("title", "author", "description", "classification", "version")} == {
+        "title": "Pump Control", "author": "Bea", "description": "How the pump is controlled.",
+        "classification": "Internal", "version": "0.1.0",
+    }  # fmt: skip
+    assert reg.entries[-1] == new.Entry("G460-TN-013", "Pump Control", "docs/pump/G460-TN-013-Pump-Control.yaml")
+    result = migrate([written[0]], notes)
+    assert not [f for f in result.findings if f.level == "warning"]
+
+
+def test_an_existing_file_takes_its_front_matter_title_and_options_still_win(repo):
+    page = repo / "docs" / "notes" / "x.md"
+    page.write_text("---\ntitle: From Front Matter\nversion: 1.2.0\n---\n# Heading\n", encoding="utf-8")
+    written, _, _ = make([str(page), "--type", "", "--title", "Given Title"])
+    meta = yaml.safe_load(written[0].read_text(encoding="utf-8"))["meta"]
+    assert (meta["title"], meta["version"]) == ("Given Title", "1.2.0")
+    page2 = repo / "docs" / "notes" / "y.md"
+    page2.write_text("---\ntitle: From Front Matter\n---\n# Heading\n", encoding="utf-8")
+    written, _, _ = make([str(page2), "--type", ""])
+    assert yaml.safe_load(written[0].read_text(encoding="utf-8"))["meta"]["title"] == "From Front Matter"
+
+
+@pytest.mark.parametrize(
+    ("name", "text", "message"),
+    [
+        ("numbered.md", "---\ndocument_number: X-001\n---\n# A\n", "already has the document number X-001"),
+        ("a.md", "# Already used\n", "a.md is already a source of docs/notes/G460-TN-012-pipelines.yaml, number G460-TN-012"),
+        ("notes.txt", "text\n", "is not a Markdown file"),
+    ],
+)
+def test_a_file_that_has_a_number_or_is_not_markdown_is_refused(repo, name, text, message):
+    page = repo / "docs" / "notes" / name
+    page.write_text(text, encoding="utf-8")
+    make(["--title", "Seed", "--type", "TN", "--prefix", "G460"])  # makes the register, with pipelines.yaml in it
+    with pytest.raises(new.NewError, match=re.escape(message)):
+        make([str(page), "--type", "TN"])
+
+
+def test_the_command_numbers_an_existing_file(repo, capsys):
+    page = repo / "docs" / "notes" / "c.md"
+    page.write_text("# Cmd Page\n", encoding="utf-8")
+    assert main(["new", "-y", str(page), "--type", "TN", "--prefix", "G460"]) == 0
+    out = capsys.readouterr().out
+    assert "written   G460-TN-013-Cmd-Page.yaml" in out and "c.md" not in out.split("written")[1].split("\n")[0]
+
+
+def test_the_paths_shown_work_from_where_the_command_was_run(repo, capsys, monkeypatch):
+    from pathlib import Path
+
+    monkeypatch.chdir(repo)
+    page = repo / "docs" / "notes" / "d.md"
+    page.write_text("# From Root\n", encoding="utf-8")
+    assert main(["new", "-y", "docs/notes/d.md", "--type", "TN", "--prefix", "G460"]) == 0
+    shown = str(Path("docs/notes/G460-TN-013-From-Root.yaml"))
+    out = capsys.readouterr().out
+    assert f"written   {shown}" in out and f"py-doc build --legacy {shown}" in out
