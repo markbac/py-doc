@@ -19,6 +19,7 @@ from pathlib import Path
 import yaml
 
 from ._logging import configure_logging
+from .platform import restore_console_input
 from .config import CONFIG_NAMES, SITE_ENGINES, ConfigError, load_config, parse_config
 from .errors import ConversionError, EnvironmentProblem, exit_status
 from .runtime import Mount, connect
@@ -171,6 +172,8 @@ def run_init(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     configure_logging(quiet=args.quiet, verbose=args.verbose)
     ask = None if args.yes or not sys.stdin.isatty() else input
+    if ask:
+        restore_console_input()
     folder = args.folder
     try:
         choices = choose(args, folder, ask)

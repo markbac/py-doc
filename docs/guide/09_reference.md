@@ -47,6 +47,7 @@ The commands `py-doc2docx`, `py-doc2slides`, `py-doclint` and `py-c4-exporter` s
 - **Exit status `1`** means a tool ran and failed. Its whole output is shown above the error.
 - **A diagram error** names the file, the line and the tool's own message. `py-doc build --keep-going` lists every failing diagram together.
 - **Structurizr Local does not answer**: check that Docker is running and that port 8080 is free (`c4.port` changes it), then run `py-doc c4 down` and try again.
+- **A question that takes no answer** on Windows (nothing you type shows, and Enter and Ctrl+C do nothing): an earlier program left the console raw. `py-doc new` and `py-doc init` now reset it before they ask. In an older version, close the tab, or give every answer as an option with `-y`.
 - **Caches**: generated pages and exports live in `.py-doc/` at the project root, and pictures in your user cache folder. Both are safe to delete.
 
 ## Running the tests
