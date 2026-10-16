@@ -18,7 +18,7 @@ title: Traceability
 | FR-061 | `pptx_import.py` | `test_pptx_import.py` |
 | FR-080 to FR-086, QR-081 | `c4/` | `test_c4.py` |
 | FR-100 to FR-106 | `lint/`, `markdown/` | `test_lint.py`, `test_lint_cli.py`, `test_structure.py`, `test_vale.py`, `test_markdownlint.py`, `test_markdown_ast.py` |
-| FR-120 to FR-124, QR-082 | `site/`, `pandoc/resources/site.lua` | `test_site.py` |
+| FR-120 to FR-127, QR-082 | `site/`, `pandoc/resources/site.lua` | `test_site.py` |
 | FR-140 to FR-143, QR-040 to QR-043 | `runtime/`, `tools_cli.py` | `test_runtime.py`, `test_image.py`, `test_setup.py`, `test_doctor.py`, `test_platform.py` |
 | QR-102 | `cli.py`, `slides_cli.py`, `pydoc2docx`, `pydoc2slides`, `pydoclint` | `test_compat.py` |
 | QR-123 | `_logging.py` | `test_logging.py`, `test_logging_policy.py` |

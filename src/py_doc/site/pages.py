@@ -35,6 +35,7 @@ from .engines import Engine, NavPage, NavSection, engine_for
 logger = logging.getLogger(__name__)
 
 MANIFEST = ".py-doc-site.json"
+DOWNLOAD_LABELS = {"pdf": "PDF", "docx": "Word", "pptx": "PowerPoint", "html": "HTML"}
 FILTERS = ("admonitions.lua", "pagebreak.lua", "markers.lua", "site.lua")
 OUTPUT_FORMAT = "gfm"  # pipe tables, task lists and raw HTML. site.lua writes the maths
 TIMEOUT = 900
@@ -56,6 +57,8 @@ class Page:
     order: int
     markdown: str = ""
     pictures: dict[str, Path] = field(default_factory=dict)
+    downloads: list[tuple[str, Path]] = field(default_factory=list)  # (label, built file), on a document's first page
+    version: str | None = None
 
     @property
     def path(self) -> str:
@@ -86,13 +89,19 @@ def generate_site(
     sections: list[NavSection] = []
     for name in names:
         title, made = _pages_of(config, name, runtime, variables or {}, conditions or {})
+        if made and site.downloads:
+            made[0].downloads = _downloads(config, name, site.downloads, made[0].version)
         sections.append(NavSection(title, name, [NavPage(page.title, page.path) for page in made]))
         pages += made
     _convert(pages, site.engine, runtime())
     written = _write(pages, engine)
-    written.append(engine.write_nav(sections))
-    for advice in engine.check():
-        logger.warning(advice)
+    for title, path in site.pages.items():
+        if not (engine.content / path).is_file():
+            logger.warning(f"site.pages lists {title}: {engine.content / path} is not there")
+    written.append(engine.write_nav(sections, site.pages))
+    for target in site.targets.values() or [None]:
+        for advice in engine.check(target):
+            logger.warning(advice)
     return engine, written
 
 
@@ -116,8 +125,23 @@ def _pages_of(config: ProjectConfig, name: str, runtime, variables: dict, condit
         used.add(name_)
         title = first_heading(text) or (metadata.title if order == 1 else file.stem)
         rendered = render_parts([(file, text)], "html", runtime)
-        pages.append(Page(name, file, name_, title, order, rendered.markdown, rendered.pictures))
+        pages.append(Page(name, file, name_, title, order, rendered.markdown, rendered.pictures, version=metadata.version))
     return metadata.title or name, pages
+
+
+def _downloads(config: ProjectConfig, name: str, formats: list[str], version: str | None) -> list[tuple[str, Path]]:
+    """The built files of a document that its pages link to. ``py-doc build`` makes them; a missing one is left out."""
+    doc = config.documents[name]
+    found = []
+    for fmt in formats:
+        if fmt not in config.output_formats(doc):
+            continue
+        path = config.output_path(doc, fmt, version)
+        if path.is_file():
+            found.append((DOWNLOAD_LABELS[fmt], path))
+        else:
+            logger.warning(f"{name}: {path} is not there, so the pages do not link it. Run `py-doc build {name}` first")
+    return found
 
 
 def _convert(pages: list[Page], engine: str, runtime: Runtime) -> None:
@@ -153,6 +177,8 @@ def _write(pages: list[Page], engine: Engine) -> list[Path]:
     files: dict[Path, bytes] = {}
     for page in pages:
         text = _relink(page, by_source, engine.name, files, content)
+        if page.downloads:
+            text = _with_downloads(text, page, engine, files)
         front = {"title": page.title}
         if engine.name == "starlight":
             front["sidebar"] = {"order": page.order}
@@ -174,6 +200,20 @@ def _write(pages: list[Page], engine: Engine) -> list[Path]:
     manifest.write_text(json.dumps({"files": sorted(relative(p) for p in files)}, indent=1) + "\n", encoding="utf-8")
     logger.info(f"Wrote {len(pages)} page(s) to {content}")
     return sorted(files)
+
+
+def _with_downloads(text: str, page: Page, engine: Engine, files: dict[Path, bytes]) -> str:
+    """Copy the document's built files beside the site and put a line of links under the page's first heading."""
+    folder, href = engine.downloads(page.document)
+    links = []
+    for label, path in page.downloads:
+        files[folder / path.name] = path.read_bytes()
+        links.append(f"[{label}]({href}/{path.name})")
+    line = "Download: " + " · ".join(links)
+    first, sep, rest = text.partition("\n")
+    if first.startswith("# "):
+        return f"{first}\n\n{line}\n{sep}{rest}"
+    return f"{line}\n\n{text}"
 
 
 def _relink(page: Page, by_source: dict[Path, Page], engine: str, files: dict[Path, bytes], content: Path) -> str:

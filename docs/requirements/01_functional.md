@@ -89,6 +89,9 @@ title: Functional requirements
 | FR-122 | py-doc shall write the site navigation from the documents of `py-doc.yml`. It goes in a file of its own that the site's configuration takes in, so a hand-made navigation is kept. | Should | Met |
 | FR-123 | py-doc shall never replace a site file it did not write, and shall remove pages whose sources are gone. | Must | Met |
 | FR-124 | Site pages shall keep callouts, diagrams, pictures, captions and links between chapters. | Should | Met |
+| FR-125 | One MkDocs site project shall build more than one site (`site.targets`), each from its own configuration file and to its own folder, from the same pages. | Should | Met |
+| FR-126 | A document's site pages shall link the files `py-doc build` made for it (`site.downloads`), copied beside the site. | Should | Met |
+| FR-127 | The site navigation py-doc writes shall also list pages of the user's own (`site.pages`), after the documents. | Should | Met |
 
 ## Tool container
 

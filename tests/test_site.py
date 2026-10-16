@@ -68,6 +68,28 @@ def test_the_mkdocs_navigation_has_a_section_per_document(tmp_path):
     ]
 
 
+def test_hand_written_pages_follow_the_documents_in_the_navigation(tmp_path):
+    engine = engine_for("mkdocs", tmp_path)
+    engine.scaffold("x")
+    nav = engine.write_nav([NavSection("Guide", "guide", [NavPage("Overview", "guide/overview.md")])], {"Blog": "blog/index.md"})
+    assert yaml.safe_load(nav.read_text(encoding="utf-8"))["nav"][-2:] == [{"Overview": "guide/overview.md"}, {"Blog": "blog/index.md"}]
+    sidebar = engine_for("starlight", tmp_path / "astro").write_nav([], {"Blog": "blog/index.md", "About": "about.md"})
+    assert json.loads(sidebar.read_text(encoding="utf-8")) == [{"label": "Blog", "link": "/blog/"}, {"label": "About", "link": "/about/"}]
+
+
+def test_a_target_config_inherits_the_navigation_through_mkdocs_yml(tmp_path):
+    engine = engine_for("mkdocs", tmp_path)
+    engine.scaffold("x")
+    (tmp_path / "mkdocs.tarf.yml").write_text("INHERIT: mkdocs.yml\nsite_url: https://tarf.example/\nsite_dir: build-tarf\n", encoding="utf-8")
+    assert engine.check("mkdocs.tarf.yml") == []
+    assert engine.site_dir("mkdocs.tarf.yml") == tmp_path / "build-tarf" and engine.site_dir() == tmp_path / "build"
+    (tmp_path / "mkdocs.alone.yml").write_text("site_name: alone\n", encoding="utf-8")
+    assert "INHERIT: py-doc-nav.yml" in engine.check("mkdocs.alone.yml")[0]
+    (tmp_path / "mkdocs.moved.yml").write_text("INHERIT: mkdocs.yml\ndocs_dir: pages\n", encoding="utf-8")
+    assert "reads its pages from pages" in engine.check("mkdocs.moved.yml")[0]
+    assert "is not there" in engine.check("mkdocs.missing.yml")[0]
+
+
 def test_a_new_starlight_site_passes_the_sidebar_to_starlight(tmp_path):
     engine = engine_for("starlight", tmp_path)
     assert not engine.exists()
@@ -104,6 +126,17 @@ def test_the_builds_run_in_the_container(tmp_path):
     engine_for("starlight", tmp_path).build(box)
     assert [c[0][:2] for c in box.calls] == [["npm", "install"], ["npx", "astro"]]
     assert box.calls[0][1]["network"] is True and box.calls[1][1]["env"]["ASTRO_TELEMETRY_DISABLED"] == "1"
+
+
+def test_a_target_builds_with_its_own_config_file(tmp_path):
+    engine = engine_for("mkdocs", tmp_path)
+    engine.scaffold("x")
+    (tmp_path / "mkdocs.tarf.yml").write_text("INHERIT: mkdocs.yml\nsite_dir: build-tarf\n", encoding="utf-8")
+    box = _Box()
+    assert engine.build(box, "mkdocs.tarf.yml") == tmp_path / "build-tarf"
+    assert box.calls[0][0][-1].endswith("mkdocs.tarf.yml")
+    with pytest.raises(ConversionError, match="site.targets names it"):
+        engine.build(box, "mkdocs.missing.yml")
 
 
 # --- pages ------------------------------------------------------------------------------------------
@@ -161,6 +194,24 @@ def test_mkdocs_pages_have_admonitions_links_pictures_and_captions(project, pand
 
 
 @needs_sh
+def test_the_first_page_links_the_built_downloads(project, pandoc_runtime, caplog):
+    text = (project / "py-doc.yml").read_text(encoding="utf-8").replace("site: {engine: ENGINE}", "site: {engine: ENGINE, downloads: [pdf, docx]}")
+    text = text.replace("    variables: {version: '1.0'}\n", "    variables: {version: '1.0'}\n    outputs: {docx: {}, pdf: {}}\n")
+    (project / "py-doc.yml").write_text(text, encoding="utf-8")
+    (project / "build").mkdir()
+    (project / "build" / "guide.pdf").write_bytes(b"%PDF-1.7 test")
+    config, runtime = _site(project, "mkdocs", pandoc_runtime)
+    generate_site(config, runtime)
+    docs = project / "site" / "docs" / "guide"
+    overview = (docs / "01-overview.md").read_text(encoding="utf-8")
+    assert "# Overview\n\nDownload: [PDF](downloads/guide.pdf)\n" in overview
+    assert (docs / "downloads" / "guide.pdf").read_bytes() == b"%PDF-1.7 test"
+    assert "Download" not in (docs / "02-design.md").read_text(encoding="utf-8"), "only the first page links them"
+    assert "guide.docx is not there" in caplog.text and "py-doc build guide" in caplog.text
+    assert "docs/guide/downloads/guide.pdf" in json.loads((project / "site" / MANIFEST).read_text(encoding="utf-8"))["files"]
+
+
+@needs_sh
 def test_starlight_pages_have_asides_an_order_and_no_repeated_title(project, pandoc_runtime):
     config, runtime = _site(project, "starlight", pandoc_runtime)
     generate_site(config, runtime)
@@ -208,6 +259,18 @@ def test_site_init_makes_the_site_named_in_py_doc_yml(project, monkeypatch, caps
     assert main(["site", "init"]) == 0
     assert "already there" in capsys.readouterr().out
     assert main(["site", "init", "--engine", "mkdocs"]) == 1
+
+
+def test_site_build_checks_the_targets_before_building(project, monkeypatch, capsys):
+    text = (project / "py-doc.yml").read_text(encoding="utf-8")
+    monkeypatch.chdir(project)
+    (project / "py-doc.yml").write_text(text.replace("site: {engine: ENGINE}", "site: {engine: mkdocs, targets: {github: mkdocs.yml, tarf: mkdocs.tarf.yml}}"), encoding="utf-8")
+    engine_for("mkdocs", project / "site").scaffold("x")
+    (project / "site" / "mkdocs.tarf.yml").write_text("INHERIT: mkdocs.yml\n", encoding="utf-8")
+    assert main(["site", "build", "--target", "other"]) == 1
+    assert "--target other is not in site.targets. Defined: github, tarf" in capsys.readouterr().err
+    assert main(["site", "build"]) == 1
+    assert "github and tarf both build to" in capsys.readouterr().err
 
 
 def test_site_init_without_a_site_section_says_what_to_add(tmp_path, monkeypatch, capsys):
