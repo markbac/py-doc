@@ -51,7 +51,8 @@ def cache_dir() -> Path:
 def _tools_revision() -> str:
     digest = hashlib.sha256()
     for path in sorted(TOOLS.iterdir()):
-        digest.update(path.name.encode() + path.read_bytes())
+        if path.is_file():  # an installed package can have a __pycache__ folder beside the scripts
+            digest.update(path.name.encode() + path.read_bytes())
     return digest.hexdigest()[:12]
 
 

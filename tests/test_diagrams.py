@@ -392,3 +392,13 @@ def test_the_svg_to_png_step_falls_back_to_librsvg_when_inkscape_writes_nothing(
         env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"}, capture_output=True, text=True,
     )
     assert done.returncode == 0 and target.read_text() == "png\n" and "librsvg" in done.stderr
+
+
+def test_the_tools_revision_ignores_folders_beside_the_scripts(tmp_path, monkeypatch):
+    from py_doc.diagrams import render
+
+    (tmp_path / "draw.py").write_text("print(1)\n", encoding="utf-8")
+    monkeypatch.setattr(render, "TOOLS", tmp_path)
+    before = render._tools_revision()
+    (tmp_path / "__pycache__").mkdir()  # pip compiles the scripts when py-doc is installed
+    assert render._tools_revision() == before
