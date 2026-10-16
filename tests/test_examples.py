@@ -43,7 +43,7 @@ def examples(tmp_path, monkeypatch):
 
 def test_the_config_loads_and_names_every_part():
     config = load_config(EXAMPLES / "py-doc.yml")
-    assert sorted(config.documents) == ["architecture", "datasheet", "deck", "guide", "release-notes"]
+    assert sorted(config.documents) == ["architecture", "datasheet", "deck", "guide", "interfaces", "release-notes"]
     assert config.documents["architecture"].sources[1].structurizr is not None
     assert config.lint.vale.rules["PyDoc.SentenceLength"].options == {"max": 35}
     assert config.lint.structure
@@ -114,6 +114,15 @@ def test_the_guide_builds_as_word_and_html(examples, pandoc_runtime):
     assert "[[" not in html, "no marker is printed in HTML"
     assert 'src="data:image/png' in html and 'src="images/logo.png"' not in html, "the logo is embedded"
     assert "<figcaption>Data flow through the node</figcaption>" in html
+
+
+def test_the_interface_samples_include_every_specification(examples, pandoc_runtime):
+    assert main(["build", "interfaces", "-f", "html"]) == 0
+    html = (examples / "build" / "interfaces.html").read_text(encoding="utf-8")
+    text = re.sub(r"<[^>]+>", "", html)  # highlighting wraps each token in its own span
+    for spec in ("openapi: 3.1.0", "asyncapi: 2.0.0", "service LibraryService", "type Query"):
+        assert spec in text, f"{spec!r} is included from docs/includes/apis/"
+    assert "[[" not in html, "no marker is printed in HTML"
 
 
 def test_the_conditions_choose_the_text(examples, pandoc_runtime):

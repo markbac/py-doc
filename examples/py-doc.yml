@@ -82,6 +82,14 @@ documents:
         split_level: 2                 # a new slide at each heading up to level 2
         footer: "{title} v{version}"   # fills the footer of every slide
 
+  interfaces:
+    # API specifications kept in their own files and included with [[INCLUDE-CODE:]],
+    # with a PlantUML use case diagram.
+    sources: [docs/interfaces.md]
+    outputs:
+      docx: {toc: true}                               # build/interfaces.docx
+      html: {toc: true}                               # build/interfaces.html
+
   architecture:
     # Chapters generated from a Structurizr workspace, between hand-written ones.
     # workspace.json needs no Java. To start from the DSL, name architecture/workspace.dsl instead:
