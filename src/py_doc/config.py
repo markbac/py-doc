@@ -140,6 +140,9 @@ class SiteConfig:
     dir: Path
     title: str | None = None
     documents: list[str] = field(default_factory=list)  # empty: every document, in the order they are defined
+    downloads: list[str] = field(default_factory=list)  # built outputs (pdf, docx, ...) linked from each document's pages
+    targets: dict[str, str] = field(default_factory=dict)  # MkDocs: a site per config file in site.dir, sharing the pages
+    pages: dict[str, str] = field(default_factory=dict)  # hand-written pages for the navigation, after the documents: title -> path
 
 
 @dataclass
@@ -280,7 +283,7 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
 
 
 def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
-    _only(data, ("engine", "dir", "title", "documents"), "site")
+    _only(data, ("engine", "dir", "title", "documents", "downloads", "targets", "pages"), "site")
     engine = _typed(data, "engine", str, "site")
     if engine not in SITE_ENGINES:
         raise ConfigError(f"site.engine must be one of {', '.join(SITE_ENGINES)}, not {engine!r}")
@@ -288,11 +291,21 @@ def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
     for name in documents:
         if name not in config.documents:
             raise ConfigError(f"site.documents names '{name}', which is not under documents. Defined: {', '.join(config.documents)}")
+    downloads = [str(fmt) for fmt in _typed(data, "downloads", list, "site", [])]
+    for fmt in downloads:
+        if fmt not in FORMATS:
+            raise ConfigError(f"site.downloads names '{fmt}', which is not a format. Use {', '.join(FORMATS)}")
+    targets = {str(name): str(file) for name, file in _mapping(data.get("targets") or {}, "site.targets").items()}
+    if targets and engine != "mkdocs":
+        raise ConfigError("site.targets needs engine: mkdocs. Each target is a MkDocs config file in site.dir")
     return SiteConfig(
         engine=engine,
         dir=_path(root, data.get("dir", DEFAULT_SITE_DIR), "site.dir"),
         title=_typed(data, "title", str, "site") or config.name,
         documents=documents,
+        downloads=downloads,
+        targets=targets,
+        pages={str(title): str(path) for title, path in _mapping(data.get("pages") or {}, "site.pages").items()},
     )
 
 

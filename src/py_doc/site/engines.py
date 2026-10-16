@@ -84,16 +84,21 @@ class Engine:
     def files(self, title: str) -> dict[str, str]:
         raise NotImplementedError
 
-    def write_nav(self, sections: list[NavSection]) -> Path:
+    def write_nav(self, sections: list[NavSection], pages: dict[str, str] | None = None) -> Path:
+        """Write the navigation: a section per document, then the hand-written ``pages`` (title: path below the content folder)."""
         raise NotImplementedError
 
-    def check(self) -> list[str]:
+    def check(self, config_file: str | None = None) -> list[str]:
         """What the site's own configuration lacks to show the generated pages and navigation."""
         return []
 
-    def build(self, runtime: Runtime) -> Path:
+    def build(self, runtime: Runtime, config_file: str | None = None) -> Path:
         """Build the site in the tool container. Returns the folder the site was written to."""
         raise NotImplementedError
+
+    def downloads(self, document: str) -> tuple[Path, str]:
+        """Where a document's downloadable files go, and how its pages link to that folder."""
+        return self.content / document / "downloads", "downloads"
 
 
 # --- MkDocs ---------------------------------------------------------------------------------------
@@ -111,15 +116,23 @@ class MkDocs(Engine):
     name = "mkdocs"
     marker = "mkdocs.yml"
 
-    def _config(self) -> dict:
-        path = self.root / self.marker
-        if not path.is_file():
+    def _config(self, config_file: str | None = None) -> dict:
+        """The settings of a config file, with the files it INHERITs merged under it as MkDocs does."""
+        return self._read(self.root / (config_file or self.marker), [])
+
+    def _read(self, path: Path, seen: list[Path]) -> dict:
+        if not path.is_file() or path.resolve() in seen:
             return {}
         try:
             data = yaml.load(path.read_text(encoding="utf-8"), Loader=_Loose)  # noqa: S506 - a safe loader that ignores tags
         except yaml.YAMLError as exc:
             raise ConversionError(f"{path} is not valid YAML: {exc}") from exc
-        return data if isinstance(data, dict) else {}
+        data = data if isinstance(data, dict) else {}
+        parent = data.get("INHERIT")
+        if not isinstance(parent, str):
+            return data
+        base = self._read(path.parent / parent, [*seen, path.resolve()])
+        return {**base, **data, "INHERITS": [parent, *base.get("INHERITS", [])]}
 
     @property
     def content(self) -> Path:
@@ -132,30 +145,42 @@ class MkDocs(Engine):
             ".gitignore": "build/\n.py-doc-site.json\n",
         }
 
-    def write_nav(self, sections: list[NavSection]) -> Path:
+    def write_nav(self, sections: list[NavSection], pages: dict[str, str] | None = None) -> Path:
         nav: list = []
         if (self.content / "index.md").is_file():
             nav.append({"Home": "index.md"})
         for section in sections:
-            pages = [{page.title: page.path} for page in section.pages]
-            nav.append({section.title: pages} if len(pages) > 1 else pages[0] if pages else {section.title: []})
+            entries = [{page.title: page.path} for page in section.pages]
+            nav.append({section.title: entries} if len(entries) > 1 else entries[0] if entries else {section.title: []})
+        nav += [{title: path} for title, path in (pages or {}).items()]
         path = self.root / MKDOCS_NAV
         header = "# Written by py-doc site from py-doc.yml. mkdocs.yml takes it in with INHERIT: py-doc-nav.yml\n"
         path.write_text(header + yaml.safe_dump({"nav": nav}, allow_unicode=True, sort_keys=False), encoding="utf-8")
         return path
 
-    def check(self) -> list[str]:
-        config = self._config()
-        if config.get("INHERIT") == MKDOCS_NAV:
+    def check(self, config_file: str | None = None) -> list[str]:
+        path = self.root / (config_file or self.marker)
+        if config_file and not path.is_file():
+            return [f"{path} is not there. site.targets names it"]
+        config = self._config(config_file)
+        if config_file and self.root / str(config.get("docs_dir") or "docs") != self.content:
+            return [f"{path} reads its pages from {config.get('docs_dir')}, but py-doc writes them to {self.content}. Leave docs_dir to {self.marker}"]
+        if MKDOCS_NAV in config.get("INHERITS", []):
             return []
         if "nav" in config:
-            return [f"{self.root / self.marker} has its own nav, so that is the navigation. {MKDOCS_NAV} lists the pages py-doc wrote"]
-        return [f"Add `INHERIT: {MKDOCS_NAV}` to {self.root / self.marker} to use the navigation py-doc writes"]
+            return [f"{path} has its own nav, so that is the navigation. {MKDOCS_NAV} lists the pages py-doc wrote"]
+        return [f"Add `INHERIT: {MKDOCS_NAV}` to {path} (or to a file it inherits) to use the navigation py-doc writes"]
 
-    def build(self, runtime: Runtime) -> Path:
-        config = self.root / self.marker
+    def site_dir(self, config_file: str | None = None) -> Path:
+        """Where a config file builds its site to."""
+        return self.root / str(self._config(config_file).get("site_dir") or "site")
+
+    def build(self, runtime: Runtime, config_file: str | None = None) -> Path:
+        config = self.root / (config_file or self.marker)
+        if config_file and not config.is_file():
+            raise ConversionError(f"{config} is not there, so that site cannot be built. site.targets names it")
         runtime.run(["mkdocs", "build", "--config-file", config], mounts=[Mount(self.root, writable=True)], workdir=self.root, timeout=TIMEOUT)
-        return self.root / str(self._config().get("site_dir") or "site")
+        return self.site_dir(config_file)
 
 
 MKDOCS_YML = """\
@@ -197,6 +222,10 @@ class Starlight(Engine):
     def content(self) -> Path:
         return self.root / "src" / "content" / "docs"
 
+    def downloads(self, document: str) -> tuple[Path, str]:
+        """Starlight serves files from public/, at the site root."""
+        return self.root / "public" / document / "downloads", f"/{document}/downloads"
+
     def files(self, title: str) -> dict[str, str]:
         package = {
             "name": "site",
@@ -215,14 +244,17 @@ class Starlight(Engine):
             ".gitignore": "dist/\nnode_modules/\n.astro/\n.py-doc-site.json\n",
         }
 
-    def write_nav(self, sections: list[NavSection]) -> Path:
+    def write_nav(self, sections: list[NavSection], pages: dict[str, str] | None = None) -> Path:
         sidebar = [{"label": section.title, "items": [{"autogenerate": {"directory": section.folder}}]} for section in sections]
+        for title, page in (pages or {}).items():
+            link = "/" + page.removesuffix(".md").removesuffix("index").strip("/")
+            sidebar.append({"label": title, "link": link.rstrip("/") + "/" if link != "/" else "/"})
         path = self.root / STARLIGHT_SIDEBAR
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(sidebar, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         return path
 
-    def check(self) -> list[str]:
+    def check(self, config_file: str | None = None) -> list[str]:
         configs = [p for p in self.root.glob("astro.config.*") if p.is_file()]
         if not configs:
             return [f"{self.root} has no astro.config.mjs. Run `py-doc site init` to make one"]
@@ -233,7 +265,7 @@ class Starlight(Engine):
             "`import sidebar from './src/py-doc-sidebar.json';` and `starlight({ sidebar, ... })`"
         ]
 
-    def build(self, runtime: Runtime) -> Path:
+    def build(self, runtime: Runtime, config_file: str | None = None) -> Path:
         mounts = [Mount(self.root, writable=True)]
         env = {"ASTRO_TELEMETRY_DISABLED": "1"}
         # npm install keeps to package-lock.json when it matches package.json, and brings it up to date when not

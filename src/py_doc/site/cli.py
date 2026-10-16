@@ -45,6 +45,8 @@ def build_parser() -> argparse.ArgumentParser:
         common(sub)
         sub.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
         sub.add_argument("--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set an [[IF:]] condition")
+        if name == "build":
+            sub.add_argument("--target", action="append", default=[], metavar="NAME", help="Build only this site of site.targets (default: every one)")
     return parser
 
 
@@ -66,11 +68,13 @@ def run_site(argv: Sequence[str] | None = None) -> int:
         runtime = functools.cache(lambda: connect(config.runtime))
         words = {"true": True, "false": False}
         conditions = {name: words.get(value.lower(), value) for name, value in args.condition}
+        targets = _targets(config, getattr(args, "target", []))
         engine, written = generate_site(config, runtime, dict(args.var), conditions)
         print(f"Wrote {len(written)} file(s) in {engine.root}")
         if args.action == "build":
-            out = engine.build(runtime())
-            print(f"Built the site in {out}")
+            for name, config_file in targets:
+                out = engine.build(runtime(), config_file)
+                print(f"Built the {name} site in {out}" if name else f"Built the site in {out}")
         return 0
     except ConfigError as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -78,6 +82,27 @@ def run_site(argv: Sequence[str] | None = None) -> int:
     except (ConversionError, FileNotFoundError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return exit_status(exc) if isinstance(exc, ConversionError) else 1
+
+
+def _targets(config: ProjectConfig, chosen: list[str]) -> list[tuple[str | None, str | None]]:
+    """The sites to build: the chosen targets, every target, or the one site of the site project."""
+    site = config.site
+    targets = site.targets if site else {}
+    unknown = [name for name in chosen if name not in targets]
+    if unknown:
+        named = ", ".join(targets) or "none"
+        raise ConfigError(f"--target {unknown[0]} is not in site.targets. Defined: {named}")
+    if not targets:
+        return [(None, None)]
+    picked = [(name, targets[name]) for name in (chosen or targets)]
+    engine = engine_for(site.engine, site.dir)
+    outs: dict = {}
+    for name, config_file in picked:
+        out = engine.site_dir(config_file)
+        if out in outs:
+            raise ConfigError(f"site.targets {outs[out]} and {name} both build to {out}. Give each config file its own site_dir")
+        outs[out] = name
+    return picked
 
 
 def _init(config: ProjectConfig, chosen: str | None) -> int:

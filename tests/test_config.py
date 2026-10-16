@@ -175,6 +175,18 @@ def test_the_site_section(tmp_path):
         load_config(write(tmp_path, docs + "site: {engine: mkdocs, theme: x}\n"))
 
 
+def test_the_site_downloads_and_targets(tmp_path):
+    docs = "documents:\n  guide: {sources: [a.md]}\n"
+    config = load_config(write(tmp_path, docs + "site: {engine: mkdocs, downloads: [pdf, docx], targets: {github: mkdocs.yml, tarf: mkdocs.tarf.yml}}\n"))
+    assert config.site.downloads == ["pdf", "docx"]
+    assert config.site.targets == {"github": "mkdocs.yml", "tarf": "mkdocs.tarf.yml"}
+    assert load_config(write(tmp_path, docs + "site: {engine: mkdocs, pages: {Blog: blog/index.md}}\n")).site.pages == {"Blog": "blog/index.md"}
+    with pytest.raises(ConfigError, match="site.downloads names 'epub'"):
+        load_config(write(tmp_path, docs + "site: {engine: mkdocs, downloads: [epub]}\n"))
+    with pytest.raises(ConfigError, match="site.targets needs engine: mkdocs"):
+        load_config(write(tmp_path, docs + "site: {engine: starlight, targets: {a: x.yml}}\n"))
+
+
 def test_find_config_walks_up(tmp_path):
     path = write(tmp_path, "")
     deep = tmp_path / "a" / "b"
