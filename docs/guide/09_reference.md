@@ -4,75 +4,9 @@ title: Reference
 
 # Reference
 
-## Migrating from createdocs
+## Legacy build files
 
-```bash
-py-doc migrate docs/ --check      # report only
-py-doc migrate docs/              # write py-doc.yml
-py-doc migrate docs/ --backup     # also keep .bak copies of the originals and any old py-doc.yml
-py-doc build --legacy docs/guide.yaml         # build one createdocs file as it is, without writing py-doc.yml
-```
-
-Each `createdocs` YAML file becomes one document, so folders, sources, templates and shared chapters keep their relations. A template used by every Word document is set once under `outputs`. YAML files that are not build files (such as `mkdocs.yml`) are listed as skipped, and the originals are never changed or deleted. An existing output file is not replaced unless you pass `--backup` or `--force`.
-
-`--from createdocs` names the legacy format. It is the default and, for now, the only one.
-
-`py-doc build --legacy FILE` reads one `createdocs` file the same way and builds it straight away, so old build files keep working while you move over. The findings `migrate` would report are shown as warnings. The output format comes from the `emit-*` switches, else from the extension of `cli.output` (`.docx`, `.pptx`, `.pdf` or `.html`). `cli.template` goes to the PowerPoint output when it is a `.pptx` file, else to the Word output. An entry's `section` is taken as its `title`: it replaces the first heading of that file.
-
-### New legacy documents
-
-```bash
-py-doc new                                   # asks for the title, type, format, author, classification and description
-py-doc new --title "Build and Release Pipelines" --type TN --format docx -y
-```
-
-`py-doc new` writes a build file and its Markdown in the current folder, named after the number and the title (`G460-TN-013-Build-and-Release-Pipelines.yaml` and `.md`), ready for `py-doc build --legacy`. The date is today and the version is `0.1.0`. A file that is already there is never replaced. It asks, in this order:
-
-| Question | Option | Default |
-|---|---|---|
-| Number prefix (only when the register is made, or when it lists `prefixes`) | `--prefix` | the register's `prefix` |
-| Title | `--title` | none: it is needed |
-| Type code | `--type` | empty |
-| Word or PowerPoint | `--format` | `docx` |
-| Author | `--author` | `git config user.name` |
-| Classification | `--classification` | empty |
-| Description | `--description` | empty |
-
-A question is skipped when its option is given. `-y` asks nothing, and nothing is asked when there is no terminal, so a script must give `--title`.
-
-The number comes from `doc-numbers.yml` at the repository root, found from any folder below it:
-
-```yaml
-prefix: G460                                      # the default prefix
-prefixes: [G460, G470]                            # optional: the only prefixes allowed
-types: [TN, OV, SP]                               # optional: the only type codes allowed
-classifications: [Confidential, Internal, Public] # optional: the only classifications allowed
-documents:
-  - number: G460-TN-012
-    title: Build and Release Pipelines
-    file: docs/notes/G460-TN-012-build-and-release-pipelines.yaml
-```
-
-A number is `[prefix-][type-]NNN`. The prefix defaults to the register's `prefix`, `--prefix` changes it for one document, and the type is asked each time. Either may be empty.
-
-When the register has a `prefixes`, `types` or `classifications` list, the value must be one of it. Case does not matter, and the spelling in the list is used. The wizard shows the list and asks again after a wrong answer. A wrong option is an error that names the list. Without a list, anything goes. `NNN` is one counter for every type, one more than the highest number in the register, so `G460-TN-012` and `G460-OV-012` cannot both be given out. The first `py-doc new` in a repository makes the register from the `document_number` of the legacy build files already there, and asks for the prefix. Commit the register with the new document. If two people take a number on separate branches, they then get a merge conflict in the register, not two documents with one number.
-
-Two options keep the register up to date and make no document:
-
-```bash
-py-doc new --scan               # add the legacy build files that are not in the register yet
-py-doc new --scan --start 100   # and begin new numbers at 100
-```
-
-`--scan` adds every legacy build file below the repository root that is not in the register yet, even when its number is taken. It lists each number used by more than one file as a clash. Fix those by hand: py-doc never renumbers a document. `--start N` is kept in the register as `start: N`. New numbers then begin at `N` and step over any number a document already has, so they stay unique however the old ones were given out. Without it, the next number is one more than the highest.
-
-The `Setup-DocTools.ps1` script that installed pandoc, TeX and the diagram tools on Windows is no longer needed: the tools run in the tool container. Use `py-doc setup` (Docker Engine in WSL), then `py-doc tools build` and `py-doc doctor`.
-
-The report lists what has no equivalent yet, so nothing is lost quietly:
-
-- processed Markdown output and the build switches for it;
-- the template chosen from the document status, and the version added to the output file name;
-- unknown `meta` and `entries` keys.
+Legacy `createdocs` build files, `py-doc build --legacy`, `py-doc new`, the document number register and `py-doc migrate` are described in [Legacy build files](10_legacy.md).
 
 ## Python API
 

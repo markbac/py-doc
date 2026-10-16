@@ -14,7 +14,7 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | Command | What it does |
 |---|---|
 | `py-doc init` | Start a project: `py-doc.yml`, a first document, and optionally a C4 model, templates and a site |
-| `py-doc new` | Start one document in the legacy build file format, numbered from `doc-numbers.yml` at the repository root |
+| `py-doc new` | Start a legacy document, or number an existing Markdown file, from `doc-numbers.yml` at the repository root |
 | `py-doc build` | Build every document described in `py-doc.yml`, or one legacy `createdocs` file with `--legacy` |
 | `py-doc docx` | Convert Markdown to Word |
 | `py-doc slides` | Convert Markdown to PowerPoint |
@@ -56,7 +56,7 @@ py-doc site build                           # site/build/index.html
 
 py-doc documents itself with py-doc. The sources are in [`docs/`](docs), and the [`py-doc.yml`](py-doc.yml) at the root of this repository builds them: `py-doc build` for Word, HTML and PDF, `py-doc site build` for the web site.
 
-- **User guide**: [introduction](docs/guide/00_introduction.md), [installation](docs/guide/01_install.md), [projects and `py-doc.yml`](docs/guide/02_projects.md), [writing](docs/guide/03_writing.md), [outputs and templates](docs/guide/04_outputs.md), [importing](docs/guide/05_import.md), [C4 architecture](docs/guide/06_c4.md), [linting](docs/guide/07_lint.md), [web sites](docs/guide/08_sites.md), [reference](docs/guide/09_reference.md).
+- **User guide**: [introduction](docs/guide/00_introduction.md), [installation](docs/guide/01_install.md), [projects and `py-doc.yml`](docs/guide/02_projects.md), [writing](docs/guide/03_writing.md), [outputs and templates](docs/guide/04_outputs.md), [importing](docs/guide/05_import.md), [C4 architecture](docs/guide/06_c4.md), [linting](docs/guide/07_lint.md), [web sites](docs/guide/08_sites.md), [reference](docs/guide/09_reference.md), [legacy build files and document numbers](docs/guide/10_legacy.md).
 - **[Requirements](docs/requirements/00_introduction.md)**: what py-doc must do and how well, with the status of every requirement and the open issues.
 - **[Architecture](docs/architecture/00_introduction.md)**: how py-doc is built, with C4 chapters generated from [its Structurizr model](docs/architecture/workspace.dsl), and the decisions behind it.
 - **[Examples](examples/README.md)**: a small project that uses every feature, with a command for each output.

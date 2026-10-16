@@ -20,7 +20,7 @@ This guide is for the people who write and build documentation with py-doc. The 
 | Command | What it does |
 |---|---|
 | `py-doc init` | Starts a project: `py-doc.yml`, a first document, and optionally a C4 model, templates and a site |
-| `py-doc new` | Starts one document in the legacy build file format, numbered from `doc-numbers.yml` at the repository root |
+| `py-doc new` | Starts a legacy document, or numbers an existing Markdown file, from `doc-numbers.yml` at the repository root |
 | `py-doc build` | Builds every document described in `py-doc.yml` |
 | `py-doc docx` | Converts Markdown files to Word |
 | `py-doc slides` | Converts Markdown files to PowerPoint |
@@ -44,7 +44,8 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 1. [C4 architecture](06_c4.md): Structurizr models, generated chapters and the live editor.
 1. [Linting](07_lint.md): the built-in rules, structure rules, markdownlint and Vale.
 1. [Web sites](08_sites.md): MkDocs and Astro + Starlight.
-1. [Reference](09_reference.md): migration, the Python API, exit statuses and troubleshooting.
+1. [Reference](09_reference.md): the Python API, exit statuses and troubleshooting.
+1. [Legacy build files](10_legacy.md): `createdocs` build files, new documents, document numbers and migration.
 
 ## The examples
 

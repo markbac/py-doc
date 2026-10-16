@@ -1,5 +1,7 @@
 """``py-doc new``: start one document in the legacy build file format, with a number from the register.
 
+Given an existing Markdown file, it writes only the build file, beside it, and leaves the Markdown as it is.
+
 The register is ``doc-numbers.yml`` in the repository root. It lists every number given out, with the
 title and the build file, so two documents never get the same number. Committing it with the new
 document makes a clash between branches show as a merge conflict. When there is no register yet, it is
@@ -170,6 +172,7 @@ NEW_EXAMPLES = """examples:
   py-doc new                                   ask for everything
   py-doc new -y --title "Meter Wakeup" --type TN --classification Confidential
   py-doc new --title "Overview" --type OV --format pptx
+  py-doc new notes/pump-control.md --type TN   number an existing Markdown file
   py-doc new --scan                            add existing build files to the register
   py-doc new --scan --start 100                and begin new numbers at 100"""
 
@@ -182,7 +185,11 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=NEW_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--title", help="The document title (needed)")
+    parser.add_argument(
+        "markdown", nargs="?", type=Path, metavar="FILE.md",
+        help="An existing Markdown file to number: its build file is written beside it, and the file is not changed",
+    )  # fmt: skip
+    parser.add_argument("--title", help="The document title (needed; default for FILE.md: its front matter title or first heading)")
     parser.add_argument("--type", dest="kind", help="The type code in the number, such as TN: one of the register's types when it lists them, else anything or empty")
     parser.add_argument("--format", choices=sorted(FORMATS), help="Word (docx) or PowerPoint (pptx). Default: docx")
     parser.add_argument("--author", help="Default: git config user.name")
@@ -240,9 +247,59 @@ def _chooser(ask: Callable[[str], str] | None):
     return pick
 
 
+@dataclass
+class ExistingMarkdown:
+    """What an existing Markdown file already says about itself, as defaults for the questions."""
+
+    path: Path
+    title: str = ""
+    author: str = ""
+    version: str = ""
+    classification: str = ""
+    description: str = ""
+
+
+def _existing_markdown(path: Path) -> ExistingMarkdown:
+    from .errors import ConversionError
+    from .pandoc.source import first_heading, read_front_matter, split_front_matter
+
+    path = path.resolve()
+    if not path.is_file() or path.suffix.lower() not in (".md", ".markdown"):
+        raise NewError(f"{path} is not a Markdown file")
+    try:
+        front, body = split_front_matter(path.read_text(encoding="utf-8-sig"))
+        meta = read_front_matter(front, path)
+    except (UnicodeDecodeError, ConversionError) as exc:
+        raise NewError(f"Cannot read {path}: {exc}") from exc
+    if meta.document_id:
+        raise NewError(f"{path.name} already has the document number {meta.document_id} in its front matter")
+
+    def extra(key: str) -> str:
+        return str(meta.extra.get(key) or "").strip()
+
+    return ExistingMarkdown(
+        path, meta.title or first_heading(body) or "", meta.author or "", meta.version or "", extra("classification"), extra("description")
+    )
+
+
+def _not_registered(markdown: Path, register: Register, root: Path) -> None:
+    """Refuse a Markdown file that a build file in the register already uses: it has a number."""
+    for entry in register.entries or []:
+        data = read_createdocs(root / entry.file) if entry.file else None
+        for item in (data or {}).get("entries") or []:
+            if ((root / entry.file).parent / str(item["file"])).resolve() == markdown:
+                raise NewError(f"{markdown.name} is already a source of {entry.file}, number {entry.number}")
+
+
 def make(folder: Path, args: argparse.Namespace, ask: Callable[[str], str] | None, today: datetime.date) -> tuple[list[Path], Register, bool]:
-    """Write the build file and its Markdown in ``folder`` and record the number. Returns what was written."""
+    """Write the build file and its Markdown in ``folder`` and record the number. Returns what was written.
+
+    With ``args.markdown``, the build file goes beside that file and names it; the Markdown is not written.
+    """
     value = _asker(ask)
+    existing = _existing_markdown(args.markdown) if getattr(args, "markdown", None) else None
+    if existing:
+        folder = existing.path.parent
     root = find_root(folder)
     created = not (root / REGISTER).is_file()
     if created:
@@ -250,6 +307,8 @@ def make(folder: Path, args: argparse.Namespace, ask: Callable[[str], str] | Non
         register.prefix = value("Number prefix, kept in the register (empty for none)", args.prefix, "").strip()
     else:
         register = load_register(root)
+    if existing:
+        _not_registered(existing.path, register, root)
 
     allowed = register.allowed or {}
     pick = _chooser(ask)
@@ -259,7 +318,7 @@ def make(folder: Path, args: argparse.Namespace, ask: Callable[[str], str] | Non
         prefix = pick("Number prefix", args.prefix, default, prefixes, "--prefix")
     else:
         prefix = (register.prefix if args.prefix is None or created else args.prefix).strip()
-    title = value("Title", args.title, "").strip()
+    title = value("Title", args.title, existing.title if existing else "").strip()
     if not title:
         raise NewError("A title is needed (--title)")
     kind = pick("Type code, such as TN (empty for none)", args.kind, "", allowed.get("types"), "--type").upper()
@@ -268,26 +327,31 @@ def make(folder: Path, args: argparse.Namespace, ask: Callable[[str], str] | Non
     fmt = value("Word or PowerPoint (docx or pptx)", args.format, "docx").strip().lower()
     if fmt not in FORMATS:
         raise NewError(f"'{fmt}' is not docx or pptx")
-    author = value("Author", args.author, _git_name()).strip()
-    classification = pick("Classification", args.classification, "", allowed.get("classifications"), "--classification")
-    description = value("Description", args.description, "").strip()
+    author = value("Author", args.author, (existing.author if existing else "") or _git_name()).strip()
+    classification = pick(
+        "Classification", args.classification, existing.classification if existing else "", allowed.get("classifications"), "--classification"
+    )
+    description = value("Description", args.description, existing.description if existing else "").strip()
 
     number = register.next_number(kind, prefix)
     stem = _stem(number, title)
-    build, source = folder / f"{stem}.yaml", folder / f"{stem}.md"
-    for path in (build, source):
+    build = folder / f"{stem}.yaml"
+    source = existing.path if existing else folder / f"{stem}.md"
+    for path in (build,) if existing else (build, source):
         if path.exists():
             raise NewError(f"{path} already exists")
     meta = {
-        "title": title, "author": author, "version": "0.1.0", "date": f"{today.day} {today:%B %Y}",
+        "title": title, "author": author, "version": (existing.version if existing else "") or "0.1.0",
+        "date": f"{today.day} {today:%B %Y}",
         "description": description, "document_number": number, "classification": classification,
     }  # fmt: skip
     folder.mkdir(parents=True, exist_ok=True)
-    source.write_text(f"# {title}\n\nWrite the document here.\n", encoding="utf-8")
+    if not existing:
+        source.write_text(f"# {title}\n\nWrite the document here.\n", encoding="utf-8")
     build.write_text(build_file(meta, f"{stem}.{fmt}", fmt, source.name), encoding="utf-8")
     register.entries = [*(register.entries or []), Entry(number, title, Path(os.path.relpath(build, root)).as_posix())]
     register.save()
-    return [build, source], register, created
+    return ([build] if existing else [build, source]), register, created
 
 
 def update(folder: Path, scan: bool, start: int | None, prefix: str | None) -> tuple[Register, list[Entry]]:
@@ -347,7 +411,7 @@ def run_new(argv: Sequence[str] | None = None) -> int:
         print(f"made      {shown} with {len(register.entries) - 1} existing number(s)")
         _report_clashes(register)
     for path in written:
-        print(f"written   {path.name}")
+        print(f"written   {Path(os.path.relpath(path))}")
     print(f"number    {register.entries[-1].number}, recorded in {shown}")
-    print(f"\nNext: commit {REGISTER} with the new files, then `py-doc build --legacy {written[0].name}`")
+    print(f"\nNext: commit {REGISTER} with the new files, then `py-doc build --legacy {Path(os.path.relpath(written[0]))}`")
     return 0
