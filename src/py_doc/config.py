@@ -86,6 +86,7 @@ class Source:
     page_break: bool = False
     include: bool = True
     structurizr: StructurizrSpec | None = None
+    site_path: str | None = None  # the page's path on a site below the document's folder, without .md: cloud/kafka
 
 
 @dataclass
@@ -373,7 +374,7 @@ def _parse_document(doc_id: str, raw: Any, root: Path) -> DocumentConfig:
             _only(entry, ("structurizr", "levels", "systems", "diagrams", "heading_offset", "title", "page_break"), place)
             spec = _parse_structurizr(entry, place)
             entry = {**entry, "file": entry["structurizr"]}
-        _only(entry, ("file", "structurizr", "levels", "systems", "diagrams", "heading_offset", "title", "page_break", "include"), place)
+        _only(entry, ("file", "structurizr", "levels", "systems", "diagrams", "heading_offset", "title", "page_break", "include", "site_path"), place)
         if "file" not in entry:
             raise ConfigError(f"{place} needs a 'file' or a 'structurizr' workspace")
         doc.sources.append(
@@ -384,12 +385,24 @@ def _parse_document(doc_id: str, raw: Any, root: Path) -> DocumentConfig:
                 title=_typed(entry, "title", str, place),
                 page_break=_typed(entry, "page_break", bool, place, False),
                 include=_typed(entry, "include", bool, place, True),
+                site_path=_site_path(entry, place),
             )
         )
     doc.outputs = _parse_outputs(_mapping(data.get("outputs", {}), f"{where}.outputs"), root, f"{where}.outputs")
     doc.variables = _mapping(data.get("variables", {}), f"{where}.variables")
     doc.conditions = _mapping(data.get("conditions", {}), f"{where}.conditions")
     return doc
+
+
+def _site_path(entry: dict, place: str) -> str | None:
+    """A page path below the document's folder, such as cloud/kafka: relative, with / separators and no .md."""
+    value = _typed(entry, "site_path", str, place)
+    if value is None:
+        return None
+    path = value.strip().replace("\\", "/").removesuffix(".md").strip("/")
+    if not path or value.startswith("/") or any(part in ("", ".", "..") for part in path.split("/")):
+        raise ConfigError(f"{place}.site_path must be a path below the document's folder, such as cloud/kafka")
+    return path
 
 
 def _parse_structurizr(entry: dict, place: str) -> StructurizrSpec:

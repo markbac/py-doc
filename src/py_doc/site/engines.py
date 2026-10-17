@@ -46,9 +46,15 @@ class NavPage:
 
 @dataclass
 class NavSection:
+    """A document, or a folder of its pages. A folder's index page, when there is one, comes first."""
+
     title: str
-    folder: str  # the document's folder below the content folder
-    pages: list[NavPage]
+    folder: str  # below the content folder: guide, or guide/cloud
+    pages: list[NavPage | NavSection]
+
+    @property
+    def nested(self) -> bool:
+        return any(isinstance(item, NavSection) for item in self.pages)
 
 
 class Engine:
@@ -150,8 +156,8 @@ class MkDocs(Engine):
         if (self.content / "index.md").is_file():
             nav.append({"Home": "index.md"})
         for section in sections:
-            entries = [{page.title: page.path} for page in section.pages]
-            nav.append({section.title: entries} if len(entries) > 1 else entries[0] if entries else {section.title: []})
+            entries = _mkdocs_entries(section.pages)
+            nav.append(entries[0] if len(entries) == 1 and not section.nested else {section.title: entries})  # one page: no section
         nav += [{title: path} for title, path in (pages or {}).items()]
         path = self.root / MKDOCS_NAV
         header = "# Written by py-doc site from py-doc.yml. mkdocs.yml takes it in with INHERIT: py-doc-nav.yml\n"
@@ -181,6 +187,11 @@ class MkDocs(Engine):
             raise ConversionError(f"{config} is not there, so that site cannot be built. site.targets names it")
         runtime.run(["mkdocs", "build", "--config-file", config], mounts=[Mount(self.root, writable=True)], workdir=self.root, timeout=TIMEOUT)
         return self.site_dir(config_file)
+
+
+def _mkdocs_entries(items: list[NavPage | NavSection]) -> list[dict]:
+    """A page as {title: path}, a folder as {title: [its entries]}: with navigation.indexes, its index page leads it."""
+    return [{item.title: _mkdocs_entries(item.pages)} if isinstance(item, NavSection) else {item.title: item.path} for item in items]
 
 
 MKDOCS_YML = """\
@@ -245,7 +256,11 @@ class Starlight(Engine):
         }
 
     def write_nav(self, sections: list[NavSection], pages: dict[str, str] | None = None) -> Path:
-        sidebar = [{"label": section.title, "items": [{"autogenerate": {"directory": section.folder}}]} for section in sections]
+        sidebar = []
+        for section in sections:
+            # A flat document lists its folder; one with folders lists its pages, so a group takes its index page's title
+            items = _starlight_items(section.pages) if section.nested else [{"autogenerate": {"directory": section.folder}}]
+            sidebar.append({"label": section.title, "items": items})
         for title, page in (pages or {}).items():
             link = "/" + page.removesuffix(".md").removesuffix("index").strip("/")
             sidebar.append({"label": title, "link": link.rstrip("/") + "/" if link != "/" else "/"})
@@ -272,6 +287,17 @@ class Starlight(Engine):
         runtime.run(["npm", "install", "--no-audit", "--no-fund"], mounts=mounts, workdir=self.root, network=True, env=env, timeout=TIMEOUT)
         runtime.run(["npx", "astro", "build"], mounts=mounts, workdir=self.root, env=env, timeout=TIMEOUT)
         return self.root / "dist"
+
+
+def _starlight_items(items: list[NavPage | NavSection]) -> list[dict]:
+    """A page by its slug (Starlight labels it with its title), a folder as a group of its pages."""
+    out: list[dict] = []
+    for item in items:
+        if isinstance(item, NavSection):
+            out.append({"label": item.title, "items": _starlight_items(item.pages)})
+        else:
+            out.append({"slug": item.path.removesuffix(".md").removesuffix("/index")})
+    return out
 
 
 ASTRO_CONFIG = """\
