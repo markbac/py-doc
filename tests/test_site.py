@@ -10,11 +10,11 @@ import yaml
 from PIL import Image
 
 from py_doc.app import main
-from py_doc.config import load_config
+from py_doc.config import ConfigError, load_config
 from py_doc.errors import ConversionError
 from py_doc.site import engine_for, generate_site
 from py_doc.site.engines import MKDOCS_NAV, STARLIGHT_SIDEBAR, NavPage, NavSection
-from py_doc.site.pages import MANIFEST, slug
+from py_doc.site.pages import MANIFEST, Page, nav_items, slug
 
 needs_sh = pytest.mark.skipif(shutil.which("sh") is None, reason="the pages are converted by a shell script")
 
@@ -240,6 +240,107 @@ def test_a_page_whose_source_is_gone_is_removed(project, pandoc_runtime):
     generate_site(load_config(project / "py-doc.yml"), runtime)
     assert not (project / "site" / "docs" / "guide" / "02-design.md").exists()
     assert (project / "site" / "docs" / "index.md").is_file(), "a page py-doc did not write stays"
+
+
+@pytest.fixture
+def nested(tmp_path):
+    """A document whose sources are in folders: an index page at the top, a folder with one, a folder without."""
+    docs = tmp_path / "content" / "primers"
+    (docs / "cloud" / "images").mkdir(parents=True)
+    (docs / "architecture").mkdir()
+    Image.new("RGB", (4, 4), "blue").save(docs / "cloud" / "images" / "broker.png")
+    (docs / "index.md").write_text("# Primers\n\nStart with [Kafka](cloud/kafka.md#topics).\n", encoding="utf-8")
+    (docs / "cloud" / "index.md").write_text("# Cloud and messaging\n\nThe cloud primers.\n", encoding="utf-8")
+    (docs / "cloud" / "kafka.md").write_text(
+        "# Kafka\n\n## Topics\n\n![A broker](images/broker.png)\n\nSee [C4](../architecture/c4.md) and [the primers](../index.md).\n",
+        encoding="utf-8",
+    )
+    (docs / "architecture" / "c4.md").write_text("# C4\n\nBack to [Kafka](../cloud/kafka.md).\n", encoding="utf-8")
+    (tmp_path / "py-doc.yml").write_text(
+        "project: {name: Notes}\ndocuments:\n  primers:\n    sources:\n      - content/primers/index.md\n"
+        "      - content/primers/cloud/kafka.md\n      - {file: content/primers/cloud/index.md, heading_offset: 1}\n"
+        "      - content/primers/architecture/c4.md\nsite: {engine: ENGINE}\n",
+        encoding="utf-8",
+    )
+    return tmp_path
+
+
+def _page(slug_: str, title: str) -> Page:
+    return Page("primers", None, slug_, title, 0)
+
+
+def test_the_navigation_nests_by_folder_with_the_index_page_first():
+    items = nav_items([_page("index", "Primers"), _page("cloud/kafka", "Kafka"), _page("cloud/index", "Cloud and messaging"),
+                       _page("iot-and-embedded/mqtt", "MQTT"), _page("cloud/deep/x", "X")])
+    assert items[0] == NavPage("Primers", "primers/index.md")
+    cloud, iot = items[1:]
+    assert cloud.title == "Cloud and messaging" and cloud.folder == "primers/cloud"
+    assert cloud.pages[:2] == [NavPage("Cloud and messaging", "primers/cloud/index.md"), NavPage("Kafka", "primers/cloud/kafka.md")]
+    assert cloud.pages[2] == NavSection("Deep", "primers/cloud/deep", [NavPage("X", "primers/cloud/deep/x.md")])
+    assert iot.title == "Iot and embedded", "a folder without an index page is named after the folder"
+
+
+def test_nested_navigation_for_mkdocs_and_starlight(tmp_path):
+    section = NavSection("Primers", "primers", nav_items([_page("index", "Primers"), _page("cloud/index", "Cloud"), _page("cloud/kafka", "Kafka")]))
+    engine = engine_for("mkdocs", tmp_path)
+    nav = yaml.safe_load(engine.write_nav([section]).read_text(encoding="utf-8"))["nav"]
+    assert nav == [{"Primers": [{"Primers": "primers/index.md"}, {"Cloud": [{"Cloud": "primers/cloud/index.md"}, {"Kafka": "primers/cloud/kafka.md"}]}]}]
+    sidebar = json.loads(engine_for("starlight", tmp_path / "astro").write_nav([section]).read_text(encoding="utf-8"))
+    assert sidebar == [{"label": "Primers", "items": [
+        {"slug": "primers"}, {"label": "Cloud", "items": [{"slug": "primers/cloud"}, {"slug": "primers/cloud/kafka"}]},
+    ]}]
+
+
+def test_a_site_path_must_stay_below_the_document_folder(tmp_path):
+    for bad in ("../x", "/x", "a//b", "."):
+        (tmp_path / "py-doc.yml").write_text(f"documents:\n  a: {{sources: [{{file: a.md, site_path: '{bad}'}}]}}\n", encoding="utf-8")
+        with pytest.raises(ConfigError, match="site_path"):
+            load_config(tmp_path / "py-doc.yml")
+    (tmp_path / "py-doc.yml").write_text("documents:\n  a: {sources: [{file: a.md, site_path: cloud/Kafka.md}]}\n", encoding="utf-8")
+    assert load_config(tmp_path / "py-doc.yml").documents["a"].sources[0].site_path == "cloud/Kafka"
+
+
+@needs_sh
+def test_pages_keep_their_folders_and_the_nav_nests(nested, pandoc_runtime):
+    config, runtime = _site(nested, "mkdocs", pandoc_runtime)
+    generate_site(config, runtime)
+    docs = nested / "site" / "docs" / "primers"
+    assert "[Kafka](cloud/kafka.md#topics)" in (docs / "index.md").read_text(encoding="utf-8")
+    kafka = (docs / "cloud" / "kafka.md").read_text(encoding="utf-8")
+    assert "[C4](../architecture/c4.md)" in kafka and "[the primers](../index.md)" in kafka
+    (picture,) = (docs / "cloud" / "media").iterdir()
+    assert f"](media/{picture.name})" in kafka, "a picture goes beside its page"
+    assert "[Kafka](../cloud/kafka.md)" in (docs / "architecture" / "c4.md").read_text(encoding="utf-8")
+    nav = yaml.safe_load((nested / "site" / MKDOCS_NAV).read_text(encoding="utf-8"))["nav"]
+    assert nav[-1] == {"Primers": [
+        {"Primers": "primers/index.md"},
+        {"Cloud and messaging": [{"Cloud and messaging": "primers/cloud/index.md"}, {"Kafka": "primers/cloud/kafka.md"}]},
+        {"Architecture": [{"C4": "primers/architecture/c4.md"}]},
+    ]}
+
+
+@needs_sh
+def test_starlight_links_reach_pages_in_folders(nested, pandoc_runtime):
+    config, runtime = _site(nested, "starlight", pandoc_runtime)
+    generate_site(config, runtime)
+    kafka = (nested / "site" / "src" / "content" / "docs" / "primers" / "cloud" / "kafka.md").read_text(encoding="utf-8")
+    assert "[C4](/primers/architecture/c4/)" in kafka and "[the primers](/primers/)" in kafka
+
+
+@needs_sh
+def test_a_site_path_moves_a_page_and_a_clash_is_reported(nested, pandoc_runtime):
+    text = (nested / "py-doc.yml").read_text(encoding="utf-8")
+    moved = text.replace("- content/primers/architecture/c4.md", "- {file: content/primers/architecture/c4.md, site_path: cloud/c4}")
+    (nested / "py-doc.yml").write_text(moved, encoding="utf-8")
+    config, runtime = _site(nested, "mkdocs", pandoc_runtime)
+    generate_site(config, runtime)
+    docs = nested / "site" / "docs" / "primers"
+    assert (docs / "cloud" / "c4.md").is_file() and not (docs / "architecture").exists()
+    assert "[C4](c4.md)" in (docs / "cloud" / "kafka.md").read_text(encoding="utf-8")
+    clash = (nested / "py-doc.yml").read_text(encoding="utf-8").replace("site_path: cloud/c4", "site_path: cloud/Kafka")
+    (nested / "py-doc.yml").write_text(clash, encoding="utf-8")
+    with pytest.raises(ConversionError, match=r"would both be the page primers/cloud/kafka\.md"):
+        generate_site(load_config(nested / "py-doc.yml"), runtime)
 
 
 def test_a_site_must_be_made_first(project):

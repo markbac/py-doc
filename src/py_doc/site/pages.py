@@ -1,5 +1,8 @@
 """The pages of a site: each source file of each document becomes one page, in a folder per document.
 
+A page keeps its source's place below the folder that holds the document's sources (``cloud/kafka.md`` stays
+``<document>/cloud/kafka.md``), or takes the ``site_path`` of its source, and the navigation nests by folder.
+
 The Markdown goes through the same steps as every other output (includes, variables, conditions, generated
 C4 chapters, diagrams drawn as SVG) and then through pandoc with ``site.lua``, which writes Markdown the
 site's own tool reads: admonitions for MkDocs, asides for Starlight. Pictures are copied beside the pages,
@@ -12,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import os
 import posixpath
 import re
 import tempfile
@@ -52,7 +56,7 @@ _CODE_OR_TEXT = re.compile(
 class Page:
     document: str
     source: Path
-    slug: str
+    slug: str  # below the document's folder, without .md: overview, or cloud/kafka
     title: str
     order: int
     markdown: str = ""
@@ -64,6 +68,11 @@ class Page:
     def path(self) -> str:
         """Below the content folder: guide/overview.md."""
         return f"{self.document}/{self.slug}.md"
+
+    @property
+    def url(self) -> str:
+        """Starlight's address of the page: an index page is its folder's address."""
+        return "/" + f"{self.document}/{self.slug}".removesuffix("/index") + "/"
 
 
 def slug(text: str) -> str:
@@ -91,7 +100,7 @@ def generate_site(
         title, made = _pages_of(config, name, runtime, variables or {}, conditions or {})
         if made and site.downloads:
             made[0].downloads = _downloads(config, name, site.downloads, made[0].version)
-        sections.append(NavSection(title, name, [NavPage(page.title, page.path) for page in made]))
+        sections.append(NavSection(title, name, nav_items(made)))
         pages += made
     _convert(pages, site.engine, runtime())
     written = _write(pages, engine)
@@ -116,17 +125,79 @@ def _pages_of(config: ProjectConfig, name: str, runtime, variables: dict, condit
     sources = [replace(s, heading_offset=0, page_break=False) for s in sources if s.include]
     joined = join_sources(sources, {**doc.variables, **variables}, {**doc.conditions, **conditions}, doc.id)
     metadata = _combine_metadata(doc, joined.metadata, joined.first_heading, config.root)
+    slugs = _slugs(name, [file for file, _ in joined.parts], [s for s in doc.sources if s.include and s.structurizr is None])
     pages: list[Page] = []
-    used: set[str] = set()
-    for order, (file, text) in enumerate(joined.parts, start=1):
-        name_ = slug(file.stem)
-        while name_ in used:
-            name_ += "-2"
-        used.add(name_)
+    for order, ((file, text), name_) in enumerate(zip(joined.parts, slugs, strict=True), start=1):
         title = first_heading(text) or (metadata.title if order == 1 else file.stem)
         rendered = render_parts([(file, text)], "html", runtime)
         pages.append(Page(name, file, name_, title, order, rendered.markdown, rendered.pictures, version=metadata.version))
     return metadata.title or name, pages
+
+
+def _slugs(document: str, files: list[Path], sources: list) -> list[str]:
+    """The page path of each file, below the document's folder and without .md.
+
+    A source file keeps its place below the folder that holds all of the document's source files, or takes its
+    ``site_path``. Two source files that would make the same page stop the run. A generated file (a C4 chapter)
+    goes at the top of the document's folder, with -2 added when its name is taken.
+    """
+    own = {source.file.resolve(): source.site_path for source in sources}
+    try:
+        base = Path(os.path.commonpath([file.parent for file in own])) if own else None
+    except ValueError:  # on more than one drive: no folder holds them all
+        base = None
+    slugs: list[str | None] = []
+    taken: dict[str, Path] = {}
+    for file in files:
+        key = file.resolve()
+        if key not in own:
+            slugs.append(None)
+            continue
+        if own[key]:
+            parts = own[key].split("/")
+        else:
+            parts = key.relative_to(base).with_suffix("").parts if base else (key.stem,)
+        path = "/".join(slug(part) for part in parts)
+        if path in taken:
+            raise ConversionError(
+                f"{taken[path]} and {file} would both be the page {document}/{path}.md on the site. "
+                "Rename one, or give one a site_path in py-doc.yml"
+            )
+        taken[path] = file
+        slugs.append(path)
+    for index, file in enumerate(files):
+        if slugs[index] is None:
+            path = slug(file.stem)
+            while path in taken:
+                path += "-2"
+            taken[path] = file
+            slugs[index] = path
+    return slugs  # type: ignore[return-value]
+
+
+def nav_items(pages: list[Page]) -> list[NavPage | NavSection]:
+    """The navigation of one document's pages, nested by folder in the order of the pages.
+
+    A folder's index page leads its group and gives it its title. A folder without one is named after the folder.
+    """
+    items: list[NavPage | NavSection] = []
+    groups: dict[str, NavSection] = {}
+    for page in pages:
+        *folders, leaf = page.slug.split("/")
+        level, path = items, ""
+        for folder in folders:
+            path = f"{path}/{folder}" if path else folder
+            if path not in groups:
+                groups[path] = NavSection(folder.replace("-", " ").capitalize(), f"{page.document}/{path}", [])
+                level.append(groups[path])
+            level = groups[path].pages
+        entry = NavPage(page.title, page.path)
+        if folders and leaf == "index":
+            groups[path].title = page.title
+            level.insert(0, entry)
+        else:
+            level.append(entry)
+    return items
 
 
 def _downloads(config: ProjectConfig, name: str, formats: list[str], version: str | None) -> list[tuple[str, Path]]:
@@ -205,6 +276,8 @@ def _write(pages: list[Page], engine: Engine) -> list[Path]:
 def _with_downloads(text: str, page: Page, engine: Engine, files: dict[Path, bytes]) -> str:
     """Copy the document's built files beside the site and put a line of links under the page's first heading."""
     folder, href = engine.downloads(page.document)
+    if not href.startswith("/"):  # beside the document's folder, so from a page in a folder below it, up first
+        href = posixpath.relpath(f"{page.document}/{href}", posixpath.dirname(page.path))
     links = []
     for label, path in page.downloads:
         files[folder / path.name] = path.read_bytes()
@@ -218,7 +291,7 @@ def _with_downloads(text: str, page: Page, engine: Engine, files: dict[Path, byt
 
 def _relink(page: Page, by_source: dict[Path, Page], engine: str, files: dict[Path, bytes], content: Path) -> str:
     """Point links at the pages made from their source files, and copy the pictures the page shows."""
-    folder = content / page.document
+    folder = (content / page.path).parent  # diagrams/ and media/ go beside the page
 
     def picture(target: str) -> str | None:
         if target in page.pictures:  # a diagram, drawn under diagrams/
@@ -241,9 +314,9 @@ def _relink(page: Page, by_source: dict[Path, Page], engine: str, files: dict[Pa
         if other is None:
             return None
         if engine == "starlight":
-            url = f"/{other.document}/{other.slug}/"
+            url = other.url
         else:
-            url = posixpath.relpath(other.path, page.document)
+            url = posixpath.relpath(other.path, posixpath.dirname(page.path))
         return url + (f"#{anchor}" if anchor else "")
 
     def swap(match: re.Match) -> str:

@@ -39,8 +39,8 @@ py-doc site build --target tarf   # one site of site.targets (default: every one
 
 The configuration is yours to change: theme, colours, logo, plugins, extra pages. py-doc never edits it. It writes the navigation into a file of its own, which the configuration takes in:
 
-- **MkDocs**: `py-doc-nav.yml`, with a section per document and a page per source file. `mkdocs.yml` takes it in with `INHERIT: py-doc-nav.yml`. A `nav:` written in `mkdocs.yml` itself wins, so a hand-made navigation is kept. `py-doc site generate` says what is missing when `mkdocs.yml` neither inherits nor has a `nav`.
-- **Starlight**: `src/py-doc-sidebar.json`, a group per document that lists the document's folder. `astro.config.mjs` passes it to Starlight as `sidebar`, and each page carries its place in the front matter (`sidebar.order`).
+- **MkDocs**: `py-doc-nav.yml`, with a section per document and a page per source file, nested by folder. `mkdocs.yml` takes it in with `INHERIT: py-doc-nav.yml`. A `nav:` written in `mkdocs.yml` itself wins, so a hand-made navigation is kept. `py-doc site generate` says what is missing when `mkdocs.yml` neither inherits nor has a `nav`.
+- **Starlight**: `src/py-doc-sidebar.json`, a group per document. A document with all its pages in one folder lists that folder. A document with subfolders lists its pages, in groups by folder. `astro.config.mjs` passes it to Starlight as `sidebar`, and each page carries its place in the front matter (`sidebar.order`).
 
 An existing site works the same way: point `site.dir` at it and add the `INHERIT` line or the sidebar import.
 
@@ -50,11 +50,39 @@ Pages you write yourself, such as an about page or a blog, go in the content fol
 
 Each source file of each document becomes one page, in a folder named after the document: `docs/guide/01-overview.md` for MkDocs, `src/content/docs/guide/01-overview.md` for Starlight. The pages go through the same steps as every other output, then through pandoc with the `site.lua` filter.
 
+A page keeps the place of its source below the folder that holds all of the document's sources. Names are made lower case, with `-` in place of other characters. For these sources:
+
+```yaml
+documents:
+  primers:
+    sources:
+      - content/primers/index.md
+      - content/primers/cloud/index.md
+      - content/primers/cloud/kafka.md
+      - content/primers/architecture/c4.md
+```
+
+the pages are `docs/primers/index.md`, `docs/primers/cloud/index.md`, `docs/primers/cloud/kafka.md` and `docs/primers/architecture/c4.md`. The navigation nests the same way, in the order of `sources`. Each folder is a group:
+
+- **Landing page**: the folder's `index.md`, when it is listed, comes first in its group wherever it is in `sources`. With the Material feature `navigation.indexes`, which `py-doc site init` turns on, the group's title opens that page.
+- **Group title**: the index page's title. A folder without one is named after the folder, so `iot-and-embedded` becomes "Iot and embedded".
+- **Flat documents**: a document whose sources are all in one folder gives flat pages, as before.
+
+`site_path` on a source puts its page somewhere else on the site without moving the file. It is the path below the document's folder, without `.md`:
+
+```yaml
+      - {file: content/primers/c4.md, site_path: architecture/c4}
+```
+
+Two sources that would give the same page, such as `Kafka.md` and `kafka.md` in one folder, stop the run with both named. Rename one, or give one a `site_path`. Generated C4 chapters go at the top of the document's folder.
+
+Word, PowerPoint and PDF ignore the folders and `site_path`. `heading_offset` and `page_break` still set how the sources nest there.
+
 - **Includes, conditions and variables** are expanded, and C4 chapters are generated from `structurizr:` sources.
-- **Diagrams** are drawn as SVG where the tool can, and copied beside the page. Pictures the Markdown shows are copied into `media/`.
+- **Diagrams** are drawn as SVG where the tool can, and copied beside the page. Pictures the Markdown shows are copied into a `media/` folder beside the page.
 - **Callouts** become MkDocs admonitions (`!!! note`) or Starlight asides (`:::note`).
 - **Captions** become an italic line under the picture or table.
-- **Links between source files** point at the pages made from them, anchors included.
+- **Links between source files** point at the pages made from them, anchors included, across folders too.
 - **Titles**: the first heading is the page title. Starlight shows the title itself, so the heading is not repeated there.
 - **Page breaks and heading offsets** mean nothing on a site and are left out.
 

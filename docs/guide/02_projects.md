@@ -54,6 +54,7 @@ documents:
         heading_offset: 0      # shift every heading level (kept within 1 to 6)
         page_break: true       # start on a new page, or a new slide
         title: Foundations     # replaces the first heading, or adds one
+        site_path: basics/foundations  # its page on a site (default: its place below the sources' folder)
       - {file: draft.md, include: false}
     variables: {version: "1.0"}
     conditions: {internal: false}
