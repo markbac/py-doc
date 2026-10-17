@@ -14,6 +14,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from . import __version__
+from ._cli import safe_console
 from ._logging import configure_logging
 from .build import build_document
 from .cli import run_docx
@@ -302,4 +303,5 @@ def _migrate(args: argparse.Namespace) -> int:
 
 
 def run() -> None:
+    safe_console()
     sys.exit(main())

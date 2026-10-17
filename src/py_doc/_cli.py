@@ -24,6 +24,19 @@ class Converter(Protocol):
     def convert_file(self, md_path: Path, output_path: Path) -> Path: ...
 
 
+def safe_console() -> None:
+    """Let a character the output's encoding lacks become ``?`` instead of stopping the command.
+
+    On Windows, output sent to a pipe or a file uses the ANSI code page (cp1252 and the like), so an
+    emoji or an arrow quoted from a document raised UnicodeEncodeError partway through a lint report.
+    A console window, and anything already writing UTF-8, can show every character and is left alone.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        encoding = (getattr(stream, "encoding", None) or "").lower().replace("-", "")
+        if encoding != "utf8" and hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
+
+
 def error(message: str) -> None:
     print(f"Error: {message}", file=sys.stderr)
 

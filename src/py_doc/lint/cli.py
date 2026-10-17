@@ -10,7 +10,7 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
-from py_doc._cli import deprecation_notice
+from py_doc._cli import deprecation_notice, safe_console
 from py_doc._logging import configure_logging
 from py_doc.config import ConfigError, find_config, load_config
 from py_doc.errors import ConversionError
@@ -238,6 +238,7 @@ def _error(result: FileResult) -> None:
 
 
 def main() -> None:
+    safe_console()
     sys.exit(run(legacy=True))
 
 
