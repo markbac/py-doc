@@ -7,7 +7,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from ._cli import add_common_options, deprecation_notice, run
+from ._cli import add_common_options, deprecation_notice, run, safe_console
 from .errors import ConversionError
 from .convert import DocxConverter
 
@@ -48,6 +48,7 @@ def run_docx(argv: Sequence[str] | None = None, legacy: bool = False) -> int:
 
 
 def main() -> None:
+    safe_console()
     code = run_docx(legacy=True)
     if code:
         sys.exit(code)
