@@ -18,7 +18,7 @@ The files in `src/py_doc/runtime/definition` define the image:
 | `fetch.sh` | Downloads one of them and checks it |
 | `export-diagrams.js` | Draws Structurizr views in Chromium |
 
-The tag is a hash of the folder (`runtime/image.py`). A change to any of these files builds a new image, and a release that changes none of them reuses the old one. Node.js comes from nodejs.org rather than Debian, whose version is too old for the current Vega, markdownlint and Astro packages and for the AsyncAPI generator, which needs Node.js 24.
+The tag is a hash of the folder (`runtime/image.py`). A change to any of these files builds a new image, and a release that changes none of them reuses the old one. Node.js comes from nodejs.org rather than Debian, whose version is too old for the current Vega, markdownlint and Astro packages. The AsyncAPI generator needs Node.js 24.
 
 ## Running a tool
 
