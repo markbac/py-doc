@@ -48,6 +48,10 @@ RULE_BROKEN_LINK = "DOC006"
 RULE_IMAGE_ALT = "DOC007"
 RULE_SENTENCE_LENGTH = "DOC008"
 RULE_HEADING_LENGTH = "DOC009"
+RULE_DUPLICATE_HEADING = "DOC010"
+RULE_UNCLOSED_FENCE = "DOC011"
+RULE_REQUIRED_SECTION = "DOC012"
+RULE_TERMINOLOGY = "DOC013"
 ACRONYM_SCOPES = ("file", "document")
 DEFAULT_ACRONYM_SUGGESTION = "Define it on first use, for example 'Full Name ({acronym})'."
 C4_RULES = {"C4001": "warning", "C4002": "warning", "C4003": "warning", "C4004": "info"}  # see py_doc.c4.check
@@ -73,13 +77,15 @@ class LintConfig:
     acronym_suggestion: str = DEFAULT_ACRONYM_SUGGESTION  # {acronym} is replaced
     sentence_words: int = 40  # DOC008: a sentence with more words than this
     heading_length: int = 80  # DOC009: a heading with more characters than this
+    required_sections: dict[str, list[str]] = field(default_factory=dict)  # DOC012: document id (or *) -> headings
     exclude_dirs: frozenset[str] = DEFAULT_EXCLUDE_DIRS
     disabled_rules: frozenset[str] = frozenset()
     severities: dict[str, str] = field(
         default_factory=lambda: {
             RULE_GLOSSARY: "warning", RULE_REDUNDANT: "warning", RULE_ACRONYM: "info", RULE_DIRECTIVE: "error",
             RULE_HEADING_JUMP: "warning", RULE_BROKEN_LINK: "warning", RULE_IMAGE_ALT: "warning",
-            RULE_SENTENCE_LENGTH: "info", RULE_HEADING_LENGTH: "info", **C4_RULES,
+            RULE_SENTENCE_LENGTH: "info", RULE_HEADING_LENGTH: "info", RULE_DUPLICATE_HEADING: "info",
+            RULE_UNCLOSED_FENCE: "error", RULE_REQUIRED_SECTION: "warning", RULE_TERMINOLOGY: "info", **C4_RULES,
         }  # fmt: skip
     )
     structure: list = field(default_factory=list)  # StructureRule entries, see lint.structure

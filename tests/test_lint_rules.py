@@ -92,3 +92,41 @@ class TestAcronymOptions:
         )
         lint = load_config(tmp_path / "py-doc.yml").lint
         assert (lint.acronym_require_definition, lint.acronym_scope, lint.acronym_suggestion) == (False, "document", "Spell it out")
+
+
+class TestQualityChecks:
+    def test_a_repeated_heading_in_the_same_section(self):
+        text = "# A\n\n## Setup\n\n## Setup\n\n# B\n\n## Setup\n"
+        assert [r for r in rules(text) if r[1] == "DOC010"] == [(5, "DOC010")]
+
+    def test_an_unclosed_fence_is_an_error(self):
+        found = DocLinter().lint_text("# A\n\n```python\nx = 1\n")
+        assert [(i.line, i.severity) for i in found if i.rule == "DOC011"] == [(3, "error")]
+
+    def test_required_sections_over_the_files_of_a_document(self, tmp_path):
+        (tmp_path / "a.md").write_text("# Introduction\n\nText.\n", encoding="utf-8")
+        (tmp_path / "b.md").write_text("## 2.1 Scope\n\nText.\n", encoding="utf-8")
+        (tmp_path / "py-doc.yml").write_text(
+            "documents:\n  spec: {sources: [a.md, b.md]}\nlint:\n  required_sections: {'*': [Introduction, scope, Glossary]}\n",
+            encoding="utf-8",
+        )
+        config = load_config(tmp_path / "py-doc.yml")
+        report = DocLinter(config=config.lint, engine="builtin").lint_paths([tmp_path])
+        assert [(i.file.name, i.message) for i in report.issues if i.rule == "DOC012"] == [
+            ("a.md", "Document 'spec' has no 'Glossary' section.")
+        ]
+
+    def test_a_word_hyphenated_in_one_place_and_closed_up_in_others(self, tmp_path):
+        (tmp_path / "a.md").write_text("Send an email. Read the email.\n", encoding="utf-8")
+        (tmp_path / "b.md").write_text("Send an e-mail.\n", encoding="utf-8")
+        report = DocLinter(engine="builtin").lint_paths([tmp_path])
+        found = [(i.file.name, i.line, i.suggestion) for i in report.issues if i.rule == "DOC013"]
+        assert found == [("b.md", 1, "email")]
+
+    def test_a_glossary_spelling_under_two_terms_is_a_configuration_error(self, tmp_path):
+        import pytest
+        from py_doc.config import ConfigError
+
+        (tmp_path / "py-doc.yml").write_text("lint:\n  glossary: {Wi-Fi: [wifi], WiFi6: [wifi]}\n", encoding="utf-8")
+        with pytest.raises(ConfigError, match="'wifi' as a wrong spelling of both"):
+            load_config(tmp_path / "py-doc.yml")

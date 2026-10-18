@@ -8,7 +8,8 @@ import pytest
 from py_doc.lint.config import C4_RULES
 from py_doc.config import ConfigError, find_config, load_config, parse_config
 
-NEW_RULES = {"DOC005": "warning", "DOC006": "warning", "DOC007": "warning", "DOC008": "info", "DOC009": "info"}
+NEW_RULES = {"DOC005": "warning", "DOC006": "warning", "DOC007": "warning", "DOC008": "info", "DOC009": "info",
+             "DOC010": "info", "DOC011": "error", "DOC012": "warning", "DOC013": "info"}
 
 
 def write(tmp_path, text: str):
@@ -158,10 +159,13 @@ class TestLint:
         assert {"drafts", "node_modules"} <= lint.exclude_dirs
 
 
-def test_reserved_sections_are_kept_with_a_warning(tmp_path, caplog):
-    config = load_config(write(tmp_path, "content: {name: x}\n"))
-    assert config.reserved == {"content": {"name": "x"}}
-    assert "'content' section is accepted but not used yet" in caplog.text
+def test_the_content_and_build_sections(tmp_path):
+    config = load_config(write(tmp_path, "content: {generators: [{type: glossary, output: g.md}]}\nbuild: {lint: on}\n"))
+    assert [(g.name, g.type) for g in config.generators] == [("g", "glossary")] and config.build.lint == "on"
+    with pytest.raises(ConfigError, match="build.lint must be one of off, on, strict"):
+        load_config(write(tmp_path, "build: {lint: loud}\n"))
+    with pytest.raises(ConfigError, match="unknown key 'name' in content"):
+        load_config(write(tmp_path, "content: {name: x}\n"))
 
 
 def test_the_site_section(tmp_path):
@@ -206,7 +210,8 @@ def test_the_example_in_the_user_guide_loads(tmp_path):
     readme = Path(__file__).parent.parent / "docs" / "guide" / "02_projects.md"  # the configuration example of the user guide
     block = re.search(r"```yaml\n(project:.*?)```", readme.read_text(encoding="utf-8"), re.S).group(1)
     config = load_config(write(tmp_path, block))
-    assert list(config.documents) == ["c4-guide"]
+    assert list(config.documents) == ["c4-guide", "api", "handbook"]
+    assert config.documents["handbook"].bundle == ["c4-guide", "api"]
     assert config.lint.severities["DOC001"] == "error"
 
 

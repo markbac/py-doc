@@ -137,7 +137,7 @@ def test_the_guide_builds_as_pdf_with_task_lists_and_captions(examples, pandoc_r
     pdf = examples / "build" / "guide.pdf"
     assert pdf.read_bytes().startswith(b"%PDF")
     if shutil.which("pdftotext"):
-        text = subprocess.run(["pdftotext", str(pdf), "-"], capture_output=True, text=True, check=True).stdout
+        text = subprocess.run(["pdftotext", "-enc", "UTF-8", str(pdf), "-"], capture_output=True, encoding="utf-8", check=True).stdout
         assert "[[" not in text, "no marker is printed in the PDF"
         assert "Data flow through the node" in text and "Figure 1" in text
 
