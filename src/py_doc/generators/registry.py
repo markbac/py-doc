@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import logging
 from collections.abc import Callable
+from contextvars import ContextVar
 from importlib.metadata import entry_points
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -22,6 +23,24 @@ Generator = Callable[["GeneratorSpec", "ProjectConfig"], str]
 
 class GeneratorError(ConversionError):
     """A generator could not make its Markdown. The message names the generator."""
+
+
+_RUNTIME: ContextVar[Callable | None] = ContextVar("generator_runtime", default=None)
+
+
+def tool_runtime(project: ProjectConfig):
+    """The tool container for a generator that runs a tool: the caller's, else one of the project's settings."""
+    given = _RUNTIME.get()
+    if given is not None:
+        return given()
+    if id(project) not in _CONNECTED:
+        from py_doc.runtime import connect
+
+        _CONNECTED[id(project)] = connect(project.runtime)
+    return _CONNECTED[id(project)]
+
+
+_CONNECTED: dict[int, object] = {}
 
 
 def _builtins() -> dict[str, Generator]:
@@ -59,8 +78,30 @@ def load_callable(target: str) -> Generator:
         raise GeneratorError(f"Cannot load the generator {target}: {exc}") from exc
 
 
-def run_generators(project: ProjectConfig, names: list[str] | None = None) -> list[Path]:
-    """Run the generators of ``project`` (or the ones named), in order. Returns the files that changed."""
+def for_documents(project: ProjectConfig, documents: list[str]) -> list[str]:
+    """The generators whose output is a source of one of ``documents``, so a build of those runs only them.
+
+    A generated file pulled in only by an ``[[INCLUDE:]]`` is not seen: building every document, or
+    ``py-doc generate``, runs it.
+    """
+    sources = {s.file.resolve() for name in documents for s in project.documents[name].sources}
+    return [spec.name for spec in project.generators if spec.output.resolve() in sources]
+
+
+def run_generators(project: ProjectConfig, names: list[str] | None = None, runtime: Callable | None = None) -> list[Path]:
+    """Run the generators of ``project`` (or the ones named), in order. Returns the files that changed.
+
+    ``runtime`` returns the tool container, for the generators that run a tool. Without it, one is connected
+    from the project's settings when a generator first needs it.
+    """
+    token = _RUNTIME.set(runtime)
+    try:
+        return _run_all(project, names)
+    finally:
+        _RUNTIME.reset(token)
+
+
+def _run_all(project: ProjectConfig, names: list[str] | None) -> list[Path]:
     specs = project.generators
     if names:
         unknown = [name for name in names if name not in {spec.name for spec in specs}]

@@ -12,12 +12,13 @@ The files in `src/py_doc/runtime/definition` define the image:
 |---|---|
 | `Dockerfile` | The image, on Debian 12 |
 | `requirements.txt` | The Python diagram tools and MkDocs |
-| `package.json` | Mermaid, markdownlint, WaveDrom, bytefield-svg, Vega and Puppeteer |
+| `package.json` | Mermaid, markdownlint, WaveDrom, bytefield-svg, Vega and Puppeteer, and for API documentation Redocly CLI, Widdershins, the AsyncAPI generator and its Markdown and HTML templates |
+| `asyncapi-docs.js` | Runs the AsyncAPI generator with the installed templates, so it needs no network |
 | `tools.lock` | Downloads with their SHA-256: pandoc, PlantUML, ditaa, Vale, `structurizr-cli` and Node.js |
 | `fetch.sh` | Downloads one of them and checks it |
 | `export-diagrams.js` | Draws Structurizr views in Chromium |
 
-The tag is a hash of the folder (`runtime/image.py`). A change to any of these files builds a new image, and a release that changes none of them reuses the old one. Node.js comes from nodejs.org rather than Debian, whose version is too old for the current Vega, markdownlint and Astro packages.
+The tag is a hash of the folder (`runtime/image.py`). A change to any of these files builds a new image, and a release that changes none of them reuses the old one. Node.js comes from nodejs.org rather than Debian, whose version is too old for the current Vega, markdownlint and Astro packages and for the AsyncAPI generator, which needs Node.js 24.
 
 ## Running a tool
 

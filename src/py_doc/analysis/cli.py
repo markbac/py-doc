@@ -187,7 +187,8 @@ def run_check(argv: list[str]) -> int:
         print(f"Error: {problem}", file=sys.stderr)
     status = 1 if problems else 0
     if not args.no_lint:
-        files = sorted({f.resolve() for name in project.own_documents for f in _sources(project, name) if f.exists()})
+        generated = {spec.output.resolve() for spec in project.generators}  # written by tools, not people
+        files = sorted({f.resolve() for name in project.own_documents for f in _sources(project, name) if f.exists()} - generated)
         if files:
             linter = DocLinter(config=project.lint, runtime=lambda: connect(project.runtime), engine=args.engine)
             try:

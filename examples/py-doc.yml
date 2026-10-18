@@ -113,6 +113,34 @@ documents:
       docx: {}
       html: {}
 
+  api-reference:
+    # The reference documentation of the library's REST and event APIs, written by the generators below
+    # from docs/includes/apis/. py-doc build runs them first; `py-doc generate` runs them on their own.
+    title: Library API Reference
+    version: "1.0"
+    status: Draft
+    sources:
+      - build/generated/rest-api.md
+      - {file: build/generated/events-api.md, page_break: true}
+    outputs:
+      docx: {toc: true}                               # build/api-reference.docx
+      html: {toc: true}                               # build/api-reference.html
+
+# Content generators: Markdown made from other sources before the build. The API ones run Redocly and
+# Widdershins (OpenAPI) and the AsyncAPI generator in the tool container, and also write their HTML pages.
+content:
+  generators:
+    - type: openapi
+      source: docs/includes/apis/library-openapi.yaml
+      output: build/generated/rest-api.md
+      title: REST API
+      html: build/api/rest-api.html                   # a Redoc page
+    - type: asyncapi
+      source: docs/includes/apis/library-asyncapi.yaml
+      output: build/generated/events-api.md
+      title: Event API
+      html: build/api/events-api.html                 # an AsyncAPI page
+
 # Structurizr Local, started on a private Docker network for the `browser` engine.
 # `py-doc c4 lock` pins the image by digest in c4-images.lock.
 c4:

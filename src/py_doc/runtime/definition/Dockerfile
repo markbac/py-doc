@@ -11,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # A certificate for builds behind a TLS-inspecting proxy (nothing unless --ca-file was given).
 COPY extra-ca/ /usr/local/share/ca-certificates/
-COPY tools.lock fetch.sh requirements.txt package.json puppeteer.json export-diagrams.js /tmp/build/
+COPY tools.lock fetch.sh requirements.txt package.json puppeteer.json export-diagrams.js asyncapi-docs.js /tmp/build/
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl git unzip \
@@ -24,7 +24,7 @@ RUN apt-get update \
       python3 python3-venv python3-pip xz-utils \
  && rm -rf /var/lib/apt/lists/*
 
-# Downloaded tools, and Node.js (Debian 12 has Node 18, and vega-cli and markdownlint need 20 or later).
+# Downloaded tools, and Node.js (Debian 12 has Node 18; the AsyncAPI generator needs 24.11 or later).
 # Their urls and checksums are in tools.lock, and a mismatch stops the build.
 RUN sh /tmp/build/fetch.sh pandoc /tmp/pandoc.deb \
  && apt-get install -y --no-install-recommends /tmp/pandoc.deb \
@@ -43,8 +43,11 @@ RUN sh /tmp/build/fetch.sh pandoc /tmp/pandoc.deb \
  && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 --exclude CHANGELOG.md --exclude LICENSE --exclude README.md \
  && rm -f /tmp/pandoc.deb /tmp/vale.tar.gz /tmp/structurizr-cli.zip /tmp/node.tar.xz
 
-# Python and Node diagram tools, at the versions pinned beside this file.
+# Python and Node diagram and API documentation tools, at the versions pinned beside this file.
 # --legacy-peer-deps: mermaid-cli 11.12.0 declares a peer of puppeteer ^23, but the image pins puppeteer 24.
+# allowScripts in package.json denies every dependency install script (npm 11 runs none it has not been told about):
+# canvas loads without its node-gyp rebuild, puppeteer's would download a Chrome the image does not use, and the
+# rest delete leftover files, print a banner or send usage telemetry.
 RUN python3 -m venv /opt/venv \
  && /opt/venv/bin/pip install --no-cache-dir -r /tmp/build/requirements.txt \
  && mkdir -p /opt/node /etc/py-doc \
@@ -52,6 +55,8 @@ RUN python3 -m venv /opt/venv \
  && cd /opt/node && npm install --omit=dev --legacy-peer-deps --no-audit --no-fund \
  && cp /tmp/build/puppeteer.json /etc/py-doc/puppeteer.json \
  && cp /tmp/build/export-diagrams.js /opt/node/export-diagrams.js \
+ && cp /tmp/build/asyncapi-docs.js /opt/node/asyncapi-docs.js \
+ && node /opt/node/asyncapi-docs.js --compile \
  && rm -rf /tmp/build /root/.npm
 
 # A cache every run shares, as a volume: font caches, TeX caches and Chromium profiles live here.

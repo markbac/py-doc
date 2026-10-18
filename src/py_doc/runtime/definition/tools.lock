@@ -6,4 +6,4 @@ plantuml 1.2025.4 https://github.com/plantuml/plantuml/releases/download/v1.2025
 ditaa 0.11.0 https://github.com/stathissideris/ditaa/releases/download/v0.11.0/ditaa-0.11.0-standalone.jar 9418aa63ff6d89c5d2318396f59836e120e75bea7a5930c4d34aa10fe7a196a9
 vale 3.24.0 https://github.com/errata-ai/vale/releases/download/v3.24.0/vale_3.24.0_Linux_64-bit.tar.gz 867534ddb678abca7f214bc4706ead0922bd5252ffe8035fc227013f66c8b214
 structurizr-cli 2025.11.09 https://github.com/structurizr/cli/releases/download/v2025.11.09/structurizr-cli.zip f5365a463fc44d539ed19bec00c48ba1e1ecda0ccfd1ba40d2e7472d264eb79a
-node 22.23.3 https://nodejs.org/dist/v22.23.3/node-v22.23.3-linux-x64.tar.xz df450af89261115ef9f9e3830c3eeb2cc9213b63c720b1af623cb5dcbe2e02de
+node 24.21.0 https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.xz fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6
