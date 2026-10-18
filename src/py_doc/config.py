@@ -7,14 +7,14 @@ names its place (``documents.guide.sources[1].page_brek``), never a setting that
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from .files import DEFAULT_EXCLUDE_DIRS
-from .lint.config import DEFAULT_ALLOWED_ACRONYMS, LintConfig, MarkdownlintSettings
+from .lint.config import ACRONYM_SCOPES, DEFAULT_ALLOWED_ACRONYMS, LintConfig, MarkdownlintSettings
 from .lint.structure import StructureRuleError, load_rules, parse_rules
 from .lint.vale_config import ValeConfigError, parse_vale
 from .markdown.frontmatter import Metadata
@@ -36,8 +36,9 @@ REMOVED_OPTIONS = {
 SEVERITIES = ("error", "warning", "info")
 DEFAULT_OUTPUT_DIR = "build"
 
-# Top-level sections that are accepted and kept, but nothing uses them yet.
-RESERVED_SECTIONS = ("collections", "bundles", "content")
+# Top-level sections that are accepted and kept, but nothing uses them yet: content is for the generators.
+RESERVED_SECTIONS = ("content",)
+_GLOB = set("*?[")
 SITE_ENGINES = ("mkdocs", "starlight")
 DEFAULT_SITE_DIR = "site"
 
@@ -106,6 +107,7 @@ class DocumentConfig:
     outputs: dict[str, OutputSettings] = field(default_factory=dict)
     variables: dict[str, Any] = field(default_factory=dict)
     conditions: dict[str, Any] = field(default_factory=dict)
+    bundle: list[str] = field(default_factory=list)  # a bundle: the documents it combines, in order
 
     def metadata(self) -> Metadata:
         """The document properties set in the configuration. Unset ones stay None."""
@@ -144,13 +146,15 @@ class SiteConfig:
     downloads: list[str] = field(default_factory=list)  # built outputs (pdf, docx, ...) linked from each document's pages
     targets: dict[str, str] = field(default_factory=dict)  # MkDocs: a site per config file in site.dir, sharing the pages
     pages: dict[str, str] = field(default_factory=dict)  # hand-written pages for the navigation, after the documents: title -> path
+    groups: dict[str, list[str]] = field(default_factory=dict)  # a navigation section of several documents: title -> documents
 
 
 @dataclass
 class ProjectConfig:
     root: Path
     name: str | None = None
-    documents: dict[str, DocumentConfig] = field(default_factory=dict)
+    documents: dict[str, DocumentConfig] = field(default_factory=dict)  # bundles too, after the documents
+    collections: dict[str, list[Path]] = field(default_factory=dict)  # a named set of source files, in order
     outputs: dict[str, OutputSettings] = field(default_factory=dict)
     lint: LintConfig = field(default_factory=LintConfig)
     runtime: RuntimeSettings = field(default_factory=RuntimeSettings)
@@ -175,6 +179,11 @@ class ProjectConfig:
     def output_formats(self, document: DocumentConfig) -> list[str]:
         """Formats a document builds: the ones it lists, else docx."""
         return [fmt for fmt in FORMATS if fmt in document.outputs] or ["docx"]
+
+    @property
+    def own_documents(self) -> list[str]:
+        """The documents that are not bundles, in the order they are defined."""
+        return [name for name, doc in self.documents.items() if not doc.bundle]
 
 
 def _text(value: Any) -> str | None:
@@ -247,7 +256,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -256,12 +265,20 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
 
     config.outputs = _parse_outputs(_mapping(top.get("outputs", {}), "outputs"), root, "outputs", defaults=True)
 
+    for name, raw in _mapping(top.get("collections", {}), "collections").items():
+        config.collections[str(name)] = _parse_collection(str(name), raw, root)
     for doc_id, raw in _mapping(top.get("documents", {}), "documents").items():
-        config.documents[str(doc_id)] = _parse_document(str(doc_id), raw, root)
+        config.documents[str(doc_id)] = _parse_document(str(doc_id), raw, root, config.collections)
+    for name, raw in _mapping(top.get("bundles", {}), "bundles").items():
+        if str(name) in config.documents:
+            raise ConfigError(f"bundles.{name} has the name of a document. Give it another")
+        config.documents[str(name)] = _parse_bundle(str(name), raw, root, config)
 
     config.lint = _parse_lint(_mapping(top.get("lint", {}), "lint"), root)
     config.lint.documents = {
-        doc_id: [source.file for source in doc.sources if source.include and source.structurizr is None] for doc_id, doc in config.documents.items()
+        doc_id: [source.file for source in doc.sources if source.include and source.structurizr is None]
+        for doc_id, doc in config.documents.items()
+        if not doc.bundle
     }
     config.build = _mapping(top.get("build", {}), "build")
     c4 = _mapping(top.get("c4", {}), "c4")
@@ -279,12 +296,12 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     for name in RESERVED_SECTIONS:
         if name in top:
             config.reserved[name] = top[name]
-            logger.warning(f"The '{name}' section is accepted but not used yet")
+            logger.warning(f"The '{name}' section is accepted but not used yet (it is for content generators)")
     return config
 
 
 def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
-    _only(data, ("engine", "dir", "title", "documents", "downloads", "targets", "pages"), "site")
+    _only(data, ("engine", "dir", "title", "documents", "downloads", "targets", "pages", "groups"), "site")
     engine = _typed(data, "engine", str, "site")
     if engine not in SITE_ENGINES:
         raise ConfigError(f"site.engine must be one of {', '.join(SITE_ENGINES)}, not {engine!r}")
@@ -297,6 +314,18 @@ def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
         if fmt not in FORMATS:
             raise ConfigError(f"site.downloads names '{fmt}', which is not a format. Use {', '.join(FORMATS)}")
     targets = {str(name): str(file) for name, file in _mapping(data.get("targets") or {}, "site.targets").items()}
+    groups: dict[str, list[str]] = {}
+    grouped: set[str] = set()
+    for title, members in _mapping(data.get("groups") or {}, "site.groups").items():
+        if not isinstance(members, list) or not members:
+            raise ConfigError(f"site.groups.{title} must list at least one document")
+        for name in map(str, members):
+            if name not in (documents or config.own_documents):
+                raise ConfigError(f"site.groups.{title} names '{name}', which is not a document of the site")
+            if name in grouped:
+                raise ConfigError(f"site.groups puts '{name}' in more than one group")
+            grouped.add(name)
+        groups[str(title)] = [str(name) for name in members]
     if targets and engine != "mkdocs":
         raise ConfigError("site.targets needs engine: mkdocs. Each target is a MkDocs config file in site.dir")
     return SiteConfig(
@@ -307,6 +336,7 @@ def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
         downloads=downloads,
         targets=targets,
         pages={str(title): str(path) for title, path in _mapping(data.get("pages") or {}, "site.pages").items()},
+        groups=groups,
     )
 
 
@@ -352,7 +382,56 @@ def _parse_outputs(data: dict, root: Path, where: str, defaults: bool = False) -
     return result
 
 
-def _parse_document(doc_id: str, raw: Any, root: Path) -> DocumentConfig:
+def _parse_collection(name: str, raw: Any, root: Path) -> list[Path]:
+    """A named list of source files. A pattern (``docs/guide/*.md``, ``docs/**/*.md``) adds its files sorted by path."""
+    where = f"collections.{name}"
+    entries = raw.get("sources") if isinstance(raw, dict) and set(raw) == {"sources"} else raw
+    if not isinstance(entries, list) or not entries:
+        raise ConfigError(f"{where} must be a list of files or patterns, with at least one")
+    files: list[Path] = []
+    for index, entry in enumerate(entries):
+        place = f"{where}[{index}]"
+        if not isinstance(entry, str) or not entry:
+            raise ConfigError(f"{place} must be a file or a pattern such as docs/guide/*.md")
+        if _GLOB & set(entry):
+            if Path(entry).is_absolute():
+                raise ConfigError(f"{place} must be a pattern relative to py-doc.yml")
+            matched = sorted(path.resolve() for path in root.glob(entry) if path.is_file())
+            if not matched:
+                logger.warning(f"{place}: no file matches {entry}")
+            files += matched
+        else:
+            files.append(_path(root, entry, place))
+    return list(dict.fromkeys(files))
+
+
+def _parse_bundle(name: str, raw: Any, root: Path, config: ProjectConfig) -> DocumentConfig:
+    """A bundle: several documents in one output, each starting on a new page. Its own properties come first."""
+    where = f"bundles.{name}"
+    data = _mapping(raw, where)
+    _only(data, (*_META_KEYS, "documents", "outputs", "variables", "conditions"), where)
+    names = _typed(data, "documents", list, where, [])
+    if not names:
+        raise ConfigError(f"{where}.documents must list at least one document")
+    bundle = DocumentConfig(id=name, bundle=[str(n) for n in names])
+    for key in _META_KEYS:
+        if data.get(key) is not None:
+            bundle.meta[key] = data[key]
+    for doc_name in bundle.bundle:
+        doc = config.documents.get(doc_name)
+        if doc is None or doc.bundle:
+            raise ConfigError(f"{where}.documents names '{doc_name}', which is not under documents. Defined: {', '.join(config.own_documents)}")
+        for index, source in enumerate(doc.sources):
+            bundle.sources.append(replace(source, page_break=source.page_break or (index == 0 and bool(bundle.sources))))
+        bundle.variables.update(doc.variables)
+        bundle.conditions.update(doc.conditions)
+    bundle.variables.update(_mapping(data.get("variables", {}), f"{where}.variables"))
+    bundle.conditions.update(_mapping(data.get("conditions", {}), f"{where}.conditions"))
+    bundle.outputs = _parse_outputs(_mapping(data.get("outputs", {}), f"{where}.outputs"), root, f"{where}.outputs")
+    return bundle
+
+
+def _parse_document(doc_id: str, raw: Any, root: Path, collections: dict[str, list[Path]] | None = None) -> DocumentConfig:
     where = f"documents.{doc_id}"
     data = _mapping(raw, where)
     _only(data, (*_META_KEYS, "sources", "outputs", "variables", "conditions"), where)
@@ -369,6 +448,9 @@ def _parse_document(doc_id: str, raw: Any, root: Path) -> DocumentConfig:
     for index, item in enumerate(sources):
         place = f"{where}.sources[{index}]"
         entry = {"file": item} if isinstance(item, str) else _mapping(item, place)
+        if "collection" in entry:
+            doc.sources += _collection_sources(entry, place, collections or {})
+            continue
         spec = None
         if "structurizr" in entry:
             _only(entry, ("structurizr", "levels", "systems", "diagrams", "heading_offset", "title", "page_break"), place)
@@ -392,6 +474,17 @@ def _parse_document(doc_id: str, raw: Any, root: Path) -> DocumentConfig:
     doc.variables = _mapping(data.get("variables", {}), f"{where}.variables")
     doc.conditions = _mapping(data.get("conditions", {}), f"{where}.conditions")
     return doc
+
+
+def _collection_sources(entry: dict, place: str, collections: dict[str, list[Path]]) -> list[Source]:
+    """The files of a collection, as sources. ``page_break`` goes before the first, ``heading_offset`` on each."""
+    _only(entry, ("collection", "heading_offset", "page_break"), place)
+    name = entry["collection"]
+    if name not in collections:
+        raise ConfigError(f"{place}.collection names '{name}', which is not under collections. Defined: {', '.join(collections) or 'none'}")
+    offset = _typed(entry, "heading_offset", int, place, 0)
+    page_break = _typed(entry, "page_break", bool, place, False)
+    return [Source(file=file, heading_offset=offset, page_break=page_break and i == 0) for i, file in enumerate(collections[name])]
 
 
 def _site_path(entry: dict, place: str) -> str | None:
@@ -445,7 +538,7 @@ def _parse_markdownlint(data: dict, root: Path) -> MarkdownlintSettings:
 
 
 def _parse_lint(data: dict, root: Path) -> LintConfig:
-    _only(data, ("exclude", "rules", "glossary", "phrases", "acronyms", "structure", "markdownlint", "vale"), "lint")
+    _only(data, ("exclude", "rules", "glossary", "phrases", "acronyms", "limits", "structure", "markdownlint", "vale"), "lint")
     config = LintConfig()
 
     if "exclude" in data:
@@ -492,8 +585,22 @@ def _parse_lint(data: dict, root: Path) -> LintConfig:
         for phrase, suggestion in _mapping(data["phrases"], "lint.phrases").items():
             config.redundant_phrases[str(phrase)] = "" if suggestion is None else str(suggestion)
 
+    limits = _mapping(data.get("limits", {}), "lint.limits")
+    _only(limits, ("sentence_words", "heading_length"), "lint.limits")
+    for key in limits:
+        value = _typed(limits, key, int, "lint.limits")
+        if value < 1:
+            raise ConfigError(f"lint.limits.{key} must be at least 1")
+        setattr(config, key, value)
+
     acronyms = _mapping(data.get("acronyms", {}), "lint.acronyms")
-    _only(acronyms, ("min_length", "allowed"), "lint.acronyms")
+    _only(acronyms, ("min_length", "allowed", "require_definition", "scope", "suggestion"), "lint.acronyms")
+    config.acronym_require_definition = _typed(acronyms, "require_definition", bool, "lint.acronyms", True)
+    config.acronym_scope = _typed(acronyms, "scope", str, "lint.acronyms", "file")
+    if config.acronym_scope not in ACRONYM_SCOPES:
+        raise ConfigError(f"lint.acronyms.scope must be one of {', '.join(ACRONYM_SCOPES)}, not {config.acronym_scope!r}")
+    if "suggestion" in acronyms:
+        config.acronym_suggestion = "" if acronyms["suggestion"] is None else str(acronyms["suggestion"])
     if "min_length" in acronyms:
         config.acronym_min_length = _typed(acronyms, "min_length", int, "lint.acronyms")
         if config.acronym_min_length < 2:

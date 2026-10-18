@@ -8,6 +8,8 @@ import pytest
 from py_doc.lint.config import C4_RULES
 from py_doc.config import ConfigError, find_config, load_config, parse_config
 
+NEW_RULES = {"DOC005": "warning", "DOC006": "warning", "DOC007": "warning", "DOC008": "info", "DOC009": "info"}
+
 
 def write(tmp_path, text: str):
     path = tmp_path / "py-doc.yml"
@@ -136,7 +138,7 @@ class TestLint:
 
     def test_rule_severity_and_off(self, tmp_path):
         lint = self.load(tmp_path, "  rules:\n    DOC001: error\n    DOC002: off\n    DOC003: warning\n")
-        assert lint.severities == {"DOC001": "error", "DOC002": "warning", "DOC003": "warning", "DOC004": "error"} | C4_RULES
+        assert lint.severities == {"DOC001": "error", "DOC002": "warning", "DOC003": "warning", "DOC004": "error"} | NEW_RULES | C4_RULES
         assert lint.disabled_rules == {"DOC002"}
 
     def test_glossary_and_phrases_extend_the_defaults(self, tmp_path):
@@ -157,9 +159,9 @@ class TestLint:
 
 
 def test_reserved_sections_are_kept_with_a_warning(tmp_path, caplog):
-    config = load_config(write(tmp_path, "bundles: {name: x}\n"))
-    assert config.reserved == {"bundles": {"name": "x"}}
-    assert "'bundles' section is accepted but not used yet" in caplog.text
+    config = load_config(write(tmp_path, "content: {name: x}\n"))
+    assert config.reserved == {"content": {"name": "x"}}
+    assert "'content' section is accepted but not used yet" in caplog.text
 
 
 def test_the_site_section(tmp_path):
@@ -206,3 +208,51 @@ def test_the_example_in_the_user_guide_loads(tmp_path):
     config = load_config(write(tmp_path, block))
     assert list(config.documents) == ["c4-guide"]
     assert config.lint.severities["DOC001"] == "error"
+
+
+def test_collections_name_sets_of_files_that_documents_take_in(tmp_path):
+    for name in ("b.md", "a.md", "intro.md"):
+        (tmp_path / "guide").mkdir(exist_ok=True)
+        (tmp_path / "guide" / name).write_text("# x\n", encoding="utf-8")
+    text = (
+        "collections:\n  chapters: [guide/*.md, guide/intro.md]\n"
+        "documents:\n  guide:\n    sources: [README.md, {collection: chapters, heading_offset: 1, page_break: true}]\n"
+    )
+    config = load_config(write(tmp_path, text))
+    root = tmp_path.resolve()
+    assert config.collections["chapters"] == [root / "guide" / n for n in ("a.md", "b.md", "intro.md")]
+    sources = config.documents["guide"].sources
+    assert [s.file.name for s in sources] == ["README.md", "a.md", "b.md", "intro.md"]
+    assert [s.page_break for s in sources] == [False, True, False, False]
+    assert {s.heading_offset for s in sources[1:]} == {1}
+    with pytest.raises(ConfigError, match="names 'other', which is not under collections"):
+        load_config(write(tmp_path, "documents:\n  guide: {sources: [{collection: other}]}\n"))
+
+
+def test_bundles_combine_documents_and_build_beside_them(tmp_path):
+    text = (
+        "documents:\n  guide: {sources: [a.md, b.md], variables: {x: 1}}\n  api: {sources: [c.md], outputs: {pdf: {}}}\n"
+        "bundles:\n  handbook: {title: Handbook, documents: [guide, api], outputs: {pdf: {}, docx: {}}, variables: {y: 2}}\n"
+    )
+    config = load_config(write(tmp_path, text))
+    handbook = config.documents["handbook"]
+    assert list(config.documents) == ["guide", "api", "handbook"] and config.own_documents == ["guide", "api"]
+    assert handbook.bundle == ["guide", "api"] and handbook.meta["title"] == "Handbook"
+    assert [(s.file.name, s.page_break) for s in handbook.sources] == [("a.md", False), ("b.md", False), ("c.md", True)]
+    assert handbook.variables == {"x": 1, "y": 2}
+    assert config.output_formats(handbook) == ["docx", "pdf"] and config.output_formats(config.documents["api"]) == ["pdf"]
+    assert set(config.lint.documents) == {"guide", "api"}
+    with pytest.raises(ConfigError, match="names 'gone', which is not under documents"):
+        load_config(write(tmp_path, "documents:\n  guide: {sources: [a.md]}\nbundles:\n  b: {documents: [gone]}\n"))
+    with pytest.raises(ConfigError, match="has the name of a document"):
+        load_config(write(tmp_path, "documents:\n  guide: {sources: [a.md]}\nbundles:\n  guide: {documents: [guide]}\n"))
+
+
+def test_site_groups(tmp_path):
+    docs = "documents:\n  a: {sources: [a.md]}\n  b: {sources: [b.md]}\n  c: {sources: [c.md]}\n"
+    config = load_config(write(tmp_path, docs + "site: {engine: mkdocs, groups: {Reference: [b, c]}}\n"))
+    assert config.site.groups == {"Reference": ["b", "c"]}
+    with pytest.raises(ConfigError, match="more than one group"):
+        load_config(write(tmp_path, docs + "site: {engine: mkdocs, groups: {X: [a], Y: [a]}}\n"))
+    with pytest.raises(ConfigError, match="not a document of the site"):
+        load_config(write(tmp_path, docs + "site: {engine: mkdocs, documents: [a], groups: {X: [b]}}\n"))

@@ -16,7 +16,7 @@ title: Functional requirements
 | FR-006 | `py-doc init` shall start a project with a working `py-doc.yml` and a first document, and on request a C4 model, Word and PowerPoint templates and a web site. It shall never replace a file, and shall refuse a folder that already has a `py-doc.yml`. | Should | Met |
 | FR-007 | `py-doc init` shall ask for its choices in a terminal, and ask nothing with `--yes` or when it is not run from a terminal. | Should | Met |
 | FR-008 | `py-doc migrate` shall turn legacy `createdocs` build files into one `py-doc.yml`, report what has no equivalent, and never change or delete the originals. | Should | Met |
-| FR-009 | The configuration shall support collections of sources and bundles of documents. | Could | Open (#15): `collections` and `bundles` are accepted and kept, with a warning |
+| FR-009 | The configuration shall support collections of sources and bundles of documents. | Could | Met: `collections` of source files and `bundles` of documents, built beside the documents |
 | FR-010 | The configuration shall support content generators that run before the build. | Could | Open (#18): `content` is accepted and kept, with a warning. C4 chapters are the one generator so far |
 
 ## Writing

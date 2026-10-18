@@ -61,6 +61,19 @@ documents:
     outputs:
       docx: {path: build/guides/c4-guide.docx}
       pptx: {}                 # also build a deck
+  api:
+    sources:
+      - api/index.md
+      - {collection: endpoints, page_break: true}   # every file of a collection, in order
+
+collections:                   # named sets of source files, for any document to take in
+  endpoints: [api/endpoints/*.md]   # a pattern adds its files sorted by path
+
+bundles:                       # several documents in one output, each starting on a new page
+  handbook:
+    title: Sensor handbook
+    documents: [c4-guide, api]
+    outputs: {pdf: {}}
 
 site:                          # a web site of the documents: see the web sites chapter
   engine: mkdocs
@@ -78,6 +91,9 @@ lint:
   acronyms:
     min_length: 3
     allowed: [SBOM]
+    scope: document            # a definition in an earlier file of the same document counts
+  limits:
+    sentence_words: 40
 ```
 
 - **Documents** join their sources in order. Properties come from the configuration, then from the first source's front matter, then from its first heading. A document builds the formats listed under `outputs`, or Word if none is listed.
@@ -85,7 +101,9 @@ lint:
 - **Lint** settings extend the built-in glossary, phrases and allowed acronyms. The [linting chapter](07_lint.md) has every setting.
 - **C4**: `c4.cli`, `c4.image` and `c4.port` say how Structurizr runs. See the [C4 chapter](06_c4.md).
 - **Reports**: `reports.path` writes the JSON build report of every build.
-- **Reserved**: `collections`, `bundles` and `content` are accepted and kept, with a warning, because nothing uses them yet.
+- **Collections** name sets of source files: a list of files and patterns such as `docs/guide/*.md` or `docs/**/*.md`. A document takes one in with `{collection: name}`, which can carry `heading_offset` and `page_break`. The same file can be in several collections and documents.
+- **Bundles** build several documents as one output, beside their own outputs. A bundle lists its `documents` and can set the same properties, `outputs`, `variables` and `conditions` as a document. Its own properties come first, then the first document's front matter. Each document after the first starts on a new page. `py-doc build handbook` builds one bundle. A bundle is not on the site unless `site.documents` names it.
+- **Reserved**: `content` is accepted and kept, with a warning, for the content generators that are still to come.
 
 ## Building
 
