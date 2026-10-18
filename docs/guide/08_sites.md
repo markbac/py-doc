@@ -18,6 +18,8 @@ site:
     tarf: mkdocs.tarf.yml
   pages:                      # pages of your own, added to the navigation after the documents
     Blog: blog/index.md
+  groups:                     # documents under one heading in the navigation, where the first of them would be
+    Reference: [api, architecture]
 ```
 
 ```bash
@@ -41,6 +43,8 @@ The configuration is yours to change: theme, colours, logo, plugins, extra pages
 
 - **MkDocs**: `py-doc-nav.yml`, with a section per document and a page per source file, nested by folder. `mkdocs.yml` takes it in with `INHERIT: py-doc-nav.yml`. A `nav:` written in `mkdocs.yml` itself wins, so a hand-made navigation is kept. `py-doc site generate` says what is missing when `mkdocs.yml` neither inherits nor has a `nav`.
 - **Starlight**: `src/py-doc-sidebar.json`, a group per document. A document with all its pages in one folder lists that folder. A document with subfolders lists its pages, in groups by folder. `astro.config.mjs` passes it to Starlight as `sidebar`, and each page carries its place in the front matter (`sidebar.order`).
+
+A document's first page carries its properties in the front matter: `description` (or the subtitle), and for MkDocs also `document_id`, `version`, `status`, `author` and `date`, which a theme or a plugin can show. Starlight takes only the description.
 
 An existing site works the same way: point `site.dir` at it and add the `INHERIT` line or the sidebar import.
 

@@ -26,26 +26,26 @@ title: Traceability
 
 ## Open issues
 
-The issues of the repository, as reviewed on 12 October 2026, and the requirements they map to.
+The issues of the repository, as reviewed on 18 October 2026, and the requirements they map to.
 
 | Issue | Title | Requirements | State |
 |---|---|---|---|
-| #3 | Merge py-doc2docx, py-doc2slides and py-doclint into a py-doc toolset | FR-001, FR-048, FR-100, QR-102 | Done: one `py-doc` command and package, old names kept. `render docx` became `docx`, and `init` now exists. Can be closed |
-| #4 | Canonical py-doc.yml configuration model | FR-001 to FR-005, FR-009, FR-010, FR-120 | Mostly done: the site section is now used. Collections, bundles and content remain (#15, #18) |
-| #11 | Configurable lint rules in py-doc.yml | FR-101, FR-102, FR-106 | Mostly done: rules, severities, glossary, phrases, acronyms and structure rules. Built-in link and style-limit rules remain (#41) |
-| #12 | Complete acronym linting | FR-105 | Partly done: required-definition and definition-scope options remain |
-| #14 | HTML renderer and PDF output pipeline | FR-042, FR-043 | Done through pandoc (HTML and XeLaTeX PDF, with templates and per-document settings). Can be closed |
-| #15 | Multiple documents, collections and combined bundles | FR-004, FR-009 | Partly done: many documents and shared sources work. Collections and bundles remain |
-| #16 | MkDocs project integration and scaffolding | FR-120 to FR-124 | Done: `py-doc site` with `engine: mkdocs`. Can be closed |
-| #17 | Astro + Starlight project integration and scaffolding | FR-120 to FR-124 | Done: `py-doc site` with `engine: starlight`. Can be closed |
+| #3 | Merge py-doc2docx, py-doc2slides and py-doclint into a py-doc toolset | FR-001, FR-048, FR-100, QR-102 | Done and closed: one `py-doc` command and package, old names kept. `render docx` became `docx`, and `init` now exists |
+| #4 | Canonical py-doc.yml configuration model | FR-001 to FR-005, FR-009, FR-010, FR-120 | Done: documents, collections, bundles, outputs, lint and site. Only `content` is reserved, for the generators (#18) |
+| #11 | Configurable lint rules in py-doc.yml | FR-101, FR-102, FR-106 | Done: rules, severities, glossary, phrases, acronyms, structure rules, heading, link and alt-text rules, and `lint.limits` |
+| #12 | Complete acronym linting | FR-105 | Done: length, allow-list, `require_definition`, `scope` (file or document), `suggestion` and severity |
+| #14 | HTML renderer and PDF output pipeline | FR-042, FR-043 | Done and closed: pandoc HTML and XeLaTeX PDF, with templates and per-document settings |
+| #15 | Multiple documents, collections and combined bundles | FR-004, FR-009 | Done: many documents, shared sources, `collections` and `bundles`, built side by side |
+| #16 | MkDocs project integration and scaffolding | FR-120 to FR-124 | Done and closed: `py-doc site` with `engine: mkdocs` |
+| #17 | Astro + Starlight project integration and scaffolding | FR-120 to FR-124 | Done and closed: `py-doc site` with `engine: starlight` |
 | #18 | Configurable content generators | FR-010 | Open: C4 chapters are the only generator |
 | #19 | Unified build pipeline and CI integration | FR-046, FR-104 | Mostly done: `py-doc build` with a JSON report and GitHub annotations from lint. Site builds are a separate command. SARIF remains (#47) |
-| #41 | Documentation quality checks beyond current lint rules | FR-106 | Partly done through markdownlint and structure rules |
+| #41 | Documentation quality checks beyond current lint rules | FR-106 | Partly done: heading jumps, broken links, alt text and long sentences and headings (DOC005 to DOC009), markdownlint and structure rules. Required sections and terminology checks remain |
 | #42 | py-doc init and project scaffolding | FR-006, FR-007 | Done. Can be closed |
 | #43 | Documentation analysis and semantic diff tools | | Open: `doctor` exists for the environment. `stats`, `diff` and a document `check` do not |
-| #44 | Front matter and document metadata | FR-005 | Done: front matter reaches every format and the site pages |
+| #44 | Front matter and document metadata | FR-005 | Done: front matter reaches every format, and the site pages carry the description, number, version and status |
 | #47 | Machine-readable lint and build output | FR-046, FR-104 | Partly done: the JSON build report, CSV and GitHub lint output. JSON and SARIF lint output remain |
-| #48 | Site navigation from document metadata | FR-122 | Done: navigation from the documents and their titles, a hand-made navigation kept. Can be closed |
+| #48 | Site navigation from document metadata | FR-122 | Done: navigation from the documents, their titles and order, `site.groups`, and a hand-made navigation kept |
 
 ## Closed issues
 

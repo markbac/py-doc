@@ -63,6 +63,7 @@ class Page:
     pictures: dict[str, Path] = field(default_factory=dict)
     downloads: list[tuple[str, Path]] = field(default_factory=list)  # (label, built file), on a document's first page
     version: str | None = None
+    meta: dict = field(default_factory=dict)  # the document's properties, in the front matter of its first page
 
     @property
     def path(self) -> str:
@@ -93,15 +94,16 @@ def generate_site(
     engine = engine_for(site.engine, site.dir)
     if not engine.exists():
         raise ConversionError(f"There is no {site.engine} site in {site.dir}. Run `py-doc site init` to make one")
-    names = site.documents or list(config.documents)
+    names = site.documents or config.own_documents
     pages: list[Page] = []
-    sections: list[NavSection] = []
+    by_name: dict[str, NavSection] = {}
     for name in names:
         title, made = _pages_of(config, name, runtime, variables or {}, conditions or {})
         if made and site.downloads:
             made[0].downloads = _downloads(config, name, site.downloads, made[0].version)
-        sections.append(NavSection(title, name, nav_items(made)))
+        by_name[name] = NavSection(title, name, nav_items(made))
         pages += made
+    sections = grouped(names, by_name, site.groups)
     _convert(pages, site.engine, runtime())
     written = _write(pages, engine)
     for title, path in site.pages.items():
@@ -131,7 +133,23 @@ def _pages_of(config: ProjectConfig, name: str, runtime, variables: dict, condit
         title = first_heading(text) or (metadata.title if order == 1 else file.stem)
         rendered = render_parts([(file, text)], "html", runtime)
         pages.append(Page(name, file, name_, title, order, rendered.markdown, rendered.pictures, version=metadata.version))
+    if pages:
+        pages[0].meta = page_meta(metadata)
     return metadata.title or name, pages
+
+
+def page_meta(metadata) -> dict:
+    """The document properties a page's front matter carries: its description, number, version, status, author and date."""
+    extra = metadata.extra or {}
+    meta = {
+        "description": extra.get("description") or metadata.subtitle,
+        "document_id": metadata.document_id,
+        "version": metadata.version,
+        "status": metadata.status,
+        "author": metadata.author,
+        "date": metadata.date,
+    }
+    return {key: str(value) for key, value in meta.items() if value}
 
 
 def _slugs(document: str, files: list[Path], sources: list) -> list[str]:
@@ -173,6 +191,21 @@ def _slugs(document: str, files: list[Path], sources: list) -> list[str]:
             taken[path] = file
             slugs[index] = path
     return slugs  # type: ignore[return-value]
+
+
+def grouped(names: list[str], sections: dict[str, NavSection], groups: dict[str, list[str]]) -> list[NavSection]:
+    """The documents' sections in order, with each group (``site.groups``) where its first document would be."""
+    group_of = {name: title for title, members in groups.items() for name in members}
+    result: list[NavSection] = []
+    placed: set[str] = set()
+    for name in names:
+        title = group_of.get(name)
+        if title is None:
+            result.append(sections[name])
+        elif title not in placed:
+            placed.add(title)
+            result.append(NavSection(title, "", [sections[member] for member in groups[title] if member in sections]))
+    return result
 
 
 def nav_items(pages: list[Page]) -> list[NavPage | NavSection]:
@@ -250,9 +283,14 @@ def _write(pages: list[Page], engine: Engine) -> list[Path]:
         text = _relink(page, by_source, engine.name, files, content)
         if page.downloads:
             text = _with_downloads(text, page, engine, files)
-        front = {"title": page.title}
+        front: dict = {"title": page.title}
         if engine.name == "starlight":
+            # Starlight's schema has a description, but not the other document properties
+            if "description" in page.meta:
+                front["description"] = page.meta["description"]
             front["sidebar"] = {"order": page.order}
+        else:
+            front.update(page.meta)  # MkDocs makes every key page.meta, for a theme or a plugin
         header = "---\n" + yaml.safe_dump(front, allow_unicode=True, sort_keys=False) + "---\n\n"
         files[content / page.path] = (header + text.rstrip() + "\n").encode("utf-8")
         files[content / page.document / ".gitignore"] = b"# Written by py-doc site: built from the sources, so not kept in Git\n*\n"

@@ -15,17 +15,29 @@ from py_doc.files import MARKDOWN_SUFFIXES, find_markdown
 from py_doc.markdown import ParseError, parse
 
 from . import rules, structure, vale
-from .config import RULE_ACRONYM, RULE_DIRECTIVE, RULE_GLOSSARY, RULE_REDUNDANT, LintConfig
+from .config import (
+    RULE_ACRONYM, RULE_BROKEN_LINK, RULE_DIRECTIVE, RULE_GLOSSARY, RULE_HEADING_JUMP, RULE_HEADING_LENGTH,
+    RULE_IMAGE_ALT, RULE_REDUNDANT, RULE_SENTENCE_LENGTH, LintConfig,
+)  # fmt: skip
 from .mdlint import run_markdownlint
 from .model import FileResult, LintIssue, LintReport
 from .text import segments
 
 logger = logging.getLogger(__name__)
 
+# Text rules: Vale replaces them when it is the engine.
 _RULES = (
     (RULE_GLOSSARY, rules.glossary),
     (RULE_REDUNDANT, rules.redundant_phrases),
     (RULE_ACRONYM, rules.acronyms),
+)
+# Rules of the parsed document (or, for sentence length, its prose) that run whatever the engine.
+_DOCUMENT_RULES = (
+    (RULE_HEADING_JUMP, rules.heading_jumps, False),
+    (RULE_BROKEN_LINK, rules.broken_links, False),
+    (RULE_IMAGE_ALT, rules.image_alt, False),
+    (RULE_SENTENCE_LENGTH, rules.sentence_length, True),
+    (RULE_HEADING_LENGTH, rules.heading_length, False),
 )
 
 
@@ -61,16 +73,19 @@ class DocLinter:
     def lint_text(self, text: str, file: Path | str = "<text>") -> list[LintIssue]:
         """Lint Markdown text. Raises :class:`py_doc.markdown.ParseError` for unsupported Markdown."""
         file = Path(file)
-        prose = segments(parse(text))
-        issues: list[LintIssue] = []
+        document = parse(text)
+        prose = segments(document)
+        found: list[LintIssue] = []
         for rule, check in _RULES:
             if rule in self.config.disabled_rules or self.engine == "vale":
                 continue
-            severity = self.config.severities.get(rule, "warning")
-            issues += [
-                LintIssue(i.file, i.line, i.rule, i.category, i.message, severity, i.suggestion)
-                for i in check(file, prose, self.config)
-            ]
+            if rule == RULE_ACRONYM and self._acronyms_by_document:
+                continue  # read over the whole document by lint_paths
+            found += check(file, prose, self.config)
+        for rule, check, reads_prose in _DOCUMENT_RULES:
+            if rule not in self.config.disabled_rules:
+                found += check(file, prose if reads_prose else document, self.config)
+        issues = [self._graded(issue) for issue in found]
         if RULE_DIRECTIVE not in self.config.disabled_rules:
             severity = self.config.severities.get(RULE_DIRECTIVE, "error")
             issues += [
@@ -79,6 +94,41 @@ class DocLinter:
             ]
         issues += structure.check_file(file, text, self.config.structure)
         return sorted(issues, key=lambda issue: (issue.line, issue.rule))
+
+    @property
+    def _acronyms_by_document(self) -> bool:
+        return self.config.acronym_scope == "document" and bool(self.config.documents)
+
+    def _graded(self, issue: LintIssue) -> LintIssue:
+        """The issue at the severity the configuration gives its rule."""
+        severity = self.config.severities.get(issue.rule, "warning")
+        return LintIssue(issue.file, issue.line, issue.rule, issue.category, issue.message, severity, issue.suggestion)
+
+    def _document_acronyms(self, report: LintReport) -> None:
+        """With ``lint.acronyms.scope: document``, read acronyms over each document's files in order.
+
+        A file in no document is read on its own. A file in several documents is reported from the first.
+        """
+        if not self._acronyms_by_document or RULE_ACRONYM in self.config.disabled_rules or self.engine == "vale":
+            return
+        scanned = {result.file: result for result in report.results if result.error is None}
+        done: set[Path] = set()
+        found: list[LintIssue] = []
+        groups = [[s.resolve() for s in sources] for sources in self.config.documents.values()]
+        groups += [[file] for file in scanned if not any(file in group for group in groups)]
+        for group in groups:
+            files = [file for file in group if file.is_file()]
+            if not any(file in scanned for file in files):
+                continue
+            prose = []
+            for file in files:
+                try:
+                    prose.append((file, segments(parse(file.read_text(encoding="utf-8-sig")))))
+                except (OSError, UnicodeDecodeError, ParseError):
+                    continue  # reported by the file's own result, or not a file being linted
+            found += [i for i in rules.acronyms_across(prose, self.config) if i.file in scanned and i.file not in done]
+            done.update(files)
+        report.add([self._graded(issue) for issue in dict.fromkeys(found)])
 
     def lint_file(self, path: Path | str) -> FileResult:
         """Lint one file. A file that cannot be read is an error result, never an empty clean one."""
@@ -124,6 +174,7 @@ class DocLinter:
         report = LintReport([self.lint_file(path) for path in dict.fromkeys(files)])
         folders = [target if target.is_dir() else target.parent for target in resolved]
         self._whole_document_rules(report)
+        self._document_acronyms(report)
         self._markdownlint(report)
         try:
             base = Path(os.path.commonpath(folders))

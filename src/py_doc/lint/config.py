@@ -43,6 +43,13 @@ RULE_GLOSSARY = "DOC001"
 RULE_REDUNDANT = "DOC002"
 RULE_ACRONYM = "DOC003"
 RULE_DIRECTIVE = "DOC004"
+RULE_HEADING_JUMP = "DOC005"
+RULE_BROKEN_LINK = "DOC006"
+RULE_IMAGE_ALT = "DOC007"
+RULE_SENTENCE_LENGTH = "DOC008"
+RULE_HEADING_LENGTH = "DOC009"
+ACRONYM_SCOPES = ("file", "document")
+DEFAULT_ACRONYM_SUGGESTION = "Define it on first use, for example 'Full Name ({acronym})'."
 C4_RULES = {"C4001": "warning", "C4002": "warning", "C4003": "warning", "C4004": "info"}  # see py_doc.c4.check
 
 
@@ -61,10 +68,19 @@ class LintConfig:
     redundant_phrases: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_PHRASES))
     acronym_min_length: int = 3
     allowed_acronyms: frozenset[str] = DEFAULT_ALLOWED_ACRONYMS
+    acronym_require_definition: bool = True  # False: report only a use before a later definition
+    acronym_scope: str = "file"  # document: a definition in an earlier file of the same document counts
+    acronym_suggestion: str = DEFAULT_ACRONYM_SUGGESTION  # {acronym} is replaced
+    sentence_words: int = 40  # DOC008: a sentence with more words than this
+    heading_length: int = 80  # DOC009: a heading with more characters than this
     exclude_dirs: frozenset[str] = DEFAULT_EXCLUDE_DIRS
     disabled_rules: frozenset[str] = frozenset()
     severities: dict[str, str] = field(
-        default_factory=lambda: {RULE_GLOSSARY: "warning", RULE_REDUNDANT: "warning", RULE_ACRONYM: "info", RULE_DIRECTIVE: "error", **C4_RULES}
+        default_factory=lambda: {
+            RULE_GLOSSARY: "warning", RULE_REDUNDANT: "warning", RULE_ACRONYM: "info", RULE_DIRECTIVE: "error",
+            RULE_HEADING_JUMP: "warning", RULE_BROKEN_LINK: "warning", RULE_IMAGE_ALT: "warning",
+            RULE_SENTENCE_LENGTH: "info", RULE_HEADING_LENGTH: "info", **C4_RULES,
+        }  # fmt: skip
     )
     structure: list = field(default_factory=list)  # StructureRule entries, see lint.structure
     markdownlint: MarkdownlintSettings | None = None

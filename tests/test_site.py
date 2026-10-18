@@ -380,3 +380,20 @@ def test_site_init_without_a_site_section_says_what_to_add(tmp_path, monkeypatch
     assert main(["site", "init"]) == 1
     assert main(["site", "init", "--engine", "mkdocs"]) == 0
     assert "site:\n  engine: mkdocs\n  dir: site" in capsys.readouterr().out
+
+
+def test_groups_put_documents_under_one_section_where_the_first_would_be():
+    from py_doc.site.pages import grouped
+
+    sections = {name: NavSection(name.upper(), name, []) for name in "abcd"}
+    result = grouped(list("abcd"), sections, {"Reference": ["c", "b"]})
+    assert [s.title for s in result] == ["A", "Reference", "D"]
+    assert [s.title for s in result[1].pages] == ["C", "B"] and result[1].nested
+
+
+def test_a_documents_properties_go_in_the_front_matter_of_its_first_page():
+    from py_doc.markdown import Metadata
+    from py_doc.site.pages import page_meta
+
+    meta = Metadata(title="Guide", version="1.2", status="Draft", document_id="DOC-7", extra={"description": "How to"})
+    assert page_meta(meta) == {"description": "How to", "document_id": "DOC-7", "version": "1.2", "status": "Draft"}
