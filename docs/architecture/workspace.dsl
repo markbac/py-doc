@@ -12,7 +12,7 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
 
         pydoc = softwareSystem "py-doc" "Turns Markdown into Word, PowerPoint, PDF, HTML and web sites, checks the writing, and documents C4 models." {
             cli = container "py-doc command" "The py-doc command and Python package. Reads py-doc.yml, prepares the Markdown and starts every tool in the tool image." "Python 3.10+" {
-                commands = component "Commands" "Parses the command line and hands each command to its module: build, docx, slides, lint, c4, site, import, init, template, tools, doctor, setup, migrate." "argparse"
+                commands = component "Commands" "Parses the command line and hands each command to its module: build, docx, slides, lint, check, generate, stats, diff, c4, site, import, init, new, template, tools, doctor, setup, migrate. Runs the build pipeline around the documents." "argparse"
                 configuration = component "Configuration" "Loads py-doc.yml and checks every key, so a mistake is an error that names its place." "PyYAML"
                 pipeline = component "Build pipeline" "Joins a document's sources, expands includes, conditions and variables, and picks the template and the output name." "Python"
                 diagrams = component "Diagram renderer" "Turns diagram fences into pictures with the right tool, and keeps them in a cache." "Python"
@@ -23,6 +23,8 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
                 site = component "Site generator" "Writes a page per source file and the navigation for MkDocs or Astro + Starlight, then builds the site." "pandoc, MkDocs, Astro"
                 scaffold = component "Project scaffold" "Starts a new project: py-doc.yml, a first document, a C4 model, templates and a site." "Python"
                 runner = component "Tool runner" "Starts a program in a fresh container as the calling user, with only the folders it needs, and reports its whole output when it fails." "Docker CLI, WSL"
+                generators = component "Content generators" "Write Markdown from other sources before the build: glossaries, indexes, traceability, API references, diagram files, commands." "Python, entry points"
+                analysis = component "Analysis" "Counts what documents hold, checks a project without building it, and compares versions by section." "Python, Git"
                 report = component "Build report" "Records the tools, sources, outputs, diagrams and warnings of a build as JSON." "JSON schema"
             }
             toolImage = container "Tool image" "Every program that is not Python: pandoc, XeLaTeX, PlantUML, Mermaid, Graphviz, the diagram tools, Chromium, structurizr-cli, Vale, markdownlint, MkDocs and Node." "Docker image on Debian 12"
@@ -41,6 +43,10 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
         pydoc.cli.commands -> pydoc.cli.site "Makes sites with"
         pydoc.cli.commands -> pydoc.cli.scaffold "Starts projects with"
         pydoc.cli.commands -> pydoc.cli.c4 "Checks, exports and edits models with"
+        pydoc.cli.commands -> pydoc.cli.generators "Runs the content generators with"
+        pydoc.cli.commands -> pydoc.cli.analysis "Counts, checks and compares documents with"
+        pydoc.cli.analysis -> pydoc.cli.linter "Lints the sources with"
+        pydoc.cli.site -> pydoc.cli.generators "Runs the content generators first with"
         pydoc.cli.pipeline -> pydoc.cli.c4 "Asks for the chapters of a structurizr source"
         pydoc.cli.pipeline -> pydoc.cli.diagrams "Has the diagrams drawn by"
         pydoc.cli.pipeline -> pydoc.cli.pandocEngine "Has each output written by"
