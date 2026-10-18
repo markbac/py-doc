@@ -169,3 +169,30 @@ def test_the_old_commands_keep_their_own_name_in_the_help(capsys):
         with pytest.raises(SystemExit):
             run(["--help"], legacy=True)
         assert capsys.readouterr().out.startswith(f"usage: {name}")
+
+
+class TestPipeline:
+    def test_lint_errors_stop_the_build_and_strict_stops_on_warnings(self, project, capsys):
+        (project / "a.md").write_text("# Alpha\n\n```\nnever closed\n", encoding="utf-8")
+        assert main(["build", "alpha", "--lint"]) == 1
+        assert "nothing was built" in capsys.readouterr().err and not (project / "build").exists()
+        (project / "a.md").write_text("# Alpha\n\nWe run in order to test.\n", encoding="utf-8")
+        assert main(["build", "alpha", "--lint"]) == 0
+        assert main(["build", "alpha", "--strict"]) == 1
+
+    def test_the_lint_report_and_the_steps_in_the_build_report(self, project):
+        import json
+
+        assert main(["build", "alpha", "--lint", "--lint-report", "out/lint.sarif", "--report", "out/report.json"]) == 0
+        sarif = json.loads((project / "out" / "lint.sarif").read_text(encoding="utf-8"))
+        assert sarif["version"] == "2.1.0" and sarif["runs"][0]["results"][0]["ruleId"] == "DOC002"
+        steps = json.loads((project / "out" / "report.json").read_text(encoding="utf-8"))["steps"]
+        assert [(s["step"], s["status"]) for s in steps] == [("lint", "ok"), ("documents", "ok"), ("verify", "ok")]
+
+    def test_build_settings_in_py_doc_yml(self, project, capsys):
+        with open(project / "py-doc.yml", "a", encoding="utf-8") as file:
+            file.write("build: {lint: strict, site: true}\n")
+        assert main(["build", "alpha"]) == 1  # strict: the wordy phrase is a warning
+        assert main(["build", "alpha", "--no-lint"]) == 1  # then the site: there is no site section
+        assert "has no site section" in capsys.readouterr().err
+        assert main(["build", "alpha", "--no-lint", "--no-site"]) == 0

@@ -36,9 +36,10 @@ REMOVED_OPTIONS = {
 SEVERITIES = ("error", "warning", "info")
 DEFAULT_OUTPUT_DIR = "build"
 
-# Top-level sections that are accepted and kept, but nothing uses them yet: content is for the generators.
-RESERVED_SECTIONS = ("content",)
+# Top-level sections that are accepted and kept, but nothing uses them yet.
+RESERVED_SECTIONS: tuple[str, ...] = ()
 _GLOB = set("*?[")
+LINT_IN_BUILD = ("off", "on", "strict")
 SITE_ENGINES = ("mkdocs", "starlight")
 DEFAULT_SITE_DIR = "site"
 
@@ -150,6 +151,26 @@ class SiteConfig:
 
 
 @dataclass
+class GeneratorSpec:
+    """One entry of ``content.generators``: what makes the Markdown, and the file it is written to."""
+
+    name: str
+    type: str
+    output: Path
+    options: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class BuildSettings:
+    """The ``build:`` section: what ``py-doc build`` does around building the documents."""
+
+    generate: bool = True  # run content.generators first
+    lint: str = "off"  # off, on (errors stop the build) or strict (warnings too)
+    lint_report: Path | None = None  # also write the lint issues here: .sarif, .json or .csv
+    site: bool = False  # build the site after the documents
+
+
+@dataclass
 class ProjectConfig:
     root: Path
     name: str | None = None
@@ -161,7 +182,8 @@ class ProjectConfig:
     c4: C4Settings = field(default_factory=C4Settings)
     report: Path | None = None  # reports.path: where `py-doc build` writes its JSON report
     site: SiteConfig | None = None
-    build: dict[str, Any] = field(default_factory=dict)
+    generators: list[GeneratorSpec] = field(default_factory=list)
+    build: BuildSettings = field(default_factory=BuildSettings)
     reserved: dict[str, Any] = field(default_factory=dict)
 
     def output_path(self, document: DocumentConfig, fmt: str, version: str | None = None) -> Path:
@@ -256,7 +278,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", "content", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -280,7 +302,8 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
         for doc_id, doc in config.documents.items()
         if not doc.bundle
     }
-    config.build = _mapping(top.get("build", {}), "build")
+    config.build = _parse_build(_mapping(top.get("build") or {}, "build"), root)
+    config.generators = _parse_content(_mapping(top.get("content") or {}, "content"), root)
     c4 = _mapping(top.get("c4", {}), "c4")
     _only(c4, ("cli", "image", "port"), "c4")
     config.c4 = C4Settings(_typed(c4, "cli", str, "c4"), _typed(c4, "image", str, "c4"), _typed(c4, "port", int, "c4"))
@@ -296,8 +319,55 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     for name in RESERVED_SECTIONS:
         if name in top:
             config.reserved[name] = top[name]
-            logger.warning(f"The '{name}' section is accepted but not used yet (it is for content generators)")
+            logger.warning(f"The '{name}' section is accepted but not used yet")
     return config
+
+
+def _parse_build(data: dict, root: Path) -> BuildSettings:
+    _only(data, ("generate", "lint", "lint_report", "site"), "build")
+    settings = BuildSettings(generate=_typed(data, "generate", bool, "build", True), site=_typed(data, "site", bool, "build", False))
+    lint = data.get("lint", "off")
+    lint = {False: "off", True: "on"}.get(lint, lint)  # YAML reads a bare off or on as a boolean
+    if lint not in LINT_IN_BUILD:
+        raise ConfigError(f"build.lint must be one of {', '.join(LINT_IN_BUILD)}, not {lint!r}")
+    settings.lint = lint
+    if "lint_report" in data:
+        settings.lint_report = _path(root, data["lint_report"], "build.lint_report")
+        if settings.lint_report.suffix.lower() not in (".sarif", ".json", ".csv"):
+            raise ConfigError("build.lint_report must end in .sarif, .json or .csv, which says its format")
+    return settings
+
+
+def _parse_content(data: dict, root: Path) -> list[GeneratorSpec]:
+    """``content.generators``: a list of generators, each with a type, an output file and its own options."""
+    from .generators.builtin import OPTIONS
+
+    _only(data, ("generators",), "content")
+    raw = _typed(data, "generators", list, "content", [])
+    specs: list[GeneratorSpec] = []
+    for index, entry in enumerate(raw):
+        place = f"content.generators[{index}]"
+        entry = _mapping(entry, place)
+        kind = entry.get("type")
+        if not isinstance(kind, str) or not kind:
+            raise ConfigError(f"{place} needs a type, such as glossary, documents, openapi or command")
+        if "output" not in entry:
+            raise ConfigError(f"{place} needs an output: the Markdown file it writes")
+        options = {k: v for k, v in entry.items() if k not in ("type", "name", "output")}
+        if kind in OPTIONS:  # a type of another package checks its own options
+            known = [o.lstrip("*") for o in OPTIONS[kind]]
+            _only(options, known, place)
+            missing = [o[1:] for o in OPTIONS[kind] if o.startswith("*") and o[1:] not in options]
+            if missing:
+                raise ConfigError(f"{place} ({kind}) needs {', '.join(missing)}")
+        output = _path(root, entry["output"], f"{place}.output")
+        name = str(entry.get("name") or output.stem)
+        if name in {spec.name for spec in specs}:
+            raise ConfigError(f"{place}: two generators are called '{name}'. Give one a name")
+        if output in {spec.output for spec in specs}:
+            raise ConfigError(f"{place}: another generator already writes {entry['output']}")
+        specs.append(GeneratorSpec(name, kind, output, options))
+    return specs
 
 
 def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
@@ -538,7 +608,7 @@ def _parse_markdownlint(data: dict, root: Path) -> MarkdownlintSettings:
 
 
 def _parse_lint(data: dict, root: Path) -> LintConfig:
-    _only(data, ("exclude", "rules", "glossary", "phrases", "acronyms", "limits", "structure", "markdownlint", "vale"), "lint")
+    _only(data, ("exclude", "rules", "glossary", "phrases", "acronyms", "limits", "required_sections", "structure", "markdownlint", "vale"), "lint")
     config = LintConfig()
 
     if "exclude" in data:
@@ -581,10 +651,21 @@ def _parse_lint(data: dict, root: Path) -> LintConfig:
             if not isinstance(variants, list):
                 raise ConfigError(f"lint.glossary.{term} must be a list of wrong spellings")
             config.glossary[str(term)] = [str(v) for v in variants]
+        owner: dict[str, str] = {}
+        for term, variants in config.glossary.items():
+            for variant in variants:
+                if variant in config.glossary and variant != term:
+                    raise ConfigError(f"lint.glossary lists '{variant}' as a wrong spelling of '{term}', but it is a term of its own")
+                if owner.setdefault(variant, term) != term:
+                    raise ConfigError(f"lint.glossary lists '{variant}' as a wrong spelling of both '{owner[variant]}' and '{term}'")
     if "phrases" in data:
         for phrase, suggestion in _mapping(data["phrases"], "lint.phrases").items():
             config.redundant_phrases[str(phrase)] = "" if suggestion is None else str(suggestion)
 
+    for doc_id, sections in _mapping(data.get("required_sections", {}), "lint.required_sections").items():
+        if not isinstance(sections, list) or not all(isinstance(s, str) for s in sections):
+            raise ConfigError(f"lint.required_sections.{doc_id} must be a list of headings")
+        config.required_sections[str(doc_id)] = sections
     limits = _mapping(data.get("limits", {}), "lint.limits")
     _only(limits, ("sentence_words", "heading_length"), "lint.limits")
     for key in limits:

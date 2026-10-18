@@ -14,7 +14,11 @@ py-doc lint docs/ --strict    # exit 1 if any warning or error is reported
 py-doc lint . --exclude drafts
 py-doc lint docs/ --format csv > issues.csv      # a spreadsheet (the summary goes to standard error)
 py-doc lint docs/ --format github                # ::warning file=...,line=... annotations for GitHub Actions
+py-doc lint docs/ --format json                  # every issue with rule, severity, file, line, column, message and suggestion
+py-doc lint docs/ --format sarif --output build/lint.sarif   # SARIF 2.1.0 for code scanning
 ```
+
+With `--format csv`, `json` or `sarif` the summary goes to standard error, so standard output can be read by a program. `--output` writes the issues to a file instead. A file that cannot be linted is in the JSON `errors` list and in the SARIF run as a failed notification, never left out.
 
 With several targets, each Markdown file is checked once and the settings come from the `py-doc.yml` nearest the first one, unless `--config` names another.
 
@@ -33,7 +37,13 @@ A `[[CAPTION:Figure]]` or `[[CAPTION:Table]]` marker counts when it is on the li
 | `DOC007` | Accessibility | warning | A picture without alt text |
 | `DOC008` | Style | info | A sentence longer than `lint.limits.sentence_words` words (default 40) |
 | `DOC009` | Style | info | A heading longer than `lint.limits.heading_length` characters (default 80) |
+| `DOC010` | Structure | info | A heading with the same text as an earlier one in the same section |
+| `DOC011` | Structure | error | A code fence that is never closed, so the rest of the file is code |
+| `DOC012` | Structure | warning | A document of `py-doc.yml` without a heading `lint.required_sections` asks for, in any of its files |
+| `DOC013` | Terminology | info | A word written both hyphenated and closed up across the files linted together (`e-mail` and `email`). The rarer spelling is reported |
 
+- **Required sections**: `lint.required_sections` maps a document to the headings it must have, or `*` to every document: `{'*': [Introduction, Scope], spec: [Requirements]}`. A document's own list replaces the `*` one. Case and a leading number such as `2.1` are ignored.
+- **Glossary**: a wrong spelling listed under two terms, or a term listed as a wrong spelling of another, is a configuration error.
 - **Acronym options** under `lint.acronyms`: `min_length` (default 3), `allowed` (added to the built-in list), `require_definition` (default true; false reports only an acronym used before a later definition), `scope` (`file`, the default, or `document`, where a definition in an earlier file of the same document in `py-doc.yml` counts and each acronym is reported once per document) and `suggestion` (the advice shown, with `{acronym}` replaced; empty for none). The severity is `lint.rules.DOC003`.
 - **Acronym definitions** are recognised in both orders, `Pre-Shared Key (PSK)` and `PSK (Pre-Shared Key)`, including mixed-case forms such as `LwM2M` and `IoT`. The words must spell out the acronym. Words in the built-in allow-list and glossary terms need no definition.
 - **Folders**: hidden folders and `node_modules`, `venv`, `env`, `site-packages`, `__pycache__`, `dist`, `build` and `vendor` are skipped. `.md` and `.markdown` files are found in any capitalisation. Paths are printed relative to the working folder.

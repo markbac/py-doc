@@ -17,7 +17,7 @@ title: Functional requirements
 | FR-007 | `py-doc init` shall ask for its choices in a terminal, and ask nothing with `--yes` or when it is not run from a terminal. | Should | Met |
 | FR-008 | `py-doc migrate` shall turn legacy `createdocs` build files into one `py-doc.yml`, report what has no equivalent, and never change or delete the originals. | Should | Met |
 | FR-009 | The configuration shall support collections of sources and bundles of documents. | Could | Met: `collections` of source files and `bundles` of documents, built beside the documents |
-| FR-010 | The configuration shall support content generators that run before the build. | Could | Open (#18): `content` is accepted and kept, with a warning. C4 chapters are the one generator so far |
+| FR-010 | The configuration shall support content generators that run before the build. | Could | Met: `content.generators` with eleven built-in types and an entry point for more, run by `py-doc generate`, `build` and `site` |
 
 ## Writing
 
@@ -76,9 +76,9 @@ title: Functional requirements
 | FR-101 | Rule severities shall be set in `py-doc.yml`, and a rule switched off. | Must | Met |
 | FR-102 | Project structure rules shall be data: required files, line patterns, blank lines, paths, balanced markers, required captions and cross-file anchors. | Should | Met |
 | FR-103 | `py-doc lint` shall run markdownlint and Vale beside the built-in rules and report one list with one exit status. | Should | Met |
-| FR-104 | Lint results shall be available as text, CSV and GitHub annotations. | Should | Partly met (#47): JSON and SARIF are open |
-| FR-105 | Acronym checks shall support a required definition and a definition scope. | Could | Partly met (#12): length, allow-list and definition order are done |
-| FR-106 | Further checks: heading-level jumps, duplicate headings, broken links, missing alt text, long headings, required sections. | Could | Partly met (#41): through markdownlint and structure rules, not built-in rules |
+| FR-104 | Lint results shall be available as text, CSV and GitHub annotations. | Should | Met: also JSON and SARIF, with `--output` |
+| FR-105 | Acronym checks shall support a required definition and a definition scope. | Could | Met: `require_definition`, `scope` (file or document) and `suggestion` |
+| FR-106 | Further checks: heading-level jumps, duplicate headings, broken links, missing alt text, long headings, required sections. | Could | Met: built-in rules DOC005 to DOC013 |
 
 ## Web sites
 

@@ -16,8 +16,9 @@ from py_doc.markdown import ParseError, parse
 
 from . import rules, structure, vale
 from .config import (
-    RULE_ACRONYM, RULE_BROKEN_LINK, RULE_DIRECTIVE, RULE_GLOSSARY, RULE_HEADING_JUMP, RULE_HEADING_LENGTH,
-    RULE_IMAGE_ALT, RULE_REDUNDANT, RULE_SENTENCE_LENGTH, LintConfig,
+    RULE_ACRONYM, RULE_BROKEN_LINK, RULE_DIRECTIVE, RULE_DUPLICATE_HEADING, RULE_GLOSSARY, RULE_HEADING_JUMP,
+    RULE_HEADING_LENGTH, RULE_IMAGE_ALT, RULE_REDUNDANT, RULE_REQUIRED_SECTION, RULE_SENTENCE_LENGTH, RULE_TERMINOLOGY,
+    RULE_UNCLOSED_FENCE, LintConfig,
 )  # fmt: skip
 from .mdlint import run_markdownlint
 from .model import FileResult, LintIssue, LintReport
@@ -38,6 +39,8 @@ _DOCUMENT_RULES = (
     (RULE_IMAGE_ALT, rules.image_alt, False),
     (RULE_SENTENCE_LENGTH, rules.sentence_length, True),
     (RULE_HEADING_LENGTH, rules.heading_length, False),
+    (RULE_DUPLICATE_HEADING, rules.duplicate_headings, False),
+    (RULE_UNCLOSED_FENCE, rules.unclosed_fences, False),
 )
 
 
@@ -103,6 +106,34 @@ class DocLinter:
         """The issue at the severity the configuration gives its rule."""
         severity = self.config.severities.get(issue.rule, "warning")
         return LintIssue(issue.file, issue.line, issue.rule, issue.category, issue.message, severity, issue.suggestion)
+
+    def _parsed(self, file: Path):
+        """The document tree of a file, or None when it cannot be read or parsed (its own result says why)."""
+        try:
+            return parse(file.read_text(encoding="utf-8-sig"))
+        except (OSError, UnicodeDecodeError, ParseError):
+            return None
+
+    def _required_sections(self, report: LintReport) -> None:
+        """``lint.required_sections``, over all the files of each document that has a scanned file."""
+        if not self.config.required_sections or RULE_REQUIRED_SECTION in self.config.disabled_rules:
+            return
+        scanned = {result.file for result in report.results}
+        found: list[LintIssue] = []
+        for doc_id, sources in self.config.documents.items():
+            files = [s.resolve() for s in sources if s.exists()]
+            if not files or not scanned.intersection(files):
+                continue
+            titles = [title for file in files if (tree := self._parsed(file)) is not None for title in rules.headings(tree)]
+            found += rules.required_sections(doc_id, files, titles, self.config)
+        report.add([self._graded(issue) for issue in found])
+
+    def _terminology(self, report: LintReport) -> None:
+        """One spelling of each hyphenated word over every file linted together."""
+        if RULE_TERMINOLOGY in self.config.disabled_rules:
+            return
+        prose = [(r.file, segments(tree)) for r in report.results if r.error is None and (tree := self._parsed(r.file)) is not None]
+        report.add([self._graded(issue) for issue in rules.terminology(prose, self.config)])
 
     def _document_acronyms(self, report: LintReport) -> None:
         """With ``lint.acronyms.scope: document``, read acronyms over each document's files in order.
@@ -175,6 +206,8 @@ class DocLinter:
         folders = [target if target.is_dir() else target.parent for target in resolved]
         self._whole_document_rules(report)
         self._document_acronyms(report)
+        self._required_sections(report)
+        self._terminology(report)
         self._markdownlint(report)
         try:
             base = Path(os.path.commonpath(folders))

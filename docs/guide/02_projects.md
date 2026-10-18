@@ -103,7 +103,7 @@ lint:
 - **Reports**: `reports.path` writes the JSON build report of every build.
 - **Collections** name sets of source files: a list of files and patterns such as `docs/guide/*.md` or `docs/**/*.md`. A document takes one in with `{collection: name}`, which can carry `heading_offset` and `page_break`. The same file can be in several collections and documents.
 - **Bundles** build several documents as one output, beside their own outputs. A bundle lists its `documents` and can set the same properties, `outputs`, `variables` and `conditions` as a document. Its own properties come first, then the first document's front matter. Each document after the first starts on a new page. `py-doc build handbook` builds one bundle. A bundle is not on the site unless `site.documents` names it.
-- **Reserved**: `content` is accepted and kept, with a warning, for the content generators that are still to come.
+- **Content generators** (`content.generators`) write Markdown files from other sources before the build, and **build** settings (`build.lint`, `build.lint_report`, `build.site`, `build.generate`) say what `py-doc build` does around the documents. Both are in [Generators, the build pipeline and analysis](11_pipeline.md).
 
 ## Building
 
@@ -112,9 +112,10 @@ py-doc build                      # every document
 py-doc build c4-guide -f pptx     # one document, one format
 py-doc build --var version=2.1 --condition internal=true
 py-doc build --keep-going         # list every broken diagram, not just the first
+py-doc build --lint --site        # generate, lint, build the documents, then the site
 ```
 
-`--var` and `--condition` win over the values in the file. A document that fails does not stop the others: each failure is named, a summary follows, and the exit status is `1`.
+`--var` and `--condition` win over the values in the file. A document that fails does not stop the others: each failure is named, a summary follows, and the exit status is `1`. The generators, lint and site steps around the documents are described in [the build pipeline](11_pipeline.md#the-build-pipeline).
 
 ## Converting single files
 

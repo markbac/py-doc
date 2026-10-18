@@ -17,6 +17,7 @@ SRC = Path(__file__).parent.parent / "src"
 # Modules that are command line front ends: they print results and errors for people and programs.
 FRONT_ENDS = {
     "app.py", "_cli.py", "cli.py", "slides_cli.py", "tools_cli.py", "template_cli.py", "import_cli.py", "__main__.py", "lint/cli.py", "c4/cli.py", "site/cli.py", "init.py", "new.py",
+    "analysis/cli.py", "generators/cli.py",
 }  # fmt: skip
 
 

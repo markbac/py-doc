@@ -45,6 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
         common(sub)
         sub.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
         sub.add_argument("--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set an [[IF:]] condition")
+        sub.add_argument("--no-generate", action="store_true", help="Do not run content.generators first")
         if name == "build":
             sub.add_argument("--target", action="append", default=[], metavar="NAME", help="Build only this site of site.targets (default: every one)")
     return parser
@@ -69,6 +70,10 @@ def run_site(argv: Sequence[str] | None = None) -> int:
         words = {"true": True, "false": False}
         conditions = {name: words.get(value.lower(), value) for name, value in args.condition}
         targets = _targets(config, getattr(args, "target", []))
+        if config.generators and config.build.generate and not args.no_generate:
+            from py_doc.generators import run_generators
+
+            run_generators(config)
         engine, written = generate_site(config, runtime, dict(args.var), conditions)
         print(f"Wrote {len(written)} file(s) in {engine.root}")
         if args.action == "build":

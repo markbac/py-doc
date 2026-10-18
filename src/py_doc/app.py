@@ -20,12 +20,15 @@ from .build import build_document
 from .cli import run_docx
 from .config import FORMATS, ConfigError, find_config, load_config, parse_config
 from .errors import ConversionError, exit_status
+from .generators import GeneratorError, run_generators
 from .lint.cli import run as run_lint
 from .migrate import LEGACY_FORMATS, Migration, migrate, render
 from .report import BuildReport
 from .runtime import connect
 from .slides_cli import run_slides
+from .analysis.cli import run_check, run_diff, run_stats
 from .c4.cli import run_c4
+from .generators.cli import run_generate
 from .import_cli import run_import
 from .init import run_init
 from .new import run_new
@@ -47,6 +50,10 @@ _DELEGATES = {
     "import": ("Convert a Word (.docx) or PowerPoint (.pptx) file to Markdown", run_import),
     "template": ("Check and inspect Word and PowerPoint templates", run_template),
     "site": ("Make and build a web site of the documents (MkDocs or Astro + Starlight)", run_site),
+    "generate": ("Write the Markdown that content.generators makes", run_generate),
+    "check": ("Check a project without building it: py-doc.yml, sources, templates and lint", run_check),
+    "stats": ("Count the words, headings, tables, pictures and links of documents", run_stats),
+    "diff": ("Compare two versions of documents section by section", run_diff),
     "doctor": ("Check that the tool container works", run_doctor),
     "setup": ("Install Docker Engine for the tool runner", run_setup),
 }
@@ -56,7 +63,12 @@ BUILD_EXAMPLES = """examples:
   py-doc build                               every document in the nearest py-doc.yml
   py-doc build guide -f docx                 only the guide, only as Word
   py-doc build --var version=2.1 --condition audience=staff
-  py-doc build --legacy G460-TN-012.yaml     one legacy build file, without py-doc.yml"""
+  py-doc build --legacy G460-TN-012.yaml     one legacy build file, without py-doc.yml
+  py-doc build --lint --site                 generate, lint, build every document, then the site
+  py-doc build --strict --lint-report lint.sarif     for CI: warnings fail, issues for code scanning
+
+The pipeline: check py-doc.yml, run content.generators, lint (build.lint or --lint), build the documents and
+bundles, build the site (build.site or --site), then check that every output was written."""
 
 MIGRATE_EXAMPLES = """examples:
   py-doc migrate docs --check                report what would be migrated, write nothing
@@ -99,6 +111,15 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("--report", metavar="FILE", help="Write a JSON report of the build (default: reports.path in py-doc.yml)")
     build.add_argument("--timestamps", action="store_true", help="Put the time and the render times in the report")
     build.add_argument("--keep-going", action="store_true", help="Report every broken diagram, not just the first")
+    lint = build.add_mutually_exclusive_group()
+    lint.add_argument("--lint", dest="lint", action="store_const", const="on", help="Lint the sources first: an error stops the build")
+    lint.add_argument("--strict", dest="lint", action="store_const", const="strict", help="Lint the sources first: a warning stops the build too")
+    lint.add_argument("--no-lint", dest="lint", action="store_const", const="off", help="Do not lint, whatever build.lint says")
+    build.add_argument("--lint-report", metavar="FILE", help="Also write the lint issues to FILE (.sarif, .json or .csv)")
+    site = build.add_mutually_exclusive_group()
+    site.add_argument("--site", dest="site", action="store_true", default=None, help="Build the site after the documents")
+    site.add_argument("--no-site", dest="site", action="store_false", help="Do not build the site, whatever build.site says")
+    build.add_argument("--no-generate", action="store_true", help="Do not run content.generators first")
     noise = build.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -191,32 +212,9 @@ def _build(args: argparse.Namespace) -> int:
 
     report_path = Path(args.report).resolve() if args.report else config.report
     report = BuildReport(config.root, args.timestamps) if report_path else None
-    failed = 0
-    status = 0
     names = args.documents or list(config.documents)
     with report.recording() if report else contextlib.nullcontext():
-        for name in names:
-            try:
-                build_document(
-                    config, config.documents[name], args.format, dict(args.var), _conditions(args.condition), runtime,
-                    args.keep_going, report,
-                )
-            except (FileNotFoundError, ConversionError) as exc:
-                _error(f"{name}: {exc}")
-                failed += 1
-                status = max(status, exit_status(exc))
-                if report:
-                    report.failed(name, exc)
-            except Exception as exc:  # one document must not stop the others
-                logger.debug("Unexpected failure", exc_info=True)
-                _error(f"{name}: {type(exc).__name__}: {exc}")
-                failed += 1
-                status = max(status, 1)
-                if report:
-                    report.failed(name, exc)
-        if len(names) > 1 or failed:
-            summary = f"{len(names) - failed} of {len(names)} document(s) built" + (f", {failed} failed" if failed else "")
-            (logger.error if failed else logger.info)(summary)
+        status = _pipeline(args, config, names, runtime, report)
     if report:
         report.describe_runtime(used[-1] if used else None)
         try:
@@ -225,6 +223,128 @@ def _build(args: argparse.Namespace) -> int:
             _error(f"Cannot write the report {report_path}: {exc.strerror or exc}")
             status = max(status, 1)
     return status
+
+
+def _pipeline(args: argparse.Namespace, config, names: list[str], runtime, report: BuildReport | None) -> int:
+    """Generate, lint, build the documents and bundles, build the site, then check the outputs.
+
+    A failed stage stops the ones after it, except that every document is tried. Returns the exit status.
+    """
+
+    def step(name: str, state: str, detail: str = "") -> None:
+        if report:
+            report.step(name, state, detail)
+
+    # 1. content generators: their files are sources, so they come before anything reads the sources
+    if config.generators and config.build.generate and not args.no_generate:
+        try:
+            changed = run_generators(config)
+        except GeneratorError as exc:
+            _error(str(exc))
+            step("generate", "failed", str(exc))
+            return 1
+        step("generate", "ok", f"{len(config.generators)} generator(s), {len(changed)} file(s) changed")
+
+    # 2. lint the sources of the documents being built
+    lint_mode = args.lint or config.build.lint
+    lint_report = Path(args.lint_report).resolve() if args.lint_report else config.build.lint_report
+    if lint_mode != "off":
+        status = _lint_sources(config, names, lint_mode, lint_report, runtime)
+        step("lint", "failed" if status else "ok")
+        if status:
+            _error("Lint found problems, so nothing was built. Fix them, or build with --no-lint")
+            return status
+    else:
+        step("lint", "skipped")
+
+    # 3. the documents, bundles included: one failure does not stop the others
+    failed = 0
+    status = 0
+    written: list[Path] = []
+    for name in names:
+        try:
+            written += build_document(
+                config, config.documents[name], args.format, dict(args.var), _conditions(args.condition), runtime,
+                args.keep_going, report,
+            ) or []
+        except (FileNotFoundError, ConversionError) as exc:
+            _error(f"{name}: {exc}")
+            failed += 1
+            status = max(status, exit_status(exc))
+            if report:
+                report.failed(name, exc)
+        except Exception as exc:  # one document must not stop the others
+            logger.debug("Unexpected failure", exc_info=True)
+            _error(f"{name}: {type(exc).__name__}: {exc}")
+            failed += 1
+            status = max(status, 1)
+            if report:
+                report.failed(name, exc)
+    if len(names) > 1 or failed:
+        summary = f"{len(names) - failed} of {len(names)} document(s) built" + (f", {failed} failed" if failed else "")
+        (logger.error if failed else logger.info)(summary)
+    step("documents", "failed" if failed else "ok", f"{len(names) - failed} of {len(names)} built")
+    if failed:
+        return status
+
+    # 4. the site, from the same sources
+    want_site = config.build.site if args.site is None else args.site
+    if want_site:
+        if config.site is None:
+            _error("A site build was asked for, but py-doc.yml has no site section")
+            step("site", "failed", "no site section")
+            return 1
+        try:
+            from .site.pages import generate_site
+
+            engine, _ = generate_site(config, runtime, dict(args.var), _conditions(args.condition))
+            for _, config_file in config.site.targets.items() or [(None, None)]:
+                logger.info(f"Built the site in {engine.build(runtime(), config_file)}")
+        except (ConversionError, FileNotFoundError) as exc:
+            _error(f"site: {exc}")
+            step("site", "failed", str(exc))
+            return exit_status(exc) if isinstance(exc, ConversionError) else 1
+        step("site", "ok")
+
+    # 5. every output is there and not empty
+    missing = [path for path in written if not path.is_file() or path.stat().st_size == 0]
+    for path in missing:
+        _error(f"{_shown(path)} was not written, or is empty")
+    step("verify", "failed" if missing else "ok", f"{len(written) - len(missing)} of {len(written)} output(s)")
+    return 1 if missing else 0
+
+
+def _lint_sources(config, names: list[str], mode: str, output: Path | None, runtime) -> int:
+    """Lint every source of the documents (bundles: of theirs). Prints the issues; returns the lint exit status."""
+    from .lint import DocLinter
+    from .lint.cli import exit_status as lint_status
+    from .lint.cli import render as render_lint
+    from .lint.linter import LintTargetError
+
+    files = sorted({
+        s.file.resolve() for name in names for s in config.documents[name].sources
+        if s.include and s.structurizr is None and s.file.suffix.lower() in (".md", ".markdown") and s.file.exists()
+    })  # fmt: skip
+    if not files:
+        return 0
+    try:
+        lint = DocLinter(config=config.lint, runtime=runtime).lint_paths(files)
+    except (LintTargetError, ConversionError) as exc:
+        _error(str(exc))
+        return 2
+    print(render_lint(lint, "text"), end="")
+    if output is not None:
+        fmt = {".sarif": "sarif", ".json": "json", ".csv": "csv"}.get(output.suffix.lower())
+        if fmt is None:
+            _error(f"{output} must end in .sarif, .json or .csv, which says its format")
+            return 2
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(render_lint(lint, fmt), encoding="utf-8")
+        logger.info(f"Wrote the lint issues to {output}")
+    for result in lint.errors:
+        _error(f"{_shown(result.file)}: {result.error}")
+    logger.info(f"Lint: {len(lint.issues)} issue(s) in {lint.files_scanned} file(s), {lint.count('warning')} warning or error")
+    return lint_status(lint, mode == "strict")
 
 
 # --- migrate -------------------------------------------------------------------------------------

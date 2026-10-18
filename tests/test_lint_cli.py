@@ -264,3 +264,21 @@ class TestSeveralTargets:
             run(["--help"])
         out = capsys.readouterr().out
         assert out.startswith("usage: py-doc lint") and "[TARGET ...]" in out and "py-doc lint docs README.md" in out
+
+
+def test_json_and_sarif_output(tmp_path, monkeypatch, capsys):
+    import json
+
+    (tmp_path / "a.md").write_text("# A\n\nWe test in order to win.\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    assert run(["a.md", "--engine", "builtin", "--format", "json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["summary"]["warning"] == 1 and data["issues"][0] == {
+        "file": "a.md", "line": 3, "column": None, "severity": "warning", "rule": "DOC002", "category": "Style",
+        "message": "Redundant phrase found: 'in order to'. Consider simplifying.", "suggestion": "to",
+    }  # fmt: skip
+    assert run(["a.md", "--engine", "builtin", "--format", "sarif", "--output", "out/l.sarif", "--strict"]) == 1
+    sarif = json.loads((tmp_path / "out" / "l.sarif").read_text(encoding="utf-8"))
+    (result,) = sarif["runs"][0]["results"]
+    assert result["level"] == "warning" and result["locations"][0]["physicalLocation"]["region"] == {"startLine": 3}
+    assert sarif["runs"][0]["tool"]["driver"]["rules"][0]["id"] == "DOC002"

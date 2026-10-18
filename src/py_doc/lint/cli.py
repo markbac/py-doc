@@ -16,17 +16,20 @@ from py_doc.config import ConfigError, find_config, load_config
 from py_doc.errors import ConversionError
 from py_doc.runtime import RuntimeSettings, connect
 
+from . import formats
 from .config import LintConfig
 from .linter import DocLinter, LintTargetError
 from .model import FileResult, LintIssue, LintReport
 
 logger = logging.getLogger(__name__)
+FORMATS = ("text", "csv", "github", "json", "sarif")
 EXAMPLE_RULES = Path(__file__).with_name("examples") / "structure-rules.yaml"
 EXAMPLES = """examples:
   py-doc lint                          check every Markdown file below this folder
   py-doc lint docs README.md           check a folder and a file as one report
   py-doc lint docs --strict            exit with status 1 on any warning (for CI)
   py-doc lint docs --format github     annotations for a GitHub Actions run
+  py-doc lint docs --format sarif --output lint.sarif   for code scanning
   py-doc lint --check-engines          say whether Vale is installed and used"""
 
 
@@ -67,9 +70,10 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         help="auto runs the built-in rules and Vale when it is installed, builtin skips Vale, vale uses Vale for the text rules",
     )  # fmt: skip
     parser.add_argument(
-        "--format", choices=("text", "csv", "github"), default="text",
-        help="text (default), csv for a spreadsheet, github for workflow annotations",
+        "--format", choices=FORMATS, default="text",
+        help="text (default), csv for a spreadsheet, github for workflow annotations, json, or sarif for code scanning",
     )  # fmt: skip
+    parser.add_argument("--output", metavar="FILE", help="Write the report to this file instead of standard output")
     parser.add_argument("--show-vale-config", action="store_true", help="Print the Vale configuration py-doc would use and exit")
     parser.add_argument("--check-engines", action="store_true", help="Report whether Vale is found, its version and its folder")
     parser.add_argument("--sync", action="store_true", help="Download the Vale packages in lint.vale.packages (vale sync)")
@@ -103,7 +107,7 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
     except (LintTargetError, ConversionError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2
-    return _print(report, strict=args.strict, fmt=args.format)
+    return _print(report, strict=args.strict, fmt=args.format, output=Path(args.output) if args.output else None)
 
 
 def _model_checks(args: argparse.Namespace, config: LintConfig, settings: RuntimeSettings) -> list:
@@ -162,7 +166,7 @@ def _vale_command(args: argparse.Namespace, linter: DocLinter) -> int:
         return 0
     runner = linter.vale_runner(base)
     if args.check_engines:
-        print("builtin: available (DOC001 to DOC004)")
+        print("builtin: available (DOC001 to DOC009)")
         if runner is None:
             print("vale: not used (off, or not installed)")
             print(f"  {vale.INSTALL_HELP}")
@@ -211,26 +215,44 @@ def _annotation(issue: LintIssue) -> str:
     return f"::{level} {properties}::{escape(issue.message)}"
 
 
-def _print(report: LintReport, strict: bool, fmt: str = "text") -> int:
+def render(report: LintReport, fmt: str) -> str:
+    """The issues of a report in one of FORMATS, paths relative to the working folder."""
     shown = [_shown(issue) for issue in report.issues]
+    errors = [replace(result, file=_display(result.file)) for result in report.errors]
     if fmt == "csv":
-        print(_csv(shown), end="")
-    else:
-        for issue in shown:
-            print(_annotation(issue) if fmt == "github" else issue)
-    for result in report.errors:
-        _error(result)
-    failing = report.count("warning")
-    print(
-        f"\n[SUMMARY] Scanned {report.files_scanned} file(s): {len(report.issues)} issue(s) reported"
-        f" ({failing} warning or error), {len(report.errors)} file(s) could not be linted.",
-        file=sys.stderr if fmt == "csv" else sys.stdout,
-    )
+        return _csv(shown)
+    if fmt == "json":
+        return formats.to_json(report, shown, errors)
+    if fmt == "sarif":
+        return formats.to_sarif(shown, errors)
+    return "".join(f"{_annotation(issue) if fmt == 'github' else issue}\n" for issue in shown)
+
+
+def exit_status(report: LintReport, strict: bool) -> int:
     if report.errors:
         return 2
     if report.count("error"):
         return 1  # an issue the configuration calls an error always fails
-    return 1 if strict and failing else 0
+    return 1 if strict and report.count("warning") else 0
+
+
+def _print(report: LintReport, strict: bool, fmt: str = "text", output: Path | None = None) -> int:
+    text = render(report, fmt)
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(text, encoding="utf-8")
+    else:
+        print(text, end="")
+    for result in report.errors:
+        _error(result)
+    failing = report.count("warning")
+    machine = fmt in ("csv", "json", "sarif") and output is None  # keep standard output parseable
+    print(
+        f"\n[SUMMARY] Scanned {report.files_scanned} file(s): {len(report.issues)} issue(s) reported"
+        f" ({failing} warning or error), {len(report.errors)} file(s) could not be linted.",
+        file=sys.stderr if machine else sys.stdout,
+    )
+    return exit_status(report, strict)
 
 
 def _error(result: FileResult) -> None:

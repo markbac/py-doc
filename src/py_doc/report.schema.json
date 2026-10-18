@@ -9,6 +9,20 @@
     "py_doc": {"type": "string"},
     "status": {"enum": ["ok", "failed"]},
     "error": {"type": ["string", "null"]},
+    "steps": {
+      "description": "The stages of the build pipeline that ran, in order",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "step": {"enum": ["generate", "lint", "documents", "site", "verify"]},
+          "status": {"enum": ["ok", "failed", "skipped"]},
+          "detail": {"type": "string"}
+        }
+      }
+    },
     "generated": {"type": "string", "description": "UTC time, only with --timestamps"},
     "image": {
       "type": "object",

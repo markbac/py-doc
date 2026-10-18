@@ -30,6 +30,7 @@ documents:
       - docs/guide/08_sites.md
       - docs/guide/09_reference.md
       - docs/guide/10_legacy.md
+      - docs/guide/11_pipeline.md
     outputs:
       docx: {toc: true}
       html: {toc: true}

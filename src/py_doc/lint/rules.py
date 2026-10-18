@@ -9,8 +9,9 @@ from urllib.parse import unquote
 from py_doc.markdown import nodes as n
 
 from .config import (
-    RULE_ACRONYM, RULE_BROKEN_LINK, RULE_GLOSSARY, RULE_HEADING_JUMP, RULE_HEADING_LENGTH, RULE_IMAGE_ALT,
-    RULE_REDUNDANT, RULE_SENTENCE_LENGTH, LintConfig,
+    RULE_ACRONYM, RULE_BROKEN_LINK, RULE_DUPLICATE_HEADING, RULE_GLOSSARY, RULE_HEADING_JUMP, RULE_HEADING_LENGTH,
+    RULE_IMAGE_ALT, RULE_REDUNDANT, RULE_REQUIRED_SECTION, RULE_SENTENCE_LENGTH, RULE_TERMINOLOGY, RULE_UNCLOSED_FENCE,
+    LintConfig,
 )  # fmt: skip
 from .model import LintIssue
 from .text import Segment
@@ -245,6 +246,106 @@ def heading_length(file: Path, document: n.Document, config: LintConfig) -> list
                         file, node.line, RULE_HEADING_LENGTH, "Style",
                         f"Heading of {len(text)} characters; the limit is {config.heading_length}.",
                         suggestion="Shorten it",
+                    )
+                )  # fmt: skip
+    return issues
+
+
+def duplicate_headings(file: Path, document: n.Document, config: LintConfig) -> list[LintIssue]:
+    """A heading with the same text as an earlier one under the same parent heading: two sections a reader
+    (and a link to its anchor) cannot tell apart."""
+    issues: list[LintIssue] = []
+    seen: dict[tuple, int] = {}
+    parents: list[str] = []  # the text of the open heading at each level
+    for node in n.walk(document):
+        if not isinstance(node, n.Heading):
+            continue
+        text = " ".join(n.plain_text(node.children).split()).lower()
+        del parents[node.level - 1 :]
+        key = (tuple(parents), node.level, text)
+        if text and key in seen:
+            issues.append(
+                LintIssue(
+                    file, node.line, RULE_DUPLICATE_HEADING, "Structure",
+                    f"Heading '{n.plain_text(node.children).strip()}' repeats the one on line {seen[key]} in the same section.",
+                    suggestion="Give it a distinct title",
+                )
+            )  # fmt: skip
+        seen.setdefault(key, node.line)
+        parents += [""] * (node.level - 1 - len(parents)) + [text]
+    return issues
+
+
+def unclosed_fences(file: Path, document: n.Document, config: LintConfig) -> list[LintIssue]:
+    """A code fence that is never closed, so the rest of the file becomes code."""
+    return [
+        LintIssue(
+            file, node.line, RULE_UNCLOSED_FENCE, "Structure", "Code fence is never closed: the rest of the file is code.",
+            suggestion="Close it with the same fence (``` or ~~~) on a line of its own",
+        )  # fmt: skip
+        for node in n.walk(document)
+        if isinstance(node, n.CodeBlock) and node.fenced and not node.closed
+    ]
+
+
+def headings(document: n.Document) -> list[str]:
+    return [" ".join(n.plain_text(node.children).split()) for node in n.walk(document) if isinstance(node, n.Heading)]
+
+
+def required_sections(doc_id: str, files: list[Path], found: list[str], config: LintConfig) -> list[LintIssue]:
+    """The headings ``lint.required_sections`` asks of a document (its own list, then ``*``) that none of its
+    files has. Matching ignores case and a leading number such as ``2.1``."""
+    wanted = config.required_sections.get(doc_id, config.required_sections.get("*", []))
+    have = {_bare(text) for text in found}
+    return [
+        LintIssue(
+            files[0], 1, RULE_REQUIRED_SECTION, "Structure", f"Document '{doc_id}' has no '{section}' section.",
+            suggestion=f"Add a heading '{section}'",
+        )  # fmt: skip
+        for section in wanted
+        if _bare(section) not in have
+    ]
+
+
+def _bare(heading: str) -> str:
+    return re.sub(r"^[\d.]+\s+", "", heading.strip()).lower()
+
+
+_HYPHENATED = re.compile(r"(?<![\w-])([A-Za-z]+)-([A-Za-z]{2,})(?![\w-])")  # e-mail, sub-system
+
+
+def terminology(files: list[tuple[Path, list[Segment]]], config: LintConfig) -> list[LintIssue]:
+    """A word written both hyphenated and closed up (e-mail and email, sub-system and subsystem) across the
+    files read together. The rarer spelling is reported at each use, with the commoner one suggested."""
+    uses: dict[str, dict[str, list[tuple[Path, int]]]] = {}
+    joined: dict[str, str] = {}
+    for file, segments in files:
+        for segment in segments:
+            for match in _HYPHENATED.finditer(segment.text):
+                key = (match.group(1) + match.group(2)).lower()
+                uses.setdefault(key, {}).setdefault(match.group(0), []).append((file, segment.line_at(match.start())))
+    if not uses:
+        return []
+    closed = re.compile(r"(?<![\w-])(" + "|".join(re.escape(k) for k in uses) + r")(?![\w-])", re.IGNORECASE)
+    for file, segments in files:
+        for segment in segments:
+            for match in closed.finditer(segment.text):
+                word = match.group(0)
+                joined[word.lower()] = joined.get(word.lower(), word)
+                uses[word.lower()].setdefault(word, []).append((file, segment.line_at(match.start())))
+    issues: list[LintIssue] = []
+    for key, spellings in uses.items():
+        if key not in joined or len({s.lower() for s in spellings}) < 2:
+            continue
+        common = max(spellings, key=lambda s: (len(spellings[s]), s == joined[key]))
+        for spelling, places in spellings.items():
+            if spelling.lower() == common.lower():
+                continue
+            for file, line in places:
+                issues.append(
+                    LintIssue(
+                        file, line, RULE_TERMINOLOGY, "Terminology",
+                        f"'{spelling}' is also written '{common}' in these files.", suggestion=common,
                     )
                 )  # fmt: skip
     return issues
