@@ -7,6 +7,9 @@
 % Fonts (XeLaTeX / fontspec) — Carlito/Caladea are metric-compatible with
 % Calibri/Cambria, matching the look of the Template.docx output so the
 % XeLaTeX and LibreOffice-converted PDFs stay visually consistent.
+% Where they are not installed (a TeX outside the tool container), the fonts
+% they copy come next (Cambria, Calibri, Consolas on Windows), then Latin Modern.
+% Their fi and fl ligatures copy out of a PDF as nothing, so they are off.
 % ---------------------------------------------------------------------------
 \usepackage{fontspec}
 \IfFontExistsTF{Caladea}{\setmainfont{Caladea}}{%
@@ -30,6 +33,7 @@
 \usepackage{adjustbox}
 \usepackage{longtable,booktabs,array,calc}
 \usepackage{xcolor}
+\usepackage{amsmath}  % \text, align and the other commands pandoc writes for maths
 \usepackage{amssymb}  % \boxtimes and \square, which pandoc writes for task lists
 % pandoc writes ~~struck out~~ as \st{} or \sout{}, and underlined text as \ul{} or \uline{}
 \IfFileExists{ulem.sty}{\usepackage[normalem]{ulem}}{}
