@@ -298,6 +298,26 @@ def test_latex_template_defines_task_list_boxes():
     assert "\\usepackage{amssymb}" in template
 
 
+def test_latex_template_loads_amsmath():
+    """pandoc writes \\text and other amsmath commands for maths, so the PDF template must load amsmath."""
+    template = (Path(source.__file__).parent / "resources" / "latex_template.tex").read_text(encoding="utf-8")
+    assert "\\usepackage{amsmath}" in template
+
+
+@needs_xelatex
+def test_pdf_with_amsmath_maths(tmp_path, host):
+    """Inline and displayed maths with \\text and \\frac builds to a PDF; \\text failed before amsmath was loaded."""
+    _, runtime = host
+    config, doc = project(tmp_path, "      pdf: {}\n")
+    (tmp_path / "guide.md").write_text(
+        "# Sleep time\n\nThe delay is $\\text{base} \\times 2^{\\text{attempt}}$.\n\n"
+        "$$\\text{Lifespan} = \\frac{100{,}000\\ \\text{cycles}}{22.5\\ \\text{erases/day}}$$\n",
+        encoding="utf-8",
+    )
+    (out,) = build_document(config, doc, ["pdf"], runtime=runtime)
+    assert out.read_bytes().startswith(b"%PDF")
+
+
 def test_pdf_html_and_pptx_turn_caption_markers_into_captions():
     from py_doc.pandoc.engine import FILTERS
 
