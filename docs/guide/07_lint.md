@@ -44,7 +44,14 @@ A `[[CAPTION:Figure]]` or `[[CAPTION:Table]]` marker counts when it is on the li
 
 - **Required sections**: `lint.required_sections` maps a document to the headings it must have, or `*` to every document: `{'*': [Introduction, Scope], spec: [Requirements]}`. A document's own list replaces the `*` one. Case and a leading number such as `2.1` are ignored.
 - **Glossary**: a wrong spelling listed under two terms, or a term listed as a wrong spelling of another, is a configuration error.
-- **Acronym options** under `lint.acronyms`: `min_length` (default 3), `allowed` (added to the built-in list), `require_definition` (default true; false reports only an acronym used before a later definition), `scope` (`file`, the default, or `document`, where a definition in an earlier file of the same document in `py-doc.yml` counts and each acronym is reported once per document) and `suggestion` (the advice shown, with `{acronym}` replaced; empty for none). The severity is `lint.rules.DOC003`.
+- **Acronym options** under `lint.acronyms`:
+    - `min_length`: the shortest acronym checked (default 3).
+    - `allowed`: acronyms added to the built-in list.
+    - `require_definition`: default true. False reports only an acronym used before a later definition.
+    - `scope`: `file` (the default) or `document`. With `document`, a definition in an earlier file of the same document in `py-doc.yml` counts, and each acronym is reported once per document.
+    - `suggestion`: the advice shown, with `{acronym}` replaced; empty for none.
+
+    The severity is `lint.rules.DOC003`.
 - **Acronym definitions** are recognised in both orders, `Pre-Shared Key (PSK)` and `PSK (Pre-Shared Key)`, including mixed-case forms such as `LwM2M` and `IoT`. The words must spell out the acronym. Words in the built-in allow-list and glossary terms need no definition.
 - **Folders**: hidden folders and `node_modules`, `venv`, `env`, `site-packages`, `__pycache__`, `dist`, `build` and `vendor` are skipped. `.md` and `.markdown` files are found in any capitalisation. Paths are printed relative to the working folder.
 - **Exit status**: `0` when clean, or when only info is reported, or when warnings are reported without `--strict`. `1` for any issue the configuration calls an error, or with `--strict` and at least one warning. `2` when the target is missing or not Markdown, or when any file cannot be read, so an error is never mistaken for a clean result.
