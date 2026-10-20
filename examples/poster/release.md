@@ -70,7 +70,7 @@ sequenceDiagram
   end
 ```
 
-Fig. 1 An update over the air. The node checks the hash of the spare copy, restarts into it and tests itself, so it is never left without working firmware.
+[[CAPTION:Figure]] An update over the air. The node checks the hash of the spare copy, restarts into it and tests itself, so it is never left without working firmware.
 
 ## 4. What changed
 

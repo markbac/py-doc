@@ -105,9 +105,10 @@ columns: 3
 split: 2, 2        # two sections in the first column, two in the second, the rest in the third
 ```
 
-Two attributes in braces after a heading change one section:
+Three attributes in braces after a heading change one section:
 
 - `{.wide}` makes the section span every column. Use it for a timeline, a wide diagram or a table with many columns. The sections before it are balanced into columns above it, and the ones after it below.
+- `{.flow}` lets a long section go on in the next column, between two of its blocks, under its heading marked "(continued)". The page breaks it only when that makes the columns more even.
 - `{colour=red}` colours its heading bar, to mark a warning or a section that stands apart.
 
 ```markdown
@@ -202,6 +203,17 @@ Warehouse | 1440 | 980
 
 `type` is `column`, `bar` or `line`. Each line is a label and one value for each series, and `series:` names them. Use `bar` when the labels are long, and `line` for a change over time. A chart is drawn by py-doc itself, in the theme's colours, so it needs no tool container.
 
+A line chart can start its axis above zero, so a small change shows, and can mark a target with a dashed line:
+
+````markdown
+```chart type=line title="Cell voltage" unit=" V" min=2.2 max=3.2 step=0.2 values=last axis="Volts"
+Year 0 | 3.05
+Year 5 | 2.62
+```
+````
+
+[Posters](12_posters.md#diagrams-and-charts) lists every option.
+
 ### Diagrams
 
 Any diagram fence works, as in a document:
@@ -233,7 +245,7 @@ The kinds are note, tip, important, warning and caution, in either spelling, eac
 
 ### Pictures, tables, code and captions
 
-A local picture, `![Board](board.svg)`, is embedded in the page. A table is shown as in a document, so keep it to two or three columns. A code block is shown as code. A caption is a `[[CAPTION:Figure]] text` line next to the picture, or a paragraph that starts with `Fig.`.
+A local picture, `![Board](board.svg)`, is embedded in the page. A table is shown as in a document, so keep it to two or three columns. A code block is shown as code. A caption is a `[[CAPTION:Figure]] text` or `[[CAPTION:Table]] text` line next to the picture or table. It is numbered for you, "Figure 1:" and "Table 1:", in order down the poster. Give a caption to a figure or table that the text names, or that a reader looks at on its own. A decorative picture needs none.
 
 ## The summary and references
 
@@ -283,7 +295,7 @@ The page always has the shape of its paper. A script in it finds the narrowest l
 |---|---|
 | Space above the footer | Lower `width`, such as `width: 1100`, to make everything larger |
 | Small text everywhere | Cut words, or move a long section to its own `{.wide}` row |
-| One column much longer than the others | One section is taller than the rest. Make it `{.wide}`, split it in two, or choose the columns with `split:` |
+| One column much longer than the others | One section is taller than the rest. Mark it `{.flow}`, make it `{.wide}`, split it in two, or choose the columns with `split:` |
 | A diagram with tiny text | Simplify it, or put it in a `{.wide}` section |
 | A wide table squeezed into a column | Make its section `{.wide}`, or cut columns |
 
@@ -305,7 +317,7 @@ poster:
   footer: {centre: Example Instruments}
 ```
 
-Change one colour for one poster beside the theme with `colours:`, such as `colours: {accent: "#d9573a"}`. Set `embed_fonts: true` to put the theme's fonts inside the page, so a poster you send by email, or print to PDF, keeps them without internet. [Posters](12_posters.md) lists every colour and what it paints.
+Change one colour for one poster beside the theme with `colours:`, such as `colours: {accent: "#d9573a"}`. Set `embed_fonts: true` to put the theme's fonts inside the page, so a poster you send by email keeps them without internet. A PDF that py-doc prints always gets the fonts inside. [Posters](12_posters.md) lists every colour and what it paints.
 
 ## Reuse text
 
@@ -322,6 +334,16 @@ This is firmware {{version}}.
 ```
 
 Set the values under the poster in `py-doc.yml`, in its front matter, or for one build with `--var version=2.1 --condition internal=false`.
+
+A condition that has no value is an error, which names the file and line, so a poster never leaves text out by mistake. Give each condition a value in the front matter, the one a reader outside the company should get, and set the other in `py-doc.yml`:
+
+```yaml
+---
+conditions: {internal: false}   # the poster on its own: the public version
+---
+```
+
+`examples/poster/reliability.md` does this. Its entry in `py-doc.yml` sets `internal: true`, which wins over the front matter.
 
 ## Build, print and share
 

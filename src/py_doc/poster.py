@@ -24,7 +24,7 @@ from py_doc.directives import Fence, expand
 from py_doc.naming import git_version
 from py_doc.pandoc.source import split_front_matter
 from py_doc.poster_blocks import MD, Ctx, PosterError, block_html, esc, inline, parse_opts, qr_svg
-from py_doc.poster_fonts import font_css
+from py_doc.poster_fonts import font_css, web_faces
 from py_doc.poster_settings import SettingsError, layer, merge
 from py_doc.poster_themes import apply_overrides, load_theme
 from py_doc.runtime import Mount, Runtime
@@ -63,6 +63,7 @@ main{padding:24px 40px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
 .abstract{background:var(--secondary);color:var(--on-secondary);padding:18px 28px;font-size:19px;line-height:1.45;text-align:center}
 .abstract p{margin:0}
 .cols{display:flex;gap:28px;align-items:flex-start}
+section.continued h2::after{content:" (continued)";font-weight:400;opacity:.8}
 .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:22px}
 section h2{margin:0 0 10px;background:var(--primary);color:var(--on-primary);font-family:var(--font-heading);padding:10px 16px;font-size:25px;line-height:1.2}
 section h2 span{color:var(--highlight);font-weight:600}
@@ -159,24 +160,57 @@ SCRIPT = """
 var R=__RATIO__, MIN=__MIN__, PAPER=__PAPER_PX__;
 var p=document.querySelector('.poster');
 // Share the sections of each balanced group between its columns by their measured heights, keeping their
-// order: of every split into one run of sections for each column, the one whose tallest column is shortest
+// order. A {.flow} section may also break between its blocks, and goes on in the next column under its own
+// heading, marked as continued. Of every split, take those whose tallest column is shortest, and of those
+// the one whose columns are most even.
 function balance(){
   p.querySelectorAll('.cols[data-balance]').forEach(function(g){
-    var cols=g.querySelectorAll(':scope>.col'), k=cols.length, s=[];
-    cols.forEach(function(c){s.push.apply(s,c.querySelectorAll(':scope>section'));});
-    var n=s.length, gap=parseFloat(getComputedStyle(cols[0]).rowGap)||0, pre=[0], i, j, t;
+    var cols=g.querySelectorAll(':scope>.col'), k=cols.length, i, j, t;
+    g.querySelectorAll('section.continued').forEach(function(c){  // undo the last run first
+      var to=c._of.querySelector(':scope>.body');
+      [].slice.call(c.querySelector(':scope>.body').children).forEach(function(kid){to.appendChild(kid);});
+      c.remove();
+    });
+    var u=[];  // the units to share out: whole sections, or the blocks of a flow section
+    cols.forEach(function(c){c.querySelectorAll(':scope>section').forEach(function(s){
+      var r=s.getBoundingClientRect(), b=s.querySelector(':scope>.body'), kids=b?[].slice.call(b.children):[];
+      if(!s.classList.contains('breakable')||kids.length<2){u.push({s:s,h:r.height,o:0});return;}
+      var tops=kids.map(function(kid){return kid.getBoundingClientRect().top;}), head=tops[0]-r.top, part=null;
+      kids.forEach(function(kid,x){
+        var glued=part&&(kid.classList.contains('caption')||kids[x-1].classList.contains('caption'));
+        var h=(x<kids.length-1?tops[x+1]:r.bottom)-(x?tops[x]:r.top);
+        if(glued){part.h+=h;part.kids.push(kid);return;}  // a caption stays with its picture or table
+        part={s:s,h:h,o:x?head:0,kids:[kid]};u.push(part);
+      });
+    });});
+    var n=u.length, gap=parseFloat(getComputedStyle(cols[0]).rowGap)||0, pre=[0], gaps=[0, 0];
     if(k<2||n<=k){return;}
-    for(i=0;i<n;i++){pre.push(pre[i]+s[i].getBoundingClientRect().height);}
-    function run(a,b){return pre[b]-pre[a]+gap*(b-a-1);}
-    var best=[[0]], cut=[[0]];
-    for(i=1;i<=n;i++){best[0][i]=Infinity;}
-    for(j=1;j<=k;j++){best[j]=[Infinity];cut[j]=[0];
-      for(i=1;i<=n;i++){best[j][i]=Infinity;
-        for(t=j-1;t<i;t++){var m=Math.max(best[j-1][t],run(t,i));if(m<best[j][i]){best[j][i]=m;cut[j][i]=t;}}}}
-    var ends=[], e=n;
-    for(j=k;j>0;j--){ends.unshift(e);e=cut[j][e];}
-    var a=0;
-    ends.forEach(function(b,c){for(i=a;i<b;i++){cols[c].appendChild(s[i]);}a=b;});
+    for(i=0;i<n;i++){pre.push(pre[i]+u[i].h);if(i){gaps.push(gaps[i]+(u[i].s!==u[i-1].s?1:0));}}
+    function run(a,b){return pre[b]-pre[a]+gap*(gaps[b]-gaps[a+1])+u[a].o;}
+    function solve(cost,limit){  // the cuts of the cheapest split, in which no column is above limit
+      var best=[[0]], cut=[[0]];
+      for(i=1;i<=n;i++){best[0][i]=Infinity;}
+      for(j=1;j<=k;j++){best[j]=[Infinity];cut[j]=[0];
+        for(i=1;i<=n;i++){best[j][i]=Infinity;
+          for(t=j-1;t<i;t++){var h=run(t,i);if(h>limit){continue;}
+            var m=cost(best[j-1][t],h);if(m<best[j][i]){best[j][i]=m;cut[j][i]=t;}}}}
+      var ends=[], e=n;
+      for(j=k;j>0;j--){ends.unshift(e);e=cut[j][e];}
+      return {top:best[k][n],ends:ends};
+    }
+    var tallest=solve(function(a,h){return Math.max(a,h);},Infinity).top;
+    var ends=solve(function(a,h){return a+h*h;},tallest+1).ends, a=0, parts=new Map();
+    ends.forEach(function(b,c){for(i=a;i<b;i++){
+      var x=u[i], part=parts.get(x.s);
+      if(!part||part.col!==c){
+        var el=x.s;
+        if(part){el=x.s.cloneNode(false);el.classList.add('continued');el._of=x.s;
+          el.appendChild(x.s.querySelector(':scope>h2').cloneNode(true));
+          var body=document.createElement('div');body.className='body';el.appendChild(body);}
+        part={col:c,el:el};parts.set(x.s,part);cols[c].appendChild(el);
+      }
+      if(x.kids){var to=part.el.querySelector(':scope>.body');x.kids.forEach(function(kid){to.appendChild(kid);});}
+    }a=b;});
   });
 }
 function natural(w){p.style.zoom='1';p.style.width=w+'px';p.style.height='auto';p.style.minHeight='0';balance();return p.scrollHeight;}
@@ -185,6 +219,7 @@ function fit(){
   var lo=MIN,hi=4000;
   if(natural(lo)<=lo*R){hi=lo;}
   else{while(hi-lo>6){var m=(lo+hi)>>1;if(natural(m)<=m*R){hi=m;}else{lo=m;}}}
+  natural(hi);  // balanced at the width it keeps, not the last one it tried
   p.style.width=hi+'px';p.style.height=(hi*R)+'px';p.style.minHeight='';
   p.dataset.w=hi;scale();
 }
@@ -208,7 +243,7 @@ COLUMNS = {"portrait": 2, "landscape": 3}
 
 FENCE = re.compile(r"(?ms)^```[ \t]*([\w+-]+)([^\n]*)\n(.*?)^```[ \t]*$")
 CALLOUTS = ("note", "tip", "important", "warning", "caution")
-_CAPTION = re.compile(r"^\s*\[\[CAPTION:\s*(?:Figure|Table)\s*\]\]\s*(?P<text>.*)$", re.I)
+_CAPTION = re.compile(r"^\s*\[\[CAPTION:\s*(?P<kind>Figure|Table)\s*\]\]\s*(?P<text>.*)$", re.I)
 _STYLE = re.compile(r"^\s*\[\[STYLE:[^\]]*\]\]\s*")
 _DROPPED = re.compile(r"^\s*(\[\[(LANDSCAPE|PORTRAIT)\]\]|::: \{\.pagebreak\}|:::)\s*$")
 _ATTRIBUTES = re.compile(r"\s*\{(?P<attrs>[^{}]*)\}\s*$")
@@ -229,13 +264,16 @@ def embed_images(text, base):
 
 
 def prepare(text):
-    """py-doc's own markers, outside code: a ``[[CAPTION:]]`` line is a caption, the page and Word markers go."""
-    out, fence = [], Fence()
+    """py-doc's own markers, outside code: a ``[[CAPTION:]]`` line is a caption, numbered as in Word
+    (Figure 1: and Table 1:, each counted down the poster), and the page and Word markers go."""
+    out, fence, counts = [], Fence(), {"Figure": 0, "Table": 0}
     for line in text.splitlines():
         if fence.inside(line):
             out.append(line)
         elif m := _CAPTION.match(line):
-            out += ["", f"@@CAPTION@@ {m['text']}", ""]
+            kind = m["kind"].title()
+            counts[kind] += 1
+            out += ["", f"@@CAPTION@@ **{kind} {counts[kind]}:** {m['text']}", ""]
         elif not _DROPPED.match(line):
             out.append(_STYLE.sub("", line))
     return "\n".join(out)
@@ -280,19 +318,25 @@ def heading_html(h):
 
 
 def heading_attributes(heading, where):
-    """A section heading and its ``{.wide colour=red}``: whether it spans every column, and its colour."""
+    """A section heading and its ``{.wide .flow colour=red}``: whether it spans every column, whether it may
+    go on in the next column, and its colour."""
     m = _ATTRIBUTES.search(heading)
     if not m:
-        return heading.strip(), False, None
-    wide, colour = False, None
+        return heading.strip(), False, None, False
+    wide, colour, flow = False, None, False
     for item in parse_opts(m["attrs"]):
         if item == ".wide":
             wide = True
+        elif item == ".flow":
+            flow = True
         elif item == "colour" or item == "color":
             colour = parse_opts(m["attrs"])[item]
         else:
             logger.warning(f"{where}: heading '{heading.strip()}' has '{item}', which a poster does not use")
-    return heading[: m.start()].strip(), wide, colour
+    if wide and flow:
+        logger.warning(f"{where}: heading '{heading.strip()}' is wide, so .flow is ignored: a wide section is never split")
+        flow = False
+    return heading[: m.start()].strip(), wide, colour, flow
 
 
 def parse_stats(text):
@@ -418,7 +462,7 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
     parts = re.split(r"(?m)^## +(.+)$", body)
     stats, abstract, summary, references, sections = [], "", None, "", []
     for heading, content in zip(parts[1::2], parts[2::2]):
-        heading, wide, colour = heading_attributes(heading, md_path)
+        heading, wide, colour, flow = heading_attributes(heading, md_path)
         key = heading.lower()
         if key == "stats":
             stats = parse_stats(content)
@@ -429,7 +473,7 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
         elif key == "references":
             references = render(content.strip(), ctx)
         else:
-            sections.append((heading, content.strip(), {"wide": wide, "colour": colour}))
+            sections.append((heading, content.strip(), {"wide": wide, "colour": colour, "flow": flow}))
     if not sections:
         raise PosterError(f"{md_path}: no sections found (expected '## Heading' blocks)")
 
@@ -440,7 +484,7 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
 
     def sec(h, c, extra):
         style = f' style="background:{ctx.theme.colour(extra["colour"])}"' if extra["colour"] else ""
-        wide = ' class="wide"' if extra["wide"] else ""
+        wide = ' class="wide"' if extra["wide"] else ' class="breakable"' if extra["flow"] else ""
         return f'<section{wide}><h2{style}>{heading_html(h)}</h2><div class="body">{render(c, ctx)}</div></section>'
 
     groups, run = [], []  # the column groups, and a wide section between two of them
@@ -494,6 +538,7 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
               .replace("__PAPER_PX__", str(paper_mm[0] / 25.4 * 96)))
     faces, link = font_css(ctx.theme, meta.get("embed_fonts") or False, str(md_path))
     fonts = ctx.theme.fonts.get("stylesheet") if link else None
+    ctx.stylesheet = fonts  # still linked, so the PDF gets its fonts put inside: see with_web_fonts
     page = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -570,17 +615,29 @@ def write_poster(source: Path, output: Path, runtime: Callable[[], Runtime], set
     wanted = ctx.settings.get("pdf") if pdf is None else pdf
     if wanted:
         target = wanted if isinstance(wanted, Path) else output.with_suffix(".pdf")
-        print_pdf(ctx.runtime(), page, target)
+        print_pdf(ctx.runtime(), with_web_fonts(page, ctx), target)
         files.append(target)
     return ctx, files
+
+
+def with_web_fonts(page: str, ctx) -> str:
+    """The page with the web fonts it links put inside it, for its PDF: the container that prints it has no
+    network. Without them, as when this computer is offline, the PDF has the fallback fonts."""
+    if not ctx.stylesheet:
+        return page
+    faces = web_faces(ctx.stylesheet, ctx.where, instead="so the PDF has the fallback fonts")
+    if faces is None:
+        return page
+    link = f'<link rel="stylesheet" href="{esc(ctx.stylesheet)}">\n'
+    return page.replace(link, "", 1).replace("<style>", "<style>" + faces, 1)
 
 
 def print_pdf(runtime: Runtime, page: str, pdf: Path) -> None:
     """Print a poster page to a one-page PDF at ``pdf``, with the Chromium of the tool container.
 
     The page sets its own paper size and scales itself to it, so the PDF is what Chrome's print dialogue
-    makes with no margins and background graphics on. The container has no network, so web fonts the theme
-    names are replaced by their fallbacks.
+    makes with no margins and background graphics on. The container has no network, so a web font the page
+    only links is replaced by its fallback: :func:`with_web_fonts` puts them inside first.
     """
     with tempfile.TemporaryDirectory(prefix="py-doc-poster-") as folder:
         work = Path(folder)

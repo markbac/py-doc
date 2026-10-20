@@ -32,7 +32,7 @@ This review covers every SN-100 node in service from 1 July to 30 September 2026
 
 ## 1. Fleet: where the nodes are
 
-[[CAPTION:Table]] Table 1. Nodes in service on 30 September, by site type
+[[CAPTION:Table]] Nodes in service on 30 September, by site type
 
 | Site type | Sites | Nodes | Share |
 |---|---|---|---|
@@ -72,9 +72,9 @@ Cold stores hold one node in eight but sent back almost one return in three, so 
 }
 ```
 
-[[CAPTION:Figure]] Fig. 1 Returns by month and cause: 24, 21 and 16
+[[CAPTION:Figure]] Returns by month and cause: 24, 21 and 16
 
-[[CAPTION:Table]] Table 2. Returns by cause, with the change on the second quarter
+[[CAPTION:Table]] Returns by cause, with the change on the second quarter
 
 | Cause | Returns | Share | Change on Q2 |
 |---|---|---|---|
@@ -86,7 +86,7 @@ Cold stores hold one node in eight but sent back almost one return in three, so 
 
 ## 3. Trend: the return rate
 
-```chart type=line title="Annualised return rate (%)" unit=" %" max=1.2 height=260 colours=navy,amber
+```chart type=line title="Annualised return rate (%)" unit=" %" max=1.2 step=0.2 height=260 colours=navy,amber values=last dashed=Target axis="Returns a year (%)"
 series: Measured, Target
 Q4 2025 | 0.92 | 0.50
 Q1 2026 | 0.81 | 0.50
@@ -120,7 +120,7 @@ digraph causes {
 }
 ```
 
-[[CAPTION:Figure]] Fig. 2 The fault tree, from the symptom to its root causes (shaded)
+[[CAPTION:Figure]] The fault tree, from the symptom to its root causes (shaded)
 
 Condensation appears twice: a wet sensor draws current and flattens the cell, or it reads out of range and reports `E01`. One fix, a coated sensor, removes both.
 
@@ -146,7 +146,7 @@ Support -> Fleet : replace or update
 @enduml
 ```
 
-[[CAPTION:Figure]] Fig. 3 How a fault becomes a support ticket
+[[CAPTION:Figure]] How a fault becomes a support ticket
 
 Every node sends a status message each hour, beside its readings. A rule opens a ticket on a cell below 2.4 V before two years, on any error code, or on six hours of silence.
 
@@ -186,7 +186,7 @@ The two chambers run the stages in opposite orders, so an effect of the order sh
 +-----------+
 ```
 
-[[CAPTION:Figure]] Fig. 4 The rig: both chambers report through one gateway to the logger
+[[CAPTION:Figure]] The rig: both chambers report through one gateway to the logger
 
 ## 7. Cell life: the Weibull analysis
 
