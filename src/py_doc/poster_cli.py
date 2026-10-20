@@ -72,7 +72,7 @@ def run_poster(argv: list[str]) -> int:
         runtime = functools.cache(lambda: connect(settings))  # one container check for every poster
         for job in jobs:
             out = Path(args.output) if args.output else job.output
-            ctx, files = write_poster(job.source, out, runtime, merge(job.settings, command_line), defaults, args.pdf)
+            ctx, files = write_poster(job.source, out, runtime, merge(job.settings, command_line), defaults, args.pdf, project.mermaid if project else None)
             print(f"wrote {out} ({ctx.n} diagrams, {ctx.failed} failed)")
             for extra in files[1:]:
                 print(f"wrote {extra}")

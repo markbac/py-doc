@@ -79,6 +79,11 @@ site:                          # a web site of the documents: see the web sites 
   engine: mkdocs
   dir: site
 
+diagrams:
+  mermaid:                     # Mermaid configuration of every Mermaid diagram
+    look: classic
+    theme: neutral
+
 poster:                        # settings for every poster: see the posters chapter
   theme: brand/poster-theme.yml
   logo: brand/logo.svg
@@ -110,6 +115,7 @@ lint:
 - **Output options** per format: `template`, `allow_missing_template`, `name`, `placeholder_prefix`, `marker` and `toc` for Word, `split_level` and `footer` for PowerPoint, `template`, `toc`, `name` and `number_sections` for PDF and HTML, and `heading_numbers` for every format. A document's value overrides the default. The [outputs chapter](04_outputs.md) has the details.
 - **Lint** settings extend the built-in glossary, phrases and allowed acronyms. The [linting chapter](07_lint.md) has every setting.
 - **C4**: `c4.cli`, `c4.image` and `c4.port` say how Structurizr runs. See the [C4 chapter](06_c4.md).
+- **Diagrams**: `diagrams.mermaid` is Mermaid configuration for every Mermaid diagram, in documents, sites and posters, such as `look`, `theme`, `layout` or `flowchart: {curve: linear}`. A diagram's own front matter wins, key by key. See [Diagrams](03_writing.md#diagrams).
 - **Reports**: `reports.path` writes the JSON build report of every build.
 - **Posters**: `posters` lists the posters `py-doc poster` builds, each with its `source`, `output` and settings, and `poster` holds settings for every poster, such as the company colours and logo. See the [posters chapter](12_posters.md).
 - **Collections** name sets of source files: a list of files and patterns such as `docs/guide/*.md` or `docs/**/*.md`. A document takes one in with `{collection: name}`, which can carry `heading_offset` and `page_break`. The same file can be in several collections and documents.

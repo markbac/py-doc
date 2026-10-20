@@ -131,7 +131,7 @@ def _pages_of(config: ProjectConfig, name: str, runtime, variables: dict, condit
     pages: list[Page] = []
     for order, ((file, text), name_) in enumerate(zip(joined.parts, slugs, strict=True), start=1):
         title = first_heading(text) or (metadata.title if order == 1 else file.stem)
-        rendered = render_parts([(file, text)], "html", runtime)
+        rendered = render_parts([(file, text)], "html", runtime, mermaid=config.mermaid)
         pages.append(Page(name, file, name_, title, order, rendered.markdown, rendered.pictures, version=metadata.version))
     if pages:
         pages[0].meta = page_meta(metadata)

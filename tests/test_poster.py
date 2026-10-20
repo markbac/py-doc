@@ -729,6 +729,14 @@ def test_version_git_outside_a_repository_is_an_error(tmp_path, drawn, monkeypat
         build(write(tmp_path, "---\nversion: git\n---\n## A\n\nText.\n"), lambda: object())
 
 
+
+def test_the_project_mermaid_settings_go_under_the_theme_colours(tmp_path, drawn):
+    build(write(tmp_path, "## A\n\n```mermaid\ngraph LR\n```\n"), lambda: object(), mermaid={"look": "classic", "theme": "neutral"})
+    config = json.loads(drawn[0][1].split("\n")[1])["config"]
+    assert config["look"] == "classic" and config["theme"] == "base"  # the poster theme's colours win
+    assert config["themeVariables"]["primaryColor"]
+
+
 # --- py-doc build ---------------------------------------------------------------------------------
 
 

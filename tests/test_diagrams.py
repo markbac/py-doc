@@ -416,3 +416,59 @@ def test_the_tools_revision_ignores_folders_beside_the_scripts(tmp_path, monkeyp
     before = render._tools_revision()
     (tmp_path / "__pycache__").mkdir()  # pip compiles the scripts when py-doc is installed
     assert render._tools_revision() == before
+
+
+class TestMermaidConfig:
+    """``diagrams.mermaid`` of py-doc.yml: front matter for every Mermaid diagram, under the diagram's own."""
+
+    def front(self, text):
+        from py_doc.diagrams.render import _FRONT
+
+        return json.loads(_FRONT.match(text).group(1))
+
+    def test_a_diagram_without_front_matter_gets_it(self):
+        from py_doc.diagrams.render import with_mermaid_config
+
+        text = with_mermaid_config("flowchart LR\n  A --> B\n", {"look": "classic"})
+        assert self.front(text) == {"config": {"look": "classic"}}
+        assert text.endswith("---\nflowchart LR\n  A --> B\n")
+
+    def test_the_diagrams_own_front_matter_wins_key_by_key(self):
+        from py_doc.diagrams.render import with_mermaid_config
+
+        own = "---\ntitle: Flow\nconfig:\n  theme: forest\n  flowchart: {curve: basis}\n---\nflowchart LR\n  A --> B\n"
+        text = with_mermaid_config(own, {"theme": "neutral", "look": "classic", "flowchart": {"curve": "linear", "padding": 20}})
+        assert self.front(text) == {
+            "title": "Flow",
+            "config": {"theme": "forest", "look": "classic", "flowchart": {"curve": "basis", "padding": 20}},
+        }
+        assert text.endswith("---\nflowchart LR\n  A --> B\n")
+
+    def test_nothing_set_or_front_matter_mermaid_rejects_is_left_alone(self):
+        from py_doc.diagrams.render import with_mermaid_config
+
+        assert with_mermaid_config("graph LR\n", {}) == "graph LR\n"
+        bad = "---\nconfig: [1, 2\n---\ngraph LR\n"
+        assert with_mermaid_config(bad, {"look": "classic"}) == bad
+
+    def test_documents_get_it_and_other_diagrams_do_not(self, tmp_path, monkeypatch):
+        texts = []
+
+        def draw(runtime, renderer, text, kind, landscape, source_dir, info=None):
+            texts.append((renderer.name, text))
+            return png(tmp_path / f"{len(texts)}.png")
+
+        monkeypatch.setattr("py_doc.diagrams.render.draw_cached", draw)
+        render_parts(part(tmp_path, "```mermaid\ngraph LR\n```\n\n```dot\ndigraph {}\n```\n"), "docx", lambda: None, mermaid={"look": "classic"})
+        assert texts[0][0] == "mermaid" and texts[0][1].startswith('---\n{"config": {"look": "classic"}}\n---\n')
+        assert texts[1] == ("dot", "digraph {}")
+
+    def test_the_setting_is_read_and_checked(self, tmp_path):
+        from py_doc.config import ConfigError, parse_config
+
+        assert parse_config({"diagrams": {"mermaid": {"look": "classic"}}}, tmp_path).mermaid == {"look": "classic"}
+        assert parse_config({}, tmp_path).mermaid == {}
+        with pytest.raises(ConfigError, match="unknown key 'plantuml' in diagrams"):
+            parse_config({"diagrams": {"plantuml": {}}}, tmp_path)
+        with pytest.raises(ConfigError, match="diagrams.mermaid"):
+            parse_config({"diagrams": {"mermaid": "classic"}}, tmp_path)

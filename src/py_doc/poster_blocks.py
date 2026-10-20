@@ -19,7 +19,7 @@ import segno
 from markdown_it import MarkdownIt
 
 from py_doc.diagrams import BY_FENCE, DiagramError
-from py_doc.diagrams.render import draw_cached
+from py_doc.diagrams.render import draw_cached, with_mermaid_config
 from py_doc.errors import ConversionError, ToolFailed
 from py_doc.poster_themes import Theme
 
@@ -63,6 +63,7 @@ class Ctx:
         self._connect, self._runtime = runtime, None
         self.n = 0
         self.failed = 0
+        self.mermaid = None  # diagrams.mermaid of py-doc.yml
 
     def runtime(self):
         """The tool container, started on the first diagram, so a poster without one needs no Docker."""
@@ -95,6 +96,8 @@ def render_diagram(lang, code, ctx):
     ctx.n += 1
     if lang == "mermaid" and "%%{init" not in code and not code.lstrip().startswith("---"):
         code = mermaid_init(ctx.theme) + code
+    if lang == "mermaid":
+        code = with_mermaid_config(code, ctx.mermaid)
     renderer = BY_FENCE[lang]
     kind = "svg" if "svg" in renderer.kinds else "png"  # SVG where the tool can write it: it prints sharp at any size
     return draw_cached(ctx.runtime(), renderer, code, kind, False, ctx.base)

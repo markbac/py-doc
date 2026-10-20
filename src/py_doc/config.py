@@ -197,6 +197,7 @@ class ProjectConfig:
     build: BuildSettings = field(default_factory=BuildSettings)
     poster: dict = field(default_factory=dict)  # poster: the settings of every poster, paths resolved
     posters: dict[str, PosterConfig] = field(default_factory=dict)
+    mermaid: dict = field(default_factory=dict)  # diagrams.mermaid: the Mermaid configuration of every Mermaid diagram
     reserved: dict[str, Any] = field(default_factory=dict)
 
     def output_path(self, document: DocumentConfig, fmt: str, version: str | None = None) -> Path:
@@ -291,7 +292,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", "content", "poster", "posters", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", "content", "poster", "posters", "diagrams", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -321,6 +322,9 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     c4 = _mapping(top.get("c4", {}), "c4")
     _only(c4, ("cli", "image", "port"), "c4")
     config.c4 = C4Settings(_typed(c4, "cli", str, "c4"), _typed(c4, "image", str, "c4"), _typed(c4, "port", int, "c4"))
+    diagrams = _mapping(top.get("diagrams") or {}, "diagrams")
+    _only(diagrams, ("mermaid",), "diagrams")
+    config.mermaid = _mapping(diagrams.get("mermaid") or {}, "diagrams.mermaid")
     config.runtime = _parse_runtime(_mapping(top.get("runtime", {}), "runtime"))
     reports = _mapping(top.get("reports", {}), "reports")
     _only(reports, ("path",), "reports")

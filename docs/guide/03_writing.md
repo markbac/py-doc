@@ -115,5 +115,15 @@ Alice -> Bob : hello
       A --> B
     ```
 
+    To give every Mermaid diagram of a project the same settings, put them under `diagrams.mermaid` in `py-doc.yml`. A diagram's own front matter wins, key by key:
+
+    ```yaml
+    diagrams:
+      mermaid:
+        layout: dagre
+        look: classic
+        theme: neutral
+    ```
+
     Give settings in front matter, not in a `%%{init: ...}%%` line. Mermaid ignores the whole init line when a value in it has a single quote, such as a font list.
 - **Pictures** in Markdown are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown. `![](images/a.png){width=50%}` makes a picture that share of the text width, in Word too, where py-doc works it out from the template's page and margins.
