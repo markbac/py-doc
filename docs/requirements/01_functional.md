@@ -120,7 +120,7 @@ title: Functional requirements
 | FR-153 | A poster's columns shall be balanced by the measured height of their sections, in order: the shortest tallest column, then the most even. A section marked `{.flow}` may go on in the next column, between its blocks. `split` shall choose the columns by hand. | Should | Met |
 | FR-154 | A poster's `[[CAPTION:]]` captions shall be numbered, Figure and Table, in order down the poster. | Should | Met |
 | FR-155 | A poster's charts shall take the axis range, gridline step, value labels, axis title, markers, shading and dashed series asked for. A column or bar axis shall start at zero. | Could | Met |
-| FR-156 | A poster shall have `steps` (numbered things to do) and `gallery` (pictures with captions) blocks. | Could | Met |
+| FR-156 | A poster shall have blocks for numbered steps, a gallery of pictures, progress towards targets, a checklist, a comparison, people and highlighted figures. | Could | Met |
 | FR-157 | `version: git` on a poster shall take its version from Git, as on a document. | Could | Met |
 | FR-158 | `py-doc lint` and `py-doc build --lint` shall lint the posters of `py-doc.yml` with every rule but the document structure, acronym and passive voice rules. | Should | Met |
 | FR-159 | `py-doc poster --watch` shall build the posters again on every save of their sources and reload them in the browser, and show a failed build's error over the last good page. | Could | Met |

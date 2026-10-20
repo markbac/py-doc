@@ -454,6 +454,113 @@ def gallery_html(code, opts, ctx):
     return f'<div class="gallery" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
 
 
+def _rows(code):
+    return [[cell.strip() for cell in line.split("|")] for line in code.splitlines() if line.strip()]
+
+
+def _value(text, what, ctx):
+    try:
+        return float(text.replace(",", "").replace(" ", ""))
+    except ValueError:
+        raise PosterError(f"{ctx.where}: {what} '{text}' is not a number") from None
+
+
+def progress_html(code, opts, ctx):
+    """``Label | value | target | colour`` lines as bars towards their targets. ``better=lower`` for a ceiling."""
+    rows = _rows(code)
+    if not rows or any(len(row) < 3 for row in rows):
+        raise PosterError(f"{ctx.where}: each line of a progress block is 'Label | value | target'")
+    lower = _option(opts, "better", ("higher", "lower"), "higher", ctx) == "lower"
+    unit, shown = opts.get("unit", ""), _option(opts, "show", ("values", "percent"), "values", ctx)
+    out = ""
+    for row in rows:
+        value, target = _value(row[1], "a progress value", ctx), _value(row[2], "a progress target", ctx)
+        if target <= 0:
+            raise PosterError(f"{ctx.where}: the progress target of '{row[0]}' must be above zero")
+        met = value <= target if lower else value >= target
+        # met is good news; short of a target is work in progress, and over a ceiling is bad news
+        default = "good" if met else "bad" if lower else "accent"
+        colour = ctx.theme.colour(row[3] if len(row) > 3 else None, default)
+        share = min(value / target, 1.0)
+        text = f"{value / target * 100:.0f} %" if shown == "percent" else f"{esc(row[1])}{esc(unit)} of {esc(row[2])}{esc(unit)}"
+        mark = " &#10003;" if met else ""
+        out += (f'<div class="prog"><div class="pl"><span>{inline(row[0])}</span><b>{text}{mark}</b></div>'
+                f'<div class="pt"><i style="width:{share * 100:.1f}%;background:{colour}"></i></div></div>')
+    return f'<div class="progress">{out}</div>'
+
+
+CHECKS = {"x": ("done", "&#10003;"), " ": ("open", ""), "!": ("failed", "&#10007;")}
+
+
+def checklist_html(code, opts, ctx):
+    """``[x] done``, ``[ ] open`` and ``[!] failed`` lines as a list of boxes, in ``cols=`` columns."""
+    items = ""
+    for line in (line.strip() for line in code.splitlines() if line.strip()):
+        m = re.match(r"^\[([xX !])\]\s*(.+)$", line)
+        if not m:
+            raise PosterError(f"{ctx.where}: a checklist line starts [x], [ ] or [!], not '{line}'")
+        kind, sign = CHECKS[m[1].lower()]
+        items += f'<li class="{kind}"><span class="box">{sign}</span><span>{inline(m[2])}</span></li>'
+    if not items:
+        raise PosterError(f"{ctx.where}: a checklist needs at least one line")
+    cols = _whole(opts, "cols", 1, ctx)
+    return f'<ul class="checklist" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{items}</ul>'
+
+
+def compare_html(code, opts, ctx):
+    """A ``| Before | After`` header, then ``Label | before | after`` lines. The last column is the one to see."""
+    rows = _rows(code)
+    if len(rows) < 2 or rows[0][0] or len(rows[0]) < 3:
+        raise PosterError(f"{ctx.where}: a compare block starts with a header such as '| Before | After', then 'Label | before | after' lines")
+    heads, width = rows[0][1:], len(rows[0])
+    grid = f"grid-template-columns:minmax(0,1.2fr) repeat({len(heads)},minmax(0,1fr))"
+    out = '<div class="cmp-h"></div>' + "".join(f'<div class="cmp-h{" last" if n == len(heads) - 1 else ""}">{inline(h)}</div>' for n, h in enumerate(heads))
+    for row in rows[1:]:
+        if len(row) != width:
+            raise PosterError(f"{ctx.where}: the compare line '{' | '.join(row)}' needs {width} cells, as its header has")
+        out += f'<div class="cmp-l">{inline(row[0])}</div>'
+        out += "".join(f'<div class="cmp-v{" last" if n == len(heads) - 1 else ""}">{inline(v)}</div>' for n, v in enumerate(row[1:]))
+    return f'<div class="compare" style="{grid}">{out}</div>'
+
+
+def people_html(code, opts, ctx):
+    """``Name | role | contact | photo`` lines as cards. Without a photo, the initials stand in a circle."""
+    rows = _rows(code)
+    if not rows:
+        raise PosterError(f"{ctx.where}: a people block needs at least one 'Name | role' line")
+    out = ""
+    for row in rows:
+        name, role, contact, photo = (row + ["", "", ""])[:4]
+        if photo:
+            path = ctx.base / photo
+            if not path.is_file():
+                raise PosterError(f"{ctx.where}: the photo {photo} of {name} is not there (looked in {ctx.base})")
+            mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+            face = f'<img alt="{esc(name)}" src="data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}">'
+        else:
+            initials = "".join(word[0] for word in re.findall(r"[^\W\d_][\w'-]*", name)[:2]).upper()
+            face = f'<b style="background:{ctx.theme.colour(None, "primary")}">{esc(initials)}</b>'
+        lines = "".join(f"<div>{inline(text)}</div>" for text in (role, contact) if text)
+        out += f'<div class="person">{face}<div><div class="ch">{inline(name)}</div>{lines}</div></div>'
+    cols = _whole(opts, "cols", min(len(rows), 2), ctx)
+    return f'<div class="people" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
+
+
+def highlight_html(code, opts, ctx):
+    """``value | label | detail | colour`` lines as figures in large type, side by side."""
+    rows = _rows(code)
+    if not rows:
+        raise PosterError(f"{ctx.where}: a highlight block needs at least one 'value | label' line")
+    out = ""
+    for row in rows:
+        value, label, detail = (row + ["", ""])[:3]
+        colour = ctx.theme.colour(row[3] if len(row) > 3 else None, "accent")
+        note = f"<small>{inline(detail)}</small>" if detail else ""
+        out += f'<div class="hl" style="border-color:{colour}"><b style="color:{colour}">{inline(value)}</b><span>{inline(label)}</span>{note}</div>'
+    cols = _whole(opts, "cols", len(rows), ctx)
+    return f'<div class="highlights" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
+
+
 def block_html(lang, opts, code, ctx):
     """HTML for a fence we handle, or None to leave it as an ordinary code block."""
     if lang in BY_FENCE:
@@ -472,6 +579,16 @@ def block_html(lang, opts, code, ctx):
         return steps_html(code, opts, ctx)
     if lang == "gallery":
         return gallery_html(code, opts, ctx)
+    if lang == "progress":
+        return progress_html(code, opts, ctx)
+    if lang == "checklist":
+        return checklist_html(code, opts, ctx)
+    if lang == "compare":
+        return compare_html(code, opts, ctx)
+    if lang == "people":
+        return people_html(code, opts, ctx)
+    if lang == "highlight":
+        return highlight_html(code, opts, ctx)
     if lang in FIG_KINDS:
         return figure_html([FIG_KINDS[lang](code, ctx)], ctx)
     if lang == "figure":  # several kinds in one box, split by +++ lines, each starting with @kind

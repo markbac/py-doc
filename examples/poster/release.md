@@ -46,6 +46,14 @@ Cold store | 1440 | 1210
 
 The node remembers the channel of its last gateway and tries it first.
 
+```compare
+| 2.0 | 2.1
+Typical join | 11 s | 4 s
+Channels scanned | 8 | 3, or 1 when the last still works
+Battery life | 5.0 years | 5.7 years
+Firmware copies | 1 | 2
+```
+
 ## 3. Updates: safe by design
 
 ```cards cols=2 style=top
@@ -113,6 +121,13 @@ Fixed | The display no longer shows LINK LOST while the broker is still connecti
 
 > [!NOTE]
 > Readings sent while a node restarts into the new copy are kept and sent afterwards, so no reading is lost.
+
+## 8. Contacts: for this release
+
+```people cols=2
+Lena Chen | Firmware release manager | sn100-firmware@example.com
+Ruth Osei | Field support lead | +44 1632 960 100
+```
 
 ## Summary
 

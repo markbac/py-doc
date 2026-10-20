@@ -101,12 +101,14 @@ title: Signal strength at the node (dBm)
 
 A weak node works, but it retries more and its cell lasts less.
 
-| A node is accepted when | Check |
-|---|---|
-| Its signal is -95 dBm or better | The app, after the join |
-| Its first reading arrives within 2 minutes | The dashboard |
-| Its reading is within 1 °C of the room thermometer | By eye |
-| Its label photo and room are recorded | The app |
+A node is accepted when every box is ticked:
+
+```checklist
+[ ] Its signal is -95 dBm or better, in the app after the join
+[ ] Its first reading reaches the dashboard within 2 minutes
+[ ] Its reading is within 1 °C of the room thermometer
+[ ] Its label photo and room are recorded in the app
+```
 
 ## 6. Handover: leave the site ready
 

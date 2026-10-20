@@ -125,6 +125,11 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | A few parts, each with a line of text | `cards` | Sensor, controller and radio |
 | Things to do, in order | `steps` | Join a node to the network |
 | Photos or drawings side by side | `gallery` | Three ways to mount a node |
+| How far towards a target | `progress` | 48 of 50 nodes joined |
+| What must be true, ticked or not | `checklist` | Acceptance before handover |
+| Before and after, or this and that | `compare` | Firmware 2.0 and 2.1 |
+| Who to ask | `people` | The release manager and support lead |
+| One figure that is the message | `highlight` | 0 failed updates |
 | States and what moves between them | `flow` | Asleep, measure, send |
 | What happens in each time window | `lanes` | Every minute, every hour |
 | How a whole divides into shares | `segments` | One minute of the node's time |
@@ -173,6 +178,45 @@ images/pipe.svg | On a pipe, with the clamp
 ````
 
 Each line is a picture, relative to the Markdown file, and an optional caption. The pictures are put inside the page. `height=` crops every picture to that height, so photos of different shapes line up. Leave it out for drawings, which are shown whole.
+
+### Progress, checklists and comparisons
+
+````markdown
+```progress unit=" nodes"
+Joined | 48 | 50
+Labelled | 50 | 50
+```
+
+```checklist
+[x] Signal -95 dBm or better
+[ ] Floor plan uploaded
+[!] First reading within 2 minutes
+```
+
+```compare
+| 2.0 | 2.1
+Typical join | 11 s | 4 s
+Firmware copies | 1 | 2
+```
+````
+
+A progress bar fills towards its target and is ticked when it gets there. For a ceiling, such as a return rate, write `better=lower`: a bar over its ceiling turns red. A checklist box is ticked with `[x]`, left open with `[ ]` and crossed with `[!]`, so a blank checklist prints as a form to fill in. A comparison stresses its last column, so put the new or the better one last.
+
+### People and highlights
+
+````markdown
+```people
+Lena Chen | Firmware release manager | sn100-firmware@example.com | photos/lena.jpg
+Ruth Osei | Field support lead | +44 1632 960 100
+```
+
+```highlight
+0 | Failed updates | in 200 pilot nodes | good
+4 s | Typical join | was 11 s
+```
+````
+
+A person's photo is optional: without one, their initials stand in a circle. A highlight is a figure in large type, for the one number a section is about. Keep the strip of stats for the figures of the whole poster.
 
 ### Flow and lanes
 
