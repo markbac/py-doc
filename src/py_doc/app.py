@@ -20,7 +20,7 @@ from .build import build_document
 from .cli import run_docx
 from .config import FORMATS, ConfigError, find_config, load_config, parse_config
 from .errors import ConversionError, exit_status
-from .generators import GeneratorError, run_generators
+from .generators import GeneratorError, for_documents, run_generators
 from .lint.cli import run as run_lint
 from .migrate import LEGACY_FORMATS, Migration, migrate, render
 from .report import BuildReport
@@ -248,15 +248,17 @@ def _pipeline(args: argparse.Namespace, config, names: list[str], runtime, repor
         if report:
             report.step(name, state, detail)
 
-    # 1. content generators: their files are sources, so they come before anything reads the sources
-    if config.generators and config.build.generate and not args.no_generate:
+    # 1. content generators: their files are sources, so they come before anything reads the sources.
+    # Building named documents runs only the generators that write their sources.
+    chosen = for_documents(config, names) if args.documents else [spec.name for spec in config.generators]
+    if chosen and config.build.generate and not args.no_generate:
         try:
-            changed = run_generators(config)
+            changed = run_generators(config, chosen, runtime=runtime)
         except GeneratorError as exc:
             _error(str(exc))
             step("generate", "failed", str(exc))
             return 1
-        step("generate", "ok", f"{len(config.generators)} generator(s), {len(changed)} file(s) changed")
+        step("generate", "ok", f"{len(chosen)} generator(s), {len(changed)} file(s) changed")
 
     # 2. lint the sources of the documents being built
     lint_mode = args.lint or config.build.lint
@@ -365,16 +367,18 @@ def _build_posters(args: argparse.Namespace, config, names: list[str], runtime, 
 
 
 def _lint_sources(config, names: list[str], mode: str, output: Path | None, runtime) -> int:
-    """Lint every source of the documents (bundles: of theirs). Prints the issues; returns the lint exit status."""
+    """Lint every source of the documents (bundles: of theirs), except the files generators write: nobody edits
+    those, so the project's writing rules do not apply. Prints the issues; returns the lint exit status."""
     from .lint import DocLinter
     from .lint.cli import exit_status as lint_status
     from .lint.cli import render as render_lint
     from .lint.linter import LintTargetError
 
+    generated = {spec.output.resolve() for spec in config.generators}
     files = sorted({
         s.file.resolve() for name in names for s in config.documents[name].sources
         if s.include and s.structurizr is None and s.file.suffix.lower() in (".md", ".markdown") and s.file.exists()
-    })  # fmt: skip
+    } - generated)  # fmt: skip
     if not files:
         return 0
     try:

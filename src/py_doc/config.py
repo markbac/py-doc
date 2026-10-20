@@ -317,6 +317,7 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     }
     config.build = _parse_build(_mapping(top.get("build") or {}, "build"), root)
     config.generators = _parse_content(_mapping(top.get("content") or {}, "content"), root)
+    config.lint.generated = frozenset(spec.output.resolve() for spec in config.generators)
     c4 = _mapping(top.get("c4", {}), "c4")
     _only(c4, ("cli", "image", "port"), "c4")
     config.c4 = C4Settings(_typed(c4, "cli", str, "c4"), _typed(c4, "image", str, "c4"), _typed(c4, "port", int, "c4"))

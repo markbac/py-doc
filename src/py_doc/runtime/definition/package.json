@@ -1,7 +1,7 @@
 {
   "name": "py-doc-tools",
   "private": true,
-  "description": "Node diagram tools installed into the py-doc tool image",
+  "description": "Node diagram and API documentation tools installed into the py-doc tool image",
   "dependencies": {
     "@mermaid-js/mermaid-cli": "12.0.0",
     "markdownlint-cli2": "0.23.2",
@@ -10,7 +10,22 @@
     "bytefield-svg": "1.11.0",
     "vega": "6.4.0",
     "vega-cli": "6.4.0",
-    "vega-lite": "6.5.0"
+    "vega-lite": "6.5.0",
+    "@redocly/cli": "2.56.1",
+    "widdershins": "4.0.1",
+    "@asyncapi/generator": "3.4.1",
+    "@asyncapi/markdown-template": "2.0.0",
+    "@asyncapi/html-template": "3.5.6"
+  },
+  "allowScripts": {
+    "@hyperjump/json-pointer": false,
+    "@hyperjump/json-schema": false,
+    "@hyperjump/json-schema-core": false,
+    "@hyperjump/pact": false,
+    "@scarf/scarf": false,
+    "canvas": false,
+    "core-js": false,
+    "puppeteer": false
   },
   "overrides": {
     "mermaid": "12.1.0"

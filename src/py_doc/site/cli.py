@@ -74,9 +74,11 @@ def run_site(argv: Sequence[str] | None = None) -> int:
         conditions = {name: words.get(value.lower(), value) for name, value in args.condition}
         targets = _targets(config, getattr(args, "target", []))
         if config.generators and config.build.generate and not args.no_generate:
-            from py_doc.generators import run_generators
+            from py_doc.generators import for_documents, run_generators
 
-            run_generators(config)
+            chosen = for_documents(config, (config.site.documents or config.own_documents) if config.site else [])
+            if chosen:
+                run_generators(config, chosen, runtime=runtime)
         engine, written = generate_site(config, runtime, dict(args.var), conditions)
         print(f"Wrote {len(written)} file(s) in {engine.root}")
         if args.action == "build":

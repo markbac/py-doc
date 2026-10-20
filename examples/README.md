@@ -69,6 +69,7 @@ py-doc build deck                                    # build/deck.pptx
 py-doc build release-notes                           # build/release-notes-<git version>.docx, needs a Git commit
 py-doc build architecture                            # build/architecture.docx and architecture.html
 py-doc build interfaces                              # build/interfaces.docx and interfaces.html
+py-doc build api-reference                           # REST and event API reference from the YAML: .docx, .html and two HTML pages
 py-doc poster                                        # build/sensor-node.html, build/release.html, build/posters/commissioning.html and .pdf
 py-doc poster poster/release.md --theme print        # poster/release.html, the file alone, in the low-ink print theme
 py-doc import word/design_review.docx -o imported    # imported/design_review.md and imported/design_review/
@@ -88,6 +89,7 @@ py-doc site build                                    # site/build/index.html: th
 | `py-doc build datasheet` | `docs/datasheet.md`, `templates/datasheet.docx`, `templates/report.tex` | `build/datasheet-1_0.docx`, `build/datasheet.pdf` |
 | `py-doc build deck` | `docs/deck/slides.md`, `templates/sensor.pptx` (or `sensor_Draft.pptx`) | `build/deck.pptx` |
 | `py-doc build architecture` | `architecture/workspace.json`, `docs/includes/audience.md` | `build/architecture.docx`, `build/architecture.html` (chapters generated from the model) |
+| `py-doc build api-reference` | `docs/includes/apis/library-openapi.yaml`, `library-asyncapi.yaml`, through the `openapi` and `asyncapi` generators | `build/api-reference.docx`, `build/api-reference.html`, `build/api/rest-api.html` (Redoc), `build/api/events-api.html` (AsyncAPI) |
 | `py-doc build interfaces` | `docs/interfaces.md`, `docs/includes/apis/`, `templates/sensor.docx` (or `sensor_Draft.docx`), `templates/doc.css` | `build/interfaces.docx`, `build/interfaces.html` |
 | `py-doc import` | `word/design_review.docx`, `build/deck.pptx` | Markdown and pictures in `imported/` |
 | `py-doc site build` | The sources of the guide, datasheet and architecture, `site/mkdocs.yml` | Pages in `site/docs/<document>/`, navigation in `site/py-doc-nav.yml`, the site in `site/build` |

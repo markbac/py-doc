@@ -31,8 +31,8 @@ OPTIONS: dict[str, tuple[str, ...]] = {
     "toc": ("*document", "title", "depth"),
     "adr-index": ("*source", "title"),
     "requirements": ("*sources", "pattern", "title"),
-    "openapi": ("*source", "title"),
-    "asyncapi": ("*source", "title"),
+    "openapi": ("*source", "title", "engine", "html", "validate", "ruleset", "samples", "heading_offset"),
+    "asyncapi": ("*source", "title", "engine", "html", "heading_offset"),  # the AsyncAPI parser always validates
     "python-api": ("*source", "title", "private"),
     "diagram": ("*source", "language", "caption", "title"),
     "command": ("*run", "timeout"),
@@ -246,8 +246,47 @@ def _natural(text: str) -> list:
 _METHODS = ("get", "put", "post", "delete", "options", "head", "patch", "trace")
 
 
+def _engine(spec: GeneratorSpec) -> str:
+    from .apidocs import ENGINES
+
+    engine = spec.options.get("engine", "tool")
+    if engine not in ENGINES:
+        raise GeneratorError(f"The generator {spec.name}: engine must be one of {', '.join(ENGINES)}")
+    if engine == "summary" and (spec.options.get("html") or spec.options.get("samples") or "ruleset" in spec.options):
+        raise GeneratorError(f"The generator {spec.name}: html, samples and ruleset need engine: tool")
+    return engine
+
+
 def openapi(spec: GeneratorSpec, project: ProjectConfig) -> str:
-    """An OpenAPI (or Swagger) description as Markdown: its title, version and description, a table of the
+    """The reference documentation of an OpenAPI (or Swagger) description. With ``engine: tool`` (the default),
+    Redocly checks and bundles it and Widdershins writes every operation, parameter, body, response and schema;
+    with ``engine: summary``, py-doc writes an overview without the container."""
+    source = _path(spec, project)
+    if not source.is_file():
+        raise GeneratorError(f"{source} is not there")
+    if _engine(spec) == "tool":
+        from .apidocs import openapi_tool
+
+        return openapi_tool(spec, project, source)
+    return openapi_summary(spec, project)
+
+
+def asyncapi(spec: GeneratorSpec, project: ProjectConfig) -> str:
+    """The reference documentation of an AsyncAPI description. With ``engine: tool`` (the default), the AsyncAPI
+    generator and its Markdown template write every server, channel, operation and message; with
+    ``engine: summary``, py-doc writes an overview without the container."""
+    source = _path(spec, project)
+    if not source.is_file():
+        raise GeneratorError(f"{source} is not there")
+    if _engine(spec) == "tool":
+        from .apidocs import asyncapi_tool
+
+        return asyncapi_tool(spec, project, source)
+    return asyncapi_summary(spec, project)
+
+
+def openapi_summary(spec: GeneratorSpec, project: ProjectConfig) -> str:
+    """An OpenAPI (or Swagger) description as an overview: its title, version and description, a table of the
     operations and a list of the schemas."""
     api = _read_data(_path(spec, project))
     if not isinstance(api, dict) or not ("openapi" in api or "swagger" in api):
@@ -271,8 +310,8 @@ def openapi(spec: GeneratorSpec, project: ProjectConfig) -> str:
     return out
 
 
-def asyncapi(spec: GeneratorSpec, project: ProjectConfig) -> str:
-    """An AsyncAPI description as Markdown: its title, version, description and a table of the channels."""
+def asyncapi_summary(spec: GeneratorSpec, project: ProjectConfig) -> str:
+    """An AsyncAPI description as an overview: its title, version, description and a table of the channels."""
     api = _read_data(_path(spec, project))
     if not isinstance(api, dict) or "asyncapi" not in api:
         raise GeneratorError(f"{spec.options['source']} is not an AsyncAPI description (no asyncapi key)")

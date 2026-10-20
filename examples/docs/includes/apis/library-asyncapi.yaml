@@ -1,4 +1,4 @@
-asyncapi: 2.0.0
+asyncapi: 2.6.0
 info:
   title: Library Management AsyncAPI
   description: |
@@ -7,16 +7,20 @@ info:
   license:
     name: MIT
 servers:
-  - url: mqtt://library.mqtt.com
-    description: Production MQTT broker
-  - url: mqtt://staging.library.mqtt.com
-    description: Staging MQTT broker for testing
+  production:
+    url: library.mqtt.com
     protocol: mqtt
     protocolVersion: '5'
-    variables:
-      env:
-        enum: ['production', 'staging']
-        default: production
+    description: Production MQTT broker
+    security:
+      - oauth2: [user]
+  staging:
+    url: staging.library.mqtt.com
+    protocol: mqtt
+    protocolVersion: '5'
+    description: Staging MQTT broker for testing
+    security:
+      - apiKeyAuth: []
 channels:
   books/added:
     description: Channel for events when a book is added to the library
@@ -74,9 +78,9 @@ components:
       payload:
         $ref: '#/components/schemas/Book'
       examples:
-        example1:
+        - name: example1
           summary: Example of book added event
-          value:
+          payload:
             bookId: "1"
             title: "The Catcher in the Rye"
             author: "J.D. Salinger"
@@ -88,9 +92,9 @@ components:
       payload:
         $ref: '#/components/schemas/Book'
       examples:
-        example1:
+        - name: example1
           summary: Example of book updated event
-          value:
+          payload:
             bookId: "1"
             title: "The Catcher in the Rye"
             author: "J.D. Salinger"
@@ -102,9 +106,9 @@ components:
       payload:
         $ref: '#/components/schemas/BookCheckedOut'
       examples:
-        example1:
+        - name: example1
           summary: Example of book checked out event
-          value:
+          payload:
             bookId: "1"
             userId: "123"
             title: "The Catcher in the Rye"
@@ -116,9 +120,9 @@ components:
       payload:
         $ref: '#/components/schemas/BookReturned'
       examples:
-        example1:
+        - name: example1
           summary: Example of book returned event
-          value:
+          payload:
             bookId: "1"
             userId: "123"
             title: "The Catcher in the Rye"
@@ -232,29 +236,28 @@ components:
         status: 404
         detail: "The book with ID '1' was not found."
         instance: "/books/1"
-securitySchemes:
-  oauth2:
-    type: oauth2
-    description: |
-      OAuth2 flow to secure access to the API. Supports client credentials and authorization code flows.
-    flows:
-      clientCredentials:
-        tokenUrl: https://auth.library.com/oauth2/token
-        scopes:
-          admin: Full access to manage the library
-          user: Borrow and return books
-      authorizationCode:
-        authorizationUrl: https://auth.library.com/oauth2/authorize
-        tokenUrl: https://auth.library.com/oauth2/token
-        scopes:
-          admin: Full access to manage the library
-          user: Borrow and return books
-  apiKeyAuth:
-    type: apiKey
-    in: user
-    name: X-API-Key
-    description: API key used for authentication
-  basicAuth:
-    type: http
-    scheme: basic
-    description: Basic authentication over HTTP
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: |
+        OAuth2 flow to secure access to the API. Supports client credentials and authorization code flows.
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.library.com/oauth2/token
+          scopes:
+            admin: Full access to manage the library
+            user: Borrow and return books
+        authorizationCode:
+          authorizationUrl: https://auth.library.com/oauth2/authorize
+          tokenUrl: https://auth.library.com/oauth2/token
+          scopes:
+            admin: Full access to manage the library
+            user: Borrow and return books
+    apiKeyAuth:
+      type: apiKey
+      in: user
+      description: API key used for authentication
+    basicAuth:
+      type: http
+      scheme: basic
+      description: Basic authentication over HTTP

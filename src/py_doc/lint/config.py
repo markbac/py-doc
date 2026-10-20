@@ -93,3 +93,4 @@ class LintConfig:
     vale: ValeSettings = field(default_factory=ValeSettings)
     root: Path = field(default_factory=Path.cwd)  # the project folder: where the managed Vale folder lives
     documents: dict[str, list[Path]] = field(default_factory=dict)  # document id -> its source files, in order
+    generated: frozenset[Path] = frozenset()  # files content generators write: not missing before they run
