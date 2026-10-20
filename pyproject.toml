@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=77"]
+requires = ["setuptools>=84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -25,14 +25,14 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: Markdown",
 ]
 dependencies = [
-    "python-docx>=1.1.0",
-    "markdown-it-py>=3.0",
-    "mdit-py-plugins>=0.4",
-    "python-pptx>=1.0.0",
-    "Pillow>=10.0",
-    "docxcompose>=1.4.0",
-    "setuptools<81",  # docxcompose imports pkg_resources, which setuptools 81 no longer ships
-    "PyYAML>=6.0",
+    "python-docx>=1.2.0",
+    "markdown-it-py>=4.2.0",
+    "mdit-py-plugins>=0.6.1",
+    "python-pptx>=1.0.2",
+    "Pillow>=12.3.0",
+    "docxcompose>=2.2.0",
+    "setuptools<85",  # docxcompose imports pkg_resources, which setuptools 81 no longer ships
+    "PyYAML>=6.0.3",
     "segno>=1.5",  # QR codes on posters; pure Python, no dependencies
     # Pinned to a commit because py-logkit has no tagged release yet. Move to the first tag when there is one.
     "ctxlogkit @ git+https://github.com/markbac/py-logkit@96453b403015ed762bcc5b3ffd5adbea3ef4fb0c",
@@ -40,14 +40,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.4",
-    "pytest-timeout>=2.3",
-    "ruff>=0.5",
-    "build>=1.0",
-    "twine>=5.0",
-    "railroad-diagrams>=3.0",  # run by the railroad tool test
+    "pytest>=9.1.1",
+    "pytest-timeout>=2.4.0",
+    "ruff>=0.17.1",
+    "build>=1.6.1",
+    "twine>=7.0.0",
+    "railroad-diagrams>=3.0.1",  # run by the railroad tool test
     "pypikchr>=0.2.0",  # run by the pikchr tool test
-    "jsonschema>=4.0",  # checks the build report against its schema
+    "jsonschema>=4.26.0",  # checks the build report against its schema
 ]
 
 [project.scripts]
