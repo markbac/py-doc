@@ -31,7 +31,6 @@ dependencies = [
     "python-pptx>=1.0.2",
     "Pillow>=12.3.0",
     "docxcompose>=2.2.0",
-    "setuptools<85",  # docxcompose imports pkg_resources, which setuptools 81 no longer ships
     "PyYAML>=6.0.3",
     "segno>=1.5",  # QR codes on posters; pure Python, no dependencies
     # Pinned to a commit because py-logkit has no tagged release yet. Move to the first tag when there is one.

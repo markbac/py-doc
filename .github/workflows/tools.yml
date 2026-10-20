@@ -1,0 +1,64 @@
+name: Tool image
+
+# Builds the tool container and draws with it, which the main CI cannot: its tests run the tools on the
+# host. Runs when the image definition or the diagram tools change, once a week (a tool can break without
+# a change here, through a Debian package), and by hand. The image takes 5 to 30 minutes to build.
+on:
+  pull_request:
+    paths:
+      - "src/py_doc/runtime/**"
+      - "src/py_doc/diagrams/**"
+      - "src/py_doc/poster*.py"
+      - ".github/workflows/tools.yml"
+  schedule:
+    - cron: "17 5 * * 1"  # Mondays
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tools-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Build the image and draw with it
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - run: python -m pip install -e .
+      - name: Build the tool image
+        run: py-doc tools build
+      - name: Check every tool in it
+        run: py-doc doctor
+      - name: Every diagram type, through the container (the guide has one of each)
+        working-directory: examples
+        run: py-doc build guide -f html -f docx --keep-going
+      - name: The posters and their PDFs, through the container
+        working-directory: examples
+        run: py-doc poster --pdf
+      - name: Each poster PDF is one page
+        working-directory: examples
+        run: |
+          for pdf in build/sensor-node.pdf build/release.pdf build/posters/commissioning.pdf; do
+            pages=$(python -c "import re, sys; print(len(re.findall(rb'/Type\s*/Page[^s]', open(sys.argv[1], 'rb').read())))" "$pdf")
+            echo "$pdf: $pages page(s)"
+            test "$pages" = "1"
+          done
+      - name: Keep what was built, to look at
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: tool-image-outputs
+          path: |
+            examples/build/*.html
+            examples/build/*.docx
+            examples/build/*.pdf
+            examples/build/posters/
+          if-no-files-found: warn
+          retention-days: 14

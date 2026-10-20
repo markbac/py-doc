@@ -24,6 +24,7 @@ from py_doc.poster import PosterError, build, print_pdf
 from py_doc.poster_themes import ThemeError
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 16
+SVG = b'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>'
 
 POSTER = textwrap.dedent(
     """\
@@ -104,8 +105,8 @@ def drawn(tmp_path, monkeypatch):
 
     def draw(runtime, renderer, text, kind, landscape, source_dir):
         texts.append((renderer.name, text, kind))
-        picture = tmp_path / f"diagram{len(texts)}.png"
-        picture.write_bytes(PNG)
+        picture = tmp_path / f"diagram{len(texts)}.{kind}"
+        picture.write_bytes(PNG if kind == "png" else SVG)
         return picture
 
     monkeypatch.setattr(poster_blocks, "draw_cached", draw)
@@ -140,14 +141,19 @@ def test_the_page_has_every_part_of_the_poster(tmp_path, drawn):
     assert (ctx.n, ctx.failed) == (1, 0)
 
 
-def test_a_diagram_is_drawn_as_png_with_the_poster_theme_and_embedded(tmp_path, drawn):
+def test_a_diagram_is_drawn_as_svg_with_the_poster_theme_and_embedded(tmp_path, drawn):
     page, _ = build(write(tmp_path), lambda: object())
     [(name, text, kind)] = drawn
-    assert (name, kind) == ("mermaid", "png")
+    assert (name, kind) == ("mermaid", "svg")  # vector, so it prints sharp like the rest of the poster
     assert text.startswith("---\nconfig: {") and text.endswith("---\ngraph LR; A-->B")
     config = yaml.safe_load(text.split("---\n")[1])["config"]  # front matter, not %%{init}%%, which drops a quoted font
     assert config["theme"] == "base" and config["themeVariables"]["fontFamily"].startswith("'Source Serif 4'")
-    assert f'src="data:image/png;base64,{base64.b64encode(PNG).decode()}"' in page
+    assert f'src="data:image/svg+xml;base64,{base64.b64encode(SVG).decode()}"' in page
+
+
+def test_a_tool_that_draws_only_png_gives_a_png(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "## A\n\n```ditaa\n+--+\n```\n"), lambda: object())
+    assert drawn[0][2] == "png" and 'src="data:image/png;base64,' in page
 
 
 def test_a_mermaid_diagram_with_its_own_theme_keeps_it(tmp_path, drawn):

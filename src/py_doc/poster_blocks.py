@@ -95,7 +95,9 @@ def render_diagram(lang, code, ctx):
     ctx.n += 1
     if lang == "mermaid" and "%%{init" not in code and not code.lstrip().startswith("---"):
         code = mermaid_init(ctx.theme) + code
-    return draw_cached(ctx.runtime(), BY_FENCE[lang], code, "png", False, ctx.base)
+    renderer = BY_FENCE[lang]
+    kind = "svg" if "svg" in renderer.kinds else "png"  # SVG where the tool can write it: it prints sharp at any size
+    return draw_cached(ctx.runtime(), renderer, code, kind, False, ctx.base)
 
 
 def diagram_html(lang, code, opts, ctx):
