@@ -10,8 +10,10 @@ import pytest
 
 from py_doc import poster
 from py_doc.app import main
+from py_doc.config import ConfigError, parse_config
 from py_doc.errors import ToolFailed
 from py_doc.poster import PosterError, build
+from py_doc.poster_themes import ThemeError
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 16
 
@@ -193,7 +195,172 @@ def test_the_command_reports_a_missing_file(tmp_path, capsys):
     assert "not found" in capsys.readouterr().err
 
 
-def test_the_example_poster_builds(drawn):
-    page, ctx = build(Path(__file__).parent.parent / "examples" / "poster" / "poster.md", lambda: object())
-    assert "<title>SN-100 Sensor Node</title>" in page
-    assert (ctx.n, ctx.failed) == (1, 0)
+EXAMPLES = Path(__file__).parent.parent / "examples" / "poster"
+
+
+@pytest.mark.parametrize("name, title", [("poster", "SN-100 Sensor Node"), ("landscape", "Commissioning an SN-100 network"), ("release", "SN-100 firmware 2.1")])
+def test_the_example_posters_build(drawn, name, title):
+    page, ctx = build(EXAMPLES / f"{name}.md", lambda: object())
+    assert f"<title>{title}</title>" in page
+    assert ctx.failed == 0
+
+
+# --- orientation and columns ---------------------------------------------------------------------
+
+SECTIONS = "".join(f"## {n}. Part\n\n{'Words. ' * size}\n\n" for n, size in enumerate((10, 10, 10, 10, 10, 10), 1))
+
+
+def columns(page):
+    return [column.count("<section>") for column in page.split('<div class="col">')[1:]]
+
+
+def test_a_portrait_poster_is_two_columns_on_a_portrait_page(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\npaper: a3\n---\n" + SECTIONS), lambda: object())
+    assert columns(page) == [3, 3]
+    assert "size:297mm 420mm" in page and "R=1.4142" in page and 'class="poster portrait"' in page
+
+
+def test_a_landscape_poster_is_three_columns_on_a_landscape_page(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\norientation: landscape\npaper: a3\n---\n" + SECTIONS), lambda: object())
+    assert columns(page) == [2, 2, 2]
+    assert "size:420mm 297mm" in page and "R=0.7071" in page and "MIN=1800" in page
+    assert f"PAPER={420 / 25.4 * 96}" in page
+
+
+def test_columns_and_split_choose_the_sections_of_each_column(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\ncolumns: 3\nsplit: 1, 4\n---\n" + SECTIONS), lambda: object())
+    assert columns(page) == [1, 4, 1]
+    page, _ = build(write(tmp_path, "---\nsplit: 2\n---\n" + SECTIONS), lambda: object())
+    assert columns(page) == [2, 4]
+
+
+def test_there_are_never_more_columns_than_sections(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\ncolumns: 4\n---\n## A\n\nOne.\n\n## B\n\nTwo.\n"), lambda: object())
+    assert columns(page) == [1, 1]
+
+
+@pytest.mark.parametrize(
+    "front, message",
+    [
+        ("orientation: sideways", "orientation must be portrait or landscape"),
+        ("columns: two", "columns must be a whole number"),
+        ("columns: 0", "columns must be at least 1"),
+        ("split: 1, 2", "split needs 1 number"),
+        ("split: 6", "leaving at least one"),
+        ("width: 100", "width must be at least 400"),
+    ],
+)
+def test_a_layout_mistake_is_an_error(tmp_path, front, message):
+    with pytest.raises(PosterError, match=message):
+        build(write(tmp_path, f"---\n{front}\n---\n" + SECTIONS), lambda: object())
+
+
+# --- themes --------------------------------------------------------------------------------------
+
+BRAND = """\
+extends: dark
+colours:
+  primary: "#0f5e5e"
+palette:
+  teal: "#0f5e5e"
+fonts:
+  body: "'Brand Sans', Arial, sans-serif"
+  stylesheet: null
+logo: logo.svg
+"""
+
+
+def brand(tmp_path, text=BRAND):
+    (tmp_path / "logo.svg").write_text("<svg xmlns='http://www.w3.org/2000/svg'/>", encoding="utf-8")
+    (tmp_path / "brand.yml").write_text(text, encoding="utf-8")
+    return tmp_path / "brand.yml"
+
+
+def test_the_default_theme_sets_every_colour_and_loads_the_fonts(tmp_path, drawn):
+    page, _ = build(write(tmp_path), lambda: object())
+    assert "--primary:#2a3150;" in page and "--font-body:'Source Serif 4'" in page
+    assert '<link rel="stylesheet" href="https://fonts.googleapis.com/' in page
+    assert "#2a3150}" not in page.split(":root{")[1].split("}", 1)[1]  # the CSS itself has no fixed colours
+
+
+def test_a_built_in_theme_is_named_in_the_front_matter(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\ntheme: dark\n---\n## A\n\nText.\n"), lambda: object())
+    assert "--page:#141923;" in page and "--strong:#f2f4f8;" in page
+
+
+def test_the_print_theme_uses_installed_fonts(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\ntheme: print\n---\n## A\n\nText.\n"), lambda: object())
+    assert "--page:#ffffff;" in page and "fonts.googleapis.com" not in page
+
+
+def test_a_theme_file_extends_a_built_in_theme_and_brings_a_logo_palette_and_fonts(tmp_path, drawn):
+    brand(tmp_path)
+    text = "---\ntheme: brand.yml\n---\n## A\n\n```flow\n[Start|teal] -> [End|primary]\n```\n\n```mermaid\ngraph LR; A-->B\n```\n"
+    page, _ = build(write(tmp_path, text), lambda: object())
+    assert "--primary:#0f5e5e;" in page and "--page:#141923;" in page  # its own colour, and the dark theme's
+    assert "--font-body:'Brand Sans', Arial, sans-serif" in page and "fonts.googleapis.com" not in page
+    assert '<header class="logo"><img alt="Logo" src="data:image/svg+xml;base64,' in page
+    assert page.count('<div class="node" style="background:#0f5e5e">') == 2
+    assert '"primaryBorderColor": "#0f5e5e"' in drawn[0][1] and "Brand Sans" in drawn[0][1]
+
+
+def test_the_front_matter_logo_wins_over_the_themes(tmp_path, drawn):
+    brand(tmp_path)
+    (tmp_path / "other.png").write_bytes(PNG)
+    page, _ = build(write(tmp_path, "---\ntheme: brand.yml\nlogo: other.png\n---\n## A\n\nText.\n"), lambda: object())
+    assert 'src="data:image/png;base64,' in page
+
+
+def test_the_theme_argument_wins_over_the_front_matter_and_the_project_default_comes_last(tmp_path, drawn):
+    text = "---\ntheme: dark\n---\n## A\n\nText.\n"
+    assert "--page:#ffffff;" in build(write(tmp_path, text), lambda: object(), theme="print")[0]
+    assert "--page:#141923;" in build(write(tmp_path, text), lambda: object(), default_theme="print")[0]
+    assert "--page:#ffffff;" in build(write(tmp_path, "## A\n\nText.\n"), lambda: object(), default_theme="print")[0]
+
+
+@pytest.mark.parametrize(
+    "text, message",
+    [
+        ("colours:\n  primery: red\n", "unknown colour 'primery'"),
+        ("colours:\n  primary: 'red; x: y'\n", "is not a colour"),
+        ("extends: neon\n", "extends 'neon' is not one of"),
+        ("fonts:\n  body: '</style>'\n", "a character a font name cannot have"),
+        ("fonts:\n  stylesheet: 'javascript:alert(1)'\n", "must be an http or https address"),
+        ("logo: missing.png\n", "logo not found"),
+        ("colour:\n  primary: red\n", "unknown key 'colour'"),
+    ],
+)
+def test_a_theme_mistake_is_an_error(tmp_path, text, message):
+    brand(tmp_path, text)
+    with pytest.raises(ThemeError, match=message):
+        build(write(tmp_path, "---\ntheme: brand.yml\n---\n## A\n\nText.\n"), lambda: object())
+
+
+def test_an_unknown_theme_is_an_error(tmp_path):
+    with pytest.raises(ThemeError, match="not one of default, dark, print"):
+        build(write(tmp_path, "---\ntheme: neon\n---\n## A\n\nText.\n"), lambda: object())
+
+
+def test_an_unknown_block_colour_is_an_error(tmp_path):
+    with pytest.raises(ThemeError, match="'not a colour!' is not a colour"):
+        build(write(tmp_path, "## A\n\n```flow\n[Start|not a colour!] -> [End]\n```\n"), lambda: object())
+
+
+def test_the_project_sets_the_default_theme_and_the_command_line_wins(tmp_path, drawn, monkeypatch):
+    monkeypatch.setattr("py_doc.poster_cli.connect", lambda settings: object())
+    brand(tmp_path)
+    (tmp_path / "py-doc.yml").write_text("poster:\n  theme: brand.yml\n", encoding="utf-8")
+    source = write(tmp_path, "## A\n\nText.\n")
+    assert main(["poster", str(source)]) == 0
+    assert "--primary:#0f5e5e;" in (tmp_path / "poster.html").read_text(encoding="utf-8")
+    assert main(["poster", str(source), "--theme", "print"]) == 0
+    assert "--page:#ffffff;" in (tmp_path / "poster.html").read_text(encoding="utf-8")
+
+
+def test_a_project_poster_theme_must_be_text(tmp_path):
+    with pytest.raises(ConfigError, match="poster.theme must be str"):
+        parse_config({"poster": {"theme": 3}}, tmp_path)
+    with pytest.raises(ConfigError, match="unknown key 'colours' in poster"):
+        parse_config({"poster": {"colours": {}}}, tmp_path)
+    assert parse_config({"poster": {"theme": "brand.yml"}}, tmp_path).poster_theme == tmp_path / "brand.yml"
+    assert parse_config({"poster": {"theme": "dark"}}, tmp_path).poster_theme == "dark"

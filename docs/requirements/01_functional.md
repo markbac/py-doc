@@ -93,6 +93,16 @@ title: Functional requirements
 | FR-126 | A document's site pages shall link the files `py-doc build` made for it (`site.downloads`), copied beside the site. | Should | Met |
 | FR-127 | The site navigation py-doc writes shall also list pages of the user's own (`site.pages`), after the documents. | Should | Met |
 
+## Posters
+
+| ID | Requirement | Priority | Status |
+|---|---|---|---|
+| FR-130 | `py-doc poster` shall make one self-contained HTML poster from one Markdown file, with its pictures, diagrams, logo and styles inside the page. | Should | Met |
+| FR-131 | A poster shall keep the proportions of A paper, portrait or landscape, fit its content at the narrowest layout that holds it, and print on one page of the chosen size. | Should | Met |
+| FR-132 | A poster shall draw its diagram fences in the tool container, and a diagram that cannot be drawn shall be shown as code with a warning, without stopping the poster. | Should | Met |
+| FR-133 | The colours, fonts, block palette and logo of a poster shall come from a theme: a built-in one, or a theme file that changes a built-in one, chosen on the command line, in the front matter or in `py-doc.yml`. | Should | Met |
+| FR-134 | A mistake in a poster's front matter or theme shall stop the build with the file and the key. | Must | Met |
+
 ## Tool container
 
 | ID | Requirement | Priority | Status |

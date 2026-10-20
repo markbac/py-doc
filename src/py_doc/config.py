@@ -184,6 +184,7 @@ class ProjectConfig:
     site: SiteConfig | None = None
     generators: list[GeneratorSpec] = field(default_factory=list)
     build: BuildSettings = field(default_factory=BuildSettings)
+    poster_theme: str | Path | None = None  # poster.theme: a built-in poster theme, or a theme file
     reserved: dict[str, Any] = field(default_factory=dict)
 
     def output_path(self, document: DocumentConfig, fmt: str, version: str | None = None) -> Path:
@@ -278,7 +279,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", "content", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", "content", "poster", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -315,6 +316,11 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
 
     if "site" in top:
         config.site = _parse_site(_mapping(top["site"] or {}, "site"), root, config)
+    poster = _mapping(top.get("poster") or {}, "poster")
+    _only(poster, ("theme",), "poster")
+    theme = _typed(poster, "theme", str, "poster")
+    if theme:  # a file name is from py-doc.yml, a bare word is a built-in theme
+        config.poster_theme = _path(root, theme, "poster.theme") if theme.endswith((".yml", ".yaml")) else theme
 
     for name in RESERVED_SECTIONS:
         if name in top:

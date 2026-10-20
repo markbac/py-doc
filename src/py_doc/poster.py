@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import html
+import json
 import logging
 import mimetypes
 import re
@@ -20,96 +21,96 @@ from markdown_it import MarkdownIt
 from py_doc.diagrams import BY_FENCE, DiagramError
 from py_doc.diagrams.render import draw_cached
 from py_doc.errors import ConversionError, ToolFailed
+from py_doc.poster_themes import Theme, load_theme, logo_path
 from py_doc.runtime import Runtime
 
 logger = logging.getLogger(__name__)
 
 CSS = """
+:root{__VARS__}
 *{box-sizing:border-box}
-body{margin:0;background:#e9e9ef}
+body{margin:0;background:var(--backdrop)}
 @page{size:__PAPER__;margin:0}
-.poster{width:__W__px;margin:0 auto;background:#f3f3f7;color:#1d1f27;font-family:'Source Serif 4',Georgia,serif;display:flex;flex-direction:column;min-height:__H__px}
-header{background:#3b3b40;padding:34px 40px 28px;text-align:center;border-bottom:10px solid #4a7fc1}
-h1{margin:0;font-size:68px;line-height:1.05;color:#fff;font-weight:700}
-.subtitle{font-size:36px;color:#7cc0f2;line-height:1.15;margin-top:10px}
-.byline{font-size:20px;color:#e6e7ec;margin-top:10px}
+.poster{width:__W__px;margin:0 auto;background:var(--page);color:var(--text);font-family:var(--font-body);display:flex;flex-direction:column;min-height:__H__px}
+header{background:var(--header);padding:34px 40px 28px;text-align:center;border-bottom:10px solid var(--accent);position:relative}
+header.logo{padding-left:300px;padding-right:300px}
+header img{position:absolute;left:40px;top:50%;transform:translateY(-50%);max-height:120px;max-width:230px}
+h1{margin:0;font-size:68px;line-height:1.05;color:var(--header-text);font-weight:700;font-family:var(--font-heading)}
+.subtitle{font-size:36px;color:var(--subtitle);line-height:1.15;margin-top:10px}
+.byline{font-size:20px;color:var(--byline);margin-top:10px}
 main{padding:24px 40px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
-.stats{display:flex;background:#fff;border:1px solid #d5d8e2;padding:16px 0}
+.stats{display:flex;background:var(--surface);border:1px solid var(--border);padding:16px 0}
 .stat{flex:1;text-align:center;padding:4px 16px}
-.stat+.stat{border-left:5px solid #4a7fc1}
-.stat b{display:block;font-size:50px;line-height:1;color:#2a3150}
-.stat span{display:block;font-size:18px;color:#4a4f5c;margin-top:8px}
-.abstract{background:#3f74b8;color:#fff;padding:18px 28px;font-size:19px;line-height:1.45;text-align:center}
+.stat+.stat{border-left:5px solid var(--accent)}
+.stat b{display:block;font-size:50px;line-height:1;color:var(--strong)}
+.stat span{display:block;font-size:18px;color:var(--muted);margin-top:8px}
+.abstract{background:var(--secondary);color:var(--on-secondary);padding:18px 28px;font-size:19px;line-height:1.45;text-align:center}
 .abstract p{margin:0}
 .cols{display:flex;gap:28px;align-items:flex-start}
 .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:22px}
-section h2{margin:0 0 10px;background:#2a3150;color:#fff;padding:10px 16px;font-size:25px;line-height:1.2}
-section h2 span{color:#7cc0f2;font-weight:600}
+section h2{margin:0 0 10px;background:var(--primary);color:var(--on-primary);font-family:var(--font-heading);padding:10px 16px;font-size:25px;line-height:1.2}
+section h2 span{color:var(--highlight);font-weight:600}
 .body{font-size:16px;line-height:1.45}
 .body>*:first-child{margin-top:0}
 .body p{margin:0 0 10px}
-.body h3{font-size:19px;margin:14px 0 6px;color:#2a3150}
+.body h3{font-size:19px;margin:14px 0 6px;color:var(--strong)}
 .body ul,.body ol{margin:0 0 10px;padding-left:24px}
-.body img{max-width:100%;display:block;margin:0 auto 10px;background:#fff;border:1px solid #d5d8e2;padding:10px}
-.body table{border-collapse:collapse;width:100%;font-size:13.5px;line-height:1.35;margin:0 0 10px;background:#fff}
-.body th{background:#2a3150;color:#fff;text-align:left;padding:6px 10px}
-.body td{padding:6px 10px;border:1px solid #d5d8e2}
-.body code{font-family:'IBM Plex Mono',monospace;font-size:.9em;background:#e4e8f1;padding:1px 4px}
-.body pre{background:#fff;border:1px solid #d5d8e2;padding:10px 12px;overflow:auto;margin:0 0 10px}
+.body img{max-width:100%;display:block;margin:0 auto 10px;background:var(--surface);border:1px solid var(--border);padding:10px}
+.body table{border-collapse:collapse;width:100%;font-size:13.5px;line-height:1.35;margin:0 0 10px;background:var(--surface)}
+.body th{background:var(--primary);color:var(--on-primary);text-align:left;padding:6px 10px}
+.body td{padding:6px 10px;border:1px solid var(--border)}
+.body code{font-family:var(--font-mono);font-size:.9em;background:var(--code);padding:1px 4px}
+.body pre{background:var(--surface);border:1px solid var(--border);padding:10px 12px;overflow:auto;margin:0 0 10px}
 .body pre code{background:none;padding:0;font-size:13.5px}
-.body blockquote{margin:0 0 10px;background:#fbeee0;border:1px solid #e3b88a;padding:8px 12px;font-size:14px}
+.body blockquote{margin:0 0 10px;background:var(--callout);border:1px solid var(--callout-border);padding:8px 12px;font-size:14px}
 .body blockquote p{margin:0}
-.body p.caption{font-size:14px;line-height:1.4;color:#4a4f5c}
-.body p.caption strong{color:#1d1f27}
-.fig{background:#fff;border:1px solid #d5d8e2;padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin:0 0 10px}
-.fig-title{font-size:13px;font-weight:700;color:#4a4f5c}
+.body p.caption{font-size:14px;line-height:1.4;color:var(--muted)}
+.body p.caption strong{color:var(--text)}
+.fig{background:var(--surface);border:1px solid var(--border);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin:0 0 10px}
+.fig-title{font-size:13px;font-weight:700;color:var(--muted)}
 .fig-notes{font-size:13.5px;line-height:1.45}
 .fig-notes p{margin:0 0 4px}
 .fig-notes blockquote{margin:0}
-.bar{display:flex;gap:2px;font-size:14px;font-weight:700;color:#fff;line-height:1.25}
+.bar{display:flex;gap:2px;font-size:14px;font-weight:700;color:var(--on-primary);line-height:1.25}
 .bar>div{padding:8px 6px 8px 10px;display:flex;flex-direction:column;justify-content:center;min-width:0}
 .bar small{font-weight:400;font-size:13.5px}
 .flow{display:flex;align-items:center;gap:6px}
-.node{padding:10px 14px;font-size:17px;font-weight:700;border-radius:4px;color:#fff}
-.node.out{flex:1;background:#fff;color:#1d1f27;border:2px solid #2a3150;font-size:14px;font-weight:400;line-height:1.35;padding:8px 10px;border-radius:0}
-.arr{flex:1;text-align:center;font-size:12.5px;line-height:1.25;color:#2f5f9f;font-weight:600}
+.node{padding:10px 14px;font-size:17px;font-weight:700;border-radius:4px;color:var(--on-primary)}
+.node.out{flex:1;background:var(--surface);color:var(--text);border:2px solid var(--strong);font-size:14px;font-weight:400;line-height:1.35;padding:8px 10px;border-radius:0}
+.arr{flex:1;text-align:center;font-size:12.5px;line-height:1.25;color:var(--accent-text);font-weight:600}
 .arr i{display:block;font-style:normal;font-size:22px;line-height:1}
 .lanes{display:flex;gap:8px}
 .lane{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
-.lane b{font-size:13px;color:#2a3150}
+.lane b{font-size:13px;color:var(--strong)}
 .cells{display:flex;gap:4px}
 .cell{flex:1;font-size:12.5px;line-height:1.25;padding:8px 6px;font-weight:600}
-.cell.fill{background:#3f74b8;color:#fff}
-.cell.dash{border:2px dashed #3f74b8;color:#2a3150;padding:6px 4px}
+.cell.fill{background:var(--secondary);color:var(--on-secondary)}
+.cell.dash{border:2px dashed var(--secondary);color:var(--strong);padding:6px 4px}
 .cards{display:grid;gap:10px;margin:0 0 10px}
-.card{background:#fff;border:1px solid #d5d8e2;padding:10px 12px}
-.card .ch{font-size:15px;font-weight:700;color:#2a3150}
+.card{background:var(--surface);border:1px solid var(--border);padding:10px 12px}
+.card .ch{font-size:15px;font-weight:700;color:var(--strong)}
 .card .ct{font-size:14px;line-height:1.4;margin-top:3px}
 .card.plain .ct{margin-top:0;line-height:1.45}
-.card.label .ch{font-size:12.5px;letter-spacing:.6px;text-transform:uppercase;color:#2f5f9f}
+.card.label .ch{font-size:12.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--accent-text)}
 .card.label .ct{font-size:15px;line-height:1.35}
 .lcds{display:flex;gap:10px;margin:0 0 10px}
 .lcd{flex:1;min-width:0}
-.lcd .scr{background:#b7c79a;border:3px solid #3b3b40;border-radius:4px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:14.5px;line-height:1.4;color:#1f2a14;font-weight:600;white-space:pre}
-.lcd .cap{font-size:13px;line-height:1.3;color:#4a4f5c;margin-top:6px}
-.banner{background:#3f74b8;color:#fff;padding:14px 28px;font-size:22px;line-height:1.35;text-align:center;font-weight:600}
+.lcd .scr{background:var(--lcd);border:3px solid var(--lcd-border);border-radius:4px;padding:8px 10px;font-family:var(--font-mono);font-size:14.5px;line-height:1.4;color:var(--lcd-text);font-weight:600;white-space:pre}
+.lcd .cap{font-size:13px;line-height:1.3;color:var(--muted);margin-top:6px}
+.banner{background:var(--secondary);color:var(--on-secondary);padding:14px 28px;font-size:22px;line-height:1.35;text-align:center;font-weight:600}
 .blocks{display:flex;gap:20px}
-.block{flex:1;border-left:5px solid #4a7fc1;padding:2px 0 2px 14px}
-.block h3{margin:0;font-size:21px;color:#2a3150}
+.block{flex:1;border-left:5px solid var(--accent);padding:2px 0 2px 14px}
+.block h3{margin:0;font-size:21px;color:var(--strong);font-family:var(--font-heading)}
 .block .body{font-size:15.5px;margin-top:4px}
-footer{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid #d5d8e2;padding-top:14px;margin-top:auto}
-footer b{font-size:26px;color:#2a3150}
-footer span{font-size:15px;color:#4a4f5c}
+footer{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--border);padding-top:14px;margin-top:auto}
+footer b{font-size:26px;color:var(--strong)}
+footer span{font-size:15px;color:var(--muted)}
 @media print{body{background:none}.poster{margin:0}}
 """
 
-FONTS = ("https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700"
-         "&family=IBM+Plex+Mono:wght@500;600&display=swap")
-
-
 SCRIPT = """
 (function(){
-var R=1.4142, MIN=__MIN__, PAPER=__PAPER_PX__;
+var R=__RATIO__, MIN=__MIN__, PAPER=__PAPER_PX__;
 var p=document.querySelector('.poster');
 function natural(w){p.style.zoom='1';p.style.width=w+'px';p.style.height='auto';p.style.minHeight='0';return p.scrollHeight;}
 function scale(){p.style.zoom=document.documentElement.clientWidth/(+p.dataset.w);}
@@ -131,14 +132,20 @@ fit();
 
 PAPER_MM = {"a0": (841, 1189), "a1": (594, 841), "a2": (420, 594), "a3": (297, 420), "a4": (210, 297)}
 
-COLOURS = {"navy": "#2a3150", "blue": "#3f74b8", "amber": "#b4540a", "brown": "#8a3d08",
-           "red": "#a3322b", "grey": "#4a4f5c", "green": "#2e6b3a"}
+RATIO = 1.4142  # height to width of A paper
+COLUMNS = {"portrait": 2, "landscape": 3}
 
-# Mermaid theme that matches the poster palette. Skipped if the diagram has its own init.
-MERMAID_INIT = ('%%{init: {"theme":"base","themeVariables":{"fontFamily":"Georgia, serif","fontSize":"16px",'
-                '"primaryColor":"#e8eef8","primaryBorderColor":"#2a3150","primaryTextColor":"#1d1f27",'
-                '"lineColor":"#2a3150","secondaryColor":"#f3f3f7","tertiaryColor":"#ffffff",'
-                '"clusterBkg":"#f3f6fb","clusterBorder":"#3f74b8","edgeLabelBackground":"#ffffff"}}}%%\n')
+
+def mermaid_init(theme):
+    """A Mermaid theme that matches the poster's. Skipped if the diagram has its own init."""
+    c = theme.colours
+    variables = {
+        "fontFamily": theme.fonts["body"], "fontSize": "16px", "primaryColor": c["diagram-fill"],
+        "primaryBorderColor": c["primary"], "primaryTextColor": "#1d1f27", "lineColor": c["primary"],
+        "secondaryColor": "#f3f3f7", "tertiaryColor": "#ffffff", "clusterBkg": "#f3f6fb",
+        "clusterBorder": c["secondary"], "edgeLabelBackground": "#ffffff",
+    }  # fmt: skip
+    return "%%{init: " + json.dumps({"theme": "base", "themeVariables": variables}) + "}%%\n"
 
 FENCE = re.compile(r"(?ms)^```[ \t]*([\w+-]+)([^\n]*)\n(.*?)^```[ \t]*$")
 TOK = re.compile(r"\[([^\]|]+)(?:\|([^\]]+))?\]|-(?:([^>\[\]]*?)-)?>")
@@ -154,8 +161,9 @@ class PosterError(ConversionError):
 class Ctx:
     """Per-build state shared by all blocks."""
 
-    def __init__(self, base, runtime):
+    def __init__(self, base, runtime, theme=None):
         self.base = base
+        self.theme = theme or Theme()
         self._connect, self._runtime = runtime, None
         self.n = 0
         self.failed = 0
@@ -169,11 +177,6 @@ class Ctx:
 
 def esc(s):
     return html.escape(s, quote=True)
-
-
-def col(name):
-    name = (name or "").strip().lower()
-    return COLOURS.get(name, name) if name else COLOURS["navy"]
 
 
 def inline(s):
@@ -195,7 +198,7 @@ def parse_opts(info):
 def render_diagram(lang, code, ctx):
     ctx.n += 1
     if lang == "mermaid" and "%%{init" not in code:
-        code = MERMAID_INIT + code
+        code = mermaid_init(ctx.theme) + code
     return draw_cached(ctx.runtime(), BY_FENCE[lang], code, "png", False, ctx.base)
 
 
@@ -219,14 +222,14 @@ def diagram_html(lang, code, opts, ctx):
 # Poster blocks: cards, lcd, and the figure kinds (segments, flow, lanes)
 # ---------------------------------------------------------------------------
 
-def cards_html(code, opts):
+def cards_html(code, opts, ctx):
     rows = [[c.strip() for c in line.split("|")] for line in code.splitlines() if line.strip()]
     style = opts.get("style", "title")
     cols = int(opts.get("cols", min(len(rows), 4) or 1))
     out = ""
     for r in rows:
         head, text, colour = ("", r[0], None) if len(r) == 1 else (r[0], r[1], r[2] if len(r) > 2 else None)
-        top = f' style="border-top:4px solid {col(colour or "blue")}"' if style == "top" else ""
+        top = f' style="border-top:4px solid {ctx.theme.colour(colour, "secondary")}"' if style == "top" else ""
         h = f'<div class="ch">{inline(head)}</div>' if head else ""
         out += f'<div class="card {esc(style)}"{top}>{h}<div class="ct">{inline(text)}</div></div>'
     return f'<div class="cards" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
@@ -261,7 +264,7 @@ def kv_split(code):
     return meta, rest
 
 
-def segments_part(code):
+def segments_part(code, ctx):
     meta, lines = kv_split(code)
     rows, notes = [], []
     for line in lines:
@@ -271,13 +274,13 @@ def segments_part(code):
         label = r[1] if len(r) > 1 else ""
         det = r[2] if len(r) > 2 else ""
         detailed = detailed or bool(det)
-        cells += (f'<div style="flex:{r[0]};background:{col(r[3] if len(r) > 3 else "navy")}">{inline(label)}'
+        cells += (f'<div style="flex:{r[0]};background:{ctx.theme.colour(r[3] if len(r) > 3 else None)}">{inline(label)}'
                   + (f"<small>{inline(det)}</small>" if det else "") + "</div>")
     h = meta.get("height") or ("64" if detailed else "36")
     return meta.get("title"), f'<div class="bar" style="min-height:{h}px">{cells}</div>', "\n".join(notes).strip()
 
 
-def flow_part(code):
+def flow_part(code, ctx):
     meta, lines = kv_split(code)
     rows, notes = "", []
     for line in lines:
@@ -288,7 +291,7 @@ def flow_part(code):
         for m in TOK.finditer(line):
             if m.group(1) is not None:
                 if m.group(2):
-                    parts += f'<div class="node" style="background:{col(m.group(2))}">{inline(m.group(1))}</div>'
+                    parts += f'<div class="node" style="background:{ctx.theme.colour(m.group(2))}">{inline(m.group(1))}</div>'
                 else:
                     parts += f'<div class="node out">{inline(m.group(1))}</div>'
             else:
@@ -298,7 +301,7 @@ def flow_part(code):
     return meta.get("title"), rows, "\n".join(notes).strip()
 
 
-def lanes_part(code):
+def lanes_part(code, ctx):
     meta, lines = kv_split(code)
     lanes, notes = "", []
     for line in lines:
@@ -331,11 +334,11 @@ def block_html(lang, opts, code, ctx):
     if lang in BY_FENCE:
         return diagram_html(lang, code, opts, ctx)
     if lang == "cards":
-        return cards_html(code, opts)
+        return cards_html(code, opts, ctx)
     if lang == "lcd":
         return lcd_html(code)
     if lang in FIG_KINDS:
-        return figure_html([FIG_KINDS[lang](code)], ctx)
+        return figure_html([FIG_KINDS[lang](code, ctx)], ctx)
     if lang == "figure":  # several kinds in one box, split by +++ lines, each starting with @kind
         parts = []
         for sub in re.split(r"(?m)^\+\+\+\s*$", code):
@@ -344,7 +347,7 @@ def block_html(lang, opts, code, ctx):
             if kind not in FIG_KINDS:
                 logger.warning(f"unknown figure part '{kind}'")
                 continue
-            parts.append(FIG_KINDS[kind](body))
+            parts.append(FIG_KINDS[kind](body, ctx))
         return figure_html(parts, ctx)
     return None
 
@@ -413,11 +416,56 @@ def parse_stats(text):
     return out
 
 
-def build(md_path, runtime: Callable[[], Runtime]):
-    """The poster page for ``md_path`` and the build state (diagrams drawn and failed)."""
+def number(meta, key, default, md_path, least=1):
+    try:
+        value = int(meta.get(key, default))
+    except ValueError:
+        raise PosterError(f"{md_path}: {key} must be a whole number, not '{meta[key]}'") from None
+    if value < least:
+        raise PosterError(f"{md_path}: {key} must be at least {least}")
+    return value
+
+
+def columns_of(sections, count, split, md_path):
+    """The sections of each column: ``split`` gives how many go in each but the last, else they are balanced by length."""
+    count = min(count, len(sections))
+    if split:
+        try:
+            sizes = [int(x) for x in split.split(",")]
+        except ValueError:
+            raise PosterError(f"{md_path}: split must be a number, or numbers separated by commas") from None
+        if len(sizes) != count - 1 or min(sizes) < 1 or sum(sizes) >= len(sections):
+            raise PosterError(f"{md_path}: split needs {count - 1} number(s) of sections, leaving at least one for the last column")
+        cuts = [sum(sizes[: i + 1]) for i in range(len(sizes))]
+        return [sections[a:b] for a, b in zip([0, *cuts], [*cuts, len(sections)])]
+    total, acc, columns = sum(len(c) for _, c in sections), 0, [[]]
+    for i, section in enumerate(sections):
+        left, open_columns = len(sections) - i, count - len(columns)
+        if columns[-1] and open_columns and (acc >= total * len(columns) / count or left <= open_columns):
+            columns.append([])
+        columns[-1].append(section)
+        acc += len(section[1])
+    return columns
+
+
+def build(md_path, runtime: Callable[[], Runtime], theme: str | Path | None = None, default_theme: str | Path | None = None):
+    """The poster page for ``md_path`` and the build state (diagrams drawn and failed).
+
+    A theme is a built-in name or a theme file. ``theme`` wins over the front matter's, and
+    ``default_theme`` (the project's) is used when neither names one. A relative ``theme`` path is
+    from the working folder, a front matter one from the Markdown file.
+    """
     md_path = Path(md_path)
-    ctx = Ctx(md_path.parent, runtime)
     meta, body = parse_front_matter(md_path.read_text(encoding="utf-8"))
+    if theme:
+        loaded = load_theme(theme, Path.cwd())
+    elif meta.get("theme"):
+        loaded = load_theme(meta["theme"], md_path.parent)
+    else:
+        loaded = load_theme(default_theme, Path.cwd())
+    if meta.get("logo"):
+        loaded.logo = logo_path(meta["logo"], md_path.parent, str(md_path))
+    ctx = Ctx(md_path.parent, runtime, loaded)
     h1 = re.search(r"(?m)^# +(.+)$", body)
     title = meta.get("title") or (h1.group(1) if h1 else md_path.stem)
 
@@ -436,22 +484,15 @@ def build(md_path, runtime: Callable[[], Runtime]):
     if not sections:
         raise PosterError(f"{md_path}: no sections found (expected '## Heading' blocks)")
 
-    if "split" in meta:
-        n = int(meta["split"])
-    else:
-        total, acc, n = sum(len(c) for _, c in sections), 0, 0
-        for _, c in sections:
-            if acc >= total / 2 and n:
-                break
-            acc += len(c)
-            n += 1
-    n = max(1, min(n, len(sections) - 1)) if len(sections) > 1 else 1
+    orientation = meta.get("orientation", "portrait").lower()
+    if orientation not in COLUMNS:
+        raise PosterError(f"{md_path}: orientation must be portrait or landscape")
+    columns = columns_of(sections, number(meta, "columns", COLUMNS[orientation], md_path), meta.get("split"), md_path)
 
     def sec(h, c):
         return f'<section><h2>{heading_html(h)}</h2><div class="body">{render(c, ctx)}</div></section>'
 
-    left = "".join(sec(h, c) for h, c in sections[:n])
-    right = "".join(sec(h, c) for h, c in sections[n:])
+    cols = "".join(f'<div class="col">{"".join(sec(h, c) for h, c in column)}</div>' for column in columns)
     stats_html = "".join(f'<div class="stat"><b>{esc(v)}</b><span>{esc(label)}</span></div>' for v, label in stats)
 
     summary_html = ""
@@ -464,31 +505,37 @@ def build(md_path, runtime: Callable[[], Runtime]):
         summary_html = (f'<div class="banner">{esc(banner)}</div>' if banner else "") + \
                        (f'<div class="blocks">{blocks}</div>' if blocks else "")
 
-    width = int(meta.get("width", 1400))  # minimum layout width, the script widens it until the content fits
+    # minimum layout width, the script widens it until the content fits
+    width = number(meta, "width", 1400 if orientation == "portrait" else 1800, md_path, least=400)
     paper = meta.get("paper", "a1").lower()
     if paper not in PAPER_MM:
         raise PosterError(f"{md_path}: paper must be one of {', '.join(PAPER_MM)}")
-    css = (CSS.replace("__W__", str(width)).replace("__H__", str(round(width * 1.4142)))
-           .replace("__PAPER__", "{}mm {}mm".format(*PAPER_MM[paper])))
-    script = SCRIPT.replace("__MIN__", str(width)).replace("__PAPER_PX__", str(PAPER_MM[paper][0] / 25.4 * 96))
+    ratio = RATIO if orientation == "portrait" else 1 / RATIO
+    paper_mm = PAPER_MM[paper] if orientation == "portrait" else PAPER_MM[paper][::-1]
+    css = (CSS.replace("__VARS__", ctx.theme.css_variables()).replace("__W__", str(width))
+           .replace("__H__", str(round(width * ratio))).replace("__PAPER__", "{}mm {}mm".format(*paper_mm)))
+    script = (SCRIPT.replace("__RATIO__", f"{ratio:.4f}").replace("__MIN__", str(width))
+              .replace("__PAPER_PX__", str(paper_mm[0] / 25.4 * 96)))
+    fonts = ctx.theme.fonts.get("stylesheet")
+    logo = ctx.theme.logo_uri()
     page = f"""<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(title)}</title>
-<link rel="stylesheet" href="{FONTS}">
+{f'<link rel="stylesheet" href="{esc(fonts)}">' if fonts else ""}
 <style>{css}</style>
 </head>
 <body>
-<div class="poster">
-<header><h1>{esc(title)}</h1>
+<div class="poster {orientation}">
+<header{' class="logo"' if logo else ""}>{f'<img alt="Logo" src="{logo}">' if logo else ""}<h1>{esc(title)}</h1>
 {f'<div class="subtitle">{esc(meta["subtitle"])}</div>' if meta.get("subtitle") else ""}
 {f'<div class="byline">{esc(meta["byline"])}</div>' if meta.get("byline") else ""}</header>
 <main>
 {f'<div class="stats">{stats_html}</div>' if stats_html else ""}
 {f'<div class="abstract">{abstract}</div>' if abstract else ""}
-<div class="cols"><div class="col">{left}</div><div class="col">{right}</div></div>
+<div class="cols">{cols}</div>
 {summary_html}
 <footer><b>{esc(meta.get("footer-left", ""))}</b><span>{esc(meta.get("footer-right", ""))}</span></footer>
 </main>

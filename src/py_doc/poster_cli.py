@@ -10,11 +10,14 @@ from py_doc._logging import configure_logging
 from py_doc.config import ConfigError, find_config, load_config
 from py_doc.errors import ConversionError, exit_status
 from py_doc.poster import build
+from py_doc.poster_themes import BUILTIN
 from py_doc.runtime import RuntimeSettings, connect
 
 POSTER_EXAMPLES = """examples:
   py-doc poster g460.md                 writes g460.html
   py-doc poster g460.md -o out.html
+  py-doc poster g460.md --theme dark    a built-in theme: default, dark or print
+  py-doc poster g460.md --theme brand.yml
 
 The conventions (front matter, sections, cards, lcd, segments, flow, lanes) are in docs/guide/12_posters.md."""
 
@@ -26,6 +29,7 @@ def run_poster(argv: list[str]) -> int:
     )  # fmt: skip
     parser.add_argument("markdown_file")
     parser.add_argument("-o", "--output", help="Output path (default: the input name with .html)")
+    parser.add_argument("--theme", help=f"A built-in theme ({', '.join(BUILTIN)}) or a theme file. Wins over the front matter and py-doc.yml")
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -39,8 +43,9 @@ def run_poster(argv: list[str]) -> int:
     out = Path(args.output) if args.output else source.with_suffix(".html")
     try:
         config = find_config(source.resolve().parent)
-        settings = load_config(config).runtime if config else RuntimeSettings()
-        page, ctx = build(source, lambda: connect(settings))
+        project = load_config(config) if config else None
+        settings = project.runtime if project else RuntimeSettings()
+        page, ctx = build(source, lambda: connect(settings), args.theme, project.poster_theme if project else None)
     except (ConfigError, ConversionError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return exit_status(exc)

@@ -1,0 +1,42 @@
+# The poster theme of Example Instruments, a made-up company. Copy it for your own brand.
+# Start from a built-in theme (default, dark or print) and change only what differs.
+# The Posters chapter of the user guide (docs/guide/12_posters.md) lists every colour and what it paints.
+extends: default
+
+colours:
+  backdrop: "#dfe9e7"        # around the poster in a browser
+  page: "#f4f8f7"
+  border: "#cfe0dc"
+  text: "#1c2b2b"
+  muted: "#4a5a5a"
+  header: "#ffffff"          # a white header, so the logo needs no box of its own
+  header-text: "#0f4c4c"
+  subtitle: "#e8684a"
+  byline: "#4a5a5a"
+  accent: "#e8684a"          # the brand's coral: the rule under the header and the summary blocks
+  accent-text: "#b5452c"
+  primary: "#0f5e5e"         # the brand's teal: behind section headings and table headings
+  strong: "#0f4c4c"
+  secondary: "#178a8a"
+  highlight: "#9fe0d6"
+  code: "#e3efed"
+  callout: "#fdeee9"
+  callout-border: "#f0b4a5"
+  diagram-fill: "#e3f3f0"
+
+# Colour names for blocks (cards, segments, flow), as well as navy, blue, amber, brown, red, grey and green
+palette:
+  teal: "#0f5e5e"
+  sea: "#178a8a"
+  coral: "#e8684a"
+  sand: "#b38a1e"
+  slate: "#4a5a5a"
+
+fonts:
+  heading: "'Montserrat', Arial, sans-serif"
+  body: "'Source Sans 3', Arial, sans-serif"
+  mono: "'JetBrains Mono', Consolas, monospace"
+  # Web fonts to load. Leave it out to use fonts installed on the computer, and the fallbacks after the commas.
+  stylesheet: "https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500;600&display=swap"
+
+logo: logo.svg               # from this file's folder; a poster's own `logo:` wins
