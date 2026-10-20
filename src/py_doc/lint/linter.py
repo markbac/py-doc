@@ -24,6 +24,9 @@ from .mdlint import run_markdownlint
 from .model import FileResult, LintIssue, LintReport
 from .text import segments
 
+# Not for a poster: it has no room to spell out every acronym, and its short, direct sentences are on purpose
+POSTER_QUIET = frozenset({RULE_ACRONYM, "PyDoc.Acronyms", "PyDoc.PassiveVoice"})
+
 logger = logging.getLogger(__name__)
 
 # Text rules: Vale replaces them when it is the engine.
@@ -217,6 +220,9 @@ class DocLinter:
         self._vale(report, base)
         for check in self.extra_checks:
             report.add(check())
+        for result in report.results:
+            if result.file in self.config.posters:
+                result.issues = [issue for issue in result.issues if issue.rule not in POSTER_QUIET]
         return report
 
     def vale_folder(self) -> Path:

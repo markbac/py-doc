@@ -57,4 +57,4 @@ python -m pytest
 ruff check .
 ```
 
-The tests run pandoc, Graphviz and XeLaTeX on the host in place of the container when they are installed, and skip what they cannot run. CI runs on Linux and Windows with Python 3.10 and 3.14, the oldest and newest supported. macOS is not supported.
+The tests run pandoc, Graphviz and XeLaTeX on the host in place of the container when they are installed, and skip what they cannot run. The poster page tests run the page script in Chromium through Playwright: in `PY_DOC_CHROMIUM` when it names one, else Playwright's own, else an installed Chrome. Without a browser they are skipped, unless `PY_DOC_BROWSER_TESTS=1`, as in CI, makes that a failure. CI runs on Linux and Windows with Python 3.10 and 3.14, the oldest and newest supported. macOS is not supported.

@@ -1156,6 +1156,18 @@ def test_the_same_markdown_as_a_document_gets_the_structure_rules(tmp_path, monk
     assert "structure/diagram-missing-caption" in capsys.readouterr().out
 
 
+def test_a_poster_is_not_asked_to_spell_out_acronyms_but_a_document_is(tmp_path, monkeypatch, capsys):
+    text = "## A\n\nThe MCU sleeps. The XYZ radio is kept off.\n"
+    write(tmp_path, text)
+    (tmp_path / "doc.md").write_text("# Doc\n\n" + text, encoding="utf-8")
+    (tmp_path / "py-doc.yml").write_text("posters:\n  wall: {source: poster.md}\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    main(["lint", ".", "--engine", "builtin"])
+    out = capsys.readouterr().out
+    assert "doc.md" in out and "DOC003" in out
+    assert not [line for line in out.splitlines() if "poster.md" in line and "DOC003" in line]
+
+
 def test_build_lint_reads_the_posters_too(tmp_path, drawn, documents, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     write(tmp_path, "## A\n\nWe do this in order to save power.\n")
