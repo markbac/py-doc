@@ -4,10 +4,11 @@ subtitle: Five years of readings from one coin cell
 byline: A. Writer, Product Engineering
 paper: a1
 width: 1150
+document_number: SN-PO-001
+version: "1.3"
 footer:
   left: SN-100
-  centre: Product Engineering
-  right: Example poster, `py-doc poster poster/poster.md`
+  right: Datasheet SN-DS-001, revision C
   qr: https://example.com/sn-100
   qr-label: Datasheet
 ---
@@ -16,7 +17,7 @@ footer:
 
 | Value | Label | Change | Verdict |
 |---|---|---|---|
-| 2 uA | Sleep current | -0.5 uA | good |
+| 2 µA | Sleep current | -0.5 µA | good |
 | 5 years | Battery life at one reading a minute | +14 % | |
 | 0.2 °C | Temperature accuracy | | |
 | 1 KB | Firmware update block | | |
@@ -27,11 +28,15 @@ The SN-100 measures temperature and humidity and publishes each reading over MQT
 
 ## 1. Hardware: what is on the board
 
-The node has a sensor, a microcontroller and a radio, powered from one CR2477 cell.
+The node has a sensor, a microcontroller and a radio on one 52 by 29 mm board, powered from one CR2477 cell.
+
+![The SN-100 board, top side](images/sn100-board.svg)
+
+[[CAPTION:Figure]] Fig. 1 The board, top side, to scale. The cell holder takes most of it.
 
 ```cards cols=3 style=top
 Sensor | Temperature and humidity on I2C, up to 400 kHz | blue
-Controller | Sleeps at 2 uA, wakes on its own timer | navy
+Controller | Sleeps at 2 µA, wakes on its own timer | navy
 Radio | Sends one MQTT message, then switches off | green
 ```
 
@@ -42,20 +47,28 @@ flowchart LR
   R -- MQTT --> B[(Broker)]
 ```
 
-Fig. 1 The parts of the node and how a reading travels.
+Fig. 2 The parts of the node and how a reading travels.
+
+| Specification | Value |
+|---|---|
+| Temperature | -20 to +60 °C, ±0.2 °C |
+| Humidity | 0 to 100 % RH, ±1.8 % |
+| Radio | 868 MHz, +14 dBm, -121 dBm sensitivity |
+| Cell | CR2477, 3 V, 1,000 mAh |
+| Enclosure | 80 by 50 by 22 mm, IP54 |
 
 ## 2. Power: where the charge goes
 
 ```segments
 title: One minute of the node's time (not to scale)
-6 | Asleep, 58 s | 2 uA | navy
-2 | Measure, 1 s | 300 uA | blue
+6 | Asleep, 58 s | 2 µA | navy
+2 | Measure, 1 s | 300 µA | blue
 2 | Send, 1 s | 12 mA | amber
 ```
 
 Sending costs the most, so the node sends only when a reading has changed by more than the reporting threshold.
 
-```chart type=bar title="Charge per minute (uC)" unit=" uC"
+```chart type=bar title="Charge per minute (µC)" unit=" µC"
 Asleep | 116
 Measure | 300
 Send | 12000
@@ -64,7 +77,20 @@ Send | 12000
 > [!WARNING]
 > Keep the reporting threshold above the sensor noise, or the node sends every reading and the cell lasts months, not years.
 
-## 3. Behaviour: one reading
+## 3. Cell: how its voltage falls
+
+```chart type=line title="Cell voltage over its life" unit=" V" max=3.2 height=220 colours=blue
+Year 0 | 3.05
+Year 1 | 2.96
+Year 2 | 2.92
+Year 3 | 2.88
+Year 4 | 2.81
+Year 5 | 2.62
+```
+
+The voltage stays flat for four years and falls in the fifth, so a node warns at 2.4 V, months before it stops.
+
+## 4. Behaviour: one reading
 
 ```flow
 [Asleep|navy] -timer-> [Measure|blue] -changed-> [Send|amber] -sent-> [Asleep|navy]
@@ -76,7 +102,7 @@ Every minute | *Wake | *Measure | Send if changed
 Every hour | *Wake | *Measure | *Send status
 ```
 
-## 4. Display: what the installer sees
+## 5. Display: what the installer sees
 
 The optional display shows the last reading and the link state.
 
@@ -96,7 +122,20 @@ RETRY 3/5
 | `E02` | Broker refused the connection |
 | `E03` | Battery below 2.2 V |
 
-## 5. Roadmap: what comes next {.wide}
+> [!TIP]
+> Hold the join button for one second to wake the display without sending a reading.
+
+## 6. Messages: what it sends
+
+Each reading is one MQTT message of about 60 bytes, published with QoS 1 to `sn100/<id>/reading`.
+
+```json
+{"t": 21.4, "rh": 48.2, "cell_v": 2.96, "seq": 18342}
+```
+
+Once an hour the node adds a status message, with its firmware, signal and error codes, to `sn100/<id>/status`.
+
+## 7. Roadmap: what comes next {.wide}
 
 ```timeline
 Jan 2026 | Pilot | 200 nodes in two buildings | navy

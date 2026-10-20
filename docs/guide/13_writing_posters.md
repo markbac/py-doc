@@ -402,7 +402,7 @@ Nothing changes on site. Joining is quicker.
 Every update reports its result.
 ````
 
-`examples/poster/` in the repository has three full posters: portrait, landscape in a company's theme, and dark.
+`examples/poster/` in the repository has four full posters: portrait, landscape in a company's theme, dark, and a three-column report for printing.
 
 ## Before you print
 

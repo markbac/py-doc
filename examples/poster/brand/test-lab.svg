@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220" height="80" viewBox="0 0 220 80" font-family="Arial, sans-serif">
+  <!-- The mark of a made-up test laboratory, for the footer of the reliability poster -->
+  <circle cx="40" cy="40" r="32" fill="none" stroke="#2a3150" stroke-width="4"/>
+  <path d="M32 20 H48 M35 20 V36 L22 58 H58 L45 36 V20" fill="none" stroke="#2a3150" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M28 50 H52 L56 57 H24 Z" fill="#3f74b8"/>
+  <text x="84" y="36" font-size="17" font-weight="700" fill="#2a3150">Northfield</text>
+  <text x="84" y="58" font-size="14" fill="#4a4f5c">Test Laboratory</text>
+</svg>

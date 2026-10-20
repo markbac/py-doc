@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="80" viewBox="0 0 200 80" font-family="Arial, sans-serif">
+  <!-- The mark of a made-up installer scheme, for the footer of the commissioning poster -->
+  <path d="M40 8 L68 20 V40 C68 56 56 68 40 74 C24 68 12 56 12 40 V20 Z" fill="#178a8a"/>
+  <path d="M27 41 L37 51 L55 31" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="80" y="36" font-size="17" font-weight="700" fill="#0f4c4c">Certified</text>
+  <text x="80" y="58" font-size="15" fill="#4a5a5a">SN installer</text>
+</svg>

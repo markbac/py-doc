@@ -141,6 +141,12 @@ content:
       title: Event API
       html: build/api/events-api.html                 # an AsyncAPI page
 
+# Mermaid settings for every Mermaid diagram: documents, the site and the posters. A diagram's own
+# front matter wins, key by key.
+diagrams:
+  mermaid:
+    sequence: {showSequenceNumbers: true}
+
 # Structurizr Local, started on a private Docker network for the `browser` engine.
 # `py-doc c4 lock` pins the image by digest in c4-images.lock.
 c4:
@@ -184,6 +190,7 @@ site:
   engine: mkdocs                       # or starlight (Astro + Starlight)
   dir: site
   documents: [guide, datasheet, architecture]
+  posters: [sensor-node, commissioning, release, reliability]   # each a page of the site, and a Posters page
 
 # Posters for `py-doc poster`: one self-contained HTML page each. `py-doc poster` builds them all,
 # `py-doc poster commissioning` one. Settings in layers: `poster` (every poster), then the front matter
@@ -203,12 +210,17 @@ posters:
     colours:
       accent: "#d9573a"             # one colour changed over the theme
     header: {align: left, logo: left}
+    embed_fonts: [latin]           # the brand's web fonts inside the page, Latin letters only
     footer:
       left: SN-100 commissioning
-      right: Example landscape poster, `py-doc poster commissioning`
+      right: Field guide FG-012, revision B
+      logos: [poster/brand/partner.svg]
       qr: https://example.com/commissioning
       qr-label: The full checklist
   release:
     source: poster/release.md
     variables: {version: "2.1"}
+  reliability:
+    source: poster/reliability.md  # the print theme, three columns on A0, and a version from Git
+    conditions: {internal: true}   # over the front matter's false: with the costs and customer names
 
