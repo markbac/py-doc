@@ -106,6 +106,10 @@ class Engine:
         """Where a document's downloadable files go, and how its pages link to that folder."""
         return self.content / document / "downloads", "downloads"
 
+    def posters(self, folder: str) -> tuple[Path, str]:
+        """Where the poster pages go, and how the Posters page (``folder``/index.md) links to them."""
+        return self.content / folder, ""
+
 
 # --- MkDocs ---------------------------------------------------------------------------------------
 
@@ -236,6 +240,9 @@ class Starlight(Engine):
     def downloads(self, document: str) -> tuple[Path, str]:
         """Starlight serves files from public/, at the site root."""
         return self.root / "public" / document / "downloads", f"/{document}/downloads"
+
+    def posters(self, folder: str) -> tuple[Path, str]:
+        return self.root / "public" / folder, f"/{folder}/"
 
     def files(self, title: str) -> dict[str, str]:
         package = {

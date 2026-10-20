@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import logging
 import os
 import re
@@ -13,6 +14,8 @@ import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
+
+import yaml
 
 from py_doc.errors import ConversionError, ToolFailed
 from py_doc.runtime import Mount, Runtime
@@ -30,6 +33,7 @@ _CAPTION = re.compile(r"^\s*\[\[CAPTION:(?!\s*Table\s*\]\])[^\]]+\]\]")
 _WIDTH = re.compile(r"^\d+(?:\.\d+)?(?:%|cm|mm|in|px)$")
 _TITLE = re.compile(r"^\s*title(?::|\s)\s*(?P<title>.+?)\s*$", re.MULTILINE | re.IGNORECASE)
 _MAGIC = {"png": b"\x89PNG\r\n\x1a\n", "svg": b"<"}
+_FRONT = re.compile(r"\A\s*---[ \t]*\n(.*?)\n---[ \t]*(?:\n|\Z)", re.DOTALL)
 
 
 class DiagramError(ConversionError):
@@ -125,6 +129,31 @@ def draw_cached(
     return cached
 
 
+def with_mermaid_config(text: str, config: dict | None) -> str:
+    """The Mermaid diagram ``text`` with ``config`` (``diagrams.mermaid`` of py-doc.yml) in its front matter.
+
+    The diagram's own front matter wins, key by key, and so does an ``%%{init}%%`` line, which Mermaid reads last.
+    """
+    if not config:
+        return text
+    front = _FRONT.match(text)
+    try:
+        own = (yaml.safe_load(front.group(1)) if front else None) or {}
+    except yaml.YAMLError:
+        return text  # front matter Mermaid itself will reject, with a clearer message than ours
+    if not isinstance(own, dict) or not isinstance(own.get("config") or {}, dict):
+        return text
+    own["config"] = _deep_merge(config, own.get("config") or {})
+    return "---\n" + json.dumps(own) + "\n---\n" + (text[front.end() :] if front else text)
+
+
+def _deep_merge(low: dict, high: dict) -> dict:
+    out = dict(low)
+    for key, value in high.items():
+        out[key] = _deep_merge(out[key], value) if isinstance(value, dict) and isinstance(out.get(key), dict) else value
+    return out
+
+
 def _captioned(lines: list[str], block: Block) -> bool:
     """True when a ``[[CAPTION:]]`` line (not a table's) is the nearest text above or below the diagram."""
     before = next((line for line in reversed(lines[: block.start]) if line.strip()), "")
@@ -152,11 +181,13 @@ def render_parts(
     runtime: Callable[[], Runtime],
     keep_going: bool = False,
     events: list[dict] | None = None,
+    mermaid: dict | None = None,
 ) -> Rendered:
     """Replace the diagram fences of each ``(file, text)`` part by pictures, and join the parts.
 
     HTML gets SVG where the tool can write it, everything else PNG. A failure stops the build with the
-    file and line of the diagram, or with every failure when ``keep_going`` is set.
+    file and line of the diagram, or with every failure when ``keep_going`` is set. ``mermaid`` is the
+    Mermaid configuration of every Mermaid diagram (``diagrams.mermaid`` of py-doc.yml).
     """
     pictures: dict[str, Path] = {}
     failures: list[str] = []
@@ -177,11 +208,12 @@ def render_parts(
                 if position < offsets[block.start]:
                     landscape = name == "LANDSCAPE"
             renderer = BY_FENCE[block.fence]
+            body = with_mermaid_config(block.body, mermaid) if renderer.name == "mermaid" else block.body
             kind = "svg" if fmt == "html" and "svg" in renderer.kinds else "png"
             event: dict = {"type": renderer.name, "file": str(file), "line": block.line, "kind": kind}
             started = time.monotonic()
             try:
-                picture = draw_cached(runtime(), renderer, block.body, kind, landscape, file.parent, event)
+                picture = draw_cached(runtime(), renderer, body, kind, landscape, file.parent, event)
                 event.update(status="ok", seconds=round(time.monotonic() - started, 3))
                 if events is not None:
                     events.append(event)

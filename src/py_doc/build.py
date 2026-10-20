@@ -73,6 +73,7 @@ def build_document(
         output = render_output(
             fmt, joined, metadata, config.output_path(doc, fmt, metadata.version), doc.id,
             sorted({s.file.parent for s in sources if s.include}), template, settings, runtime, keep_going, report,
+            config.mermaid,
         )  # fmt: skip
         written.append(output)
         if report is not None:
@@ -81,7 +82,7 @@ def build_document(
 
 
 def render_output(
-    fmt, joined, metadata, output, name, source_dirs, template, settings, runtime, keep_going=False, report=None
+    fmt, joined, metadata, output, name, source_dirs, template, settings, runtime, keep_going=False, report=None, mermaid=None
 ) -> Path:
     """Draw the diagrams of ``joined`` and have pandoc write ``output``. ``name`` is used in messages."""
     if runtime is None:
@@ -96,7 +97,7 @@ def render_output(
             report.template(name, checked)
     events: list[dict] = []
     try:
-        drawn = render_parts(joined.parts, fmt, runtime, keep_going, events)
+        drawn = render_parts(joined.parts, fmt, runtime, keep_going, events, mermaid)
     finally:
         if report is not None:
             for event in events:

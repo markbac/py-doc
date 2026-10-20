@@ -43,6 +43,7 @@ _GLOB = set("*?[")
 LINT_IN_BUILD = ("off", "on", "strict")
 SITE_ENGINES = ("mkdocs", "starlight")
 DEFAULT_SITE_DIR = "site"
+POSTERS_FOLDER = "posters"  # the site folder of the posters and their page
 
 _META_KEYS = (
     "title", "subtitle", "author", "date", "version", "status", "document_number", "description",
@@ -149,6 +150,7 @@ class SiteConfig:
     targets: dict[str, str] = field(default_factory=dict)  # MkDocs: a site per config file in site.dir, sharing the pages
     pages: dict[str, str] = field(default_factory=dict)  # hand-written pages for the navigation, after the documents: title -> path
     groups: dict[str, list[str]] = field(default_factory=dict)  # a navigation section of several documents: title -> documents
+    posters: list[str] = field(default_factory=list)  # posters of py-doc.yml on the site, linked from a Posters page
 
 
 @dataclass
@@ -197,6 +199,7 @@ class ProjectConfig:
     build: BuildSettings = field(default_factory=BuildSettings)
     poster: dict = field(default_factory=dict)  # poster: the settings of every poster, paths resolved
     posters: dict[str, PosterConfig] = field(default_factory=dict)
+    mermaid: dict = field(default_factory=dict)  # diagrams.mermaid: the Mermaid configuration of every Mermaid diagram
     reserved: dict[str, Any] = field(default_factory=dict)
 
     def output_path(self, document: DocumentConfig, fmt: str, version: str | None = None) -> Path:
@@ -291,7 +294,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", "content", "poster", "posters", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", "content", "poster", "posters", "diagrams", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -321,6 +324,9 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     c4 = _mapping(top.get("c4", {}), "c4")
     _only(c4, ("cli", "image", "port"), "c4")
     config.c4 = C4Settings(_typed(c4, "cli", str, "c4"), _typed(c4, "image", str, "c4"), _typed(c4, "port", int, "c4"))
+    diagrams = _mapping(top.get("diagrams") or {}, "diagrams")
+    _only(diagrams, ("mermaid",), "diagrams")
+    config.mermaid = _mapping(diagrams.get("mermaid") or {}, "diagrams.mermaid")
     config.runtime = _parse_runtime(_mapping(top.get("runtime", {}), "runtime"))
     reports = _mapping(top.get("reports", {}), "reports")
     _only(reports, ("path",), "reports")
@@ -336,6 +342,11 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
         config.lint.posters = frozenset(poster.source.resolve() for poster in config.posters.values())
     except poster_settings.SettingsError as exc:
         raise ConfigError(str(exc)) from None
+    for name in config.site.posters if config.site else ():
+        if name not in config.posters:
+            raise ConfigError(f"site.posters names '{name}', which is not under posters. Defined: {', '.join(config.posters) or 'none'}")
+    if config.site and config.site.posters and POSTERS_FOLDER in (config.site.documents or config.own_documents):
+        raise ConfigError(f"site.posters puts the posters in a '{POSTERS_FOLDER}' folder, and a document of the site has that name. Rename the document")
 
     for name in RESERVED_SECTIONS:
         if name in top:
@@ -403,7 +414,7 @@ def _parse_content(data: dict, root: Path) -> list[GeneratorSpec]:
 
 
 def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
-    _only(data, ("engine", "dir", "title", "documents", "downloads", "targets", "pages", "groups"), "site")
+    _only(data, ("engine", "dir", "title", "documents", "downloads", "targets", "pages", "groups", "posters"), "site")
     engine = _typed(data, "engine", str, "site")
     if engine not in SITE_ENGINES:
         raise ConfigError(f"site.engine must be one of {', '.join(SITE_ENGINES)}, not {engine!r}")
@@ -439,6 +450,7 @@ def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
         targets=targets,
         pages={str(title): str(path) for title, path in _mapping(data.get("pages") or {}, "site.pages").items()},
         groups=groups,
+        posters=[str(name) for name in _typed(data, "posters", list, "site", [])],
     )
 
 

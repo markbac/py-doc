@@ -396,12 +396,13 @@ def fill(text, variables):
     return re.sub(r"\{\{\s*(\w+)\s*\}\}", lambda m: str(variables.get(m[1], m[0])), text)
 
 
-def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None, defaults: dict | None = None):
+def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None, defaults: dict | None = None,
+          mermaid: dict | None = None):
     """The poster page for ``md_path`` and the build state (diagrams drawn and failed).
 
     ``defaults`` (the ``poster:`` section of py-doc.yml) are under the front matter, and ``settings`` (the
     poster's entry under ``posters:``, then the command line) are over it. Both are checked layers from
-    :func:`py_doc.poster_settings.layer`.
+    :func:`py_doc.poster_settings.layer`. ``mermaid`` (``diagrams.mermaid`` of py-doc.yml) is under the theme's colours.
     """
     md_path = Path(md_path)
     meta, body = read_settings(md_path, settings, defaults)
@@ -409,6 +410,7 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
     apply_overrides(theme, meta, str(md_path))
     ctx = Ctx(md_path.parent, runtime, theme, render, str(md_path))
     ctx.settings = meta
+    ctx.mermaid = mermaid
     body = prepare(expand(body, md_path, meta.get("variables"), meta.get("conditions")))
     h1 = re.search(r"(?m)^# +(.+)$", body)
     title = meta.get("title") or (h1.group(1) if h1 else md_path.stem)
@@ -556,12 +558,12 @@ def footer_html(footer, ctx):
 
 
 def write_poster(source: Path, output: Path, runtime: Callable[[], Runtime], settings: dict | None = None,
-                 defaults: dict | None = None, pdf: bool | None = None):
+                 defaults: dict | None = None, pdf: bool | None = None, mermaid: dict | None = None):
     """Build the poster ``source`` into ``output``, and print its PDF when its settings or ``pdf`` ask.
 
     ``pdf`` (``--pdf`` or ``--no-pdf``) wins over the ``pdf`` setting. Returns the build state and the files written.
     """
-    page, ctx = build(source, runtime, settings, defaults)
+    page, ctx = build(source, runtime, settings, defaults, mermaid)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(page, encoding="utf-8")
     files = [output]

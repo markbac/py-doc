@@ -17,6 +17,8 @@ py-doc poster --pdf                       # every poster, and a one-page PDF of 
 
 `py-doc build` builds the posters of `py-doc.yml` too, after the documents, with their PDFs when they have `pdf: true`. `py-doc build NAME` builds one poster or document, and `py-doc build -f poster` builds only the posters. `--var` and `--condition` reach the posters as they reach the documents.
 
+`site.posters` puts posters on the web site. The [web sites chapter](08_sites.md#posters) has the details.
+
 For a step-by-step introduction, read [Writing a poster](13_writing_posters.md) first. This chapter is the reference.
 
 The examples in `examples/poster/` show three kinds, and `examples/py-doc.yml` lists them under `posters:`:
@@ -133,7 +135,7 @@ Section bodies are ordinary Markdown, with py-doc's own additions as in the [Wri
 
 ## Diagrams and charts
 
-Every diagram fence of a document works on a poster: Mermaid, PlantUML, Graphviz, Vega-Lite and the rest. It is drawn by the tool container and embedded as an SVG picture, so it stays sharp when printed. Ditaa and the blockdiag family can only draw PNG, so theirs are PNG. Mermaid gets the colours and body font of the theme, as front matter added to the diagram, unless the diagram has its own front matter or `%%{init`. A diagram that cannot be drawn is shown as code with a warning, and the poster is still written.
+Every diagram fence of a document works on a poster: Mermaid, PlantUML, Graphviz, Vega-Lite and the rest. It is drawn by the tool container and embedded as an SVG picture, so it stays sharp when printed. Ditaa and the blockdiag family can only draw PNG, so theirs are PNG. Mermaid gets the colours and body font of the theme, as front matter added to the diagram, unless the diagram has its own front matter or `%%{init`. The `diagrams.mermaid` settings of py-doc.yml apply too, under the theme's colours. A diagram that cannot be drawn is shown as code with a warning, and the poster is still written.
 
 > **Note:** A diagram wider than its column is scaled down and its text shrinks, so prefer compact layouts, such as Graphviz `dpi=80` or PlantUML `skinparam dpi 80`, or put it in a `{.wide}` section.
 

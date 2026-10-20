@@ -351,7 +351,7 @@ def _build_posters(args: argparse.Namespace, config, names: list[str], runtime, 
     for name in names:
         poster = config.posters[name]
         try:
-            ctx, files = write_poster(poster.source, poster.output, runtime, merge(poster.settings, overrides), config.poster)
+            ctx, files = write_poster(poster.source, poster.output, runtime, merge(poster.settings, overrides), config.poster, mermaid=config.mermaid)
         except (FileNotFoundError, ConversionError) as exc:
             _error(f"{name}: {exc}")
             status = max(status, exit_status(exc) if isinstance(exc, ConversionError) else 1)
