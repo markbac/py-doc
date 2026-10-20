@@ -13,6 +13,7 @@ ever replaced (a manifest in the site folder lists what it wrote).
 from __future__ import annotations
 
 import hashlib
+import html
 import json
 import logging
 import os
@@ -27,7 +28,7 @@ import yaml
 
 from py_doc.build import _combine_metadata
 from py_doc.c4 import source as c4_source
-from py_doc.config import ProjectConfig
+from py_doc.config import POSTERS_FOLDER, ProjectConfig
 from py_doc.diagrams import render_parts
 from py_doc.errors import ConversionError
 from py_doc.pandoc.engine import INPUT_FORMAT, RESOURCES
@@ -105,11 +106,13 @@ def generate_site(
         pages += made
     sections = grouped(names, by_name, site.groups)
     _convert(pages, site.engine, runtime())
-    written = _write(pages, engine)
+    posters = _posters(config, engine, runtime) if site.posters else {}
+    written = _write(pages, engine, posters)
     for title, path in site.pages.items():
         if not (engine.content / path).is_file():
             logger.warning(f"site.pages lists {title}: {engine.content / path} is not there")
-    written.append(engine.write_nav(sections, site.pages))
+    nav_pages = {**site.pages, "Posters": f"{POSTERS_FOLDER}/index.md"} if posters else site.pages
+    written.append(engine.write_nav(sections, nav_pages))
     for target in site.targets.values() or [None]:
         for advice in engine.check(target):
             logger.warning(advice)
@@ -233,6 +236,32 @@ def nav_items(pages: list[Page]) -> list[NavPage | NavSection]:
     return items
 
 
+def _posters(config: ProjectConfig, engine: Engine, runtime: Callable[[], Runtime]) -> dict[Path, bytes]:
+    """The posters of ``site.posters``, each a page of its own, and a Posters page that links them and their PDFs."""
+    from py_doc.poster import build as build_poster  # the poster modules are only needed by a site with posters
+
+    folder, href = engine.posters(POSTERS_FOLDER)
+    files: dict[Path, bytes] = {}
+    lines = ["# Posters", ""] if engine.name == "mkdocs" else []  # Starlight shows the title itself
+    for name in config.site.posters:
+        poster = config.posters[name]
+        page, ctx = build_poster(poster.source, runtime, poster.settings, config.poster, config.mermaid)
+        files[folder / f"{name}.html"] = page.encode("utf-8")
+        title = html.unescape(re.search(r"<title>(.*?)</title>", page).group(1))
+        line = f"- [{title}]({href}{name}.html)"
+        wanted = ctx.settings.get("pdf")
+        pdf = wanted if isinstance(wanted, Path) else poster.output.with_suffix(".pdf")
+        if pdf.is_file():  # printed by `py-doc poster --pdf` or `py-doc build`
+            files[folder / f"{name}.pdf"] = pdf.read_bytes()
+            line += f" · [PDF]({href}{name}.pdf)"
+        lines.append(line)
+    files[folder / ".gitignore"] = b"# Written by py-doc site: built from the sources, so not kept in Git\n*\n"
+    index = engine.content / POSTERS_FOLDER / "index.md"
+    files[index] = ("---\ntitle: Posters\n---\n\n" + "\n".join(lines) + "\n").encode("utf-8")
+    files[index.parent / ".gitignore"] = files[folder / ".gitignore"]
+    return files
+
+
 def _downloads(config: ProjectConfig, name: str, formats: list[str], version: str | None) -> list[tuple[str, Path]]:
     """The built files of a document that its pages link to. ``py-doc build`` makes them; a missing one is left out."""
     doc = config.documents[name]
@@ -272,13 +301,16 @@ def _convert(pages: list[Page], engine: str, runtime: Runtime) -> None:
             page.markdown = (work / f"{number}.out").read_text(encoding="utf-8")
 
 
-def _write(pages: list[Page], engine: Engine) -> list[Path]:
-    """Put the pages, their pictures and their front matter in the content folder, replacing only py-doc's own files."""
+def _write(pages: list[Page], engine: Engine, extra: dict[Path, bytes] | None = None) -> list[Path]:
+    """Put the pages, their pictures and their front matter in the content folder, replacing only py-doc's own files.
+
+    ``extra`` are other files py-doc writes, such as the posters.
+    """
     content = engine.content
     manifest = engine.root / MANIFEST
     before = set(json.loads(manifest.read_text(encoding="utf-8")).get("files", [])) if manifest.is_file() else set()
     by_source = {page.source.resolve(): page for page in pages}
-    files: dict[Path, bytes] = {}
+    files: dict[Path, bytes] = dict(extra or {})
     for page in pages:
         text = _relink(page, by_source, engine.name, files, content)
         if page.downloads:

@@ -242,6 +242,64 @@ def test_a_page_whose_source_is_gone_is_removed(project, pandoc_runtime):
     assert (project / "site" / "docs" / "index.md").is_file(), "a page py-doc did not write stays"
 
 
+
+def _with_posters(project, engine_name):
+    (project / "posters").mkdir()
+    (project / "posters" / "launch.md").write_text("---\ntitle: Launch & go\n---\n## A\n\nText.\n", encoding="utf-8")
+    (project / "posters" / "plain.md").write_text("## B\n\nText.\n", encoding="utf-8")
+    text = (project / "py-doc.yml").read_text(encoding="utf-8").replace("site: {engine: ENGINE}", "site: {engine: ENGINE, posters: [launch, plain]}")
+    text += "posters:\n  launch: {source: posters/launch.md}\n  plain: {source: posters/plain.md}\n  other: {source: posters/plain.md}\n"
+    (project / "py-doc.yml").write_text(text.replace("ENGINE", engine_name), encoding="utf-8")
+    (project / "build").mkdir()
+    (project / "build" / "launch.pdf").write_bytes(b"%PDF-1.7 poster")
+
+
+@needs_sh
+def test_mkdocs_has_the_posters_of_site_posters_and_a_page_that_links_them(project, pandoc_runtime):
+    _with_posters(project, "mkdocs")
+    config, runtime = _site(project, "mkdocs", pandoc_runtime)
+    generate_site(config, runtime)
+    folder = project / "site" / "docs" / "posters"
+    assert "<title>Launch &amp; go</title>" in (folder / "launch.html").read_text(encoding="utf-8")
+    assert (folder / "launch.pdf").read_bytes() == b"%PDF-1.7 poster"
+    assert not (folder / "other.html").exists(), "only the posters site.posters names"
+    assert (folder / "index.md").read_text(encoding="utf-8") == (
+        "---\ntitle: Posters\n---\n\n# Posters\n\n- [Launch & go](launch.html) · [PDF](launch.pdf)\n- [plain](plain.html)\n"
+    )
+    nav = yaml.safe_load((project / "site" / MKDOCS_NAV).read_text(encoding="utf-8"))["nav"]
+    assert nav[-1] == {"Posters": "posters/index.md"}
+    files = json.loads((project / "site" / MANIFEST).read_text(encoding="utf-8"))["files"]
+    assert "docs/posters/launch.html" in files and "docs/posters/index.md" in files
+    text = (project / "py-doc.yml").read_text(encoding="utf-8").replace("posters: [launch, plain]", "posters: [plain]")
+    (project / "py-doc.yml").write_text(text, encoding="utf-8")
+    generate_site(load_config(project / "py-doc.yml"), runtime)
+    assert not (folder / "launch.html").exists(), "a poster no longer listed is removed"
+
+
+@needs_sh
+def test_starlight_serves_the_posters_from_public(project, pandoc_runtime):
+    _with_posters(project, "starlight")
+    config, runtime = _site(project, "starlight", pandoc_runtime)
+    generate_site(config, runtime)
+    assert (project / "site" / "public" / "posters" / "plain.html").is_file()
+    index = (project / "site" / "src" / "content" / "docs" / "posters" / "index.md").read_text(encoding="utf-8")
+    assert index == "---\ntitle: Posters\n---\n\n- [Launch & go](/posters/launch.html) · [PDF](/posters/launch.pdf)\n- [plain](/posters/plain.html)\n"
+    sidebar = json.loads((project / "site" / STARLIGHT_SIDEBAR).read_text(encoding="utf-8"))
+    assert sidebar[-1] == {"label": "Posters", "link": "/posters/"}
+
+
+def test_site_posters_must_be_posters_of_py_doc_yml(tmp_path):
+    (tmp_path / "py-doc.yml").write_text("site: {engine: mkdocs, posters: [nope]}\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="site.posters names 'nope', which is not under posters"):
+        load_config(tmp_path / "py-doc.yml")
+    (tmp_path / "p.md").write_text("## A\n", encoding="utf-8")
+    (tmp_path / "py-doc.yml").write_text(
+        "documents: {posters: {sources: [p.md]}}\nposters: {a: {source: p.md}}\nsite: {engine: mkdocs, posters: [a]}\n", encoding="utf-8"
+    )
+    with pytest.raises(ConfigError, match="a document of the site has that name"):
+        load_config(tmp_path / "py-doc.yml")
+
+
 @pytest.fixture
 def nested(tmp_path):
     """A document whose sources are in folders: an index page at the top, a folder with one, a folder without."""

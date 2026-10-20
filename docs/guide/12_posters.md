@@ -17,6 +17,8 @@ py-doc poster --pdf                       # every poster, and a one-page PDF of 
 
 `py-doc build` builds the posters of `py-doc.yml` too, after the documents, with their PDFs when they have `pdf: true`. `py-doc build NAME` builds one poster or document, and `py-doc build -f poster` builds only the posters. `--var` and `--condition` reach the posters as they reach the documents.
 
+`site.posters` puts posters on the web site. The [web sites chapter](08_sites.md#posters) has the details.
+
 For a step-by-step introduction, read [Writing a poster](13_writing_posters.md) first. This chapter is the reference.
 
 The examples in `examples/poster/` show three kinds, and `examples/py-doc.yml` lists them under `posters:`:

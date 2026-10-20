@@ -96,6 +96,18 @@ The pages are built from the sources, so py-doc puts a `.gitignore` in each docu
 
 `site.downloads` lists the formats whose built files each document's pages link: `pdf`, `docx`, `pptx` or `html`. A document links only the formats it builds (its `outputs`), and only once `py-doc build` has made them, so run that first. py-doc copies each file beside the site and puts a line such as "Download: PDF · Word" under the first heading of the document's first page. A file that is not built yet is left out with a warning that names the `py-doc build` command to run. With MkDocs the files go in a `downloads/` folder beside the document's pages. With Starlight they go in `public/<document>/downloads/`, which Starlight serves from the site root.
 
+## Posters
+
+`site.posters` lists posters of py-doc.yml to put on the site:
+
+```yaml
+site:
+  engine: mkdocs
+  posters: [sensor-node, commissioning]
+```
+
+`py-doc site generate` builds each poster as a page of its own and writes a Posters page that links them, at the end of the navigation. A poster whose PDF is already printed, by `py-doc poster --pdf` or `py-doc build`, also gets a PDF link. With MkDocs the posters go in `docs/posters/`. With Starlight they go in `public/posters/`, which Starlight serves from the site root. So no document of the site may be called `posters`.
+
 ## More than one site
 
 `site.targets` builds several MkDocs sites from one site project, for example the same documents at two addresses with different home pages. Each target names a MkDocs config file in `site.dir`. The pages and the navigation are written once and shared, so each config file takes in `mkdocs.yml` (or `py-doc-nav.yml`) with `INHERIT` and changes only what differs:
