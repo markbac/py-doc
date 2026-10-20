@@ -673,6 +673,38 @@ def test_a_block_mistake_is_an_error(tmp_path, code, message):
         build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
 
 
+def test_steps_are_numbered_from_start_in_columns_with_their_colours(tmp_path, drawn):
+    code = "```steps cols=2 start=3\nFit the gateway | Before any node\nJoin | | coral\n```"
+    page, _ = build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
+    assert '<ol class="steps" start="3" style="grid-template-columns:repeat(2,minmax(0,1fr))">' in page
+    assert '<b class="num" style="background:#2a3150">3</b><div><div class="ch">Fit the gateway</div><div class="ct">Before any node</div>' in page
+    assert '<b class="num" style="background:coral">4</b><div><div class="ch">Join</div></div>' in page
+
+
+def test_a_gallery_embeds_its_pictures_with_captions_cropped_to_one_height(tmp_path, drawn):
+    (tmp_path / "a.png").write_bytes(PNG)
+    (tmp_path / "b.svg").write_bytes(SVG)
+    page, _ = build(write(tmp_path, "## A\n\n```gallery height=160\na.png | The *gateway*\nb.svg\n```\n"), lambda: object())
+    assert '<div class="gallery" style="grid-template-columns:repeat(2,minmax(0,1fr))">' in page
+    assert '<img alt="The gateway" src="data:image/png;base64,' in page and "<figcaption>The <em>gateway</em></figcaption>" in page
+    assert 'src="data:image/svg+xml;base64,' in page and 'alt="b"' in page
+    assert page.count('style="height:160px;object-fit:cover"') == 2
+
+
+@pytest.mark.parametrize(
+    "code, message",
+    [
+        ("```steps\n```", "a steps block needs at least one"),
+        ("```steps cols=two\nA\n```", "cols must be a whole number of at least 1, not 'two'"),
+        ("```gallery\nmissing.png | Gone\n```", "the gallery picture missing.png is not there"),
+        ("```gallery height=0\nmissing.png\n```", "height must be a whole number of at least 1"),
+    ],
+)
+def test_a_steps_or_gallery_mistake_is_an_error(tmp_path, code, message):
+    with pytest.raises(PosterError, match=message):
+        build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
+
+
 def test_a_qr_block_draws_the_code_with_its_label(tmp_path, drawn):
     page, _ = build(write(tmp_path, '## A\n\n```qr size=200 label="The manual"\nhttps://example.com/manual\n```\n'), lambda: object())
     assert '<div class="qr"><svg' in page and '<div class="cap">The manual</div>' in page
@@ -1186,3 +1218,106 @@ def test_one_font_file_for_several_weights_is_embedded_once():
     assert css.count("@font-face") == 2 and css.count("mono.woff2") == 1
     assert "font-weight:500 600;" in css and "font-weight:700;" in css
     assert merge_weights("@font-face { font-weight: bold; src: url(https://f.example/a.woff2); }").count("bold") == 1  # left alone
+
+
+# --- py-doc poster --watch ------------------------------------------------------------------------
+
+
+def test_watch_serves_the_page_and_builds_again_on_a_save(tmp_path, monkeypatch, capsys):
+    import json as json_module
+    import os
+    import threading
+    import time
+    import urllib.request
+
+    from py_doc import poster_watch
+
+    source = write(tmp_path, "## A\n\nFirst.\n")
+    (tmp_path / "page.html").write_text("<html><body>First</body></html>", encoding="utf-8")
+    builds = []
+
+    def build():
+        builds.append(source.read_text(encoding="utf-8"))
+        if "Broken" in builds[-1]:
+            raise ConfigError("the poster is broken")
+        (tmp_path / "page.html").write_text(f"<html><body>{builds[-1]}</body></html>", encoding="utf-8")
+        return {"wall": tmp_path / "page.html"}, {source}
+
+    servers = []
+    serve = poster_watch.serve
+    monkeypatch.setattr(poster_watch, "serve", lambda state, port: servers.append(serve(state, port)) or servers[-1])
+    stop = threading.Event()
+    thread = threading.Thread(target=poster_watch.watch, args=(build, (ConfigError,)),
+                              kwargs={"open_browser": False, "stop": stop, "interval": 0.05})  # fmt: skip
+    thread.start()
+    try:
+        while not servers:
+            time.sleep(0.01)
+        address = f"http://127.0.0.1:{servers[0].server_address[1]}"
+
+        def status():
+            return json_module.loads(urllib.request.urlopen(address + "/__status").read())
+
+        def until(check):
+            for _ in range(200):
+                if check(status()):
+                    return status()
+                time.sleep(0.02)
+            raise AssertionError(f"never: {status()}")
+
+        def save(text):  # as an editor does: all at once, never a half-written file
+            new = tmp_path.parent / f"{tmp_path.name}-new.md"  # outside the folder being watched
+            new.write_text(text, encoding="utf-8")
+            os.replace(new, source)
+
+        page = urllib.request.urlopen(address + "/").read().decode()
+        assert "First" in page and "var seen=1;" in page and "fetch('/__status')" in page, "one poster is served at /"
+        assert "fetch" not in (tmp_path / "page.html").read_text(encoding="utf-8"), "the file written has no script"
+        time.sleep(0.02)
+        save("## A\n\nBroken.\n")
+        assert until(lambda s: s["error"])["error"] == "the poster is broken"
+        assert status()["version"] == 1, "the last good page stays"
+        save("## A\n\nSecond.\n")
+        assert until(lambda s: s["version"] == 2)["error"] is None
+        assert "Second" in urllib.request.urlopen(address + "/wall.html").read().decode()
+        with pytest.raises(urllib.error.HTTPError, match="404"):
+            urllib.request.urlopen(address + "/other.html")
+    finally:
+        stop.set()
+        thread.join(5)
+    assert not thread.is_alive()
+    out = capsys.readouterr().out
+    assert "serving http://127.0.0.1:" in out and "Error: the poster is broken" in out and "changed: " in out
+
+
+def test_watch_stops_at_once_when_the_first_build_fails(capsys):
+    from py_doc.poster_watch import watch
+
+    def build():
+        raise ConfigError("no posters")
+
+    assert watch(build, (ConfigError,), open_browser=False) == 1
+    assert "Error: no posters" in capsys.readouterr().out
+
+
+def test_watch_takes_no_pdf_and_output_needs_one_poster(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    assert main(["poster", "--watch", "--pdf"]) == 1
+    assert "--watch builds the pages only" in capsys.readouterr().err
+    project(tmp_path, {"wall": {"source": "poster.md"}, "desk": {"source": "poster.md"}})
+    write(tmp_path, "## A\n\nText.\n")
+    assert main(["poster", "-o", "x.html"]) == 1
+    assert "--output needs exactly one poster" in capsys.readouterr().err
+
+
+def test_watch_watches_the_folder_of_the_markdown_and_the_files_its_settings_name(tmp_path):
+    from py_doc.poster_watch import watched_files
+
+    (tmp_path / "shared").mkdir()
+    (tmp_path / ".git").mkdir()
+    for name in ("poster.md", "shared/part.md", ".git/HEAD", "out.html", "watch.log", "board.svg"):
+        (tmp_path / name).write_text("x", encoding="utf-8")
+    theme = tmp_path.parent / f"{tmp_path.name}-theme.yml"
+    theme.write_text("x", encoding="utf-8")
+    found = watched_files({tmp_path}, {theme}, {tmp_path / "out.html"})
+    assert set(found) == {tmp_path / "poster.md", tmp_path / "shared" / "part.md", tmp_path / "board.svg", theme}

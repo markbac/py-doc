@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200" font-family="Arial, sans-serif">
+  <!-- Wall: a drawing for the mounting gallery of the commissioning poster -->
+  <rect width="300" height="200" fill="#e3efed"/>
+  <rect x="0" y="0" width="70" height="200" fill="#c9d6d3"/>
+  <path d="M70 0 V200" stroke="#4a5a5a" stroke-width="3"/>
+  <rect x="70" y="72" width="56" height="36" rx="6" fill="#f4f8f7" stroke="#0f5e5e" stroke-width="3"/><circle cx="98" cy="90" r="5" fill="#e8684a"/>
+  <path d="M190 40 V160" stroke="#4a5a5a" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <path d="M184 40 H196 M184 160 H196" stroke="#4a5a5a" stroke-width="1.5"/>
+  <text x="204" y="96" font-size="15" fill="#1c2b2b">1.5 m</text>
+  <text x="204" y="114" font-size="12" fill="#4a5a5a">to the floor</text>
+</svg>

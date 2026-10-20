@@ -46,6 +46,12 @@ Node | *Fix plate | *Insert cell | Clip on
 
 Fit every gateway before the first node, so a node always has a gateway to join.
 
+```gallery cols=3
+images/mount-wall.svg | On a wall: head height, out of sunlight
+images/mount-ceiling.svg | On a ceiling: away from lights and vents
+images/mount-pipe.svg | On a pipe: two clamps, never a hot pipe
+```
+
 > [!IMPORTANT]
 > Above 2 m, work from a podium step, not a ladder, and never alone.
 
@@ -104,9 +110,11 @@ A weak node works, but it retries more and its cell lasts less.
 
 ## 6. Handover: leave the site ready
 
-1. Upload the marked-up floor plan from the app.
-1. Walk the dashboard with the customer: every node, every room.
-1. Leave the spare cells and the support number on site.
+```steps
+Upload the floor plan | From the app, with every node marked
+Walk the dashboard | With the customer: every node, every room
+Leave the spares | The spare cells and the support number, on site | coral
+```
 
 ```qr size=130 label="Upload the floor plan"
 https://example.com/commissioning/upload

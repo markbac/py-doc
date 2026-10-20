@@ -412,6 +412,48 @@ def qr_html(code, opts, ctx):
     return f'<div class="qr">{qr_svg(target, ctx.theme.colours["strong"], size)}{label}</div>'
 
 
+def _whole(opts, name, default, ctx, low=1):
+    value = opts.get(name, str(default))
+    if not value.isdigit() or int(value) < low:
+        raise PosterError(f"{ctx.where}: {name} must be a whole number of at least {low}, not '{value}'")
+    return int(value)
+
+
+def steps_html(code, opts, ctx):
+    """``Heading | text | colour`` lines as numbered steps, in one column or ``cols=`` columns, from ``start=``."""
+    rows = [[c.strip() for c in line.split("|")] for line in code.splitlines() if line.strip()]
+    if not rows:
+        raise PosterError(f"{ctx.where}: a steps block needs at least one 'Heading | text' line")
+    cols, start = _whole(opts, "cols", 1, ctx), _whole(opts, "start", 1, ctx, low=0)
+    out = ""
+    for n, row in enumerate(rows, start):
+        head, text = row[0], row[1] if len(row) > 1 else ""
+        colour = ctx.theme.colour(row[2] if len(row) > 2 else None, "primary")
+        body = f'<div class="ct">{inline(text)}</div>' if text else ""
+        out += f'<li class="step"><b class="num" style="background:{colour}">{n}</b><div><div class="ch">{inline(head)}</div>{body}</div></li>'
+    return f'<ol class="steps" start="{start}" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</ol>'
+
+
+def gallery_html(code, opts, ctx):
+    """``picture | caption`` lines as a grid of embedded pictures. ``height=`` crops them all to one height."""
+    out, rows = "", [line.strip() for line in code.splitlines() if line.strip()]
+    if not rows:
+        raise PosterError(f"{ctx.where}: a gallery needs at least one 'picture | caption' line")
+    cols = _whole(opts, "cols", min(len(rows), 3), ctx)
+    height = f' style="height:{_whole(opts, "height", 0, ctx)}px;object-fit:cover"' if "height" in opts else ""
+    for row in rows:
+        src, _, caption = (part.strip() for part in row.partition("|"))
+        path = ctx.base / src
+        if not path.is_file():
+            raise PosterError(f"{ctx.where}: the gallery picture {src} is not there (looked in {ctx.base})")
+        mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        data = base64.b64encode(path.read_bytes()).decode()
+        note = f"<figcaption>{inline(caption)}</figcaption>" if caption else ""
+        alt = re.sub(r"[*_`]", "", caption) or path.stem  # the caption's words, without its Markdown
+        out += f'<figure><img alt="{esc(alt)}" src="data:{mime};base64,{data}"{height}>{note}</figure>'
+    return f'<div class="gallery" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
+
+
 def block_html(lang, opts, code, ctx):
     """HTML for a fence we handle, or None to leave it as an ordinary code block."""
     if lang in BY_FENCE:
@@ -426,6 +468,10 @@ def block_html(lang, opts, code, ctx):
         return chart_html(code, opts, ctx)
     if lang == "qr":
         return qr_html(code, opts, ctx)
+    if lang == "steps":
+        return steps_html(code, opts, ctx)
+    if lang == "gallery":
+        return gallery_html(code, opts, ctx)
     if lang in FIG_KINDS:
         return figure_html([FIG_KINDS[lang](code, ctx)], ctx)
     if lang == "figure":  # several kinds in one box, split by +++ lines, each starting with @kind

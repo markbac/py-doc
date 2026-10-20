@@ -128,6 +128,15 @@ section h2 span{color:var(--highlight);font-weight:600}
 .card{background:var(--surface);border:1px solid var(--border);padding:10px 12px}
 .card .ch{font-size:15px;font-weight:700;color:var(--strong)}
 .card .ct{font-size:14px;line-height:1.4;margin-top:3px}
+.steps{display:grid;gap:10px;list-style:none;margin:0 0 10px;padding:0}
+.step{display:flex;gap:12px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);padding:10px 12px}
+.step .num{flex:none;width:34px;height:34px;border-radius:50%;color:var(--on-primary);display:flex;align-items:center;justify-content:center;font-size:17px}
+.step .ch{font-size:15px;font-weight:700;color:var(--strong)}
+.step .ct{font-size:14px;line-height:1.4;margin-top:3px}
+.gallery{display:grid;gap:10px;margin:0 0 10px}
+.gallery figure{margin:0;background:var(--surface);border:1px solid var(--border);padding:6px}
+.body .gallery img{width:100%;margin:0;padding:0;border:0;background:none}
+.gallery figcaption{font-size:13px;line-height:1.35;color:var(--muted);margin-top:5px}
 .card.plain .ct{margin-top:0;line-height:1.45}
 .card.label .ch{font-size:12.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--accent-text)}
 .card.label .ct{font-size:15px;line-height:1.35}

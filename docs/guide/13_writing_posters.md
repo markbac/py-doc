@@ -123,6 +123,8 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | The idea is | Use | For example |
 |---|---|---|
 | A few parts, each with a line of text | `cards` | Sensor, controller and radio |
+| Things to do, in order | `steps` | Join a node to the network |
+| Photos or drawings side by side | `gallery` | Three ways to mount a node |
 | States and what moves between them | `flow` | Asleep, measure, send |
 | What happens in each time window | `lanes` | Every minute, every hour |
 | How a whole divides into shares | `segments` | One minute of the node's time |
@@ -147,6 +149,30 @@ Radio | Sends one message, then switches off | green
 ````
 
 Each line is a heading, a text and, for `style=top`, a colour. `cols` sets how many go across. `style=label` gives small capital headings, and `style=plain` gives text only.
+
+### Steps
+
+````markdown
+```steps
+Fit the gateways | One a floor, before any node
+Hold the join button | Three seconds, until the display shows JOINING
+Check the signal | -95 dBm or better | coral
+```
+````
+
+Each line is a step: a heading, an optional text and an optional colour for its number. `cols=2` puts them in two columns, and `start=4` numbers them from 4, to go on from steps in another section.
+
+### Galleries
+
+````markdown
+```gallery cols=3 height=160
+images/wall.svg | On a wall, at head height
+images/ceiling.svg | On a ceiling, away from lights
+images/pipe.svg | On a pipe, with the clamp
+```
+````
+
+Each line is a picture, relative to the Markdown file, and an optional caption. The pictures are put inside the page. `height=` crops every picture to that height, so photos of different shapes line up. Leave it out for drawings, which are shown whole.
 
 ### Flow and lanes
 
@@ -360,7 +386,10 @@ posters:
 py-doc poster                 # every poster
 py-doc poster sensor-node     # one
 py-doc poster --pdf           # and a one-page PDF of each
+py-doc poster sensor-node --watch   # build again on every save, and reload it in the browser
 ```
+
+While you write, keep `--watch` running. It opens the poster in your browser and builds it again each time you save the Markdown, a picture, an included file, the theme or `py-doc.yml`, and the page reloads itself. A save that does not build keeps the last good page and shows the error across its top until you fix it. Diagrams that did not change come from the cache, so a build takes a second or two. Ctrl+C stops it.
 
 The HTML page is the one to share by email or on a screen. The PDF is the one to send to a printer: it is one page of the poster's paper size. To print from a browser instead, use Chrome's print dialogue with no margins and background graphics on.
 

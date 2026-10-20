@@ -13,7 +13,10 @@ import pytest
 
 from py_doc.poster import build
 
-playwright = pytest.importorskip("playwright.sync_api", reason="playwright is not installed")
+if os.environ.get("PY_DOC_BROWSER_TESTS") == "1":
+    import playwright.sync_api as playwright  # in CI a missing Playwright is a failure, not a skip
+else:
+    playwright = pytest.importorskip("playwright.sync_api", reason="playwright is not installed")
 
 WORDS = "The node wakes, measures, sends and goes back to sleep. "
 
