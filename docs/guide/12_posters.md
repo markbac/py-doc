@@ -13,7 +13,10 @@ py-doc poster g460.md                     # a Markdown file: writes g460.html
 py-doc poster g460.md -o out.html --theme dark
 py-doc poster g460.md --var version=2.1 --condition internal=true
 py-doc poster --pdf                       # every poster, and a one-page PDF of each
+py-doc poster commissioning --watch       # build again on every save, and reload it in the browser
 ```
+
+`--watch` builds the posters, serves them on this computer only and opens the first in the browser. It builds them again whenever a source file below a poster's folder changes, or a file its settings name, such as the theme, a logo or `py-doc.yml`. Each open page then reloads itself. A source file is Markdown, YAML, JSON, CSV, text, a picture, a diagram source or a font. A build that fails keeps the last good page, with the error shown across its top. `--port` chooses the port (default: a free one), and `--no-open` leaves the browser closed. It builds the pages only, so it does not take `--pdf`.
 
 `py-doc build` builds the posters of `py-doc.yml` too, after the documents, with their PDFs when they have `pdf: true`. `py-doc build NAME` builds one poster or document, and `py-doc build -f poster` builds only the posters. `--var` and `--condition` reach the posters as they reach the documents.
 
@@ -26,7 +29,7 @@ The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` li
 | Example | What it shows |
 |---|---|
 | `poster.md` | Portrait A1 in the default theme: a picture, a Mermaid diagram, bar and line charts, segments, flow, lanes and `lcd` screens. Also a timeline, a JSON code block and a full-width section. A QR code is in the footer. Every setting is in its front matter |
-| `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a QR block and an included table. The words are in the Markdown and the look (orientation, theme, header, footer) is in `py-doc.yml` |
+| `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a gallery of mounting drawings, handover steps, a QR block and an included table. The words are in the Markdown and the look (orientation, theme, header, footer) is in `py-doc.yml` |
 | `release.md` | Portrait A3 in the dark theme: a column chart with two series, a Mermaid sequence with notes, title cards, a vertical timeline, callouts, references and a `{{version}}` variable |
 | `reliability.md` | Portrait A0 in the print theme, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, plain cards, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
 
@@ -186,6 +189,8 @@ A block colour is one of three things. It can be a name from the theme's palette
 | `timeline` | `date \| label \| detail \| colour`, the last two optional | `vertical` for a column instead of a row |
 | `chart` | See [Diagrams and charts](#diagrams-and-charts) | |
 | `qr` | The address or text to encode | `size=140` (pixels), `label="..."` |
+| `steps` | `Heading \| text \| colour`, the text and colour optional | `cols=1`, `start=1`: the number of the first step |
+| `gallery` | `picture \| caption`, the picture relative to the Markdown and the caption optional | `cols=3` (or fewer pictures), `height=` in pixels: crop every picture to one height |
 
 In `segments`, `flow` and `lanes`, the lines that are not part of the diagram become notes under it, written in Markdown.
 

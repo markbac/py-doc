@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200" font-family="Arial, sans-serif">
+  <!-- Ceiling: a drawing for the mounting gallery of the commissioning poster -->
+  <rect width="300" height="200" fill="#e3efed"/>
+  <rect x="0" y="0" width="300" height="40" fill="#c9d6d3"/>
+  <path d="M0 40 H300" stroke="#4a5a5a" stroke-width="3"/>
+  <rect x="60" y="40" width="56" height="36" rx="6" fill="#f4f8f7" stroke="#0f5e5e" stroke-width="3"/><circle cx="88" cy="58" r="5" fill="#e8684a"/>
+  <rect x="200" y="40" width="70" height="14" fill="#fff6c9" stroke="#b38a1e" stroke-width="2"/>
+  <path d="M120 70 H196" stroke="#4a5a5a" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="128" y="96" font-size="15" fill="#1c2b2b">1 m or more</text>
+  <text x="128" y="114" font-size="12" fill="#4a5a5a">from a light</text>
+</svg>

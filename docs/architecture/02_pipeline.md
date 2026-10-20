@@ -55,14 +55,16 @@ flowchart LR
   load[Load py-doc.yml] --> generate[Generators]
   generate --> lint[Lint]
   lint --> documents[Documents and bundles]
-  documents --> site[Site]
+  documents --> posters[Posters]
+  posters --> site[Site]
   site --> verify[Check outputs]
 ```
 
 - **Generators** (`generators/`): each entry of `content.generators` returns Markdown, written only when it changes. The built-in types are in `generators/builtin.py`, and others are found through the `py_doc.generators` entry point group, so the core depends on none of their tools. They run before anything reads the sources, because the files they write are sources.
 - **Lint** (`lint/`): with `build.lint` or `--lint`, the sources of the documents being built are linted before anything is written, and the issues can go to a SARIF, JSON or CSV file for CI (`lint/formats.py`).
 - **Documents and bundles**: a bundle is a document whose sources are those of its documents, so it takes the same path.
-- **Site** (`site/`): with `build.site` or `--site`, the pages are written and the site tool runs.
+- **Posters** (`poster*.py`): every poster under `posters:`, one self-contained HTML page each, with its PDF when it asks for one. The settings come in layers (`poster_settings.py`): `poster:`, the front matter, the poster's entry, then the command line. The page is built in Python, with diagrams through the same cache as the documents. A script in the page balances the columns by measured height and fits the poster to its paper. The PDF is that page printed by the container's Chromium (`diagrams/tools/poster_pdf.js`), from a copy with the web fonts inside, as the container has no network. `py-doc poster --watch` (`poster_watch.py`) runs the same build on every save and serves the page with a script that reloads it.
+- **Site** (`site/`): with `build.site` or `--site`, the pages are written and the site tool runs. The posters `site.posters` names are built into it as pages of their own.
 - **Check outputs**: every file the build wrote is there and not empty.
 
 `py-doc check`, `py-doc stats` and `py-doc diff` (`analysis/`) read the same configuration and the same document model, and build nothing. The diff splits each version into sections by its top-level headings. It matches them by heading path, then by text, so a renamed or moved section is not mistaken for one removed and another added.

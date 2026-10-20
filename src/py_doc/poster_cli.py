@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import functools
 import sys
 from pathlib import Path
 
@@ -22,6 +21,7 @@ POSTER_EXAMPLES = """examples:
   py-doc poster g460.md -o out.html --theme dark
   py-doc poster g460.md --theme brand.yml --var version=2.1 --condition internal=true
   py-doc poster --pdf                   every poster, and a one-page PDF of each
+  py-doc poster sn100 --watch           build again on every save, and reload it in the browser
 
 Settings come from poster: in py-doc.yml, then the front matter, then the poster's entry under posters:,
 then the command line. The conventions are in docs/guide/12_posters.md."""
@@ -48,38 +48,74 @@ def run_poster(argv: list[str]) -> int:
         "--pdf", action=argparse.BooleanOptionalAction, default=None,
         help="Also print each poster to a one-page PDF beside its page (default: the pdf setting)",
     )  # fmt: skip
+    parser.add_argument("--watch", action="store_true", help="Build again on every save, and reload the page in the browser (Ctrl+C stops)")
+    parser.add_argument("--port", type=int, default=0, help="With --watch, the local port to serve the pages on (default: a free one)")
+    parser.add_argument("--no-open", action="store_true", help="With --watch, do not open the browser")
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
     args = parser.parse_args(argv)
     configure_logging(quiet=args.quiet, verbose=args.verbose)
 
-    try:
-        files = [Path(t) for t in args.targets if t.lower().endswith(".md") or Path(t).is_file()]
-        start = files[0].resolve().parent if files else Path.cwd()
-        path = Path(args.config) if args.config else find_config(start)
-        project = load_config(path) if path else None
+    if args.watch and args.pdf:
+        print("Error: --watch builds the pages only; leave out --pdf", file=sys.stderr)
+        return 1
+    files = [Path(t) for t in args.targets if t.lower().endswith(".md") or Path(t).is_file()]
+    start = files[0].resolve().parent if files else Path.cwd()
+    config_path = Path(args.config) if args.config else find_config(start)
+    connected: list = []
+
+    def runtime():  # one container check for every poster, and every build of --watch
+        if not connected:
+            connected.append(connect(load_config(config_path).runtime if config_path else RuntimeSettings()))
+        return connected[0]
+
+    def build_all() -> tuple[dict[str, Path], set[Path]]:
+        """Write every poster asked for. Returns their pages by name, and the files they were made from."""
+        project = load_config(config_path) if config_path else None  # read again on each build of --watch
         jobs = _jobs(args.targets, files, project)
         if args.output and len(jobs) != 1:
-            print("Error: --output needs exactly one poster", file=sys.stderr)
-            return 1
+            raise ConfigError("--output needs exactly one poster")
         command_line = layer(
             {"theme": args.theme, "variables": dict(args.var), "conditions": _conditions(args.condition), "embed_fonts": args.embed_fonts},
             Path.cwd(), "the command line",
         )
-        settings = project.runtime if project else RuntimeSettings()
         defaults = project.poster if project else {}
-        runtime = functools.cache(lambda: connect(settings))  # one container check for every poster
+        pages, sources = {}, {config_path.resolve()} if config_path else set()
         for job in jobs:
             out = Path(args.output) if args.output else job.output
-            ctx, files = write_poster(job.source, out, runtime, merge(job.settings, command_line), defaults, args.pdf, project.mermaid if project else None)
+            settings = merge(job.settings, command_line)
+            ctx, written = write_poster(job.source, out, runtime, settings, defaults, False if args.watch else args.pdf,
+                                        project.mermaid if project else None)  # fmt: skip
             print(f"wrote {out} ({ctx.n} diagrams, {ctx.failed} failed)")
-            for extra in files[1:]:
+            for extra in written[1:]:
                 print(f"wrote {extra}")
-    except (ConfigError, ConversionError, SettingsError) as exc:
+            pages[job.name] = out.resolve()
+            sources |= {job.source.resolve(), *_paths(settings), *_paths(defaults)}
+        return pages, sources
+
+    errors = (ConfigError, ConversionError, SettingsError)
+    if args.watch:
+        from py_doc.poster_watch import watch
+
+        return watch(build_all, errors, port=args.port, open_browser=not args.no_open)
+    try:
+        build_all()
+    except errors as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return exit_status(exc)
     return 0
+
+
+def _paths(value) -> list[Path]:
+    """The files a layer of settings names, such as its theme and logos, to watch with the Markdown."""
+    if isinstance(value, Path):
+        return [value]
+    if isinstance(value, dict):
+        return [path for item in value.values() for path in _paths(item)]
+    if isinstance(value, list):
+        return [path for item in value for path in _paths(item)]
+    return []
 
 
 def _jobs(targets: list[str], files: list[Path], project) -> list[PosterConfig]:
