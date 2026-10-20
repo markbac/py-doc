@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def _composer():
-    # docxcompose imports pkg_resources, which warns on every import and is gone from setuptools 81.
+    # docxcompose before 2.2 imported pkg_resources, which warned on every import. 2.2 and later do not.
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         from docxcompose.composer import Composer

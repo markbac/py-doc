@@ -133,7 +133,7 @@ Section bodies are ordinary Markdown, with py-doc's own additions as in the [Wri
 
 ## Diagrams and charts
 
-Every diagram fence of a document (Mermaid, PlantUML, Graphviz, Vega-Lite and the rest) works on a poster, drawn by the tool container and embedded as a PNG picture. Mermaid gets the colours and body font of the theme, as front matter added to the diagram, unless the diagram has its own front matter or `%%{init`. A diagram that cannot be drawn is shown as code with a warning, and the poster is still written.
+Every diagram fence of a document works on a poster: Mermaid, PlantUML, Graphviz, Vega-Lite and the rest. It is drawn by the tool container and embedded as an SVG picture, so it stays sharp when printed. Ditaa and the blockdiag family can only draw PNG, so theirs are PNG. Mermaid gets the colours and body font of the theme, as front matter added to the diagram, unless the diagram has its own front matter or `%%{init`. A diagram that cannot be drawn is shown as code with a warning, and the poster is still written.
 
 > **Note:** A diagram wider than its column is scaled down and its text shrinks, so prefer compact layouts, such as Graphviz `dpi=80` or PlantUML `skinparam dpi 80`, or put it in a `{.wide}` section.
 
@@ -193,11 +193,11 @@ A mistake in a block, such as a chart value that is not a number, stops the buil
 
 A portrait poster has the proportions of its paper, such as 594 by 841 mm for A1. A landscape poster has those of the paper turned, so it prints on exactly one page. A script in the page finds the narrowest layout, no narrower than `width`, at which all the content fits, then scales the poster to the browser window. Adding or removing content needs no change of size. When a poster has little content there is space above the footer: lower `width` to make everything larger.
 
-To print from a browser, use the print dialogue of Chrome with no margins and background graphics on. The page size and its orientation come from `paper` and `orientation`, and the poster fills exactly one page. Text, charts, QR codes and shapes stay vector, and diagrams are PNG.
+To print from a browser, use the print dialogue of Chrome with no margins and background graphics on. The page size and its orientation come from `paper` and `orientation`, and the poster fills exactly one page. Text, charts, QR codes, shapes and diagrams stay vector, apart from PNG diagrams and pictures.
 
 ## PDF
 
-`py-doc poster --pdf`, or `pdf: true` in any of the four places, also prints each poster to a PDF with the Chromium of the tool container. It is one page of the poster's `paper`, in its `orientation`, the same as printing from Chrome. Text, charts, QR codes and shapes stay vector, and diagrams are PNG.
+`py-doc poster --pdf`, or `pdf: true` in any of the four places, also prints each poster to a PDF with the Chromium of the tool container. It is one page of the poster's `paper`, in its `orientation`, the same as printing from Chrome. Text, charts, QR codes, shapes and diagrams stay vector, apart from PNG diagrams and pictures.
 
 ```yaml
 posters:

@@ -115,6 +115,8 @@ py-doc lint docs --strict
 
 CI runs on Linux and Windows with Python 3.10 and 3.14, the oldest and newest supported. macOS is not supported.
 
+The tests run the tools on the host, so a second workflow, `Tool image`, builds the tool container and draws every diagram type and the example posters with it. It runs when the image definition or the diagram code changes, every Monday, and by hand from the Actions tab.
+
 ## License
 
 Licensed under the [MIT License](LICENSE).

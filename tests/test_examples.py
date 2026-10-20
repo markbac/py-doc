@@ -28,6 +28,8 @@ NO_TOOLS = re.compile(
 
 
 needs_xelatex = pytest.mark.skipif(not tex_packages_found("ulem.sty", "tcolorbox.sty"), reason="xelatex or one of its packages is not installed")
+# The examples keep their Graphviz diagrams (the fixture strips the other kinds), so building them runs dot
+needs_dot = pytest.mark.skipif(shutil.which("dot") is None, reason="Graphviz dot is not installed")
 
 
 @pytest.fixture
@@ -95,6 +97,7 @@ def test_the_dsl_and_the_json_describe_the_same_model():
     assert from_dsl == from_json
 
 
+@needs_dot
 def test_the_guide_builds_as_word_and_html(examples, pandoc_runtime):
     assert main(["build", "guide", "-f", "docx", "-f", "html", "--condition", "internal=true"]) == 0
     docx = next((examples / "build").glob("*.docx"))
@@ -125,6 +128,7 @@ def test_the_interface_samples_include_every_specification(examples, pandoc_runt
     assert "[[" not in html, "no marker is printed in HTML"
 
 
+@needs_dot
 def test_the_conditions_choose_the_text(examples, pandoc_runtime):
     assert main(["build", "guide", "-f", "html", "--condition", "audience=staff"]) == 0
     html = (examples / "build" / "guide.html").read_text(encoding="utf-8")
@@ -164,6 +168,7 @@ def test_the_release_notes_take_their_version_from_git(examples, pandoc_runtime)
     assert (examples / "build" / "release-notes-v1_2_3.docx").is_file()
 
 
+@needs_dot
 def test_the_guide_shows_the_word_features(examples, pandoc_runtime):
     assert main(["build", "guide", "-f", "docx"]) == 0
     document = Document(examples / "build" / "guide-v1.0.docx")
@@ -181,6 +186,7 @@ def test_the_guide_shows_the_word_features(examples, pandoc_runtime):
     assert "Integrating the SN-100" in core and "Technical documentation" in core and "IoT, sensor, MQTT" in core
 
 
+@needs_dot
 def test_the_deck_uses_the_layouts_notes_and_footer(examples, pandoc_runtime):
     assert main(["build", "deck"]) == 0
     presentation = Presentation(examples / "build" / "deck.pptx")
@@ -202,6 +208,7 @@ def test_the_deck_uses_the_layouts_notes_and_footer(examples, pandoc_runtime):
     assert "{{VERSION}}" not in master
 
 
+@needs_dot
 def test_a_released_deck_uses_the_base_template(examples, pandoc_runtime):
     slides = examples / "docs" / "deck" / "slides.md"
     slides.write_text(slides.read_text(encoding="utf-8").replace("status: Draft", "status: Released"), encoding="utf-8")
@@ -210,12 +217,14 @@ def test_a_released_deck_uses_the_base_template(examples, pandoc_runtime):
     assert "DRAFT" not in master and "Version 1.0" in master
 
 
+@needs_dot
 def test_a_draft_html_guide_uses_the_draft_stylesheet(examples, pandoc_runtime):
     assert main(["build", "guide", "-f", "html"]) == 0
     html = (examples / "build" / "guide.html").read_text(encoding="utf-8")
     assert "DRAFT" in html and "#c62828" in html
 
 
+@needs_dot
 def test_a_draft_deck_uses_the_draft_template(examples, pandoc_runtime):
     assert main(["build", "deck"]) == 0  # slides.md says status: Draft
     master = "".join(m.part.blob.decode("utf-8") for m in Presentation(examples / "build" / "deck.pptx").slide_masters)
