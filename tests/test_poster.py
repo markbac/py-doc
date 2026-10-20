@@ -517,7 +517,7 @@ def test_front_matter_that_is_not_yaml_is_an_error(tmp_path):
 def test_a_wide_section_spans_the_columns_and_splits_them_into_groups(tmp_path, drawn):
     text = "## 1. A\n\nOne.\n\n## 2. B\n\nTwo.\n\n## 3. Wide {.wide colour=red}\n\nAll across.\n\n## 4. C\n\nThree.\n\n## 5. D\n\nFour.\n"
     page, _ = build(write(tmp_path, text), lambda: object())
-    assert page.count('<div class="cols">') == 2
+    assert page.count('<div class="cols"') == 2
     assert '<section class="wide"><h2 style="background:#a3322b">3. Wide</h2>' in page
     assert page.index("2. B") < page.index("3. Wide") < page.index("4. C")
     with pytest.raises(PosterError, match="split cannot be used with wide sections"):
@@ -959,3 +959,11 @@ def test_the_embed_fonts_option_wins_over_the_setting(tmp_path, drawn, web, monk
 def test_embed_fonts_must_be_true_or_false(tmp_path):
     with pytest.raises(ConfigError, match="poster.embed_fonts must be true or false"):
         parse_config({"poster": {"embed_fonts": "yes"}}, tmp_path)
+
+
+def test_the_page_balances_the_columns_by_height_unless_split_chooses(tmp_path, drawn):
+    page, _ = build(write(tmp_path, SECTIONS), lambda: object())
+    assert '<div class="cols" data-balance>' in page
+    assert "function balance()" in page and "balance();return p.scrollHeight" in page  # on every width it tries
+    page, _ = build(write(tmp_path, "---\nsplit: 2\n---\n" + SECTIONS), lambda: object())
+    assert '<div class="cols">' in page and "data-balance>" not in page

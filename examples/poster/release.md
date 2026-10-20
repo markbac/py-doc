@@ -12,7 +12,6 @@ variables:
 theme: dark
 paper: a3
 width: 1100
-split: 2
 ---
 
 ## Stats

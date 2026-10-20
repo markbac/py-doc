@@ -98,7 +98,7 @@ Every other `##` heading is a section. The text before the first colon is the he
 ## 2. Power: where the charge goes
 ```
 
-The sections are shared out between the columns, balanced by length: two columns for a portrait poster and three for a landscape one. Change that with `columns:` and `split:` in the front matter:
+The sections are shared out between the columns, in order: two columns for a portrait poster and three for a landscape one. The page measures each section, charts and diagrams included, and balances the columns by height. Change that with `columns:` and `split:` in the front matter:
 
 ```yaml
 columns: 3
@@ -283,7 +283,7 @@ The page always has the shape of its paper. A script in it finds the narrowest l
 |---|---|
 | Space above the footer | Lower `width`, such as `width: 1100`, to make everything larger |
 | Small text everywhere | Cut words, or move a long section to its own `{.wide}` row |
-| One column much longer than the others | Set `split:`, because a chart or a diagram is short in text but tall on the page |
+| One column much longer than the others | One section is taller than the rest. Make it `{.wide}`, split it in two, or choose the columns with `split:` |
 | A diagram with tiny text | Simplify it, or put it in a `{.wide}` section |
 | A wide table squeezed into a column | Make its section `{.wide}`, or cut columns |
 

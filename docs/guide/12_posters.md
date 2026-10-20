@@ -69,7 +69,7 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 | `title`, `subtitle`, `byline` | The first `#` heading, else the file name | The header text. `{{variables}}` are filled in |
 | `orientation` | `portrait` | `portrait` or `landscape` |
 | `columns` | 2 for portrait, 3 for landscape | How many columns the sections are in |
-| `split` | Balanced by length | How many sections go in each column but the last, such as `3` for two columns or `2, 3` for three |
+| `split` | Balanced by height | How many sections go in each column but the last, such as `3` for two columns or `2, 3` for three. Without it, the page measures each section and shares them out, in order, so the tallest column is as short as it can be |
 | `paper` | `a1` | `a0` to `a4`, the page size for printing |
 | `width` | 1400 for portrait, 1800 for landscape | The narrowest layout in pixels. Smaller makes everything larger on the page |
 | `theme` | `default` | A built-in theme or a theme file. See [Themes](#themes) |
