@@ -24,6 +24,8 @@ With several targets, each Markdown file is checked once and the settings come f
 
 A `[[CAPTION:Figure]]` or `[[CAPTION:Table]]` marker counts when it is on the line before or after the picture, table or diagram.
 
+A poster's Markdown, named under `posters:` in `py-doc.yml`, is linted with every rule except the structure rules. Those are document conventions, such as a caption for every picture, that a poster does not follow. `py-doc build --lint` lints the posters it builds as well as the documents.
+
 ## Built-in rules
 
 | Rule | Category | Default severity | What it reports |

@@ -94,3 +94,4 @@ class LintConfig:
     root: Path = field(default_factory=Path.cwd)  # the project folder: where the managed Vale folder lives
     documents: dict[str, list[Path]] = field(default_factory=dict)  # document id -> its source files, in order
     generated: frozenset[Path] = frozenset()  # files content generators write: not missing before they run
+    posters: frozenset[Path] = frozenset()  # poster sources: their prose is linted, but not by the document structure rules

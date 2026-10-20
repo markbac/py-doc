@@ -8,6 +8,7 @@ merged, so a logo named in py-doc.yml is from py-doc.yml and one in the front ma
 from __future__ import annotations
 
 import logging
+import re
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -69,10 +70,13 @@ def layer(data: dict, folder: Path, where: str, strict: bool = True) -> dict:
             out[key] = _path(text, folder, place) if text.endswith((".yml", ".yaml")) else text
         elif key == "logo":
             out[key] = _path(value, folder, place)
-        elif key == "embed_fonts":
-            if not isinstance(value, bool):
-                raise SettingsError(f"{place} must be true or false")
-            out[key] = value
+        elif key == "embed_fonts":  # true: every font of the stylesheet; a list: only those subsets, such as latin
+            if isinstance(value, list) and value and all(isinstance(v, str) and re.fullmatch(r"[a-z][a-z0-9-]*", v) for v in value):
+                out[key] = [str(v) for v in value]
+            elif isinstance(value, bool):
+                out[key] = value
+            else:
+                raise SettingsError(f"{place} must be true, false or a list of subsets such as [latin, latin-ext]")
         elif key == "pdf":  # true: beside the page; a path: there
             if isinstance(value, bool):
                 out[key] = value

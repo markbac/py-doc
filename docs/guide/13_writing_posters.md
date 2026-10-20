@@ -98,7 +98,7 @@ Every other `##` heading is a section. The text before the first colon is the he
 ## 2. Power: where the charge goes
 ```
 
-The sections are shared out between the columns, balanced by length: two columns for a portrait poster and three for a landscape one. Change that with `columns:` and `split:` in the front matter:
+The sections are shared out between the columns, in order: two columns for a portrait poster and three for a landscape one. The page measures each section, charts and diagrams included, and balances the columns by height. Change that with `columns:` and `split:` in the front matter:
 
 ```yaml
 columns: 3
@@ -273,7 +273,7 @@ footer:
 
 The texts are Markdown and take `{{variables}}`. The QR code is drawn as SVG, so it scans from a printed page.
 
-`document` and `version` are shown in small type on a line under the footer, such as "SN-PO-001 · Version 2.1". So a printed poster can be traced to its source. Without them, the poster uses `document_number` and `version` from its front matter, the same properties a document has.
+`document` and `version` are shown in small type on a line under the footer, such as "SN-PO-001 · Version 2.1". So a printed poster can be traced to its source. Without them, the poster uses `document_number` and `version` from its front matter, the same properties a document has. `version: git` takes the version from Git, such as `v2.1-3-g1a2b3c4`, so a printed poster names the commit it came from.
 
 ## Make it fit
 
@@ -283,7 +283,7 @@ The page always has the shape of its paper. A script in it finds the narrowest l
 |---|---|
 | Space above the footer | Lower `width`, such as `width: 1100`, to make everything larger |
 | Small text everywhere | Cut words, or move a long section to its own `{.wide}` row |
-| One column much longer than the others | Set `split:`, because a chart or a diagram is short in text but tall on the page |
+| One column much longer than the others | One section is taller than the rest. Make it `{.wide}`, split it in two, or choose the columns with `split:` |
 | A diagram with tiny text | Simplify it, or put it in a `{.wide}` section |
 | A wide table squeezed into a column | Make its section `{.wide}`, or cut columns |
 
@@ -411,6 +411,7 @@ Every update reports its result.
 1. Stand back from the screen. Can you read the section text from two steps away at the size it will print?
 1. Check every number, name and date against its source.
 1. Scan the QR code with a phone.
+1. Lint it with `py-doc lint posters/`, and fix every warning. It checks the glossary, acronyms and wording, but not document rules such as captions.
 1. Build the PDF and open it. Check it is one page of the right paper size and orientation.
 
 ## When something goes wrong

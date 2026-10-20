@@ -27,6 +27,8 @@ USER_AGENT = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Ge
 FORMATS = {".woff2": ("font/woff2", "woff2"), ".woff": ("font/woff", "woff"), ".ttf": ("font/ttf", "truetype"),
            ".otf": ("font/otf", "opentype")}  # fmt: skip
 _URL = re.compile(r"url\(\s*['\"]?(https://[^'\")\s]+)['\"]?\s*\)")
+# Google Fonts names the subset of each @font-face in a comment before it: /* latin */
+_FACE = re.compile(r"(?:/\*\s*([\w-]+)\s*\*/\s*)?(@font-face\s*\{[^{}]*\})", re.S)
 
 
 def fonts_folder() -> Path:
@@ -67,12 +69,47 @@ def local_faces(files) -> str:
     return "".join(rules)
 
 
-def web_faces(stylesheet: str, where: str) -> str | None:
-    """The stylesheet's @font-face rules with every font embedded, or None (and a warning) when it cannot be had."""
+_PROPERTY = re.compile(r"([\w-]+)\s*:\s*([^;{}]+);")
+
+
+def merge_weights(css: str) -> str:
+    """One @font-face for each font file, with the range of its weights.
+
+    Google Fonts lists a variable font once for each weight asked for, every time with the same file, so
+    embedding the rules as they are would put that file in the page once for each weight.
+    """
+    merged: dict[tuple, list[int]] = {}
+    for _, rule in _FACE.findall(css):
+        props = dict(_PROPERTY.findall(rule))
+        weight = props.pop("font-weight", "400").strip()
+        if not re.fullmatch(r"\d{3}( \d{3})?", weight):
+            return css  # a weight such as 'bold': leave the rules as they are
+        merged.setdefault(tuple(sorted((k, v.strip()) for k, v in props.items())), []).extend(int(w) for w in weight.split())
+    rules = []
+    for props, weights in merged.items():
+        low, high = min(weights), max(weights)
+        body = "".join(f"{k}:{v};" for k, v in props) + f"font-weight:{low}{f' {high}' if high != low else ''};"
+        rules.append(f"@font-face{{{body}}}")
+    return "\n".join(rules)
+
+
+def subset(css: str, subsets) -> str:
+    """Only the @font-face rules of ``subsets``, by the comment before each. A rule with no comment is kept."""
+    return "\n".join(rule for name, rule in _FACE.findall(css) if not name or name in subsets)
+
+
+def web_faces(stylesheet: str, where: str, subsets=None) -> str | None:
+    """The stylesheet's @font-face rules with their fonts embedded, or None (and a warning) when they cannot be had.
+
+    ``subsets`` (such as ``["latin", "latin-ext"]``) keeps only those character sets, and downloads only their fonts.
+    """
     try:
         css = _fetch(stylesheet).decode("utf-8")
         if "<" in css or "@import" in css:
             raise ValueError("the stylesheet is not a plain list of @font-face rules")
+        if subsets:
+            css = subset(css, subsets)
+        css = merge_weights(css)
         fonts = {url: _fetch(url) for url in dict.fromkeys(_URL.findall(css))}
     except (OSError, urllib.error.URLError, UnicodeDecodeError, ValueError) as exc:
         logger.warning(f"{where}: the fonts of {stylesheet} could not be embedded, so the page links them instead: {exc}")
@@ -89,13 +126,16 @@ def web_faces(stylesheet: str, where: str) -> str | None:
     return _URL.sub(embedded, css)
 
 
-def font_css(theme, embed: bool, where: str) -> tuple[str, bool]:
-    """The @font-face rules to put in the page, and whether the page still needs its stylesheet link."""
+def font_css(theme, embed, where: str) -> tuple[str, bool]:
+    """The @font-face rules to put in the page, and whether the page still needs its stylesheet link.
+
+    ``embed`` is the ``embed_fonts`` setting: false, true, or a list of the subsets to keep.
+    """
     css = local_faces(theme.font_files)
     stylesheet = theme.fonts.get("stylesheet")
     link = bool(stylesheet)
     if embed and stylesheet:
-        web = web_faces(stylesheet, where)
+        web = web_faces(stylesheet, where, embed if isinstance(embed, list) else None)
         if web is not None:
             css += web
             link = False

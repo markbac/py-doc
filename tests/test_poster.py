@@ -517,7 +517,7 @@ def test_front_matter_that_is_not_yaml_is_an_error(tmp_path):
 def test_a_wide_section_spans_the_columns_and_splits_them_into_groups(tmp_path, drawn):
     text = "## 1. A\n\nOne.\n\n## 2. B\n\nTwo.\n\n## 3. Wide {.wide colour=red}\n\nAll across.\n\n## 4. C\n\nThree.\n\n## 5. D\n\nFour.\n"
     page, _ = build(write(tmp_path, text), lambda: object())
-    assert page.count('<div class="cols">') == 2
+    assert page.count('<div class="cols"') == 2
     assert '<section class="wide"><h2 style="background:#a3322b">3. Wide</h2>' in page
     assert page.index("2. B") < page.index("3. Wide") < page.index("4. C")
     with pytest.raises(PosterError, match="split cannot be used with wide sections"):
@@ -710,6 +710,23 @@ def test_the_document_number_and_version_of_the_front_matter_are_the_defaults(tm
     assert '<div class="docinfo"><span>Version 3.1</span></div>' in page  # the footer's own wins
     page, _ = build(write(tmp_path, "## A\n\nText.\n"), lambda: object())
     assert 'class="docinfo"' not in page
+
+
+
+def test_version_git_is_the_git_describe_of_the_poster_folder(tmp_path, drawn, monkeypatch):
+    asked = []
+    monkeypatch.setattr("py_doc.poster.git_version", lambda folder: asked.append(folder) or "v2.1-3-g1a2b3c4")
+    page, _ = build(write(tmp_path, "---\nversion: git\n---\n## A\n\nText.\n"), lambda: object())
+    assert '<div class="docinfo"><span>Version v2.1-3-g1a2b3c4</span></div>' in page
+    page, _ = build(write(tmp_path, "---\nfooter: {version: git}\n---\n## A\n\nText.\n"), lambda: object())
+    assert "Version v2.1-3-g1a2b3c4" in page
+    assert asked == [tmp_path.resolve()] * 2
+
+
+def test_version_git_outside_a_repository_is_an_error(tmp_path, drawn, monkeypatch):
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+    with pytest.raises(ConversionError, match="version: git needs a git repository"):
+        build(write(tmp_path, "---\nversion: git\n---\n## A\n\nText.\n"), lambda: object())
 
 
 # --- py-doc build ---------------------------------------------------------------------------------
@@ -956,6 +973,87 @@ def test_the_embed_fonts_option_wins_over_the_setting(tmp_path, drawn, web, monk
     assert "<link" not in (tmp_path / "poster.html").read_text(encoding="utf-8")
 
 
-def test_embed_fonts_must_be_true_or_false(tmp_path):
-    with pytest.raises(ConfigError, match="poster.embed_fonts must be true or false"):
-        parse_config({"poster": {"embed_fonts": "yes"}}, tmp_path)
+def test_embed_fonts_is_true_false_or_a_list_of_subsets(tmp_path):
+    for bad in ("yes", [], ["Latin!"], [3]):
+        with pytest.raises(ConfigError, match="poster.embed_fonts must be true, false or a list of subsets"):
+            parse_config({"poster": {"embed_fonts": bad}}, tmp_path)
+    assert parse_config({"poster": {"embed_fonts": ["latin", "latin-ext"]}}, tmp_path).poster["embed_fonts"] == ["latin", "latin-ext"]
+
+
+SUBSET_CSS = """/* cyrillic */
+@font-face {
+  font-family: 'Brand Sans';
+  src: url(https://fonts.example.com/brand-cyrillic.woff2) format('woff2');
+}
+/* latin */
+@font-face {
+  font-family: 'Brand Sans';
+  src: url(https://fonts.example.com/brand-400.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Brand Sans';
+  font-weight: 700;
+  src: url(https://fonts.example.com/brand-700.woff2) format('woff2');
+}
+"""
+
+
+def test_embed_fonts_with_subsets_keeps_and_downloads_only_those(tmp_path, drawn, web):
+    pages, asked = web
+    pages["https://fonts.example.com/css?family=Brand"] = SUBSET_CSS.encode()
+    pages["https://fonts.example.com/brand-cyrillic.woff2"] = b"cyrillic"
+    font_theme(tmp_path)
+    page, _ = build(write(tmp_path, "---\ntheme: theme.yml\nembed_fonts: [latin]\n---\n## A\n\nText.\n"), lambda: object())
+    assert "brand-cyrillic" not in " ".join(asked) and base64.b64encode(b"cyrillic").decode() not in page
+    assert page.count("@font-face") == 2  # the latin face, and the one with no subset named
+    assert "<link" not in page
+
+
+def test_the_page_balances_the_columns_by_height_unless_split_chooses(tmp_path, drawn):
+    page, _ = build(write(tmp_path, SECTIONS), lambda: object())
+    assert '<div class="cols" data-balance>' in page
+    assert "function balance()" in page and "balance();return p.scrollHeight" in page  # on every width it tries
+    page, _ = build(write(tmp_path, "---\nsplit: 2\n---\n" + SECTIONS), lambda: object())
+    assert '<div class="cols">' in page and "data-balance>" not in page
+
+
+# --- lint -----------------------------------------------------------------------------------------
+
+EXAMPLE_POSTERS = Path(__file__).parent.parent / "examples" / "poster"
+
+
+def test_the_example_posters_lint_clean_without_the_document_structure_rules(monkeypatch, capsys):
+    monkeypatch.chdir(EXAMPLE_POSTERS.parent)
+    assert main(["lint", "poster", "--engine", "builtin", "--strict"]) == 0
+    assert "structure/" not in capsys.readouterr().out
+
+
+def test_the_same_markdown_as_a_document_gets_the_structure_rules(tmp_path, monkeypatch, capsys):
+    """A poster has no [[CAPTION:]] markers, which the example project's structure rules ask of a document."""
+    import shutil
+
+    copy = tmp_path / "not-a-poster.md"
+    shutil.copy(EXAMPLE_POSTERS / "poster.md", copy)
+    monkeypatch.chdir(EXAMPLE_POSTERS.parent)
+    main(["lint", str(copy), "--engine", "builtin", "--config", "py-doc.yml"])
+    assert "structure/diagram-missing-caption" in capsys.readouterr().out
+
+
+def test_build_lint_reads_the_posters_too(tmp_path, drawn, documents, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    write(tmp_path, "## A\n\nWe do this in order to save power.\n")
+    (tmp_path / "py-doc.yml").write_text("posters:\n  wall: {source: poster.md}\n", encoding="utf-8")
+    assert main(["build", "--strict"]) == 1
+    out = capsys.readouterr()
+    assert "poster.md" in out.out and "DOC002" in out.out  # 'in order to' is a wordy phrase
+    assert not (tmp_path / "build" / "wall.html").exists()
+
+
+def test_one_font_file_for_several_weights_is_embedded_once():
+    from py_doc.poster_fonts import merge_weights
+
+    rule = "/* latin */\n@font-face {{\n  font-family: 'Mono';\n  font-weight: {w};\n  src: url(https://f.example/mono.woff2) format('woff2');\n}}\n"
+    css = merge_weights(rule.format(w=500) + rule.format(w=600) + rule.format(w=700).replace("mono.woff2", "mono-bold.woff2"))
+    assert css.count("@font-face") == 2 and css.count("mono.woff2") == 1
+    assert "font-weight:500 600;" in css and "font-weight:700;" in css
+    assert merge_weights("@font-face { font-weight: bold; src: url(https://f.example/a.woff2); }").count("bold") == 1  # left alone

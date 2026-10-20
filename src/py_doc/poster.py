@@ -21,6 +21,7 @@ import yaml
 
 from py_doc.diagrams.registry import PUPPETEER, TOOLS
 from py_doc.directives import Fence, expand
+from py_doc.naming import git_version
 from py_doc.pandoc.source import split_front_matter
 from py_doc.poster_blocks import MD, Ctx, PosterError, block_html, esc, inline, parse_opts, qr_svg
 from py_doc.poster_fonts import font_css
@@ -157,7 +158,28 @@ SCRIPT = """
 (function(){
 var R=__RATIO__, MIN=__MIN__, PAPER=__PAPER_PX__;
 var p=document.querySelector('.poster');
-function natural(w){p.style.zoom='1';p.style.width=w+'px';p.style.height='auto';p.style.minHeight='0';return p.scrollHeight;}
+// Share the sections of each balanced group between its columns by their measured heights, keeping their
+// order: of every split into one run of sections for each column, the one whose tallest column is shortest
+function balance(){
+  p.querySelectorAll('.cols[data-balance]').forEach(function(g){
+    var cols=g.querySelectorAll(':scope>.col'), k=cols.length, s=[];
+    cols.forEach(function(c){s.push.apply(s,c.querySelectorAll(':scope>section'));});
+    var n=s.length, gap=parseFloat(getComputedStyle(cols[0]).rowGap)||0, pre=[0], i, j, t;
+    if(k<2||n<=k){return;}
+    for(i=0;i<n;i++){pre.push(pre[i]+s[i].getBoundingClientRect().height);}
+    function run(a,b){return pre[b]-pre[a]+gap*(b-a-1);}
+    var best=[[0]], cut=[[0]];
+    for(i=1;i<=n;i++){best[0][i]=Infinity;}
+    for(j=1;j<=k;j++){best[j]=[Infinity];cut[j]=[0];
+      for(i=1;i<=n;i++){best[j][i]=Infinity;
+        for(t=j-1;t<i;t++){var m=Math.max(best[j-1][t],run(t,i));if(m<best[j][i]){best[j][i]=m;cut[j][i]=t;}}}}
+    var ends=[], e=n;
+    for(j=k;j>0;j--){ends.unshift(e);e=cut[j][e];}
+    var a=0;
+    ends.forEach(function(b,c){for(i=a;i<b;i++){cols[c].appendChild(s[i]);}a=b;});
+  });
+}
+function natural(w){p.style.zoom='1';p.style.width=w+'px';p.style.height='auto';p.style.minHeight='0';balance();return p.scrollHeight;}
 function scale(){p.style.zoom=document.documentElement.clientWidth/(+p.dataset.w);}
 function fit(){
   var lo=MIN,hi=4000;
@@ -351,6 +373,12 @@ def read_settings(md_path, settings=None, defaults=None):
     except SettingsError as exc:
         raise PosterError(str(exc)) from None
     meta = merge(defaults, front_layer, settings)
+    footer = meta.get("footer") or {}
+    if "git" in (meta.get("version"), footer.get("version")):  # as a document's version: git describe
+        version = git_version(md_path.resolve().parent)
+        for place in (meta, footer):
+            if place.get("version") == "git":
+                place["version"] = version
     variables = meta.get("variables") or {}
     for key in ("title", "subtitle", "byline"):
         if key in meta:
@@ -431,7 +459,8 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
         else:
             columns = columns_of(group, count, meta.get("split"), md_path)
             cols = "".join(f'<div class="col">{"".join(sec(*s) for s in column)}</div>' for column in columns)
-            middle += f'<div class="cols">{cols}</div>'
+            balanced = "" if meta.get("split") else " data-balance"  # the page script shares them out by height
+            middle += f'<div class="cols"{balanced}>{cols}</div>'
 
     stats_html = "".join(
         f'<div class="stat"><b>{esc(v)}</b><span>{esc(label)}</span>{trend_html(change, verdict)}</div>'
@@ -461,7 +490,7 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
            .replace("__H__", str(round(width * ratio))).replace("__PAPER__", "{}mm {}mm".format(*paper_mm)))
     script = (SCRIPT.replace("__RATIO__", f"{ratio:.4f}").replace("__MIN__", str(width))
               .replace("__PAPER_PX__", str(paper_mm[0] / 25.4 * 96)))
-    faces, link = font_css(ctx.theme, bool(meta.get("embed_fonts")), str(md_path))
+    faces, link = font_css(ctx.theme, meta.get("embed_fonts") or False, str(md_path))
     fonts = ctx.theme.fonts.get("stylesheet") if link else None
     page = f"""<!doctype html>
 <html lang="en">

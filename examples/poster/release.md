@@ -12,7 +12,6 @@ variables:
 theme: dark
 paper: a3
 width: 1100
-split: 2
 ---
 
 ## Stats
@@ -76,7 +75,7 @@ Install 2.1 everywhere: it costs one message and saves months of battery.
 
 ### Installers
 
-Nothing changes on site. Joining is simply quicker.
+Nothing changes on site. Joining is quicker.
 
 ### Support
 

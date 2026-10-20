@@ -333,6 +333,7 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
         config.poster = poster_settings.layer(top.get("poster") or {}, root, "poster")
         for name, raw in _mapping(top.get("posters") or {}, "posters").items():
             config.posters[str(name)] = _parse_poster(str(name), raw, root)
+        config.lint.posters = frozenset(poster.source.resolve() for poster in config.posters.values())
     except poster_settings.SettingsError as exc:
         raise ConfigError(str(exc)) from None
 
