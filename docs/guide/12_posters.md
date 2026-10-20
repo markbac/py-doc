@@ -80,6 +80,7 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 | `document_number`, `version` | None | The document's number and version, shown small under the footer, unless `footer.document` or `footer.version` names others |
 | `variables`, `conditions` | None | Values for `{{name}}` and `[[IF:]]`, as for documents |
 | `pdf` | `false` | `true` prints a one-page PDF beside the page, and a path prints it there. `--pdf` and `--no-pdf` win |
+| `embed_fonts` | `false` | `true` puts the theme's web fonts inside the page, so it and its PDF look the same offline. See [Fonts inside the page](#fonts-inside-the-page). `--embed-fonts` and `--no-embed-fonts` win |
 
 `footer-left` and `footer-right` in the front matter still work, as `footer.left` and `footer.right`.
 
@@ -208,7 +209,7 @@ posters:
     pdf: build/print/release-a3.pdf    # or a path of its own
 ```
 
-> **Note:** The tool container has no network, so a theme's web fonts (`fonts.stylesheet`) are not loaded for the PDF. Their fallbacks are used, as in a browser that is offline. The layout fits itself to the fonts it has. For the PDF to match the page exactly, use fonts every computer has, as the `print` theme does.
+> **Note:** The tool container has no network, so a theme's web fonts (`fonts.stylesheet`) are not loaded for the PDF unless they are inside the page. Set `embed_fonts: true`, or give the theme its font files, and the PDF uses the theme's own fonts. See [Fonts inside the page](#fonts-inside-the-page).
 
 The PDF needs the tool container, like diagrams. The page alone does not.
 
@@ -248,9 +249,38 @@ A colour is a hex value, a CSS colour name, or an `rgb()` or `hsl()` value. A fo
 
 `fonts.stylesheet` is a web address the page loads the fonts from. Set it to `null` to load nothing and use the fonts installed on the computer. A font that is not installed and not loaded is replaced by its fallback. So a brand font with no web version must be installed on every computer that shows or prints the poster.
 
-> **Important:** The page loads `fonts.stylesheet` when it opens, so the default theme needs an internet connection to show its fonts. Without one the fallback fonts are used, the layout fits itself again, and nothing else changes. The `print` theme loads no fonts.
+> **Important:** The page loads `fonts.stylesheet` when it opens, so the default theme needs an internet connection to show its fonts. Without one the fallback fonts are used, the layout fits itself again, and nothing else changes. The `print` theme loads no fonts, and `embed_fonts: true` puts them inside the page.
 
 A mistake in a theme, such as an unknown colour name or a value that is not a colour, stops the build with the file and the key.
+
+### Fonts inside the page
+
+A poster can carry its fonts, so it looks the same on a computer without internet and in its PDF. There are two ways.
+
+**The theme's own font files**, under `fonts.files`, are always put inside the page. Use them for a brand font that has no web version, or one you may not load from the web:
+
+```yaml
+fonts:
+  heading: "'Brand Sans', Arial, sans-serif"
+  files:
+    - {family: Brand Sans, file: fonts/BrandSans-Bold.woff2, weight: 700}
+    - {family: Brand Sans, file: fonts/BrandSans-Regular.woff2}          # weight 400, style normal
+    - {family: Brand Sans, file: fonts/BrandSans-Italic.woff2, style: italic}
+```
+
+`family` is the name the font lists use. `file` is a `.woff2`, `.woff`, `.ttf` or `.otf` file, relative to the file that names it. `weight` is 100 to 900, or a range such as `100 900` for a variable font, and `style` is `normal` or `italic`.
+
+**The web fonts of `fonts.stylesheet`** go inside the page with `embed_fonts: true`, or `--embed-fonts` on the command line. py-doc downloads the stylesheet and each font file it names once, on your computer, and keeps them in a `fonts` folder in the cache, beside the diagrams. A later build uses that copy and needs no network. When the download fails, the page links the stylesheet as before, with a warning, and the poster is still written.
+
+```yaml
+poster:
+  theme: brand/company.yml
+  embed_fonts: true
+```
+
+Embedded fonts make the page larger: the default theme's fonts add about 1.9 MB, and the example brand's about 0.5 MB. More than 5 MB of fonts is reported with a warning, because the page is then slow to send and open.
+
+> **Important:** A font's licence decides whether it may be put inside a file you send. The fonts of Google Fonts are under licences that allow it. Check the licence of a bought or brand font before you embed it.
 
 ### Theme colours
 

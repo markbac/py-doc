@@ -6,6 +6,7 @@ import base64
 import json
 import re
 import types
+import urllib.error
 import textwrap
 from pathlib import Path
 
@@ -795,3 +796,160 @@ def test_build_passes_variables_and_conditions_to_posters(tmp_path, drawn, docum
     assert main(["build", "--var", "version=3", "--condition", "internal=false"]) == 0
     page = (tmp_path / "build" / "wall.html").read_text(encoding="utf-8")
     assert "Version 3." in page and "Secret." not in page
+
+
+# --- fonts ----------------------------------------------------------------------------------------
+
+WOFF2 = b"wOF2" + b"\0" * 32
+FONT_CSS = """/* latin */
+@font-face {
+  font-family: 'Brand Sans';
+  font-style: normal;
+  font-weight: 400;
+  src: url(https://fonts.example.com/brand-400.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Brand Sans';
+  font-weight: 700;
+  src: url(https://fonts.example.com/brand-700.woff2) format('woff2');
+}
+"""
+
+
+@pytest.fixture
+def web(tmp_path, monkeypatch):
+    """A stand-in for the web: answers from a dict, and records what was asked."""
+    monkeypatch.setenv("PY_DOC_CACHE", str(tmp_path / "cache"))
+    pages = {"https://fonts.example.com/css?family=Brand": FONT_CSS.encode(),
+             "https://fonts.example.com/brand-400.woff2": WOFF2, "https://fonts.example.com/brand-700.woff2": WOFF2 + b"7"}  # fmt: skip
+    asked = []
+
+    class Response:
+        def __init__(self, data):
+            self.data = data
+
+        def read(self):
+            return self.data
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def urlopen(request, timeout=None):
+        asked.append(request.full_url)
+        assert "Chrome" in request.get_header("User-agent")
+        if request.full_url not in pages:
+            raise urllib.error.URLError("no route to host")
+        return Response(pages[request.full_url])
+
+    monkeypatch.setattr("py_doc.poster_fonts.urllib.request.urlopen", urlopen)
+    return pages, asked
+
+
+def font_theme(tmp_path, extra=""):
+    (tmp_path / "theme.yml").write_text(
+        "fonts:\n  body: \"'Brand Sans', Arial, sans-serif\"\n  stylesheet: https://fonts.example.com/css?family=Brand\n" + extra, encoding="utf-8"
+    )
+
+
+def test_a_theme_s_font_files_are_embedded(tmp_path, drawn):
+    (tmp_path / "fonts").mkdir()
+    (tmp_path / "fonts" / "Brand-Bold.woff2").write_bytes(WOFF2)
+    (tmp_path / "theme.yml").write_text(
+        "fonts:\n  heading: \"'Brand', Arial, sans-serif\"\n  files:\n    - {family: Brand, file: fonts/Brand-Bold.woff2, weight: 700}\n", encoding="utf-8"
+    )
+    page, _ = build(write(tmp_path, "---\ntheme: theme.yml\n---\n## A\n\nText.\n"), lambda: object())
+    data = base64.b64encode(WOFF2).decode()
+    assert f"@font-face{{font-family:'Brand';font-weight:700;font-style:normal;font-display:swap;src:url(data:font/woff2;base64,{data}) format('woff2')}}" in page
+    assert '<link rel="stylesheet" href="https://fonts.googleapis.com/' in page  # the default stylesheet is still linked
+
+
+def test_font_files_named_in_py_doc_yml_are_from_py_doc_yml(tmp_path):
+    (tmp_path / "brand").mkdir()
+    (tmp_path / "brand" / "a.ttf").write_bytes(b"\0")
+    config = parse_config({"poster": {"fonts": {"files": [{"family": "A", "file": "brand/a.ttf"}]}}}, tmp_path)
+    assert config.poster["fonts"]["files"][0]["file"] == str(tmp_path / "brand" / "a.ttf")
+
+
+@pytest.mark.parametrize(
+    "files, message",
+    [
+        ("files: x", "fonts.files must be a list"),
+        ("files:\n    - {file: a.woff2}", r"fonts.files\[1\] needs a family and a file"),
+        ("files:\n    - {family: \"A'; }\", file: a.woff2}", "has a character a font name cannot have"),
+        ("files:\n    - {family: A, file: a.woff2, weight: bold}", "weight must be 100 to 900"),
+        ("files:\n    - {family: A, file: a.woff2, style: oblique}", "style must be normal or italic"),
+        ("files:\n    - {family: A, file: a.png}", "is not a font file"),
+        ("files:\n    - {family: A, file: missing.woff2}", "font file not found"),
+        ("files:\n    - {family: A, file: a.woff2, size: 3}", "unknown key 'size'"),
+    ],
+)
+def test_a_font_file_mistake_is_an_error(tmp_path, files, message):
+    (tmp_path / "a.woff2").write_bytes(WOFF2)
+    (tmp_path / "a.png").write_bytes(PNG)
+    (tmp_path / "theme.yml").write_text("fonts:\n  " + files + "\n", encoding="utf-8")
+    with pytest.raises(ThemeError, match=message):
+        build(write(tmp_path, "---\ntheme: theme.yml\n---\n## A\n\nText.\n"), lambda: object())
+
+
+def test_embed_fonts_puts_the_web_fonts_in_the_page_and_keeps_them(tmp_path, drawn, web):
+    pages, asked = web
+    font_theme(tmp_path)
+    text = "---\ntheme: theme.yml\nembed_fonts: true\n---\n## A\n\nText.\n"
+    page, _ = build(write(tmp_path, text), lambda: object())
+    assert "<link" not in page and "fonts.example.com" not in page
+    assert f"url(data:font/woff2;base64,{base64.b64encode(WOFF2).decode()}) format('woff2')" in page
+    assert f"url(data:font/woff2;base64,{base64.b64encode(WOFF2 + b'7').decode()})" in page
+    assert len(asked) == 3
+    build(write(tmp_path, text), lambda: object())
+    assert len(asked) == 3  # the second build is from the cache, with no network
+    assert len(list((tmp_path / "cache" / "fonts").iterdir())) == 3
+
+
+def test_a_font_download_that_fails_leaves_the_link_and_warns(tmp_path, drawn, web, caplog):
+    pages, _ = web
+    del pages["https://fonts.example.com/brand-700.woff2"]
+    font_theme(tmp_path)
+    page, _ = build(write(tmp_path, "---\ntheme: theme.yml\nembed_fonts: true\n---\n## A\n\nText.\n"), lambda: object())
+    assert '<link rel="stylesheet" href="https://fonts.example.com/css?family=Brand">' in page
+    assert "could not be embedded, so the page links them instead" in caplog.text
+
+
+def test_a_stylesheet_that_is_not_font_faces_is_not_put_in_the_page(tmp_path, drawn, web, caplog):
+    pages, _ = web
+    pages["https://fonts.example.com/css?family=Brand"] = b"</style><script>alert(1)</script>"
+    font_theme(tmp_path)
+    page, _ = build(write(tmp_path, "---\ntheme: theme.yml\nembed_fonts: true\n---\n## A\n\nText.\n"), lambda: object())
+    assert "alert(1)" not in page and "is not a plain list of @font-face rules" in caplog.text
+
+
+def test_embedded_fonts_over_the_limit_are_a_warning(tmp_path, drawn, web, caplog, monkeypatch):
+    monkeypatch.setattr("py_doc.poster_fonts.MAX_BYTES", 10)
+    font_theme(tmp_path)
+    build(write(tmp_path, "---\ntheme: theme.yml\nembed_fonts: true\n---\n## A\n\nText.\n"), lambda: object())
+    assert "the page is slow to send and open" in caplog.text
+
+
+def test_without_embed_fonts_nothing_is_downloaded(tmp_path, drawn, web):
+    _, asked = web
+    font_theme(tmp_path)
+    page, _ = build(write(tmp_path, "---\ntheme: theme.yml\n---\n## A\n\nText.\n"), lambda: object())
+    assert asked == [] and '<link rel="stylesheet" href="https://fonts.example.com/css?family=Brand">' in page
+
+
+def test_the_embed_fonts_option_wins_over_the_setting(tmp_path, drawn, web, monkeypatch):
+    _, asked = web
+    monkeypatch.setattr("py_doc.poster_cli.connect", lambda settings: object())
+    font_theme(tmp_path)
+    source = write(tmp_path, "---\ntheme: theme.yml\nembed_fonts: true\n---\n## A\n\nText.\n")
+    assert main(["poster", str(source), "--no-embed-fonts"]) == 0
+    assert asked == []
+    assert main(["poster", str(write(tmp_path, "---\ntheme: theme.yml\n---\n## A\n\nText.\n")), "--embed-fonts"]) == 0
+    assert "<link" not in (tmp_path / "poster.html").read_text(encoding="utf-8")
+
+
+def test_embed_fonts_must_be_true_or_false(tmp_path):
+    with pytest.raises(ConfigError, match="poster.embed_fonts must be true or false"):
+        parse_config({"poster": {"embed_fonts": "yes"}}, tmp_path)

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 TEXT = ("title", "subtitle", "byline", "orientation", "paper", "version", "document_number")
 NUMBERS = ("width", "columns")
 MAPPINGS = ("colours", "palette", "fonts", "header", "footer", "variables", "conditions")
-KEYS = (*TEXT, *NUMBERS, "split", "theme", "logo", "pdf", *MAPPINGS)
+KEYS = (*TEXT, *NUMBERS, "split", "theme", "logo", "pdf", "embed_fonts", *MAPPINGS)
 ENTRY_KEYS = ("source", "output")  # only for a poster of py-doc.yml
 HEADER_KEYS = ("align", "logo")
 FOOTER_KEYS = ("left", "centre", "right", "logos", "qr", "qr-label", "document", "version")
@@ -69,6 +69,10 @@ def layer(data: dict, folder: Path, where: str, strict: bool = True) -> dict:
             out[key] = _path(text, folder, place) if text.endswith((".yml", ".yaml")) else text
         elif key == "logo":
             out[key] = _path(value, folder, place)
+        elif key == "embed_fonts":
+            if not isinstance(value, bool):
+                raise SettingsError(f"{place} must be true or false")
+            out[key] = value
         elif key == "pdf":  # true: beside the page; a path: there
             if isinstance(value, bool):
                 out[key] = value
@@ -80,6 +84,12 @@ def layer(data: dict, folder: Path, where: str, strict: bool = True) -> dict:
             if not isinstance(value, dict):
                 raise SettingsError(f"{place} must be a mapping")
             out[key] = {**out.get(key, {}), **{str(k).lower(): v for k, v in value.items()}}
+    files = out.get("fonts", {}).get("files")
+    if isinstance(files, list):  # a font file is from this layer's file, as a logo is
+        out["fonts"]["files"] = [
+            {**item, "file": str(_path(item["file"], folder, f"{where}.fonts.files"))} if isinstance(item, dict) and item.get("file") else item
+            for item in files
+        ]
     if "header" in out:
         _only(out["header"], HEADER_KEYS, f"{where}.header")
     if "footer" in out:
