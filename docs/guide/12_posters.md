@@ -18,7 +18,7 @@ The examples in `examples/poster/` show three kinds, and `examples/py-doc.yml` l
 
 | Example | What it shows |
 |---|---|
-| `poster.md` | Portrait in the default theme, every kind of block, a trend, a chart, a timeline, a full-width section and a QR code in the footer, all set in its front matter |
+| `poster.md` | Portrait in the default theme, with every kind of block, a trend, a chart, a timeline and a full-width section. A QR code is in the footer. Every setting is in its front matter |
 | `landscape.md` | Landscape in three columns, in the theme of a made-up company. The words are in the Markdown and the look (orientation, theme, header, footer) is in `py-doc.yml` |
 | `release.md` | The dark theme, a chart with two series, a vertical timeline, a callout and a `{{version}}` variable |
 
@@ -31,7 +31,7 @@ Every setting can be written in four places. Each one wins over the ones before 
 1. The poster's entry under `posters:` in `py-doc.yml`.
 1. The command line: `--theme`, `--var` and `--condition`.
 
-Mappings such as `colours` and `footer` are merged key by key, so a poster can change one colour and keep the rest. A path is relative to the file that names it: `py-doc.yml` for the first and third places, the Markdown file for the front matter, and the working folder for the command line.
+Mappings such as `colours` and `footer` are merged key by key, so a poster can change one colour and keep the rest. A path is relative to the file that names it. That is `py-doc.yml` for the first and third places, the Markdown file for the front matter, and the working folder for the command line.
 
 ```yaml
 # py-doc.yml
@@ -152,7 +152,7 @@ Each line is a label and one value for each series. `series:` names the series a
 
 ## Poster blocks
 
-A block colour is a name from the theme's palette (`navy`, `blue`, `amber`, `brown`, `red`, `grey` and `green` in every theme, and the theme's own), a theme colour name such as `primary` or `accent`, or a colour value such as `#2a3150`.
+A block colour is one of three things. It can be a name from the theme's palette: `navy`, `blue`, `amber`, `brown`, `red`, `grey` and `green` in every theme, and the theme's own. It can be a theme colour name such as `primary` or `accent`, or a colour value such as `#2a3150`.
 
 | Fence | Lines | Options |
 |---|---|---|
@@ -221,7 +221,7 @@ logo: logo.svg                   # relative to the theme file
 
 A colour is a hex value, a CSS colour name, or an `rgb()` or `hsl()` value. A font is a CSS font list: name the fallbacks after the brand font, because the poster uses them on a computer without it.
 
-`fonts.stylesheet` is a web address the page loads the fonts from. Set it to `null` to load nothing and use the fonts installed on the computer. A font that is not installed and not loaded is replaced by its fallback, so a brand font with no web version must be installed on every computer that shows or prints the poster.
+`fonts.stylesheet` is a web address the page loads the fonts from. Set it to `null` to load nothing and use the fonts installed on the computer. A font that is not installed and not loaded is replaced by its fallback. So a brand font with no web version must be installed on every computer that shows or prints the poster.
 
 > **Important:** The page loads `fonts.stylesheet` when it opens, so the default theme needs an internet connection to show its fonts. Without one the fallback fonts are used, the layout fits itself again, and nothing else changes. The `print` theme loads no fonts.
 
