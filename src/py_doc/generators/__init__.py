@@ -10,6 +10,6 @@ whose output is Markdown) and ``python`` (a function of your own). Packages can 
 ``py_doc.generators`` entry point group, so the core depends on none of their tools.
 """
 
-from .registry import GeneratorError, available, run_generators
+from .registry import GeneratorError, available, for_documents, run_generators
 
-__all__ = ["GeneratorError", "available", "run_generators"]
+__all__ = ["GeneratorError", "available", "for_documents", "run_generators"]

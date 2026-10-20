@@ -257,6 +257,8 @@ class DocLinter:
         scanned = {result.file for result in report.results}
         found: set[LintIssue] = set()
         for sources in self.config.documents.values():
+            # A generator's output that is not written yet is not a missing source
+            sources = [s for s in sources if s.exists() or s.resolve() not in self.config.generated]
             if any(source.resolve() in scanned or not source.exists() for source in sources):
                 found.update(structure.check_document([s.resolve() for s in sources], self.config.structure))
         report.add(sorted(found, key=lambda i: (str(i.file), i.line, i.rule)))

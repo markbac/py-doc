@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import sys
 import textwrap
 
@@ -81,11 +82,13 @@ class TestBuiltins:
             "asyncapi: 2.6.0\ninfo: {title: Events, version: '1'}\nchannels:\n  pets/added: {subscribe: {summary: New pet, message: {name: PetAdded}}}\n",
             encoding="utf-8",
         )
-        text = generated(tmp_path, "- {type: openapi, source: o.yml, output: out.md}\n- {type: asyncapi, source: a.yml, output: a.md}\n")
+        text = generated(
+            tmp_path, "- {type: openapi, engine: summary, source: o.yml, output: out.md}\n- {type: asyncapi, engine: summary, source: a.yml, output: a.md}\n"
+        )
         assert "| `GET` | `/pets` | List pets |" in text and "| `POST` | `/pets` | addPet |" in text and "- `Pet`: A pet" in text
         assert "| `pets/added` | subscribe | PetAdded | New pet |" in (tmp_path / "a.md").read_text(encoding="utf-8")
         with pytest.raises(GeneratorError, match="not an OpenAPI description"):
-            generated(tmp_path, "- {type: openapi, source: a.yml, output: out.md}\n")
+            generated(tmp_path, "- {type: openapi, engine: summary, source: a.yml, output: out.md}\n")
 
     def test_python_api_reads_without_importing(self, tmp_path):
         (tmp_path / "pkg").mkdir()
@@ -128,3 +131,37 @@ def test_build_runs_the_generators_before_the_documents_that_use_them(tmp_path, 
     assert main(["build"]) == 0
     assert "Passes messages." in (tmp_path / "build" / "guide.html").read_text(encoding="utf-8")
     assert main(["generate", "--list"]) == 0
+
+
+class TestApiMarkdown:
+    def test_html_headings_and_asides_become_markdown(self):
+        from py_doc.generators.apidocs import clean_markdown
+
+        raw = (
+            '<h1 id="pets-api">Pets API v1</h1>\n\n> Scroll down for code samples, example requests and responses.\n\n'
+            '<h2 id="pets-api-default">Default &amp; more</h2>\n\n<aside class="success">\nThis operation does not require authentication\n</aside>\n\n'
+            "```yaml\n# not a heading\n```\n\n# Schemas\n\n<a id=\"schemapet\"></a>\n\n* <a href=\"https://x.org/v1\">https://x.org/v1</a>\n"
+        )
+        assert clean_markdown(raw, heading_offset=1, title="Pets reference", nest=True) == (
+            "## Pets reference\n\n#### Default & more\n\n> [!NOTE]\n> This operation does not require authentication\n\n"
+            "```yaml\n# not a heading\n```\n\n### Schemas\n\n[]{#schemapet}\n\n* [https://x.org/v1](https://x.org/v1)\n"
+        )
+
+    def test_engine_and_options_are_checked(self, tmp_path):
+        (tmp_path / "o.yml").write_text("openapi: 3.0.0\ninfo: {title: T, version: '1'}\npaths: {}\n", encoding="utf-8")
+        with pytest.raises(GeneratorError, match="engine must be one of tool, summary"):
+            generated(tmp_path, "- {type: openapi, engine: magic, source: o.yml, output: out.md}\n")
+        with pytest.raises(GeneratorError, match="need engine: tool"):
+            generated(tmp_path, "- {type: openapi, engine: summary, html: x.html, source: o.yml, output: out.md}\n")
+        with pytest.raises(ConfigError, match="unknown key 'validate'"):
+            project(tmp_path, "- {type: asyncapi, validate: false, source: o.yml, output: out.md}\n")
+
+
+@pytest.mark.skipif(not all(shutil.which(tool) for tool in ("redocly", "widdershins")), reason="Redocly CLI and Widdershins are not installed")
+def test_openapi_reference_with_the_real_tools(tmp_path, pandoc_runtime):
+    from pathlib import Path
+
+    api = Path(__file__).parent.parent / "examples" / "docs" / "includes" / "apis" / "library-openapi.yaml"
+    text = generated(tmp_path, f"- {{type: openapi, source: {api.as_posix()!r}, html: api.html, output: out.md}}\n")
+    assert "## Books" in text and "### listBooks" in text and "<h" not in text
+    assert (tmp_path / "api.html").stat().st_size > 10000
