@@ -194,10 +194,10 @@ Nine of the 120 cells failed during the test. Their ages, converted to field hou
 
 [[INCLUDE-CODE: reliability/weibull.py]]
 
-```cards cols=3 style=plain
-β = 1.78 | Above 1, so cells wear out: no early failures
-η = 18.4 years | Characteristic life, 160,889 h
-B10 = 5.2 years | Nine cells in ten last longer
+```highlight
+β 1.78 | Shape | Above 1: cells wear out, with no early failures | navy
+18.4 years | Characteristic life (η) | 160,889 h, when 63 % have failed | blue
+5.2 years | B10 life | Nine cells in ten last longer | green
 ```
 
 > [!IMPORTANT]
@@ -210,6 +210,12 @@ Coat the sensor | Conformal coating from batch 26-40, cold-store orders first. O
 Retire cell lot 24-11 | Stock quarantined. 3,100 installed nodes get a new cell at their next visit. Owner R. Osei, by 31 December
 Torque-limited driver | In every installer kit, set to 0.6 N m, to stop cracked enclosures. Owner M. Duarte, done 30 September
 Gateway 1.5 by default | The gateway updates itself before it accepts its first node. Owner L. Chen, from firmware 1.5.2
+```
+
+```progress unit=" nodes"
+New cells for lot 24-11 | 1,240 | 3,100
+Cold-store nodes with a coated sensor | 410 | 6,300
+Gateways on 1.5 or later | 2,860 | 2,860
 ```
 
 > [!CAUTION]

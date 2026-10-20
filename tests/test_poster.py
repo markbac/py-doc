@@ -705,6 +705,68 @@ def test_a_steps_or_gallery_mistake_is_an_error(tmp_path, code, message):
         build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
 
 
+def block(tmp_path, code):
+    page, _ = build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
+    return page.split("<main>", 1)[1]
+
+
+def test_progress_bars_fill_towards_their_targets_and_say_when_they_are_met(tmp_path, drawn):
+    html = block(tmp_path, '```progress unit=" nodes"\nJoined | 48 | 50\nLabelled | 1,200 | 1,000\n```')
+    assert '<span>Joined</span><b>48 nodes of 50 nodes</b>' in html and 'width:96.0%;background:#4a7fc1' in html
+    assert '<b>1,200 nodes of 1,000 nodes &#10003;</b>' in html and 'width:100.0%;background:#2e6b3a' in html, "capped, and met"
+    html = block(tmp_path, "```progress better=lower show=percent\nReturn rate | 0.51 | 0.50\nDead on arrival | 0.1 | 0.5\n```")
+    assert '<b>102 %</b>' in html and 'background:#a3322b' in html, "over a ceiling is bad news"
+    assert '<b>20 % &#10003;</b>' in html
+
+
+def test_a_checklist_has_done_open_and_failed_items(tmp_path, drawn):
+    html = block(tmp_path, "```checklist cols=2\n[x] Signal -95 dBm or better\n[ ] Label photo\n[!] First reading within *2 min*\n```")
+    assert '<ul class="checklist" style="grid-template-columns:repeat(2,minmax(0,1fr))">' in html
+    assert '<li class="done"><span class="box">&#10003;</span><span>Signal -95 dBm or better</span></li>' in html
+    assert '<li class="open"><span class="box"></span><span>Label photo</span></li>' in html
+    assert '<li class="failed"><span class="box">&#10007;</span><span>First reading within <em>2 min</em></span></li>' in html
+
+
+def test_compare_puts_a_header_over_matched_rows_and_stresses_the_last_column(tmp_path, drawn):
+    html = block(tmp_path, "```compare\n| Firmware 2.0 | Firmware 2.1\nJoin | 11 s | 4 s\nMessages a day | 1,440 | 610\n```")
+    assert 'grid-template-columns:minmax(0,1.2fr) repeat(2,minmax(0,1fr))' in html
+    assert '<div class="cmp-h">Firmware 2.0</div><div class="cmp-h last">Firmware 2.1</div>' in html
+    assert '<div class="cmp-l">Join</div><div class="cmp-v">11 s</div><div class="cmp-v last">4 s</div>' in html
+
+
+def test_people_have_their_photo_or_their_initials(tmp_path, drawn):
+    (tmp_path / "jp.png").write_bytes(PNG)
+    html = block(tmp_path, "```people\nJaya Patel | Product engineering | jp@example.com | jp.png\nRuth Osei-Mensah | Field support\n```")
+    assert '<div class="person"><img alt="Jaya Patel" src="data:image/png;base64,' in html
+    assert '<div class="ch">Jaya Patel</div><div>Product engineering</div><div>jp@example.com</div>' in html
+    assert '<b style="background:#2a3150">RO</b><div><div class="ch">Ruth Osei-Mensah</div><div>Field support</div></div>' in html
+    assert 'style="grid-template-columns:repeat(2,minmax(0,1fr))"' in html
+
+
+def test_highlights_show_figures_in_large_type_in_their_colours(tmp_path, drawn):
+    html = block(tmp_path, "```highlight\n0 | Failed updates | in 200 pilot nodes | good\n4 s | Typical join\n```")
+    assert '<div class="hl" style="border-color:#2e6b3a"><b style="color:#2e6b3a">0</b><span>Failed updates</span><small>in 200 pilot nodes</small></div>' in html
+    assert '<div class="hl" style="border-color:#4a7fc1"><b style="color:#4a7fc1">4 s</b><span>Typical join</span></div>' in html
+
+
+@pytest.mark.parametrize(
+    "code, message",
+    [
+        ("```progress\nJoined | 48\n```", "each line of a progress block is 'Label | value | target'"),
+        ("```progress\nJoined | many | 50\n```", "a progress value 'many' is not a number"),
+        ("```progress\nJoined | 4 | 0\n```", "target of 'Joined' must be above zero"),
+        ("```checklist\n- Signal\n```", r"starts \[x\], \[ \] or \[!\], not '- Signal'"),
+        ("```compare\nJoin | 11 s | 4 s\n```", "starts with a header such as"),
+        ("```compare\n| A | B\nJoin | 11 s\n```", "needs 3 cells, as its header has"),
+        ("```people\nJaya | Eng | | gone.jpg\n```", "the photo gone.jpg of Jaya is not there"),
+        ("```highlight\n```", "a highlight block needs at least one"),
+    ],
+)
+def test_a_new_block_mistake_is_an_error(tmp_path, code, message):
+    with pytest.raises(PosterError, match=message):
+        build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
+
+
 def test_a_qr_block_draws_the_code_with_its_label(tmp_path, drawn):
     page, _ = build(write(tmp_path, '## A\n\n```qr size=200 label="The manual"\nhttps://example.com/manual\n```\n'), lambda: object())
     assert '<div class="qr"><svg' in page and '<div class="cap">The manual</div>' in page

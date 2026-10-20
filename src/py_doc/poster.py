@@ -137,6 +137,32 @@ section h2 span{color:var(--highlight);font-weight:600}
 .gallery figure{margin:0;background:var(--surface);border:1px solid var(--border);padding:6px}
 .body .gallery img{width:100%;margin:0;padding:0;border:0;background:none}
 .gallery figcaption{font-size:13px;line-height:1.35;color:var(--muted);margin-top:5px}
+.progress{display:flex;flex-direction:column;gap:9px;margin:0 0 10px}
+.prog .pl{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.prog .pl b{white-space:nowrap;color:var(--strong)}
+.prog .pt{height:12px;background:var(--border);margin-top:3px}
+.prog .pt i{display:block;height:100%}
+.checklist{display:grid;gap:6px 18px;list-style:none;margin:0 0 10px;padding:0;font-size:14px;line-height:1.4}
+.checklist li{display:flex;gap:9px;align-items:flex-start}
+.checklist .box{flex:none;width:18px;height:18px;border:2px solid var(--muted);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;line-height:1}
+.checklist .done .box{border-color:var(--good);background:var(--good);color:#fff}
+.checklist .failed .box{border-color:var(--bad);background:var(--bad);color:#fff}
+.checklist .failed>span:last-child{color:var(--bad)}
+.compare{display:grid;margin:0 0 10px;font-size:14px;background:var(--surface);border:1px solid var(--border)}
+.compare>div{padding:6px 10px;border-top:1px solid var(--border)}
+.compare .cmp-h{border-top:0;font-weight:700;color:var(--muted)}
+.compare .cmp-h.last,.compare .cmp-v.last{background:var(--code);color:var(--strong);font-weight:700}
+.compare .cmp-l{color:var(--muted)}
+.people{display:grid;gap:10px;margin:0 0 10px}
+.person{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--border);padding:10px 12px;font-size:13px;line-height:1.4}
+.person>img,.body .person>img{flex:none;width:56px;height:56px;border-radius:50%;object-fit:cover;margin:0;padding:0;border:0}
+.person>b{flex:none;width:56px;height:56px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px}
+.person .ch{font-size:15px;font-weight:700;color:var(--strong)}
+.highlights{display:grid;gap:12px;margin:0 0 10px}
+.hl{background:var(--surface);border:1px solid var(--border);border-left:6px solid;padding:10px 14px;display:flex;flex-direction:column}
+.hl b{font-size:44px;line-height:1.05}
+.hl span{font-size:15px;font-weight:700;color:var(--strong);margin-top:4px}
+.hl small{font-size:13px;color:var(--muted);margin-top:2px}
 .card.plain .ct{margin-top:0;line-height:1.45}
 .card.label .ch{font-size:12.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--accent-text)}
 .card.label .ct{font-size:15px;line-height:1.35}

@@ -29,9 +29,9 @@ The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` li
 | Example | What it shows |
 |---|---|
 | `poster.md` | Portrait A1 in the default theme: a picture, a Mermaid diagram, bar and line charts, segments, flow, lanes and `lcd` screens. Also a timeline, a JSON code block and a full-width section. A QR code is in the footer. Every setting is in its front matter |
-| `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a gallery of mounting drawings, handover steps, a QR block and an included table. The words are in the Markdown and the look (orientation, theme, header, footer) is in `py-doc.yml` |
-| `release.md` | Portrait A3 in the dark theme: a column chart with two series, a Mermaid sequence with notes, title cards, a vertical timeline, callouts, references and a `{{version}}` variable |
-| `reliability.md` | Portrait A0 in the print theme, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, plain cards, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
+| `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a gallery of mounting drawings, an acceptance checklist, handover steps, a QR block and an included table. The words are in the Markdown and the look (orientation, theme, header, footer) is in `py-doc.yml` |
+| `release.md` | Portrait A3 in the dark theme: a column chart with two series, a before and after `compare` and a Mermaid sequence with notes. Also title cards, a vertical timeline, callouts, `people`, references and a `{{version}}` variable |
+| `reliability.md` | Portrait A0 in the print theme, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, `highlight` figures, `progress` bars, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
 
 ## Settings and where they go
 
@@ -191,6 +191,11 @@ A block colour is one of three things. It can be a name from the theme's palette
 | `qr` | The address or text to encode | `size=140` (pixels), `label="..."` |
 | `steps` | `Heading \| text \| colour`, the text and colour optional | `cols=1`, `start=1`: the number of the first step |
 | `gallery` | `picture \| caption`, the picture relative to the Markdown and the caption optional | `cols=3` (or fewer pictures), `height=` in pixels: crop every picture to one height |
+| `progress` | `label \| value \| target \| colour`, the colour optional (default: `good` when met, else `accent`, or `bad` over a ceiling) | `unit=" nodes"`, `show=` `values` (default) or `percent`, `better=` `higher` (default) or `lower`, for a ceiling such as a return rate |
+| `checklist` | `[x] done`, `[ ] open` or `[!] failed`, then the text | `cols=1` |
+| `compare` | A header such as `\| Before \| After`, then `label \| before \| after`. Any number of columns; the last is stressed | |
+| `people` | `name \| role \| contact \| photo`, all but the name optional. Without a photo the initials are shown | `cols=2` (or fewer people) |
+| `highlight` | `value \| label \| detail \| colour`, the last two optional (default colour: `accent`) | `cols=` (default: one for each line) |
 
 In `segments`, `flow` and `lanes`, the lines that are not part of the diagram become notes under it, written in Markdown.
 
