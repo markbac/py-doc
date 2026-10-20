@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import textwrap
+from pathlib import Path
 
 import pytest
 
@@ -190,3 +191,9 @@ def test_the_command_writes_the_page_next_to_the_markdown(tmp_path, drawn, monke
 def test_the_command_reports_a_missing_file(tmp_path, capsys):
     assert main(["poster", str(tmp_path / "missing.md")]) == 1
     assert "not found" in capsys.readouterr().err
+
+
+def test_the_example_poster_builds(drawn):
+    page, ctx = build(Path(__file__).parent.parent / "examples" / "poster" / "poster.md", lambda: object())
+    assert "<title>SN-100 Sensor Node</title>" in page
+    assert (ctx.n, ctx.failed) == (1, 0)

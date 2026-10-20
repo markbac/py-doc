@@ -43,6 +43,7 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 | `docs/release-notes.md` | A short document whose version comes from Git (`version: git`) |
 | `docs/interfaces.md` | Interface specifications for a sample library system (OpenAPI, AsyncAPI, gRPC and GraphQL), each included from its own file in `docs/includes/apis/`, and a PlantUML use case diagram |
 | `docs/deck/slides.md` | The deck: section slides, bullets, columns, incremental lists, both kinds of speaker notes, diagrams, a picture, a table, maths, callouts, code, an include, a condition, a page break |
+| `poster/poster.md` | A one-page HTML poster (`py-doc poster poster/poster.md`): stats, introduction, two columns of sections with cards, a power bar, a flow, lanes, display screens, a Mermaid diagram and a summary. It is outside `docs/` because posters have no `[[CAPTION:]]` markers |
 | `docs/includes/` | Files pulled in with `[[INCLUDE:]]` and `[[INCLUDE-CODE:]]` |
 | `templates/sensor.docx` | The Word template: logo, title page with `Replace-with-*` placeholders, header, footer with page numbers, callout styles, a `Lead Paragraph` style, `[[INSERTCONTENT]]` where the body goes |
 | `templates/sensor_Draft.docx` | The same template with a red "DRAFT" header. A document with `status: Draft` uses it without being told to |
@@ -68,6 +69,7 @@ py-doc build deck                                    # build/deck.pptx
 py-doc build release-notes                           # build/release-notes-<git version>.docx, needs a Git commit
 py-doc build architecture                            # build/architecture.docx and architecture.html
 py-doc build interfaces                              # build/interfaces.docx and interfaces.html
+py-doc poster poster/poster.md                       # poster/poster.html, one self-contained page
 py-doc import word/design_review.docx -o imported    # imported/design_review.md and imported/design_review/
 py-doc docx imported/design_review.md                # imported/design_review.docx: the round trip
 py-doc import build/deck.pptx -o imported            # imported/deck.md: the deck back as Markdown
