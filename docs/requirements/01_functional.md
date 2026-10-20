@@ -34,6 +34,7 @@ title: Functional requirements
 | FR-025 | A missing or circular include, an unclosed `[[IF:]]` or an undefined condition shall be an error that names the file and line. | Must | Met |
 | FR-026 | Fenced blocks of Mermaid, PlantUML, Graphviz, ditaa, the blockdiag family, WaveDrom, bytefield-svg, Pikchr, railroad, WireViz, Vega and Vega-Lite shall become pictures in every output. | Must | Met |
 | FR-027 | A diagram that cannot be drawn shall stop the build with the file, the line and the tool's message. `--keep-going` shall list every failure. | Must | Met |
+| FR-028 | `diagrams.mermaid` in `py-doc.yml` shall give every Mermaid diagram of documents, sites and posters the same Mermaid settings, under the diagram's own. | Could | Met |
 
 ## Outputs
 
@@ -97,6 +98,7 @@ title: Functional requirements
 | FR-125 | One MkDocs site project shall build more than one site (`site.targets`), each from its own configuration file and to its own folder, from the same pages. | Should | Met |
 | FR-126 | A document's site pages shall link the files `py-doc build` made for it (`site.downloads`), copied beside the site. | Should | Met |
 | FR-127 | The site navigation py-doc writes shall also list pages of the user's own (`site.pages`), after the documents. | Should | Met |
+| FR-128 | The site shall carry the posters `site.posters` names, each a page of its own, with a page that links them and their printed PDFs. | Could | Met |
 
 ## Posters
 
@@ -112,7 +114,16 @@ title: Functional requirements
 | FR-137 | A poster shall have full-width sections, timelines, trends in the stats, a references list, and charts drawn without the tool container. Its footer shall have three texts, logos and a QR code. | Could | Met |
 | FR-138 | `py-doc poster` shall print a poster to a one-page PDF of its paper size and orientation, with the Chromium of the tool container. | Should | Met |
 | FR-139 | `py-doc build` shall build the posters of `py-doc.yml` after the documents, with their PDFs, and `-f poster` and a poster's name shall choose them. | Should | Met |
-| FR-140 | A poster shall carry its theme's fonts on request: its own font files, and the web fonts of its stylesheet, downloaded once and kept. A failed download shall leave the link, with a warning. | Could | Met |
+| FR-150 | A poster shall carry its theme's fonts on request: its own font files, and the web fonts of its stylesheet. Those shall be downloaded once and kept, all of them or only the subsets named. A failed download shall leave the link, with a warning. | Could | Met |
+| FR-151 | A poster's PDF shall have its theme's web fonts inside, though the container that prints it has no network. Offline, it shall be printed with the fallback fonts and a warning. | Should | Met |
+| FR-152 | A poster shall draw its diagrams as SVG where the tool can, and embed its pictures, SVG included. | Should | Met |
+| FR-153 | A poster's columns shall be balanced by the measured height of their sections, in order: the shortest tallest column, then the most even. A section marked `{.flow}` may go on in the next column, between its blocks. `split` shall choose the columns by hand. | Should | Met |
+| FR-154 | A poster's `[[CAPTION:]]` captions shall be numbered, Figure and Table, in order down the poster. | Should | Met |
+| FR-155 | A poster's charts shall take the axis range, gridline step, value labels, axis title, markers, shading and dashed series asked for. A column or bar axis shall start at zero. | Could | Met |
+| FR-156 | A poster shall have `steps` (numbered things to do) and `gallery` (pictures with captions) blocks. | Could | Met |
+| FR-157 | `version: git` on a poster shall take its version from Git, as on a document. | Could | Met |
+| FR-158 | `py-doc lint` and `py-doc build --lint` shall lint the posters of `py-doc.yml` with every rule but the document structure, acronym and passive voice rules. | Should | Met |
+| FR-159 | `py-doc poster --watch` shall build the posters again on every save of their sources and reload them in the browser, and show a failed build's error over the last good page. | Could | Met |
 
 ## Tool container
 

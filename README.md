@@ -95,7 +95,7 @@ src/
 │   ├── analysis/         # py-doc stats, check and diff
 │   ├── migrate.py        # createdocs to py-doc.yml
 │   ├── report.py         # the JSON build report
-│   └── poster.py         # py-doc poster: Markdown to an HTML poster
+│   └── poster*.py        # py-doc poster: Markdown to an HTML poster, its blocks, settings, themes, fonts and --watch
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/
 └── pydoclint/
@@ -113,7 +113,7 @@ ruff check .
 py-doc lint docs --strict
 ```
 
-CI runs on Linux and Windows with Python 3.10 and 3.14, the oldest and newest supported. macOS is not supported.
+CI runs on Linux and Windows with Python 3.14, the newest supported. Python 3.10, the oldest supported, is not tested in CI. macOS is not supported.
 
 The tests run the tools on the host, so a second workflow, `Tool image`, builds the tool container and draws every diagram type and the example posters with it. It runs when the image definition or the diagram code changes, every Monday, and by hand from the Actions tab.
 
