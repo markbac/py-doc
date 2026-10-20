@@ -69,7 +69,7 @@ py-doc build deck                                    # build/deck.pptx
 py-doc build release-notes                           # build/release-notes-<git version>.docx, needs a Git commit
 py-doc build architecture                            # build/architecture.docx and architecture.html
 py-doc build interfaces                              # build/interfaces.docx and interfaces.html
-py-doc poster                                        # build/sensor-node.html, build/posters/commissioning.html, build/release.html
+py-doc poster                                        # build/sensor-node.html, build/release.html, build/posters/commissioning.html and .pdf
 py-doc poster poster/release.md --theme print        # poster/release.html, the file alone, in the low-ink print theme
 py-doc import word/design_review.docx -o imported    # imported/design_review.md and imported/design_review/
 py-doc docx imported/design_review.md                # imported/design_review.docx: the round trip

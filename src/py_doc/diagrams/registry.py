@@ -14,7 +14,7 @@ TOOLS = Path(__file__).parent / "tools"
 PUPPETEER = "/etc/py-doc/puppeteer.json"  # in the image, next to the Chromium it configures
 DPI = 192
 
-# Pixel widths at which Mermaid is laid out. A landscape page can show a wider diagram.
+# The widest a Mermaid diagram is drawn, in CSS pixels. A landscape page can show a wider diagram.
 MERMAID_WIDTH = {"portrait": 1200, "landscape": 1800}
 
 
@@ -65,11 +65,13 @@ class Renderer:
 
 
 def _mermaid(job: Job) -> list[Command]:
-    width = MERMAID_WIDTH["landscape" if job.landscape else "portrait"]
+    # mermaid-cli 12 replaced --width and --height with --size, the longest side of the picture. mermaid.json
+    # turns useMaxWidth off, so a diagram keeps its natural size and only a larger one is shrunk to --size.
+    size = MERMAID_WIDTH["landscape" if job.landscape else "portrait"]
     command = ["mmdc", "-i", job.source, "-o", job.output, "-p", PUPPETEER, "-c", TOOLS / "mermaid.json"]
-    command += ["--backgroundColor", "white"]
+    command += ["--backgroundColor", "white", "--size", str(size)]
     if job.kind == "png":
-        command += ["--width", str(width), "--scale", "2"]
+        command += ["--scale", "2"]
     return [command]
 
 

@@ -9,7 +9,7 @@ from pathlib import Path
 from py_doc._logging import configure_logging
 from py_doc.config import ConfigError, PosterConfig, find_config, load_config
 from py_doc.errors import ConversionError, exit_status
-from py_doc.poster import build
+from py_doc.poster import build, print_pdf
 from py_doc.poster_settings import SettingsError, layer, merge
 from py_doc.poster_themes import BUILTIN
 from py_doc.runtime import RuntimeSettings, connect
@@ -20,6 +20,7 @@ POSTER_EXAMPLES = """examples:
   py-doc poster g460.md                 a Markdown file: writes g460.html
   py-doc poster g460.md -o out.html --theme dark
   py-doc poster g460.md --theme brand.yml --var version=2.1 --condition internal=true
+  py-doc poster --pdf                   every poster, and a one-page PDF of each
 
 Settings come from poster: in py-doc.yml, then the front matter, then the poster's entry under posters:,
 then the command line. The conventions are in docs/guide/12_posters.md."""
@@ -38,6 +39,10 @@ def run_poster(argv: list[str]) -> int:
     parser.add_argument("--theme", help=f"A built-in theme ({', '.join(BUILTIN)}) or a theme file. Wins over every other setting")
     parser.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
     parser.add_argument("--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a [[IF:]] condition")
+    parser.add_argument(
+        "--pdf", action=argparse.BooleanOptionalAction, default=None,
+        help="Also print each poster to a one-page PDF beside its page (default: the pdf setting)",
+    )  # fmt: skip
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -64,6 +69,11 @@ def run_poster(argv: list[str]) -> int:
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text(page, encoding="utf-8")
             print(f"wrote {out} ({ctx.n} diagrams, {ctx.failed} failed)")
+            pdf = ctx.settings.get("pdf") if args.pdf is None else args.pdf
+            if pdf:
+                pdf = pdf if isinstance(pdf, Path) else out.with_suffix(".pdf")
+                print_pdf(ctx.runtime(), page, pdf)
+                print(f"wrote {pdf}")
     except (ConfigError, ConversionError, SettingsError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return exit_status(exc)

@@ -2,8 +2,10 @@
 title: SN-100 firmware {{version}}
 subtitle: Longer life, faster joins, safer updates
 byline: Release notes for installers and support
+document_number: SN-PO-003
 footer:
   left: Firmware {{version}}
+  version: "{{version}}"
   right: Example dark poster, `py-doc poster poster/release.md`
 variables:
   version: "2.1"

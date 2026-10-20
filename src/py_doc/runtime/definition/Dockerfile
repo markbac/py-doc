@@ -43,13 +43,13 @@ RUN sh /tmp/build/fetch.sh pandoc /tmp/pandoc.deb \
  && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 --exclude CHANGELOG.md --exclude LICENSE --exclude README.md \
  && rm -f /tmp/pandoc.deb /tmp/vale.tar.gz /tmp/structurizr-cli.zip /tmp/node.tar.xz
 
-# Python and Node diagram tools, at the versions pinned beside this file.
-# --legacy-peer-deps: mermaid-cli 11.12.0 declares a peer of puppeteer ^23, but the image pins puppeteer 24.
+# Python and Node diagram tools, at the versions pinned beside this file. mermaid-cli 12 needs Node 22.13 or
+# later and puppeteer 25. package.json pins the Mermaid it draws with in "overrides", as mermaid-cli asks for ^12.
 RUN python3 -m venv /opt/venv \
  && /opt/venv/bin/pip install --no-cache-dir -r /tmp/build/requirements.txt \
  && mkdir -p /opt/node /etc/py-doc \
  && cp /tmp/build/package.json /opt/node/package.json \
- && cd /opt/node && npm install --omit=dev --legacy-peer-deps --no-audit --no-fund \
+ && cd /opt/node && npm install --omit=dev --no-audit --no-fund \
  && cp /tmp/build/puppeteer.json /etc/py-doc/puppeteer.json \
  && cp /tmp/build/export-diagrams.js /opt/node/export-diagrams.js \
  && rm -rf /tmp/build /root/.npm

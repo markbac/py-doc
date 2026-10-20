@@ -105,6 +105,7 @@ title: Functional requirements
 | FR-135 | A poster's settings (orientation, layout, theme, colours, logo, header, footer, variables and conditions) shall be set in `py-doc.yml`, in the front matter, or on the command line. `py-doc.yml` shall hold them for every poster or for one named poster. Each place wins over the one before. | Should | Met |
 | FR-136 | A poster shall take the py-doc Markdown of documents: includes, conditions, variables, captions and callouts. | Should | Met |
 | FR-137 | A poster shall have full-width sections, timelines, trends in the stats, a references list, and charts drawn without the tool container. Its footer shall have three texts, logos and a QR code. | Could | Met |
+| FR-138 | `py-doc poster` shall print a poster to a one-page PDF of its paper size and orientation, with the Chromium of the tool container. | Should | Met |
 
 ## Tool container
 

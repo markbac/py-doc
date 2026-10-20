@@ -12,13 +12,13 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-TEXT = ("title", "subtitle", "byline", "orientation", "paper")
+TEXT = ("title", "subtitle", "byline", "orientation", "paper", "version", "document_number")
 NUMBERS = ("width", "columns")
 MAPPINGS = ("colours", "palette", "fonts", "header", "footer", "variables", "conditions")
-KEYS = (*TEXT, *NUMBERS, "split", "theme", "logo", *MAPPINGS)
+KEYS = (*TEXT, *NUMBERS, "split", "theme", "logo", "pdf", *MAPPINGS)
 ENTRY_KEYS = ("source", "output")  # only for a poster of py-doc.yml
 HEADER_KEYS = ("align", "logo")
-FOOTER_KEYS = ("left", "centre", "right", "logos", "qr", "qr-label")
+FOOTER_KEYS = ("left", "centre", "right", "logos", "qr", "qr-label", "document", "version")
 LEGACY = {"footer-left": "left", "footer-right": "right"}  # the front matter keys of md2poster
 
 
@@ -69,6 +69,13 @@ def layer(data: dict, folder: Path, where: str, strict: bool = True) -> dict:
             out[key] = _path(text, folder, place) if text.endswith((".yml", ".yaml")) else text
         elif key == "logo":
             out[key] = _path(value, folder, place)
+        elif key == "pdf":  # true: beside the page; a path: there
+            if isinstance(value, bool):
+                out[key] = value
+            elif isinstance(value, str) and value.strip():
+                out[key] = _path(value, folder, place)
+            else:
+                raise SettingsError(f"{place} must be true, false or a path")
         else:
             if not isinstance(value, dict):
                 raise SettingsError(f"{place} must be a mapping")

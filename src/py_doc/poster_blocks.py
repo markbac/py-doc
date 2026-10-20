@@ -35,7 +35,10 @@ class PosterError(ConversionError):
 
 
 def mermaid_init(theme):
-    """A Mermaid theme that matches the poster's. Skipped if the diagram has its own init."""
+    """Front matter that gives Mermaid the poster's theme. Skipped if the diagram has its own configuration.
+
+    Front matter, not a ``%%{init}%%`` line: Mermaid drops an init line whose font list has quotes in it.
+    """
     c = theme.colours
     variables = {
         "fontFamily": theme.fonts["body"], "fontSize": "16px", "primaryColor": c["diagram-fill"],
@@ -43,7 +46,7 @@ def mermaid_init(theme):
         "secondaryColor": "#f3f3f7", "tertiaryColor": "#ffffff", "clusterBkg": "#f3f6fb",
         "clusterBorder": c["secondary"], "edgeLabelBackground": "#ffffff",
     }  # fmt: skip
-    return "%%{init: " + json.dumps({"theme": "base", "themeVariables": variables}) + "}%%\n"
+    return "---\nconfig: " + json.dumps({"theme": "base", "themeVariables": variables}) + "\n---\n"
 
 TOK = re.compile(r"\[([^\]|]+)(?:\|([^\]]+))?\]|-(?:([^>\[\]]*?)-)?>")
 
@@ -90,7 +93,7 @@ def parse_opts(info):
 
 def render_diagram(lang, code, ctx):
     ctx.n += 1
-    if lang == "mermaid" and "%%{init" not in code:
+    if lang == "mermaid" and "%%{init" not in code and not code.lstrip().startswith("---"):
         code = mermaid_init(ctx.theme) + code
     return draw_cached(ctx.runtime(), BY_FENCE[lang], code, "png", False, ctx.base)
 

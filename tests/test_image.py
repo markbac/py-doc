@@ -69,8 +69,20 @@ def test_the_node_and_python_pins_are_exact():
             assert "==" in line or "@ git+" in line, line
     import json
 
-    for name, version in json.loads((REAL / "package.json").read_text(encoding="utf-8"))["dependencies"].items():
+    package = json.loads((REAL / "package.json").read_text(encoding="utf-8"))
+    for name, version in {**package["dependencies"], **package.get("overrides", {})}.items():
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), f"{name} {version}"
+
+
+def test_the_image_has_mermaid_cli_12_and_the_puppeteer_it_needs():
+    import json
+
+    package = json.loads((REAL / "package.json").read_text(encoding="utf-8"))
+    assert package["dependencies"]["@mermaid-js/mermaid-cli"].startswith("12.")
+    assert package["dependencies"]["puppeteer"].startswith("25.")
+    assert package["overrides"]["mermaid"].startswith("12.")
+    node = next(entry for entry in image.read_lock(REAL / "tools.lock") if entry.name == "node")
+    assert tuple(int(part) for part in node.version.split(".")) >= (22, 13, 0)  # mermaid-cli 12 needs 22.13
 
 
 # --- the tag -------------------------------------------------------------------------------------

@@ -169,6 +169,7 @@ posters:
   commissioning:
     source: poster/landscape.md    # its front matter has the words; the look is set here
     output: build/posters/commissioning.html
+    pdf: true                      # and build/posters/commissioning.pdf, one A1 landscape page
     orientation: landscape
     theme: poster/brand/example-instruments.yml
     colours:

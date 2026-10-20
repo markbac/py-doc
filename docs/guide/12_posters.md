@@ -12,7 +12,10 @@ py-doc poster commissioning               # one of them, by name
 py-doc poster g460.md                     # a Markdown file: writes g460.html
 py-doc poster g460.md -o out.html --theme dark
 py-doc poster g460.md --var version=2.1 --condition internal=true
+py-doc poster --pdf                       # every poster, and a one-page PDF of each
 ```
+
+For a step-by-step introduction, read [Writing a poster](13_writing_posters.md) first. This chapter is the reference.
 
 The examples in `examples/poster/` show three kinds, and `examples/py-doc.yml` lists them under `posters:`:
 
@@ -71,8 +74,10 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 | `colours`, `palette`, `fonts` | The theme's | Changes over the theme, written as in a theme file |
 | `logo` | The theme's | The picture in the header |
 | `header` | `{align: centre, logo: left}` | `align`: `centre` or `left`. `logo`: `left`, `right` or `none` |
-| `footer` | Empty | `left`, `centre` and `right` text (Markdown, with `{{variables}}`), `logos` (a list of pictures), `qr` (an address or text) and `qr-label` |
+| `footer` | Empty | `left`, `centre` and `right` text (Markdown, with `{{variables}}`), `logos` (a list of pictures), `qr` (an address or text), `qr-label`, and `document` and `version` (shown small under the footer) |
+| `document_number`, `version` | None | The document's number and version, shown small under the footer, unless `footer.document` or `footer.version` names others |
 | `variables`, `conditions` | None | Values for `{{name}}` and `[[IF:]]`, as for documents |
+| `pdf` | `false` | `true` prints a one-page PDF beside the page, and a path prints it there. `--pdf` and `--no-pdf` win |
 
 `footer-left` and `footer-right` in the front matter still work, as `footer.left` and `footer.right`.
 
@@ -125,7 +130,7 @@ Section bodies are ordinary Markdown, with py-doc's own additions as in the [Wri
 
 ## Diagrams and charts
 
-Every diagram fence of a document (Mermaid, PlantUML, Graphviz, Vega-Lite and the rest) works on a poster, drawn by the tool container and embedded as a PNG picture. Mermaid gets the colours and body font of the theme unless the diagram has its own `%%{init`. A diagram that cannot be drawn is shown as code with a warning, and the poster is still written.
+Every diagram fence of a document (Mermaid, PlantUML, Graphviz, Vega-Lite and the rest) works on a poster, drawn by the tool container and embedded as a PNG picture. Mermaid gets the colours and body font of the theme, as front matter added to the diagram, unless the diagram has its own front matter or `%%{init`. A diagram that cannot be drawn is shown as code with a warning, and the poster is still written.
 
 > **Note:** A diagram wider than its column is scaled down and its text shrinks, so prefer compact layouts, such as Graphviz `dpi=80` or PlantUML `skinparam dpi 80`, or put it in a `{.wide}` section.
 
@@ -183,9 +188,27 @@ A mistake in a block, such as a chart value that is not a number, stops the buil
 
 ## Proportions and printing
 
-A portrait poster has the proportions of portrait A paper (1 : 1.4142), and a landscape poster those of landscape A paper (1.4142 : 1). A script in the page finds the narrowest layout, no narrower than `width`, at which all the content fits, then scales the poster to the browser window. Adding or removing content needs no change of size. When a poster has little content there is space above the footer: lower `width` to make everything larger.
+A portrait poster has the proportions of its paper, such as 594 by 841 mm for A1. A landscape poster has those of the paper turned, so it prints on exactly one page. A script in the page finds the narrowest layout, no narrower than `width`, at which all the content fits, then scales the poster to the browser window. Adding or removing content needs no change of size. When a poster has little content there is space above the footer: lower `width` to make everything larger.
 
-To print, use the print dialogue of Chrome with no margins and background graphics on. The page size and its orientation come from `paper` and `orientation`, and the poster fills exactly one page. Text, charts, QR codes and shapes stay vector, and diagrams are PNG.
+To print from a browser, use the print dialogue of Chrome with no margins and background graphics on. The page size and its orientation come from `paper` and `orientation`, and the poster fills exactly one page. Text, charts, QR codes and shapes stay vector, and diagrams are PNG.
+
+## PDF
+
+`py-doc poster --pdf`, or `pdf: true` in any of the four places, also prints each poster to a PDF with the Chromium of the tool container. It is one page of the poster's `paper`, in its `orientation`, the same as printing from Chrome. Text, charts, QR codes and shapes stay vector, and diagrams are PNG.
+
+```yaml
+posters:
+  commissioning:
+    source: poster/landscape.md
+    pdf: true                          # build/commissioning.pdf, beside the page
+  release:
+    source: poster/release.md
+    pdf: build/print/release-a3.pdf    # or a path of its own
+```
+
+> **Note:** The tool container has no network, so a theme's web fonts (`fonts.stylesheet`) are not loaded for the PDF. Their fallbacks are used, as in a browser that is offline. The layout fits itself to the fonts it has. For the PDF to match the page exactly, use fonts every computer has, as the `print` theme does.
+
+The PDF needs the tool container, like diagrams. The page alone does not.
 
 ## Themes
 

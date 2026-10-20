@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import re
 import textwrap
 from pathlib import Path
 
@@ -13,7 +14,7 @@ from py_doc import poster_blocks
 from py_doc.app import main
 from py_doc.config import ConfigError, parse_config
 from py_doc.errors import ConversionError, ToolFailed
-from py_doc.poster import PosterError, build
+from py_doc.poster import PosterError, build, print_pdf
 from py_doc.poster_themes import ThemeError
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 16
@@ -137,13 +138,16 @@ def test_a_diagram_is_drawn_as_png_with_the_poster_theme_and_embedded(tmp_path, 
     page, _ = build(write(tmp_path), lambda: object())
     [(name, text, kind)] = drawn
     assert (name, kind) == ("mermaid", "png")
-    assert text.startswith("%%{init:") and text.endswith("graph LR; A-->B")
+    assert text.startswith("---\nconfig: {") and text.endswith("---\ngraph LR; A-->B")
+    config = yaml.safe_load(text.split("---\n")[1])["config"]  # front matter, not %%{init}%%, which drops a quoted font
+    assert config["theme"] == "base" and config["themeVariables"]["fontFamily"].startswith("'Source Serif 4'")
     assert f'src="data:image/png;base64,{base64.b64encode(PNG).decode()}"' in page
 
 
 def test_a_mermaid_diagram_with_its_own_theme_keeps_it(tmp_path, drawn):
-    build(write(tmp_path, "## A\n\n```mermaid\n%%{init: {}}%%\ngraph LR; A-->B\n```\n"), lambda: object())
+    build(write(tmp_path, "## A\n\n```mermaid\n%%{init: {}}%%\ngraph LR; A-->B\n```\n\n```mermaid\n---\nconfig: {look: classic}\n---\ngraph LR; C-->D\n```\n"), lambda: object())
     assert drawn[0][1] == "%%{init: {}}%%\ngraph LR; A-->B"
+    assert drawn[1][1] == "---\nconfig: {look: classic}\n---\ngraph LR; C-->D"
 
 
 def test_a_poster_without_diagrams_does_not_start_the_container(tmp_path, drawn):
@@ -218,7 +222,7 @@ def columns(page):
 def test_a_portrait_poster_is_two_columns_on_a_portrait_page(tmp_path, drawn):
     page, _ = build(write(tmp_path, "---\npaper: a3\n---\n" + SECTIONS), lambda: object())
     assert columns(page) == [3, 3]
-    assert "size:297mm 420mm" in page and "R=1.4142" in page and 'class="poster portrait"' in page
+    assert "size:297mm 420mm" in page and "R=1.4141" in page and 'class="poster portrait"' in page
 
 
 def test_a_landscape_poster_is_three_columns_on_a_landscape_page(tmp_path, drawn):
@@ -611,3 +615,86 @@ def test_text_too_long_for_a_qr_code_is_an_error(tmp_path):
 def test_the_old_and_new_footer_keys_combine(tmp_path, drawn):
     page, _ = build(write(tmp_path, "---\nfooter-left: L\nfooter: {right: R}\n---\n## A\n\nText.\n"), lambda: object())
     assert '<b class="fl">L</b>' in page and '<span class="fr">R</span>' in page
+
+
+@pytest.mark.parametrize("paper", ["a0", "a1", "a2", "a3", "a4"])
+@pytest.mark.parametrize("orientation", ["portrait", "landscape"])
+def test_the_poster_is_never_taller_than_its_page(tmp_path, drawn, paper, orientation):
+    """A poster even a fraction of a millimetre taller than the page prints a second, empty page."""
+    page, _ = build(write(tmp_path, f"---\npaper: {paper}\norientation: {orientation}\n---\n## A\n\nText.\n"), lambda: object())
+    ratio = float(re.search(r"R=([\d.]+)", page)[1])
+    width, height = (int(x) for x in re.search(r"size:(\d+)mm (\d+)mm", page).groups())
+    assert width * ratio <= height and height - width * ratio < 0.1  # under a tenth of a millimetre short
+
+
+# --- PDF ------------------------------------------------------------------------------------------
+
+
+class PrintingRuntime:
+    """Stands in for the tool container: records the command and writes what Chromium would."""
+
+    def __init__(self, output=b"%PDF-1.7\n%fake\n"):
+        self.calls, self.output = [], output
+
+    def run(self, argv, *, mounts=(), workdir=None, env=None, timeout=None, **_):
+        self.calls.append({"argv": argv, "mounts": mounts, "env": env, "page": Path(argv[2]).read_text(encoding="utf-8")})
+        Path(argv[3]).write_bytes(self.output)
+
+
+def test_a_poster_prints_to_pdf_with_chromium_in_the_container(tmp_path):
+    runtime = PrintingRuntime()
+    print_pdf(runtime, "<!doctype html><title>T</title>", tmp_path / "out" / "poster.pdf")
+    assert (tmp_path / "out" / "poster.pdf").read_bytes().startswith(b"%PDF")
+    (call,) = runtime.calls
+    assert call["argv"][0] == "node" and Path(call["argv"][1]).name == "poster_pdf.js"
+    assert call["page"].startswith("<!doctype html>")
+    assert call["argv"][4] == "/etc/py-doc/puppeteer.json" and call["env"] == {"NODE_PATH": "/opt/node/node_modules"}
+    assert any(m.writable for m in call["mounts"]) and any(Path(m.source).name == "tools" for m in call["mounts"])
+
+
+def test_a_pdf_that_is_not_a_pdf_is_an_error(tmp_path):
+    with pytest.raises(PosterError, match="Chromium wrote no PDF"):
+        print_pdf(PrintingRuntime(b"oops"), "<html>", tmp_path / "poster.pdf")
+
+
+def test_the_pdf_setting_and_the_pdf_option(tmp_path, drawn, monkeypatch, capsys):
+    printed = []
+    monkeypatch.setattr("py_doc.poster_cli.connect", lambda settings: object())
+    monkeypatch.setattr("py_doc.poster_cli.print_pdf", lambda runtime, page, pdf: printed.append(pdf))
+    monkeypatch.chdir(tmp_path)
+    write(tmp_path, "## A\n\nText.\n")
+    project(tmp_path, {"wall": {"source": "poster.md", "pdf": True}, "desk": {"source": "poster.md", "pdf": "print/desk.pdf"},
+                       "screen": {"source": "poster.md"}})  # fmt: skip
+    assert main(["poster"]) == 0
+    assert printed == [tmp_path / "build" / "wall.pdf", tmp_path / "print" / "desk.pdf"]
+    assert "wrote " + str(tmp_path / "build" / "wall.pdf") in capsys.readouterr().out
+    printed.clear()
+    assert main(["poster", "screen", "--pdf"]) == 0
+    assert printed == [tmp_path / "build" / "screen.pdf"]
+    printed.clear()
+    assert main(["poster", "wall", "--no-pdf"]) == 0
+    assert printed == []
+
+
+def test_the_pdf_setting_is_true_false_or_a_path(tmp_path):
+    with pytest.raises(ConfigError, match="posters.x.pdf must be true, false or a path"):
+        parse_config({"posters": {"x": {"source": "p.md", "pdf": 3}}}, tmp_path)
+    assert parse_config({"poster": {"pdf": "a.pdf"}}, tmp_path).poster["pdf"] == tmp_path / "a.pdf"
+    assert parse_config({"poster": {"pdf": False}}, tmp_path).poster["pdf"] is False
+
+
+def test_the_footer_shows_the_document_and_version_in_small_type(tmp_path, drawn):
+    text = "---\nfooter: {left: SN-100, document: SN-PO-003, version: '{{v}}'}\nvariables: {v: '2.1'}\n---\n## A\n\nText.\n"
+    page, _ = build(write(tmp_path, text), lambda: object())
+    assert '<div class="docinfo"><span>SN-PO-003</span><span>Version 2.1</span></div>' in page
+    assert page.index("</footer>") < page.index('<div class="docinfo">')
+    assert ".docinfo{" in page and "font-size:12px" in page.split(".docinfo{", 1)[1].split("}", 1)[0]
+
+
+def test_the_document_number_and_version_of_the_front_matter_are_the_defaults(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\ndocument_number: SN-PO-004\nversion: '3.0'\n---\n## A\n\nText.\n"), lambda: object())
+    assert '<div class="docinfo"><span>SN-PO-004</span><span>Version 3.0</span></div>' in page
+    page, _ = build(write(tmp_path, "---\nversion: '3.0'\nfooter: {version: 3.1}\n---\n## A\n\nText.\n"), lambda: object())
+    assert '<div class="docinfo"><span>Version 3.1</span></div>' in page  # the footer's own wins
+    page, _ = build(write(tmp_path, "## A\n\nText.\n"), lambda: object())
+    assert 'class="docinfo"' not in page

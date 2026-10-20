@@ -9,21 +9,27 @@ from __future__ import annotations
 
 import base64
 import logging
+import math
 import mimetypes
 import re
+import shutil
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
 import yaml
 
+from py_doc.diagrams.registry import PUPPETEER, TOOLS
 from py_doc.directives import Fence, expand
 from py_doc.pandoc.source import split_front_matter
 from py_doc.poster_blocks import MD, Ctx, PosterError, block_html, esc, inline, parse_opts, qr_svg
 from py_doc.poster_settings import SettingsError, layer, merge
 from py_doc.poster_themes import apply_overrides, load_theme
-from py_doc.runtime import Runtime
+from py_doc.runtime import Mount, Runtime
 
-__all__ = ["PosterError", "build"]
+__all__ = ["PosterError", "build", "print_pdf"]
+
+PDF_TIMEOUT = 300
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +147,7 @@ footer .fc{flex:1;text-align:center;font-size:15px;color:var(--muted)}
 footer .fr{flex:1;text-align:right;font-size:15px;color:var(--muted)}
 footer .logos{display:flex;gap:18px;align-items:center}
 footer .logos img{max-height:56px;max-width:160px}
+.docinfo{display:flex;gap:18px;font-size:12px;color:var(--muted);margin-top:-12px}
 footer .fqr{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
 @media print{body{background:none}.poster{margin:0}}
 """
@@ -169,7 +176,6 @@ fit();
 
 PAPER_MM = {"a0": (841, 1189), "a1": (594, 841), "a2": (420, 594), "a3": (297, 420), "a4": (210, 297)}
 
-RATIO = 1.4142  # height to width of A paper
 COLUMNS = {"portrait": 2, "landscape": 3}
 
 
@@ -348,8 +354,11 @@ def read_settings(md_path, settings=None, defaults=None):
     for key in ("title", "subtitle", "byline"):
         if key in meta:
             meta[key] = fill(meta[key], variables)
-    if meta.get("footer"):
-        meta["footer"] = {k: fill(v, variables) if isinstance(v, str) else v for k, v in meta["footer"].items()}
+    footer = meta.setdefault("footer", {})  # the document's own number and version, unless the footer names others
+    for key, source in (("document", "document_number"), ("version", "version")):
+        if footer.get(key) in (None, "") and meta.get(source):
+            footer[key] = meta[source]
+    meta["footer"] = {k: fill(v, variables) if isinstance(v, str) else v for k, v in footer.items()}
     return meta, body
 
 
@@ -370,6 +379,7 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
     theme = load_theme(meta.get("theme"), Path.cwd())
     apply_overrides(theme, meta, str(md_path))
     ctx = Ctx(md_path.parent, runtime, theme, render, str(md_path))
+    ctx.settings = meta
     body = prepare(expand(body, md_path, meta.get("variables"), meta.get("conditions")))
     h1 = re.search(r"(?m)^# +(.+)$", body)
     title = meta.get("title") or (h1.group(1) if h1 else md_path.stem)
@@ -442,8 +452,10 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
     paper = str(meta.get("paper", "a1")).lower()
     if paper not in PAPER_MM:
         raise PosterError(f"{md_path}: paper must be one of {', '.join(PAPER_MM)}")
-    ratio = RATIO if orientation == "portrait" else 1 / RATIO
     paper_mm = PAPER_MM[paper] if orientation == "portrait" else PAPER_MM[paper][::-1]
+    # The paper's own height to width, rounded down: A paper is not exactly 1.4142, and a poster any
+    # taller than its page prints a second, empty page
+    ratio = math.floor(paper_mm[1] / paper_mm[0] * 10000) / 10000
     css = (CSS.replace("__VARS__", ctx.theme.css_variables()).replace("__W__", str(width))
            .replace("__H__", str(round(width * ratio))).replace("__PAPER__", "{}mm {}mm".format(*paper_mm)))
     script = (SCRIPT.replace("__RATIO__", f"{ratio:.4f}").replace("__MIN__", str(width))
@@ -504,6 +516,32 @@ def footer_html(footer, ctx):
     if footer.get("qr"):
         label = f'<span>{text("qr-label")}</span>' if footer.get("qr-label") else ""
         qr = f'<div class="fqr">{qr_svg(str(footer["qr"]), ctx.theme.colours["strong"], 96)}{label}</div>'
+    info = [text("document"), f"Version {text('version')}" if text("version") else ""]
+    docinfo = "".join(f"<span>{item}</span>" for item in info if item)
     return (f'<footer><b class="fl">{text("left")}</b><span class="fc">{text("centre")}</span>'
             f'<span class="fr">{text("right")}</span>'
-            + (f'<div class="logos">{logos}</div>' if logos else "") + qr + "</footer>")
+            + (f'<div class="logos">{logos}</div>' if logos else "") + qr + "</footer>"
+            + (f'<div class="docinfo">{docinfo}</div>' if docinfo else ""))
+
+
+def print_pdf(runtime: Runtime, page: str, pdf: Path) -> None:
+    """Print a poster page to a one-page PDF at ``pdf``, with the Chromium of the tool container.
+
+    The page sets its own paper size and scales itself to it, so the PDF is what Chrome's print dialogue
+    makes with no margins and background graphics on. The container has no network, so web fonts the theme
+    names are replaced by their fallbacks.
+    """
+    with tempfile.TemporaryDirectory(prefix="py-doc-poster-") as folder:
+        work = Path(folder)
+        source, output = work / "poster.html", work / "poster.pdf"
+        source.write_text(page, encoding="utf-8")
+        runtime.run(
+            ["node", TOOLS / "poster_pdf.js", source, output, PUPPETEER],
+            mounts=[Mount(work, writable=True), Mount(TOOLS)], workdir=work,
+            env={"NODE_PATH": "/opt/node/node_modules"}, timeout=PDF_TIMEOUT,
+        )  # fmt: skip
+        if not output.is_file() or not output.read_bytes().startswith(b"%PDF"):
+            raise PosterError(f"Chromium wrote no PDF for {pdf}")
+        pdf.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(output, pdf)
+
