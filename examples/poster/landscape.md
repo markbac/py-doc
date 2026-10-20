@@ -67,7 +67,7 @@ sequenceDiagram
   G-->>N: Joined
 ```
 
-Fig. 1 A node joins through the nearest gateway.
+[[CAPTION:Figure]] A node joins through the nearest gateway.
 
 ## 4. Verify: check each node
 

@@ -98,10 +98,11 @@ def subset(css: str, subsets) -> str:
     return "\n".join(rule for name, rule in _FACE.findall(css) if not name or name in subsets)
 
 
-def web_faces(stylesheet: str, where: str, subsets=None) -> str | None:
+def web_faces(stylesheet: str, where: str, subsets=None, instead: str = "so the page links them instead") -> str | None:
     """The stylesheet's @font-face rules with their fonts embedded, or None (and a warning) when they cannot be had.
 
     ``subsets`` (such as ``["latin", "latin-ext"]``) keeps only those character sets, and downloads only their fonts.
+    ``instead`` says in the warning what happens without them.
     """
     try:
         css = _fetch(stylesheet).decode("utf-8")
@@ -112,7 +113,7 @@ def web_faces(stylesheet: str, where: str, subsets=None) -> str | None:
         css = merge_weights(css)
         fonts = {url: _fetch(url) for url in dict.fromkeys(_URL.findall(css))}
     except (OSError, urllib.error.URLError, UnicodeDecodeError, ValueError) as exc:
-        logger.warning(f"{where}: the fonts of {stylesheet} could not be embedded, so the page links them instead: {exc}")
+        logger.warning(f"{where}: the fonts of {stylesheet} could not be embedded, {instead}: {exc}")
         return None
     if not fonts:
         logger.warning(f"{where}: {stylesheet} names no font files, so there was nothing to embed")

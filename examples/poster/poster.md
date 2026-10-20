@@ -26,13 +26,13 @@ footer:
 
 The SN-100 measures temperature and humidity and publishes each reading over MQTT. It sleeps between readings, so one coin cell lasts five years. This poster shows how it wakes, measures, sends and goes back to sleep.
 
-## 1. Hardware: what is on the board
+## 1. Hardware: what is on the board {.flow}
 
 The node has a sensor, a microcontroller and a radio on one 52 by 29 mm board, powered from one CR2477 cell.
 
 ![The SN-100 board, top side](images/sn100-board.svg)
 
-[[CAPTION:Figure]] Fig. 1 The board, top side, to scale. The cell holder takes most of it.
+[[CAPTION:Figure]] The board, top side, to scale. The cell holder takes most of it.
 
 ```cards cols=3 style=top
 Sensor | Temperature and humidity on I2C, up to 400 kHz | blue
@@ -47,7 +47,7 @@ flowchart LR
   R -- MQTT --> B[(Broker)]
 ```
 
-Fig. 2 The parts of the node and how a reading travels.
+[[CAPTION:Figure]] The parts of the node and how a reading travels.
 
 | Specification | Value |
 |---|---|
@@ -79,7 +79,7 @@ Send | 12000
 
 ## 3. Cell: how its voltage falls
 
-```chart type=line title="Cell voltage over its life" unit=" V" max=3.2 height=220 colours=blue
+```chart type=line title="Cell voltage over its life" unit=" V" min=2.2 max=3.2 step=0.2 values=last area=yes height=240 colours=blue axis="Volts at 20 °C"
 Year 0 | 3.05
 Year 1 | 2.96
 Year 2 | 2.92

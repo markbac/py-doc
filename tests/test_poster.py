@@ -20,7 +20,7 @@ from py_doc import poster_blocks
 from py_doc.app import main
 from py_doc.config import ConfigError, parse_config
 from py_doc.errors import ConversionError, ToolFailed
-from py_doc.poster import PosterError, build, print_pdf
+from py_doc.poster import PosterError, build, print_pdf, write_poster
 from py_doc.poster_themes import ThemeError
 
 PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 16
@@ -96,6 +96,12 @@ POSTER = textwrap.dedent(
     It fails closed.
     """
 )
+
+
+@pytest.fixture(autouse=True)
+def offline(monkeypatch):
+    """No test downloads the web fonts that a PDF gets: those that print one see them as unavailable."""
+    monkeypatch.setattr("py_doc.poster.web_faces", lambda *args, **kwargs: None)
 
 
 @pytest.fixture
@@ -519,7 +525,7 @@ def test_captions_callouts_and_word_markers(tmp_path, drawn):
         """
     )
     page, _ = build(write(tmp_path, text), lambda: object())
-    assert '<p class="caption">The valve.</p>' in page
+    assert '<p class="caption"><strong>Figure 1:</strong> The valve.</p>' in page
     assert '<blockquote class="callout warning"><p class="callout-title">Warning</p><p>Disconnect the battery first.</p>' in page
     assert '<blockquote class="callout tip">\n<p><strong>Tip:</strong> use the app.</p>' in page
     assert "<blockquote>\n<p>A plain quote.</p>" in page
@@ -611,6 +617,45 @@ def test_a_chart_is_svg_in_the_theme_colours(tmp_path, drawn, kind):
     assert '<div class="fig-title">Messages a day</div>' in page
     assert "#3f74b8" in svg and "#4a7fc1" in svg  # secondary, then accent
     assert ">2.0</text>" in svg and ">2.1</text>" in svg and ">Mon</text>" in svg
+
+
+def chart_svg(tmp_path, options, rows="series: Measured, Target\nQ1 | 2.9 | 2.5\nQ2 | 2.7 | 2.5\nQ3 | 2.6 | 2.5"):
+    page, _ = build(write(tmp_path, f"## A\n\n```chart {options}\n{rows}\n```\n"), lambda: object())
+    return page.split('<svg class="chart"', 1)[1].split("</svg>", 1)[0]
+
+
+def test_a_line_chart_takes_min_step_values_markers_area_dashed_and_an_axis_title(tmp_path, drawn):
+    svg = chart_svg(tmp_path, 'type=line min=2 max=3 step=0.25 values=last unit=" V" area=yes markers=no dashed=Target axis="Cell (V)"')
+    assert [label for label in re.findall(r'text-anchor="end"[^>]*>([\d.]+)</text>', svg)] == ["2", "2.25", "2.5", "2.75", "3"]
+    assert re.findall(r">([\d.]+ V)</text>", svg) == ["2.6 V", "2.5 V"], "only the last value of each series"
+    assert "<circle" not in svg and svg.count("<polygon") == 2 and svg.count('stroke-dasharray="10 6"') == 1
+    assert 'rotate(-90' in svg and ">Cell (V)</text>" in svg
+    labels = re.findall(r'y="([\d.]+)" text-anchor="middle"[^>]*>(2\.\d) V</text>', svg)
+    assert float(labels[1][0]) - float(labels[0][0]) >= 16, "two labels at one point do not overlap"
+    svg = chart_svg(tmp_path, "type=line")
+    assert svg.count("<circle") == 6 and "<polygon" not in svg and " V</text>" not in svg, "markers, no area, no values"
+
+
+def test_column_and_bar_values_can_be_left_out_and_their_axis_named(tmp_path, drawn):
+    assert re.findall(r">([\d.]+)</text>", chart_svg(tmp_path, "type=column values=none step=1")) == ["0", "1", "2", "3", "4", "5"]
+    svg = chart_svg(tmp_path, 'type=bar values=last axis="Charge (uC)"')
+    assert re.findall(r">([\d.]+)</text>", svg) == ["2.6", "2.5"] and ">Charge (uC)</text>" in svg
+
+
+@pytest.mark.parametrize(
+    "options, message",
+    [
+        ("type=column min=1", "chart min is only for a line chart \\(a bar that does not start at zero misleads\\)"),
+        ("type=bar area=yes", "chart area is only for a line chart"),
+        ("type=line min=3 max=2", r"max \(2\) must be above min \(3\)"),
+        ("type=line step=0.01", "no more than 20 steps"),
+        ("type=line values=some", "chart values must be one of all, last, none"),
+        ("type=line min=low", "chart min must be a number"),
+    ],
+)
+def test_a_chart_option_mistake_is_an_error(tmp_path, options, message):
+    with pytest.raises(PosterError, match=message):
+        chart_svg(tmp_path, options)
 
 
 @pytest.mark.parametrize(
@@ -713,6 +758,28 @@ def test_the_pdf_setting_and_the_pdf_option(tmp_path, drawn, monkeypatch, capsys
     printed.clear()
     assert main(["poster", "wall", "--no-pdf"]) == 0
     assert printed == []
+
+
+def test_the_pdf_gets_the_web_fonts_the_page_only_links(tmp_path, drawn, monkeypatch):
+    pages, asked = [], []
+    monkeypatch.setattr("py_doc.poster.print_pdf", lambda runtime, page, pdf: pages.append(page))
+    monkeypatch.setattr("py_doc.poster.web_faces", lambda sheet, where, **kw: asked.append(kw) or "@font-face{font-family:X}")
+    source = write(tmp_path, "## A\n\nText.\n")
+    write_poster(source, tmp_path / "p.html", lambda: object(), pdf=True)
+    page = (tmp_path / "p.html").read_text(encoding="utf-8")
+    assert '<link rel="stylesheet" href="https://fonts.googleapis.com' in page, "the page itself still links them"
+    assert "fonts.googleapis.com" not in pages[0] and "<style>@font-face{font-family:X}" in pages[0]
+    assert asked == [{"instead": "so the PDF has the fallback fonts"}]
+    asked.clear()
+    write_poster(source, tmp_path / "p.html", lambda: object(), {"embed_fonts": True}, pdf=True)
+    assert asked == [] and pages[1] == (tmp_path / "p.html").read_text(encoding="utf-8"), "already inside the page"
+
+
+def test_offline_the_pdf_is_printed_with_the_fallback_fonts(tmp_path, drawn, monkeypatch):
+    pages = []
+    monkeypatch.setattr("py_doc.poster.print_pdf", lambda runtime, page, pdf: pages.append(page))
+    write_poster(write(tmp_path, "## A\n\nText.\n"), tmp_path / "p.html", lambda: object(), pdf=True)
+    assert pages == [(tmp_path / "p.html").read_text(encoding="utf-8")]
 
 
 def test_the_pdf_setting_is_true_false_or_a_path(tmp_path):
@@ -1042,6 +1109,21 @@ def test_embed_fonts_with_subsets_keeps_and_downloads_only_those(tmp_path, drawn
     assert "brand-cyrillic" not in " ".join(asked) and base64.b64encode(b"cyrillic").decode() not in page
     assert page.count("@font-face") == 2  # the latin face, and the one with no subset named
     assert "<link" not in page
+
+
+def test_figures_and_tables_are_numbered_down_the_poster_includes_too(tmp_path, drawn):
+    (tmp_path / "part.md").write_text("[[CAPTION:Table]] Pins\n\n| Pin | Use |\n|---|---|\n| 1 | Power |\n", encoding="utf-8")
+    text = "## A\n\n[[CAPTION:Figure]] One\n\n[[CAPTION:Table]] First\n\n## B\n\n[[INCLUDE: part.md]]\n\n[[CAPTION:figure]] Two\n"
+    page, _ = build(write(tmp_path, text), lambda: object())
+    captions = re.findall(r'<p class="caption"><strong>(\w+ \d+):</strong> (\w+)</p>', page)
+    assert captions == [("Figure 1", "One"), ("Table 1", "First"), ("Table 2", "Pins"), ("Figure 2", "Two")]
+
+
+def test_a_flow_section_may_go_on_in_the_next_column(tmp_path, drawn, caplog):
+    page, _ = build(write(tmp_path, "## A {.flow}\n\nOne.\n\n## B {.wide .flow}\n\nTwo.\n\n## C\n\nThree.\n"), lambda: object())
+    assert '<section class="breakable"><h2>A</h2>' in page and '<section class="wide"><h2>B</h2>' in page
+    assert "is wide, so .flow is ignored" in caplog.text
+    assert 'section.continued h2::after{content:" (continued)"' in page and "classList.add('continued')" in page
 
 
 def test_the_page_balances_the_columns_by_height_unless_split_chooses(tmp_path, drawn):

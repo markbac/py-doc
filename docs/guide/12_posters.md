@@ -83,7 +83,7 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 | `document_number`, `version` | None | The document's number and version, shown small under the footer, unless `footer.document` or `footer.version` names others. `version: git` is the output of `git describe --tags --always`, as for a document |
 | `variables`, `conditions` | None | Values for `{{name}}` and `[[IF:]]`, as for documents |
 | `pdf` | `false` | `true` prints a one-page PDF beside the page, and a path prints it there. `--pdf` and `--no-pdf` win |
-| `embed_fonts` | `false` | `true` puts the theme's web fonts inside the page, so it and its PDF look the same offline. A list of subsets, such as `[latin, latin-ext]`, puts in only those. See [Fonts inside the page](#fonts-inside-the-page). `--embed-fonts` and `--no-embed-fonts` win |
+| `embed_fonts` | `false` | `true` puts the theme's web fonts inside the page, so it looks the same offline (a PDF gets the fonts inside either way). A list of subsets, such as `[latin, latin-ext]`, puts in only those. See [Fonts inside the page](#fonts-inside-the-page). `--embed-fonts` and `--no-embed-fonts` win |
 
 `footer-left` and `footer-right` in the front matter still work, as `footer.left` and `footer.right`.
 
@@ -100,7 +100,10 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 A section heading can end with attributes in braces:
 
 - `{.wide}` makes the section span every column. The sections before it are balanced into the columns above it, and those after it into the columns below. `split` cannot be used with a wide section.
+- `{.flow}` lets the section go on in the next column, between two of its blocks, under its heading again with "(continued)". Use it for a section much taller than the rest. A caption stays with its picture or table. It has no effect with `split` or on a wide section.
 - `{colour=coral}` colours its heading bar, with any block colour.
+
+Of every way to share the sections out, in order, the page takes those whose tallest column is shortest, and of those the one whose columns are most even.
 
 ```markdown
 ## 5. Roadmap: what comes next {.wide}
@@ -127,7 +130,7 @@ Section bodies are ordinary Markdown, with py-doc's own additions as in the [Wri
 | `[[INCLUDE: file.md]]`, `[[INCLUDE-CODE: file.py]]` | The file, or the file as a code block |
 | `[[IF: name]]`, `[[NOT: name]]`, `[[ENDIF]]` | Kept or left out by the `conditions` |
 | `{{name}}` | The value of a variable |
-| `[[CAPTION:Figure]] text`, `[[CAPTION:Table]] text` | A caption. A paragraph that starts `Fig.` is one too |
+| `[[CAPTION:Figure]] text`, `[[CAPTION:Table]] text` | A numbered caption, "Figure 1:" or "Table 1:" as in Word, counted down the poster and through its includes. A paragraph that starts `Fig.` is a caption as written, with no number |
 | `> [!NOTE]`, `> **Warning:** text` | A callout box, in the colour of its kind: note, tip, important, warning or caution |
 | `> text` | A plain callout, in the `callout` colour |
 | A fenced code block | Code. A language name that is a diagram or a block below is drawn instead |
@@ -155,7 +158,14 @@ Warehouse | 1440 | 980
 | `type` | `column` (default), `bar` (horizontal) or `line` |
 | `title` | The title above the chart |
 | `unit` | Text after each value label, such as `" mA"` |
+| `min` | The bottom of the value axis, for a `line` chart only (default: zero, or a round number below a negative value). A column or bar that does not start at zero misleads |
 | `max` | The top of the value axis (default: a round number above the largest value) |
+| `step` | The distance between gridlines, for `line` and `column` (default: a quarter of the axis). At most 20 steps |
+| `values` | Which values are written by their point, bar or column: `all`, `last` or `none` (default: `none` for `line`, else `all`) |
+| `axis` | The title of the value axis |
+| `markers` | `yes` (default) or `no`: a dot on each point of a `line` chart |
+| `area` | `yes` or `no` (default): shade under each line of a `line` chart |
+| `dashed` | The series of a `line` chart drawn dashed, by name or number, separated by commas, such as `dashed=Target` |
 | `height` | The height in pixels (default 300, or what the rows need for `bar`) |
 | `colours` | Block colours for the series, separated by commas (default: `secondary`, `accent`, `primary`, `good`, `bad`, `muted`) |
 
@@ -212,7 +222,7 @@ posters:
     pdf: build/print/release-a3.pdf    # or a path of its own
 ```
 
-> **Note:** The tool container has no network, so a theme's web fonts (`fonts.stylesheet`) are not loaded for the PDF unless they are inside the page. Set `embed_fonts: true`, or give the theme its font files, and the PDF uses the theme's own fonts. See [Fonts inside the page](#fonts-inside-the-page).
+The tool container has no network. So py-doc downloads a theme's web fonts (`fonts.stylesheet`) on this computer, and prints the PDF from a copy of the page with them inside. The page itself still links them, unless `embed_fonts` is set. The fonts are kept in the cache folder, so later builds need no network. Offline with an empty cache, py-doc warns and the PDF has the fallback fonts.
 
 The PDF needs the tool container, like diagrams. The page alone does not.
 
@@ -258,7 +268,7 @@ A mistake in a theme, such as an unknown colour name or a value that is not a co
 
 ### Fonts inside the page
 
-A poster can carry its fonts, so it looks the same on a computer without internet and in its PDF. There are two ways.
+A poster can carry its fonts, so it looks the same on a computer without internet. There are two ways. A PDF that py-doc prints gets the web fonts inside whether or not the page has them: see [PDF](#pdf).
 
 **The theme's own font files**, under `fonts.files`, are always put inside the page. Use them for a brand font that has no web version, or one you may not load from the web:
 

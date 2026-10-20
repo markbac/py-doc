@@ -68,6 +68,7 @@ class Ctx:
         self.n = 0
         self.failed = 0
         self.mermaid = None  # diagrams.mermaid of py-doc.yml
+        self.stylesheet = None  # the web fonts the page links, not embedded
 
     def runtime(self):
         """The tool container, started on the first diagram, so a poster without one needs no Docker."""
@@ -259,11 +260,32 @@ def _nice(value):
     return next(m * power for m in (1, 2, 2.5, 5, 10) if value <= m * power + 1e-9)
 
 
+def _option(opts, name, choices, default, ctx):
+    value = opts.get(name, default).lower()
+    if value not in choices:
+        raise PosterError(f"{ctx.where}: chart {name} must be one of {', '.join(choices)}, not '{value}'")
+    return value
+
+
+def _float(opts, name, ctx):
+    try:
+        return float(opts[name])
+    except ValueError:
+        raise PosterError(f"{ctx.where}: chart {name} must be a number") from None
+
+
 def chart_html(code, opts, ctx):
     """A ``column``, ``bar`` or ``line`` chart as SVG: ``label | value | value ...`` lines, ``series:`` names them."""
     kind = opts.get("type", "column").lower()
     if kind not in CHART_KINDS:
         raise PosterError(f"{ctx.where}: chart type must be one of {', '.join(CHART_KINDS)}, not '{kind}'")
+    line_only = [name for name in ("min", "markers", "area", "dashed") if name in opts and kind != "line"]
+    if line_only:
+        reason = " (a bar that does not start at zero misleads)" if line_only[0] == "min" else ""
+        raise PosterError(f"{ctx.where}: chart {line_only[0]} is only for a line chart{reason}")
+    shown = _option(opts, "values", ("all", "last", "none"), "none" if kind == "line" else "all", ctx)
+    markers = _option(opts, "markers", ("yes", "no"), "yes", ctx) == "yes"
+    area = _option(opts, "area", ("yes", "no"), "no", ctx) == "yes"
     series, rows = [], []
     for line in (line.strip() for line in code.splitlines() if line.strip()):
         if line.lower().startswith("series:"):
@@ -282,13 +304,18 @@ def chart_html(code, opts, ctx):
     names = opts.get("colours", "").split(",") if opts.get("colours") else SERIES_COLOURS
     colours = [ctx.theme.colour(names[i % len(names)].strip()) for i in range(count)]
     unit = opts.get("unit", "")
+    dashed = {name.strip().lower() for name in opts.get("dashed", "").split(",") if name.strip()}
+    dashed = {j for j in range(count) if (series[j].lower() if j < len(series) else str(j + 1)) in dashed or str(j + 1) in dashed}
     values = [v for _, vs in rows for v in vs]
-    low = -_nice(-min(values)) if min(values) < 0 else 0.0
-    try:
-        high = float(opts["max"]) if "max" in opts else _nice(max(values)) or 1.0
-    except ValueError:
-        raise PosterError(f"{ctx.where}: chart max must be a number") from None
-    span = (high - low) or 1.0
+    low = _float(opts, "min", ctx) if "min" in opts else -_nice(-min(values)) if min(values) < 0 else 0.0
+    high = _float(opts, "max", ctx) if "max" in opts else _nice(max(values)) or 1.0
+    if high <= low:
+        raise PosterError(f"{ctx.where}: chart max ({_number(high)}) must be above min ({_number(low)})")
+    span = high - low
+    step = _float(opts, "step", ctx) if "step" in opts else span / 4
+    if step <= 0 or span / step > 20:
+        raise PosterError(f"{ctx.where}: chart step must be above zero, with no more than 20 steps from min to max")
+    axis = opts.get("axis", "")
     legend = 24 if len(series) > 1 else 0
     width = 640
     natural = 16 + legend + len(rows) * max(30, 16 * count + 12) if kind == "bar" else 300
@@ -296,7 +323,7 @@ def chart_html(code, opts, ctx):
     text = 'font-size="13" fill="currentColor"'
     out = []
     if kind == "bar":
-        left, top, right, bottom = 140, 8 + legend, 60, 8
+        left, top, right, bottom = 140, 8 + legend, 60, 8 + (20 if axis else 0)
         plot_w, band = width - left - right, (height - top - bottom) / len(rows)
         x0 = left + (0 - low) / span * plot_w
         for i, (label, vs) in enumerate(rows):
@@ -307,19 +334,25 @@ def chart_html(code, opts, ctx):
                 x1 = left + (v - low) / span * plot_w
                 yy = y + band * 0.15 + j * thick
                 out.append(f'<rect x="{min(x0, x1):.1f}" y="{yy:.1f}" width="{abs(x1 - x0):.1f}" height="{thick:.1f}" fill="{colours[j]}"/>')
-                out.append(f'<text x="{max(x0, x1) + 4:.1f}" y="{yy + thick / 2 + 4:.1f}" {text}>{_number(v)}{esc(unit)}</text>')
+                if shown == "all" or shown == "last" and i == len(rows) - 1:
+                    out.append(f'<text x="{max(x0, x1) + 4:.1f}" y="{yy + thick / 2 + 4:.1f}" {text}>{_number(v)}{esc(unit)}</text>')
         out.append(f'<line x1="{x0:.1f}" y1="{top}" x2="{x0:.1f}" y2="{height - bottom}" stroke="currentColor"/>')
+        if axis:
+            out.append(f'<text x="{left + plot_w / 2:.1f}" y="{height - 2}" text-anchor="middle" {text}>{esc(axis)}</text>')
     else:
-        left, top, right, bottom = 52, 12 + legend, 12, 30
+        left, top, right, bottom = 52 + (22 if axis else 0), 12 + legend, 12, 30
         plot_w, plot_h = width - left - right, height - top - bottom
 
         def y_of(v):
             return top + plot_h - (v - low) / span * plot_h
 
-        for step in range(5):
-            v = low + span * step / 4
+        for n in range(round(span / step) + 1):
+            v = low + step * n
             out.append(f'<line x1="{left}" y1="{y_of(v):.1f}" x2="{width - right}" y2="{y_of(v):.1f}" stroke="currentColor" stroke-opacity=".25"/>')
-            out.append(f'<text x="{left - 6}" y="{y_of(v) + 4:.1f}" text-anchor="end" {text}>{_number(v)}</text>')
+            out.append(f'<text x="{left - 6}" y="{y_of(v) + 4:.1f}" text-anchor="end" {text}>{_number(round(v, 9))}</text>')
+        if axis:
+            middle = top + plot_h / 2
+            out.append(f'<text x="14" y="{middle:.1f}" transform="rotate(-90 14 {middle:.1f})" text-anchor="middle" {text}>{esc(axis)}</text>')
         band = plot_w / len(rows)
         for i, (label, _) in enumerate(rows):
             out.append(f'<text x="{left + band * (i + 0.5):.1f}" y="{height - 10}" text-anchor="middle" {text}>{esc(label)}</text>')
@@ -330,14 +363,27 @@ def chart_html(code, opts, ctx):
                     x = left + band * i + band * 0.15 + j * thick
                     y1, y0 = y_of(v), y_of(0)
                     out.append(f'<rect x="{x:.1f}" y="{min(y0, y1):.1f}" width="{thick:.1f}" height="{abs(y0 - y1):.1f}" fill="{colours[j]}"/>')
-                    out.append(f'<text x="{x + thick / 2:.1f}" y="{min(y0, y1) - 4:.1f}" text-anchor="middle" {text}>{_number(v)}{esc(unit)}</text>')
+                    if shown == "all" or shown == "last" and i == len(rows) - 1:
+                        out.append(f'<text x="{x + thick / 2:.1f}" y="{min(y0, y1) - 4:.1f}" text-anchor="middle" {text}>{_number(v)}{esc(unit)}</text>')
         else:
+            placed: dict[float, list[float]] = {}  # the value labels at each point across, so two do not overlap
             for j in range(count):
-                points = [(left + band * (i + 0.5), y_of(vs[j])) for i, (_, vs) in enumerate(rows) if j < len(vs)]
-                path = " ".join(f"{x:.1f},{y:.1f}" for x, y in points)
-                out.append(f'<polyline points="{path}" fill="none" stroke="{colours[j]}" stroke-width="3"/>')
-                out += [f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{colours[j]}"/>' for x, y in points]
-        out.append(f'<line x1="{left}" y1="{y_of(0):.1f}" x2="{width - right}" y2="{y_of(0):.1f}" stroke="currentColor"/>')
+                points = [(left + band * (i + 0.5), y_of(vs[j]), vs[j]) for i, (_, vs) in enumerate(rows) if j < len(vs)]
+                path = " ".join(f"{x:.1f},{y:.1f}" for x, y, _ in points)
+                if area:
+                    base = y_of(max(low, 0)) if low < 0 < high else y_of(low)
+                    out.append(f'<polygon points="{points[0][0]:.1f},{base:.1f} {path} {points[-1][0]:.1f},{base:.1f}" fill="{colours[j]}" fill-opacity=".15"/>')
+                dash = ' stroke-dasharray="10 6"' if j in dashed else ""
+                out.append(f'<polyline points="{path}" fill="none" stroke="{colours[j]}" stroke-width="3"{dash}/>')
+                if markers:
+                    out += [f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" fill="{colours[j]}"/>' for x, y, _ in points]
+                for n, (x, y, v) in enumerate(points):
+                    if shown == "all" or shown == "last" and n == len(points) - 1:
+                        at = y - 9 if all(abs(y - 9 - other) >= 16 for other in placed.get(x, [])) else y + 21
+                        placed.setdefault(x, []).append(at)
+                        out.append(f'<text x="{x:.1f}" y="{at:.1f}" text-anchor="middle" {text}>{_number(v)}{esc(unit)}</text>')
+        zero = y_of(min(max(0, low), high))  # the zero line, or the bottom of the axis when zero is not on it
+        out.append(f'<line x1="{left}" y1="{zero:.1f}" x2="{width - right}" y2="{zero:.1f}" stroke="currentColor"/>')
     for j, name in enumerate(series[:count] if legend else []):
         x = 12 + j * 150
         out.append(f'<rect x="{x}" y="4" width="14" height="14" fill="{colours[j]}"/><text x="{x + 20}" y="16" {text}>{esc(name)}</text>')
