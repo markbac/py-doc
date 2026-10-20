@@ -188,6 +188,13 @@ def test_a_local_picture_is_embedded(tmp_path, drawn):
     assert 'src="data:image/png;base64,' in page and "logo.png" not in page
 
 
+def test_an_svg_picture_is_embedded_and_a_script_link_is_not(tmp_path, drawn):
+    (tmp_path / "board.svg").write_bytes(SVG)
+    page, _ = build(write(tmp_path, "## A\n\n![Board](board.svg)\n\n[Run](javascript:alert(1))\n"), lambda: object())
+    assert '<img src="data:image/svg+xml;base64,' in page and "board.svg" not in page
+    assert 'href="javascript:' not in page
+
+
 @pytest.mark.parametrize(
     "text, message",
     [("No sections here.\n", "no sections found"), ("---\npaper: b5\n---\n## A\n\nText.\n", "paper must be one of")],
@@ -215,11 +222,31 @@ def test_the_command_reports_a_missing_file(tmp_path, capsys):
 EXAMPLES = Path(__file__).parent.parent / "examples" / "poster"
 
 
-@pytest.mark.parametrize("name, title", [("poster", "SN-100 Sensor Node"), ("landscape", "Commissioning an SN-100 network"), ("release", "SN-100 firmware 2.1")])
-def test_the_example_posters_build(drawn, name, title):
+@pytest.mark.parametrize(
+    "name, title",
+    [
+        ("poster", "SN-100 Sensor Node"),
+        ("landscape", "Commissioning an SN-100 network"),
+        ("release", "SN-100 firmware 2.1"),
+        ("reliability", "SN-100 field reliability review, Q3 2026"),
+    ],
+)
+def test_the_example_posters_build(drawn, monkeypatch, name, title):
+    monkeypatch.setattr("py_doc.poster.git_version", lambda folder: "v1.0-3-gabc1234")
     page, ctx = build(EXAMPLES / f"{name}.md", lambda: object())
     assert f"<title>{title}</title>" in page
     assert ctx.failed == 0
+    assert "image not found" not in page and "](" not in page.split("</style>", 1)[1], "every picture and link is embedded or rendered"
+
+
+def test_the_reliability_example_uses_its_includes_and_conditions(drawn, monkeypatch):
+    monkeypatch.setattr("py_doc.poster.git_version", lambda folder: "v1.0-3-gabc1234")
+    page, _ = build(EXAMPLES / "reliability.md", lambda: object(), {"conditions": {"internal": True}})
+    assert "Cost: <span>what the returns cost us</span>" in page and "Customers:" not in page
+    assert "rma@example.com" in page and "median-rank regression" in page
+    assert [kind for kind, _, _ in drawn] == ["vega-lite", "dot", "plantuml", "ditaa"]
+    page, _ = build(EXAMPLES / "reliability.md", lambda: object(), {"conditions": {"internal": False}})
+    assert "Customers: <span>what changes for you</span>" in page and "Harbour Cold Chain" not in page
 
 
 # --- orientation and columns ---------------------------------------------------------------------

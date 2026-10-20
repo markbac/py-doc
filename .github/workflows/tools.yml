@@ -45,7 +45,7 @@ jobs:
       - name: Each poster PDF is one page
         working-directory: examples
         run: |
-          for pdf in build/sensor-node.pdf build/release.pdf build/posters/commissioning.pdf; do
+          for pdf in build/sensor-node.pdf build/release.pdf build/reliability.pdf build/posters/commissioning.pdf; do
             pages=$(python -c "import re, sys; print(len(re.findall(rb'/Type\s*/Page[^s]', open(sys.argv[1], 'rb').read())))" "$pdf")
             echo "$pdf: $pages page(s)"
             test "$pages" = "1"

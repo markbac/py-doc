@@ -30,6 +30,13 @@ Records | A floor plan with every node's number and room
 
 > Concrete floors stop the radio. Plan one gateway on every floor, even a small one.
 
+```cards cols=2 style=plain
+Phone | The SN Install app, signed in to the customer's site
+Ladder | 2 m, for nodes at head height on high walls
+Cells | Two spare CR2477 cells for every ten nodes
+Driver | The torque-limited driver from the kit, set to 0.6 N m
+```
+
 ## 2. Install: fit the hardware
 
 ```lanes
@@ -38,6 +45,9 @@ Node | *Fix plate | *Insert cell | Clip on
 ```
 
 Fit every gateway before the first node, so a node always has a gateway to join.
+
+> [!IMPORTANT]
+> Above 2 m, work from a podium step, not a ladder, and never alone.
 
 ## 3. Join: add the node to the network
 
@@ -85,13 +95,34 @@ title: Signal strength at the node (dBm)
 
 A weak node works, but it retries more and its cell lasts less.
 
-## 6. Troubleshoot: when a node will not join {.wide colour=slate}
+| A node is accepted when | Check |
+|---|---|
+| Its signal is -95 dBm or better | The app, after the join |
+| Its first reading arrives within 2 minutes | The dashboard |
+| Its reading is within 1 °C of the room thermometer | By eye |
+| Its label photo and room are recorded | The app |
+
+## 6. Handover: leave the site ready
+
+1. Upload the marked-up floor plan from the app.
+1. Walk the dashboard with the customer: every node, every room.
+1. Leave the spare cells and the support number on site.
+
+```qr size=130 label="Upload the floor plan"
+https://example.com/commissioning/upload
+```
+
+[[INCLUDE: shared/contacts.md]]
+
+## 7. Troubleshoot: when a node will not join {.wide colour=slate}
 
 | Display | Do this |
 |---|---|
 | `NO GW` | Check the gateway light, then move the node nearer |
 | `KEY ERR` | Scan the node's label again in the app |
 | `LOW BAT` | Fit a new cell before joining |
+| `E01` | The sensor is not found: return the node, do not open it |
+| `RETRY 5/5` | The broker did not answer: check the gateway's Ethernet, then call support |
 
 ## Summary
 

@@ -21,13 +21,14 @@ py-doc poster --pdf                       # every poster, and a one-page PDF of 
 
 For a step-by-step introduction, read [Writing a poster](13_writing_posters.md) first. This chapter is the reference.
 
-The examples in `examples/poster/` show three kinds, and `examples/py-doc.yml` lists them under `posters:`:
+The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` lists them under `posters:`. Between them they use every setting and block in this chapter:
 
 | Example | What it shows |
 |---|---|
-| `poster.md` | Portrait in the default theme, with every kind of block, a trend, a chart, a timeline and a full-width section. A QR code is in the footer. Every setting is in its front matter |
-| `landscape.md` | Landscape in three columns, in the theme of a made-up company. The words are in the Markdown and the look (orientation, theme, header, footer) is in `py-doc.yml` |
-| `release.md` | The dark theme, a chart with two series, a vertical timeline, a callout and a `{{version}}` variable |
+| `poster.md` | Portrait A1 in the default theme: a picture, a Mermaid diagram, bar and line charts, segments, flow, lanes and `lcd` screens. Also a timeline, a JSON code block and a full-width section. A QR code is in the footer. Every setting is in its front matter |
+| `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a QR block and an included table. The words are in the Markdown and the look (orientation, theme, header, footer) is in `py-doc.yml` |
+| `release.md` | Portrait A3 in the dark theme: a column chart with two series, a Mermaid sequence with notes, title cards, a vertical timeline, callouts, references and a `{{version}}` variable |
+| `reliability.md` | Portrait A0 in the print theme, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, plain cards, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
 
 ## Settings and where they go
 
@@ -59,7 +60,7 @@ posters:
       right: Field engineering
       qr: https://example.com/commissioning
       qr-label: The full checklist
-      logos: [brand/partner.png]
+      logos: [brand/partner.svg]
     variables: {version: "2.1"}
     conditions: {internal: false}
 ```

@@ -6,7 +6,7 @@ document_number: SN-PO-003
 footer:
   left: Firmware {{version}}
   version: "{{version}}"
-  right: Example dark poster, `py-doc poster poster/release.md`
+  right: Support, support.example.com/sn100
 variables:
   version: "2.1"
 theme: dark
@@ -21,6 +21,7 @@ width: 1100
 | 5.7 years | Battery life | +14 % | |
 | 4 s | Typical join | -7 s | good |
 | 2 | Firmware copies kept | +1 | |
+| 0 | Failed updates in the pilot | -3 | good |
 
 ## Abstract
 
@@ -54,7 +55,43 @@ Roll back | A failed self-test returns to the old copy | amber
 Report | The result goes to the broker either way | navy
 ```
 
-## 4. Upgrading
+```mermaid
+sequenceDiagram
+  participant B as Broker
+  participant N as Node
+  B->>N: Offer 2.1, 412 KB in 1 KB blocks
+  Note right of N: Write the spare copy, check the hash
+  Note right of N: Restart into 2.1, self-test
+  alt Self-test passes
+    N->>B: Running 2.1
+  else Self-test fails
+    Note right of N: Restart into 2.0
+    N->>B: Update failed, still 2.0
+  end
+```
+
+Fig. 1 An update over the air. The node checks the hash of the spare copy, restarts into it and tests itself, so it is never left without working firmware.
+
+## 4. What changed
+
+```cards cols=1
+Added | Change-only reporting, with a threshold of 0.1 °C and 1 % RH by default (SN-412)
+Added | Two firmware copies and a self-test after every update (SN-388)
+Changed | The node tries its last gateway's channel first, then scans 3 channels, not 8 (SN-405)
+Fixed | A node no longer stops reporting after 49.7 days of uptime (SN-397)
+Fixed | The display no longer shows LINK LOST while the broker is still connecting (SN-401)
+```
+
+## 5. Compatibility
+
+| Part | Needs |
+|---|---|
+| Gateway firmware | 1.5 or later, for change-only reporting |
+| Broker | Any MQTT 3.1.1 or 5 broker |
+| SN Install app | 3.4 or later, to show the firmware copy |
+| Hardware | Every SN-100, revision B and C |
+
+## 6. Upgrading
 
 | From | Do this |
 |---|---|
@@ -68,6 +105,14 @@ Report | The result goes to the broker either way | navy
 15 May | Every site | Over the air, overnight
 1 June | 2.0 retired | No more 2.0 updates
 ```
+
+## 7. Known issues
+
+> [!CAUTION]
+> A node on a gateway older than 1.5 still sends every reading, as 2.0 did. Update the gateway first (SN-418).
+
+> [!NOTE]
+> Readings sent while a node restarts into the new copy are kept and sent afterwards, so no reading is lost.
 
 ## Summary
 

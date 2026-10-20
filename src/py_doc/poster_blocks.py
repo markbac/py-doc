@@ -26,6 +26,10 @@ from py_doc.poster_themes import Theme
 logger = logging.getLogger(__name__)
 
 MD = MarkdownIt("commonmark").enable("table")
+_validate_link = MD.validateLink
+# markdown-it allows only GIF, PNG, JPEG and WebP data addresses. An SVG picture is embedded as one too, and
+# shown in an <img>, where it cannot run scripts.
+MD.validateLink = lambda url: url.strip().lower().startswith("data:image/svg+xml;") or _validate_link(url)
 CHART_KINDS = ("column", "bar", "line")
 SERIES_COLOURS = ("secondary", "accent", "primary", "good", "bad", "muted")
 
