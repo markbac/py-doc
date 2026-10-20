@@ -1,10 +1,17 @@
 version: 2
+# Grouped: one PR per ecosystem instead of one per package, so CI runs once.
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
   - package-ecosystem: pip
     directory: /
     schedule:
       interval: monthly
+    groups:
+      pip:
+        patterns: ["*"]

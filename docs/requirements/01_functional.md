@@ -18,9 +18,9 @@ title: Functional requirements
 | FR-008 | `py-doc migrate` shall turn legacy `createdocs` build files into one `py-doc.yml`, report what has no equivalent, and never change or delete the originals. | Should | Met |
 | FR-009 | The configuration shall support collections of sources and bundles of documents. | Could | Met: `collections` of source files and `bundles` of documents, built beside the documents |
 | FR-010 | The configuration shall support content generators that run before the build. | Could | Met: `content.generators` with eleven built-in types and an entry point for more, run by `py-doc generate`, `build` and `site` |
-| FR-011 | `py-doc build` shall run the generators, lint (on request), the documents and bundles, the site (on request) and a check that every output was written, stop at a failed step, and record the steps in the build report. | Should | Met |
+| FR-011 | `py-doc build` shall run the generators, lint (on request), the documents and bundles, the site (on request) and a check that every output was written. It shall stop at a failed step, and record the steps in the build report. | Should | Met |
 | FR-012 | `py-doc check` shall find missing sources, templates and site projects and the lint errors of a project without building it. | Should | Met |
-| FR-013 | The reference documentation of an API shall be generated from its OpenAPI or AsyncAPI description with the standard tools of each (Redocly and Widdershins, the AsyncAPI generator), checked first, as Markdown for every output and as a standalone HTML page. | Should | Met |
+| FR-013 | The reference documentation of an API shall be generated from its OpenAPI or AsyncAPI description with the standard tools of each (Redocly and Widdershins, the AsyncAPI generator). The description shall be checked first, and the result shall be Markdown for every output and a standalone HTML page. | Should | Met |
 
 ## Writing
 
