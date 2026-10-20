@@ -79,6 +79,16 @@ site:                          # a web site of the documents: see the web sites 
   engine: mkdocs
   dir: site
 
+poster:                        # settings for every poster: see the posters chapter
+  theme: brand/poster-theme.yml
+  logo: brand/logo.svg
+
+posters:                       # HTML posters that `py-doc poster` builds
+  launch:
+    source: posters/launch.md
+    orientation: landscape
+    footer: {qr: "https://example.com/launch"}
+
 lint:
   exclude: [drafts]
   rules:
@@ -101,6 +111,7 @@ lint:
 - **Lint** settings extend the built-in glossary, phrases and allowed acronyms. The [linting chapter](07_lint.md) has every setting.
 - **C4**: `c4.cli`, `c4.image` and `c4.port` say how Structurizr runs. See the [C4 chapter](06_c4.md).
 - **Reports**: `reports.path` writes the JSON build report of every build.
+- **Posters**: `posters` lists the posters `py-doc poster` builds, each with its `source`, `output` and settings, and `poster` holds settings for every poster, such as the company colours and logo. See the [posters chapter](12_posters.md).
 - **Collections** name sets of source files: a list of files and patterns such as `docs/guide/*.md` or `docs/**/*.md`. A document takes one in with `{collection: name}`, which can carry `heading_offset` and `page_break`. The same file can be in several collections and documents.
 - **Bundles** build several documents as one output, beside their own outputs. A bundle lists its `documents` and can set the same properties, `outputs`, `variables` and `conditions` as a document. Its own properties come first, then the first document's front matter. Each document after the first starts on a new page. `py-doc build handbook` builds one bundle. A bundle is not on the site unless `site.documents` names it.
 - **Content generators** (`content.generators`) write Markdown files from other sources before the build, and **build** settings (`build.lint`, `build.lint_report`, `build.site`, `build.generate`) say what `py-doc build` does around the documents. Both are in [Generators, the build pipeline and analysis](11_pipeline.md).
@@ -108,8 +119,10 @@ lint:
 ## Building
 
 ```bash
-py-doc build                      # every document
+py-doc build                      # every document, then every poster
 py-doc build c4-guide -f pptx     # one document, one format
+py-doc build launch               # one poster, by its name under posters:
+py-doc build -f poster            # only the posters
 py-doc build --var version=2.1 --condition internal=true
 py-doc build --keep-going         # list every broken diagram, not just the first
 py-doc build --lint --site        # generate, lint, build the documents, then the site

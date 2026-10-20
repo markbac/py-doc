@@ -19,6 +19,7 @@ title: Traceability
 | FR-080 to FR-086, QR-081 | `c4/` | `test_c4.py` |
 | FR-100 to FR-106 | `lint/`, `markdown/` | `test_lint.py`, `test_lint_cli.py`, `test_structure.py`, `test_vale.py`, `test_markdownlint.py`, `test_markdown_ast.py` |
 | FR-120 to FR-127, QR-082 | `site/`, `pandoc/resources/site.lua` | `test_site.py` |
+| FR-130 to FR-139 | `poster.py`, `poster_blocks.py`, `poster_settings.py`, `poster_themes.py`, `poster_cli.py`, `config.py`, `app.py`, `diagrams/tools/poster_pdf.js` | `test_poster.py` |
 | FR-140 to FR-143, QR-040 to QR-043 | `runtime/`, `tools_cli.py` | `test_runtime.py`, `test_image.py`, `test_setup.py`, `test_doctor.py`, `test_platform.py` |
 | QR-102 | `cli.py`, `slides_cli.py`, `pydoc2docx`, `pydoc2slides`, `pydoclint` | `test_compat.py` |
 | QR-123 | `_logging.py` | `test_logging.py`, `test_logging_policy.py` |
@@ -46,6 +47,11 @@ The issues of the repository, as reviewed on 18 October 2026, and the requiremen
 | #44 | Front matter and document metadata | FR-005 | Done: front matter reaches every format, and the site pages carry the description, number, version and status |
 | #47 | Machine-readable lint and build output | FR-046, FR-104 | Done: lint output as text, CSV, GitHub annotations, JSON and SARIF, and the JSON build report |
 | #48 | Site navigation from document metadata | FR-122 | Done: navigation from the documents, their titles and order, `site.groups`, and a hand-made navigation kept |
+| #149 | HTML posters from Markdown: py-doc poster, themes and orientation | FR-130 to FR-135 | Done: `py-doc poster`, portrait and landscape, columns, built-in and file themes, examples |
+| #150 | Poster: full-width sections | FR-137 | Done: `{.wide}` on a section heading, and `{colour=}` for its heading bar |
+| #151 | Poster: callout types, timeline, trend stats and references | FR-136, FR-137 | Done: callouts in both spellings, `timeline`, trends in `## Stats`, `## References`, and `chart` |
+| #152 | Poster: QR code and partner logos in the footer | FR-137 | Done: `footer.qr`, `footer.logos`, and a `qr` block |
+| #153 | Poster: embed theme fonts so a poster looks the same offline | FR-133 | Open |
 
 ## Closed issues
 

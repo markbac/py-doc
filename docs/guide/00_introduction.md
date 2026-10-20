@@ -31,6 +31,7 @@ This guide is for the people who write and build documentation with py-doc. The 
 | `py-doc diff` | Compares two versions of documents section by section |
 | `py-doc c4` | Checks, exports, draws and edits Structurizr workspaces |
 | `py-doc site` | Makes and builds a web site of the documents with MkDocs or Astro + Starlight |
+| `py-doc poster` | Builds self-contained HTML posters from Markdown, and prints them to PDF |
 | `py-doc import` | Converts a Word document or a PowerPoint deck to Markdown |
 | `py-doc template` | Checks and lists the styles of a Word or PowerPoint template |
 | `py-doc tools`, `doctor`, `setup` | Builds and checks the tool container, and installs Docker Engine |
@@ -51,6 +52,10 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 1. [Reference](09_reference.md): the Python API, exit statuses and troubleshooting.
 1. [Legacy build files](10_legacy.md): `createdocs` build files, new documents, document numbers and migration.
 1. [Generators, the build pipeline and analysis](11_pipeline.md): content generators, what `py-doc build` runs, and `check`, `stats` and `diff`.
+1. [Posters](12_posters.md): every setting, block and theme of `py-doc poster`.
+1. [Writing a poster](13_writing_posters.md): a poster from a blank file to a printed page.
+1. [Writing a document](14_writing_documents.md): a technical document from an outline to a reviewed Word, PDF or HTML file.
+1. [Writing a slide deck](15_writing_slides.md): a PowerPoint deck in Markdown, with notes, columns and diagrams.
 
 ## The examples
 

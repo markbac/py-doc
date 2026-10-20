@@ -124,8 +124,22 @@ class TestRegistry:
     def test_mermaid_is_wider_on_a_landscape_page(self):
         portrait = BY_FENCE["mermaid"].commands(self.job())[0]
         landscape = BY_FENCE["mermaid"].commands(self.job(landscape=True))[0]
-        assert portrait[portrait.index("--width") + 1] == "1200" and landscape[landscape.index("--width") + 1] == "1800"
+        assert portrait[portrait.index("--size") + 1] == "1200" and landscape[landscape.index("--size") + 1] == "1800"
         assert "/etc/py-doc/puppeteer.json" in portrait
+
+    def test_mermaid_uses_the_mermaid_cli_12_options(self):
+        """mermaid-cli 12 has no --width or --height: --size caps the longer side, --scale sets the density."""
+        png = BY_FENCE["mermaid"].commands(self.job("png"))[0]
+        svg = BY_FENCE["mermaid"].commands(self.job("svg"))[0]
+        assert "--width" not in png + svg and "--height" not in png + svg and "-w" not in png + svg
+        assert png[png.index("--scale") + 1] == "2" and "--scale" not in svg
+        assert svg[svg.index("--size") + 1] == "1200"
+
+    def test_mermaid_keeps_a_small_diagram_at_its_natural_size(self):
+        """With useMaxWidth on, mermaid-cli 12 stretches every diagram to --size; off, it only shrinks a larger one."""
+        config = json.loads((TOOLS / "mermaid.json").read_text(encoding="utf-8"))
+        for kind in ("flowchart", "sequence", "class", "state", "er", "gantt", "journey", "pie", "mindmap", "timeline"):
+            assert config[kind]["useMaxWidth"] is False, kind
 
     def test_plantuml_only_caches_diagrams_without_includes(self):
         assert BY_FENCE["plantuml"].cacheable("A -> B") and not BY_FENCE["plantuml"].cacheable("!include x.puml")
@@ -327,7 +341,7 @@ class TestOtherTools:
         stub(tmp_path, monkeypatch, "mmdc", PNG_STUB + f"open(sys.argv[sys.argv.index('-o') + 1], 'wb').write({png_bytes!r})")
         text = "```mermaid\ngraph TD;A-->B\n```\n\n[[LANDSCAPE]]\n\n```mermaid\ngraph TD;A-->C\n```\n\n[[PORTRAIT]]\n\n```mermaid\ngraph TD;A-->D\n```\n"
         render_parts(part(tmp_path, text), "docx", runtime)
-        widths = [c["argv"][c["argv"].index("--width") + 1] for c in map(json.loads, (tmp_path / "stub.log").read_text(encoding="utf-8").splitlines())]
+        widths = [c["argv"][c["argv"].index("--size") + 1] for c in map(json.loads, (tmp_path / "stub.log").read_text(encoding="utf-8").splitlines())]
         assert widths == ["1200", "1800", "1200"]
 
     def test_the_container_runs_diagram_tools_without_a_network(self, tmp_path, monkeypatch):

@@ -4,6 +4,8 @@ title: Writing
 
 # Writing
 
+This chapter is the reference for the Markdown py-doc reads. For a walk through writing one from a blank file, read [Writing a document](14_writing_documents.md), [Writing a slide deck](15_writing_slides.md) or [Writing a poster](13_writing_posters.md).
+
 Pandoc reads the Markdown: its own flavour, with fenced divs, raw HTML, table captions, strikethrough and task lists. Footnotes, definition lists, maths and the rest of pandoc Markdown work too. py-doc adds front matter, callouts, markers, includes, conditions, variables and diagrams.
 
 ## Supported Markdown
@@ -100,4 +102,18 @@ Alice -> Bob : hello
 - **A broken diagram stops the build** with the file, the line and the tool's own message, and no output file is written. `py-doc build --keep-going` draws every diagram first and lists all the failures together.
 - **Pictures are cached** in your user cache folder (`PY_DOC_CACHE` overrides it), keyed by the diagram text, the format and the tool image, so an unchanged diagram is not drawn again. A PlantUML diagram with `!include` is always drawn, because the included file can change on its own.
 - **PlantUML includes** are looked up in the folder of the Markdown file, which is the only source folder the tool can read.
+- **Mermaid** is version 12, drawn by mermaid-cli 12. A diagram is drawn at its natural size, and only one wider or taller than the page (1200 pixels, or 1800 after `[[LANDSCAPE]]`) is shrunk to fit.
+- **Mermaid 12 looks different** from Mermaid 11: flowcharts, class, state and ER diagrams are laid out with ELK and drawn in the `neo` look. To keep the Mermaid 11 layout and look for one diagram, start it with front matter:
+
+    ```markdown
+    ---
+    config:
+      layout: dagre
+      look: classic
+    ---
+    flowchart LR
+      A --> B
+    ```
+
+    Give settings in front matter, not in a `%%{init: ...}%%` line. Mermaid ignores the whole init line when a value in it has a single quote, such as a font list.
 - **Pictures** in Markdown are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown. `![](images/a.png){width=50%}` makes a picture that share of the text width, in Word too, where py-doc works it out from the template's page and margins.

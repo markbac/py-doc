@@ -44,7 +44,8 @@ RUN sh /tmp/build/fetch.sh pandoc /tmp/pandoc.deb \
  && rm -f /tmp/pandoc.deb /tmp/vale.tar.gz /tmp/structurizr-cli.zip /tmp/node.tar.xz
 
 # Python and Node diagram and API documentation tools, at the versions pinned beside this file.
-# --legacy-peer-deps: mermaid-cli 11.12.0 declares a peer of puppeteer ^23, but the image pins puppeteer 24.
+# mermaid-cli 12 needs Node 22.13 or later and puppeteer 25. package.json pins the Mermaid it draws with in
+# "overrides", as mermaid-cli asks for ^12.
 # allowScripts in package.json denies every dependency install script (npm 11 runs none it has not been told about):
 # canvas loads without its node-gyp rebuild, puppeteer's would download a Chrome the image does not use, and the
 # rest delete leftover files, print a banner or send usage telemetry.
@@ -52,7 +53,7 @@ RUN python3 -m venv /opt/venv \
  && /opt/venv/bin/pip install --no-cache-dir -r /tmp/build/requirements.txt \
  && mkdir -p /opt/node /etc/py-doc \
  && cp /tmp/build/package.json /opt/node/package.json \
- && cd /opt/node && npm install --omit=dev --legacy-peer-deps --no-audit --no-fund \
+ && cd /opt/node && npm install --omit=dev --no-audit --no-fund \
  && cp /tmp/build/puppeteer.json /etc/py-doc/puppeteer.json \
  && cp /tmp/build/export-diagrams.js /opt/node/export-diagrams.js \
  && cp /tmp/build/asyncapi-docs.js /opt/node/asyncapi-docs.js \

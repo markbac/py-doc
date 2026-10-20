@@ -25,6 +25,7 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | `py-doc diff` | Compare two versions of documents section by section, or against a Git revision |
 | `py-doc c4` | Check, export, draw and edit Structurizr workspaces (`c4 up` opens the live editor) |
 | `py-doc site` | Make and build a web site of the documents with MkDocs or Astro + Starlight |
+| `py-doc poster` | Build self-contained HTML posters from Markdown, and print them to PDF |
 | `py-doc import` | Convert a Word document or a PowerPoint deck to Markdown |
 | `py-doc template` | Check and list the styles of a Word or PowerPoint template |
 | `py-doc tools`, `doctor`, `setup` | Build and check the tool container, and install Docker Engine |
@@ -60,7 +61,7 @@ py-doc site build                           # site/build/index.html
 
 py-doc documents itself with py-doc. The sources are in [`docs/`](docs), and the [`py-doc.yml`](py-doc.yml) at the root of this repository builds them: `py-doc build` for Word, HTML and PDF, `py-doc site build` for the web site.
 
-- **User guide**: [introduction](docs/guide/00_introduction.md), [installation](docs/guide/01_install.md), [projects and `py-doc.yml`](docs/guide/02_projects.md), [writing](docs/guide/03_writing.md), [outputs and templates](docs/guide/04_outputs.md), [importing](docs/guide/05_import.md), [C4 architecture](docs/guide/06_c4.md), [linting](docs/guide/07_lint.md), [web sites](docs/guide/08_sites.md), [reference](docs/guide/09_reference.md), [legacy build files and document numbers](docs/guide/10_legacy.md), [generators, the build pipeline and analysis](docs/guide/11_pipeline.md).
+- **User guide**: [introduction](docs/guide/00_introduction.md), [installation](docs/guide/01_install.md), [projects and `py-doc.yml`](docs/guide/02_projects.md), [writing](docs/guide/03_writing.md), [outputs and templates](docs/guide/04_outputs.md), [importing](docs/guide/05_import.md), [C4 architecture](docs/guide/06_c4.md), [linting](docs/guide/07_lint.md), [web sites](docs/guide/08_sites.md), [reference](docs/guide/09_reference.md), [legacy build files and document numbers](docs/guide/10_legacy.md), [generators, the build pipeline and analysis](docs/guide/11_pipeline.md), [posters](docs/guide/12_posters.md), [writing a poster](docs/guide/13_writing_posters.md), [writing a document](docs/guide/14_writing_documents.md), [writing a slide deck](docs/guide/15_writing_slides.md).
 - **[Requirements](docs/requirements/00_introduction.md)**: what py-doc must do and how well, with the status of every requirement and the open issues.
 - **[Architecture](docs/architecture/00_introduction.md)**: how py-doc is built, with C4 chapters generated from [its Structurizr model](docs/architecture/workspace.dsl), and the decisions behind it.
 - **[Examples](examples/README.md)**: a small project that uses every feature, with a command for each output.
@@ -93,7 +94,8 @@ src/
 │   ├── generators/       # content generators and py-doc generate
 │   ├── analysis/         # py-doc stats, check and diff
 │   ├── migrate.py        # createdocs to py-doc.yml
-│   └── report.py         # the JSON build report
+│   ├── report.py         # the JSON build report
+│   └── poster.py         # py-doc poster: Markdown to an HTML poster
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/
 └── pydoclint/

@@ -13,6 +13,7 @@ from typing import Any
 
 import yaml
 
+from . import poster_settings
 from .files import DEFAULT_EXCLUDE_DIRS
 from .lint.config import ACRONYM_SCOPES, DEFAULT_ALLOWED_ACRONYMS, LintConfig, MarkdownlintSettings
 from .lint.structure import StructureRuleError, load_rules, parse_rules
@@ -171,6 +172,16 @@ class BuildSettings:
 
 
 @dataclass
+class PosterConfig:
+    """One poster under ``posters:``: its Markdown file, its page, and its own settings (see poster_settings)."""
+
+    name: str
+    source: Path
+    output: Path
+    settings: dict = field(default_factory=dict)
+
+
+@dataclass
 class ProjectConfig:
     root: Path
     name: str | None = None
@@ -184,6 +195,8 @@ class ProjectConfig:
     site: SiteConfig | None = None
     generators: list[GeneratorSpec] = field(default_factory=list)
     build: BuildSettings = field(default_factory=BuildSettings)
+    poster: dict = field(default_factory=dict)  # poster: the settings of every poster, paths resolved
+    posters: dict[str, PosterConfig] = field(default_factory=dict)
     reserved: dict[str, Any] = field(default_factory=dict)
 
     def output_path(self, document: DocumentConfig, fmt: str, version: str | None = None) -> Path:
@@ -278,7 +291,7 @@ def _path(root: Path, value: Any, where: str) -> Path:
 
 def parse_config(data: Any, root: Path) -> ProjectConfig:
     top = _mapping(data, "the configuration")
-    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", "content", *RESERVED_SECTIONS), "the top level")
+    _only(top, ("project", "documents", "outputs", "lint", "build", "runtime", "reports", "c4", "site", "collections", "bundles", "content", "poster", "posters", *RESERVED_SECTIONS), "the top level")
     config = ProjectConfig(root=root)
 
     project = _mapping(top.get("project", {}), "project")
@@ -316,12 +329,29 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
 
     if "site" in top:
         config.site = _parse_site(_mapping(top["site"] or {}, "site"), root, config)
+    try:
+        config.poster = poster_settings.layer(top.get("poster") or {}, root, "poster")
+        for name, raw in _mapping(top.get("posters") or {}, "posters").items():
+            config.posters[str(name)] = _parse_poster(str(name), raw, root)
+    except poster_settings.SettingsError as exc:
+        raise ConfigError(str(exc)) from None
 
     for name in RESERVED_SECTIONS:
         if name in top:
             config.reserved[name] = top[name]
             logger.warning(f"The '{name}' section is accepted but not used yet")
     return config
+
+
+def _parse_poster(name: str, raw: Any, root: Path) -> PosterConfig:
+    where = f"posters.{name}"
+    data = _mapping(raw, where)
+    if "source" not in data:
+        raise ConfigError(f"{where} needs a source: the Markdown file of the poster")
+    source = _path(root, data["source"], f"{where}.source")
+    output = _path(root, data["output"], f"{where}.output") if "output" in data else root / DEFAULT_OUTPUT_DIR / f"{name}.html"
+    rest = {key: value for key, value in data.items() if key not in poster_settings.ENTRY_KEYS}
+    return PosterConfig(name, source, output, poster_settings.layer(rest, root, where))
 
 
 def _parse_build(data: dict, root: Path) -> BuildSettings:

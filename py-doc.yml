@@ -31,6 +31,10 @@ documents:
       - docs/guide/09_reference.md
       - docs/guide/10_legacy.md
       - docs/guide/11_pipeline.md
+      - docs/guide/12_posters.md
+      - docs/guide/13_writing_posters.md
+      - docs/guide/14_writing_documents.md
+      - docs/guide/15_writing_slides.md
     outputs:
       docx: {toc: true}
       html: {toc: true}

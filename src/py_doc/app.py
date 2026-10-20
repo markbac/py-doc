@@ -32,6 +32,7 @@ from .generators.cli import run_generate
 from .import_cli import run_import
 from .init import run_init
 from .new import run_new
+from .poster_cli import run_poster
 from .site.cli import run_site
 from .template_cli import run_template
 from .tools_cli import run_doctor, run_setup, run_tools
@@ -54,6 +55,7 @@ _DELEGATES = {
     "check": ("Check a project without building it: py-doc.yml, sources, templates and lint", run_check),
     "stats": ("Count the words, headings, tables, pictures and links of documents", run_stats),
     "diff": ("Compare two versions of documents section by section", run_diff),
+    "poster": ("Build a self-contained HTML poster from a Markdown file", run_poster),
     "doctor": ("Check that the tool container works", run_doctor),
     "setup": ("Install Docker Engine for the tool runner", run_setup),
 }
@@ -62,13 +64,14 @@ _DELEGATES = {
 BUILD_EXAMPLES = """examples:
   py-doc build                               every document in the nearest py-doc.yml
   py-doc build guide -f docx                 only the guide, only as Word
+  py-doc build -f poster                     only the posters of py-doc.yml
   py-doc build --var version=2.1 --condition audience=staff
   py-doc build --legacy G460-TN-012.yaml     one legacy build file, without py-doc.yml
   py-doc build --lint --site                 generate, lint, build every document, then the site
   py-doc build --strict --lint-report lint.sarif     for CI: warnings fail, issues for code scanning
 
 The pipeline: check py-doc.yml, run content.generators, lint (build.lint or --lint), build the documents and
-bundles, build the site (build.site or --site), then check that every output was written."""
+bundles, build the posters, build the site (build.site or --site), then check that every output was written."""
 
 MIGRATE_EXAMPLES = """examples:
   py-doc migrate docs --check                report what would be migrated, write nothing
@@ -99,11 +102,14 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=BUILD_EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    build.add_argument("documents", nargs="*", metavar="DOCUMENT", help="Documents to build (default: all)")
+    build.add_argument("documents", nargs="*", metavar="DOCUMENT", help="Documents and posters to build (default: all)")
     source = build.add_mutually_exclusive_group()
     source.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
     source.add_argument("--legacy", metavar="FILE", help="Build from a legacy createdocs build file instead of py-doc.yml")
-    build.add_argument("-f", "--format", action="append", choices=sorted(FORMATS), help="Build only this format")
+    build.add_argument(
+        "-f", "--format", action="append", choices=[*sorted(FORMATS), "poster"],
+        help="Build only this format; poster builds only the posters",
+    )  # fmt: skip
     build.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
     build.add_argument(
         "--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a [[IF:]] condition"
@@ -195,12 +201,14 @@ def _build(args: argparse.Namespace) -> int:
     except ConfigError as exc:
         _error(str(exc))
         return 1
-    if not config.documents:
-        _error(f"{path} defines no documents")
+    if not config.documents and not config.posters:
+        _error(f"{path} defines no documents or posters")
         return 1
-    unknown = [name for name in args.documents if name not in config.documents]
+    unknown = [name for name in args.documents if name not in config.documents and name not in config.posters]
     if unknown:
-        _error(f"Unknown document(s): {', '.join(unknown)}. Defined: {', '.join(config.documents)}")
+        defined = ", ".join(config.documents) + (f"; posters: {', '.join(config.posters)}" if config.posters else "")
+        kinds = "document(s) or poster(s)" if config.posters else "document(s)"
+        _error(f"Unknown {kinds}: {', '.join(unknown)}. Defined: {defined}")
         return 1
 
     connected = functools.cache(lambda: connect(config.runtime))  # the container is only needed to run a tool
@@ -212,9 +220,14 @@ def _build(args: argparse.Namespace) -> int:
 
     report_path = Path(args.report).resolve() if args.report else config.report
     report = BuildReport(config.root, args.timestamps) if report_path else None
-    names = args.documents or list(config.documents)
+    names = [n for n in args.documents if n in config.documents] if args.documents else list(config.documents)
+    posters = [n for n in args.documents if n in config.posters] if args.documents else list(config.posters)
+    if args.format:  # -f poster is the posters' format; any other leaves them out
+        names = names if any(f != "poster" for f in args.format) else []
+        posters = posters if "poster" in args.format else []
+        args.format = [f for f in args.format if f != "poster"] or None
     with report.recording() if report else contextlib.nullcontext():
-        status = _pipeline(args, config, names, runtime, report)
+        status = _pipeline(args, config, names, runtime, report, posters)
     if report:
         report.describe_runtime(used[-1] if used else None)
         try:
@@ -225,8 +238,8 @@ def _build(args: argparse.Namespace) -> int:
     return status
 
 
-def _pipeline(args: argparse.Namespace, config, names: list[str], runtime, report: BuildReport | None) -> int:
-    """Generate, lint, build the documents and bundles, build the site, then check the outputs.
+def _pipeline(args: argparse.Namespace, config, names: list[str], runtime, report: BuildReport | None, posters=()) -> int:
+    """Generate, lint, build the documents and bundles, the posters and the site, then check the outputs.
 
     A failed stage stops the ones after it, except that every document is tried. Returns the exit status.
     """
@@ -285,11 +298,20 @@ def _pipeline(args: argparse.Namespace, config, names: list[str], runtime, repor
     if len(names) > 1 or failed:
         summary = f"{len(names) - failed} of {len(names)} document(s) built" + (f", {failed} failed" if failed else "")
         (logger.error if failed else logger.info)(summary)
-    step("documents", "failed" if failed else "ok", f"{len(names) - failed} of {len(names)} built")
+    if names or not posters:
+        step("documents", "failed" if failed else "ok", f"{len(names) - failed} of {len(names)} built")
     if failed:
         return status
 
-    # 4. the site, from the same sources
+    # 4. the posters, which can sum up the documents
+    if posters:
+        failed, files = _build_posters(args, config, posters, runtime, report)
+        written += files
+        step("posters", "failed" if failed else "ok", f"{len(posters) - failed} of {len(posters)} built")
+        if failed:
+            return failed
+
+    # 5. the site, from the same sources
     want_site = config.build.site if args.site is None else args.site
     if want_site:
         if config.site is None:
@@ -308,12 +330,40 @@ def _pipeline(args: argparse.Namespace, config, names: list[str], runtime, repor
             return exit_status(exc) if isinstance(exc, ConversionError) else 1
         step("site", "ok")
 
-    # 5. every output is there and not empty
+    # 6. every output is there and not empty
     missing = [path for path in written if not path.is_file() or path.stat().st_size == 0]
     for path in missing:
         _error(f"{_shown(path)} was not written, or is empty")
     step("verify", "failed" if missing else "ok", f"{len(written) - len(missing)} of {len(written)} output(s)")
     return 1 if missing else 0
+
+
+def _build_posters(args: argparse.Namespace, config, names: list[str], runtime, report: BuildReport | None) -> tuple[int, list[Path]]:
+    """Build each poster, and its PDF when it asks for one. One failure does not stop the others.
+
+    Returns the exit status (0 when every poster was built) and the files written.
+    """
+    from .poster import write_poster
+    from .poster_settings import layer, merge
+
+    overrides = layer({"variables": dict(args.var), "conditions": _conditions(args.condition)}, Path.cwd(), "the command line")
+    status, written = 0, []
+    for name in names:
+        poster = config.posters[name]
+        try:
+            ctx, files = write_poster(poster.source, poster.output, runtime, merge(poster.settings, overrides), config.poster)
+        except (FileNotFoundError, ConversionError) as exc:
+            _error(f"{name}: {exc}")
+            status = max(status, exit_status(exc) if isinstance(exc, ConversionError) else 1)
+            if report:
+                report.failed(name, exc)
+            continue
+        for file in files:
+            logger.info(f"Wrote {_shown(file)}" + (f" ({ctx.n} diagram(s), {ctx.failed} not drawn)" if file.suffix == ".html" and ctx.n else ""))
+            if report:
+                report.output(name, "pdf" if file.suffix == ".pdf" else "html", file)
+        written += files
+    return status, written
 
 
 def _lint_sources(config, names: list[str], mode: str, output: Path | None, runtime) -> int:

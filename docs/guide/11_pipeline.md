@@ -80,14 +80,15 @@ Mermaid and PlantUML written in a fenced block need no generator: the build draw
 
 ## The build pipeline
 
-`py-doc build` runs these steps in order. A failed step stops the ones after it, except that every document is tried:
+`py-doc build` runs these steps in order. A failed step stops the ones after it, except that every document and every poster is tried:
 
 1. **Configuration**: `py-doc.yml` is read and checked.
 2. **Generators**: `content.generators` write their files. A build of named documents runs only the generators whose output is one of their sources. `--no-generate` or `build.generate: false` skips them.
 3. **Lint**: with `build.lint: on`, `--lint`, `build.lint: strict` or `--strict`, the sources of the documents being built are linted first. Files that generators write are left out, because the project's writing rules are for the files people write. An error (or, when strict, a warning) stops the build before anything is written. `--no-lint` skips it.
 4. **Documents and bundles**: every document named, or all, in every format asked for.
-5. **Site**: with `build.site: true` or `--site`, the pages are written and the site is built, every target of `site.targets`.
-6. **Outputs**: every file the build wrote is there and is not empty.
+5. **Posters**: every poster under `posters:` that is named, or all, and its PDF when it has `pdf: true`. `-f poster` builds only the posters, and any other `-f` leaves them out. See [Posters](12_posters.md).
+6. **Site**: with `build.site: true` or `--site`, the pages are written and the site is built, every target of `site.targets`.
+7. **Outputs**: every file the build wrote is there and is not empty.
 
 ```yaml
 build:
