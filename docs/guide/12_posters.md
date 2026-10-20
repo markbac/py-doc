@@ -77,7 +77,7 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 | `logo` | The theme's | The picture in the header |
 | `header` | `{align: centre, logo: left}` | `align`: `centre` or `left`. `logo`: `left`, `right` or `none` |
 | `footer` | Empty | `left`, `centre` and `right` text (Markdown, with `{{variables}}`), `logos` (a list of pictures), `qr` (an address or text), `qr-label`, and `document` and `version` (shown small under the footer) |
-| `document_number`, `version` | None | The document's number and version, shown small under the footer, unless `footer.document` or `footer.version` names others |
+| `document_number`, `version` | None | The document's number and version, shown small under the footer, unless `footer.document` or `footer.version` names others. `version: git` is the output of `git describe --tags --always`, as for a document |
 | `variables`, `conditions` | None | Values for `{{name}}` and `[[IF:]]`, as for documents |
 | `pdf` | `false` | `true` prints a one-page PDF beside the page, and a path prints it there. `--pdf` and `--no-pdf` win |
 | `embed_fonts` | `false` | `true` puts the theme's web fonts inside the page, so it and its PDF look the same offline. A list of subsets, such as `[latin, latin-ext]`, puts in only those. See [Fonts inside the page](#fonts-inside-the-page). `--embed-fonts` and `--no-embed-fonts` win |

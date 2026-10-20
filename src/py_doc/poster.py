@@ -21,6 +21,7 @@ import yaml
 
 from py_doc.diagrams.registry import PUPPETEER, TOOLS
 from py_doc.directives import Fence, expand
+from py_doc.naming import git_version
 from py_doc.pandoc.source import split_front_matter
 from py_doc.poster_blocks import MD, Ctx, PosterError, block_html, esc, inline, parse_opts, qr_svg
 from py_doc.poster_fonts import font_css
@@ -372,6 +373,12 @@ def read_settings(md_path, settings=None, defaults=None):
     except SettingsError as exc:
         raise PosterError(str(exc)) from None
     meta = merge(defaults, front_layer, settings)
+    footer = meta.get("footer") or {}
+    if "git" in (meta.get("version"), footer.get("version")):  # as a document's version: git describe
+        version = git_version(md_path.resolve().parent)
+        for place in (meta, footer):
+            if place.get("version") == "git":
+                place["version"] = version
     variables = meta.get("variables") or {}
     for key in ("title", "subtitle", "byline"):
         if key in meta:

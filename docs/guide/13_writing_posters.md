@@ -273,7 +273,7 @@ footer:
 
 The texts are Markdown and take `{{variables}}`. The QR code is drawn as SVG, so it scans from a printed page.
 
-`document` and `version` are shown in small type on a line under the footer, such as "SN-PO-001 · Version 2.1". So a printed poster can be traced to its source. Without them, the poster uses `document_number` and `version` from its front matter, the same properties a document has.
+`document` and `version` are shown in small type on a line under the footer, such as "SN-PO-001 · Version 2.1". So a printed poster can be traced to its source. Without them, the poster uses `document_number` and `version` from its front matter, the same properties a document has. `version: git` takes the version from Git, such as `v2.1-3-g1a2b3c4`, so a printed poster names the commit it came from.
 
 ## Make it fit
 

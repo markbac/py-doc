@@ -712,6 +712,23 @@ def test_the_document_number_and_version_of_the_front_matter_are_the_defaults(tm
     assert 'class="docinfo"' not in page
 
 
+
+def test_version_git_is_the_git_describe_of_the_poster_folder(tmp_path, drawn, monkeypatch):
+    asked = []
+    monkeypatch.setattr("py_doc.poster.git_version", lambda folder: asked.append(folder) or "v2.1-3-g1a2b3c4")
+    page, _ = build(write(tmp_path, "---\nversion: git\n---\n## A\n\nText.\n"), lambda: object())
+    assert '<div class="docinfo"><span>Version v2.1-3-g1a2b3c4</span></div>' in page
+    page, _ = build(write(tmp_path, "---\nfooter: {version: git}\n---\n## A\n\nText.\n"), lambda: object())
+    assert "Version v2.1-3-g1a2b3c4" in page
+    assert asked == [tmp_path.resolve()] * 2
+
+
+def test_version_git_outside_a_repository_is_an_error(tmp_path, drawn, monkeypatch):
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path.parent))
+    with pytest.raises(ConversionError, match="version: git needs a git repository"):
+        build(write(tmp_path, "---\nversion: git\n---\n## A\n\nText.\n"), lambda: object())
+
+
 # --- py-doc build ---------------------------------------------------------------------------------
 
 
