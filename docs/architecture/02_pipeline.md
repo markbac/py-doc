@@ -4,7 +4,7 @@ title: The build pipeline
 
 # The build pipeline
 
-`py-doc build` makes every output of a document in five steps. `py-doc docx` and `py-doc slides` run the same steps for a single file, and `py-doc site` runs the first three for each page.
+`py-doc build` makes every output of a document in five steps. `py-doc docx` and `py-doc slides` run the same steps for a single file, and `py-doc site` runs the first three for each page. Around the documents, `app.py` runs the project's generators first and its lint and site on request, as the last section describes.
 
 ```mermaid
 flowchart LR
@@ -45,3 +45,24 @@ A source with `structurizr:` is replaced by Markdown files before anything else 
 | `site.lua` | Admonitions or asides, figures as picture and caption, no repeated title | site pages |
 
 Word handles the markers itself after pandoc (`pandoc/docx_post.py`), because they become Word fields, sections and styles. `pandoc/docx_finish.py` merges the result into the template, fills the placeholders and applies the layout. `pandoc/pptx_finish.py` keeps embedded fonts, fills the version token and the footer, and warns about crowded slides. The finished file is moved to its output path, and the build report records it with its checksum.
+
+## Around the documents
+
+`py-doc build` runs the steps above for each document inside a pipeline of the whole project (`app.py`). A failed stage stops the stages after it, but every document is tried. Each stage is recorded in the build report as `ok`, `failed` or `skipped`.
+
+```mermaid
+flowchart LR
+  load[Load py-doc.yml] --> generate[Generators]
+  generate --> lint[Lint]
+  lint --> documents[Documents and bundles]
+  documents --> site[Site]
+  site --> verify[Check outputs]
+```
+
+- **Generators** (`generators/`): each entry of `content.generators` returns Markdown, written only when it changes. The built-in types are in `generators/builtin.py`, and others are found through the `py_doc.generators` entry point group, so the core depends on none of their tools. They run before anything reads the sources, because the files they write are sources.
+- **Lint** (`lint/`): with `build.lint` or `--lint`, the sources of the documents being built are linted before anything is written, and the issues can go to a SARIF, JSON or CSV file for CI (`lint/formats.py`).
+- **Documents and bundles**: a bundle is a document whose sources are those of its documents, so it takes the same path.
+- **Site** (`site/`): with `build.site` or `--site`, the pages are written and the site tool runs.
+- **Check outputs**: every file the build wrote is there and not empty.
+
+`py-doc check`, `py-doc stats` and `py-doc diff` (`analysis/`) read the same configuration and the same document model, and build nothing. The diff splits each version into sections by its top-level headings. It matches them by heading path, then by text, so a renamed or moved section is not mistaken for one removed and another added.

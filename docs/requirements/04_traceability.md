@@ -39,10 +39,10 @@ The issues of the repository, as reviewed on 18 October 2026, and the requiremen
 | #16 | MkDocs project integration and scaffolding | FR-120 to FR-124 | Done and closed: `py-doc site` with `engine: mkdocs` |
 | #17 | Astro + Starlight project integration and scaffolding | FR-120 to FR-124 | Done and closed: `py-doc site` with `engine: starlight` |
 | #18 | Configurable content generators | FR-010 | Done: `content.generators` with glossary, documents, toc, `adr-index`, requirements, `openapi`, `asyncapi`, `python-api`, diagram, command and python types, entry points for other packages, and `py-doc generate` |
-| #19 | Unified build pipeline and CI integration | FR-046, FR-104 | Done: `py-doc build` runs generators, lint, documents and bundles, the site and an output check, with steps in the JSON report and SARIF lint output |
+| #19 | Unified build pipeline and CI integration | FR-011, FR-046, FR-104 | Done: `py-doc build` runs generators, lint, documents and bundles, the site and an output check, with steps in the JSON report and SARIF lint output |
 | #41 | Documentation quality checks beyond current lint rules | FR-106 | Done: DOC005 to DOC013 (heading jumps, broken links, alt text, long sentences and headings, repeated headings, unclosed fences, required sections, terminology) and glossary checks |
 | #42 | py-doc init and project scaffolding | FR-006, FR-007 | Done. Can be closed |
-| #43 | Documentation analysis and semantic diff tools | | Done: `py-doc stats`, `py-doc check` and `py-doc diff` (by section, with Git revisions), beside `doctor` |
+| #43 | Documentation analysis and semantic diff tools | FR-012, FR-107, FR-108 | Done: `py-doc stats`, `py-doc check` and `py-doc diff` (by section, with Git revisions), beside `doctor` |
 | #44 | Front matter and document metadata | FR-005 | Done: front matter reaches every format, and the site pages carry the description, number, version and status |
 | #47 | Machine-readable lint and build output | FR-046, FR-104 | Done: lint output as text, CSV, GitHub annotations, JSON and SARIF, and the JSON build report |
 | #48 | Site navigation from document metadata | FR-122 | Done: navigation from the documents, their titles and order, `site.groups`, and a hand-made navigation kept |

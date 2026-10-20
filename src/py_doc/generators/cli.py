@@ -33,12 +33,12 @@ def run_generate(argv: list[str]) -> int:
     path = Path(args.config) if args.config else find_config(Path.cwd())
     if path is None:
         print("Error: No py-doc.yml found here or in a parent folder", file=sys.stderr)
-        return 2
+        return 1
     try:
         project = load_config(path)
     except ConfigError as exc:
         print(f"Error: {exc}", file=sys.stderr)
-        return 2
+        return 1
     if args.list:
         for spec in project.generators:
             print(f"{spec.name:<20} {spec.type:<14} {spec.output}")

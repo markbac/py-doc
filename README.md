@@ -15,10 +15,14 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 |---|---|
 | `py-doc init` | Start a project: `py-doc.yml`, a first document, and optionally a C4 model, templates and a site |
 | `py-doc new` | Start a legacy document, or number an existing Markdown file, from `doc-numbers.yml` at the repository root |
-| `py-doc build` | Build every document described in `py-doc.yml`, or one legacy `createdocs` file with `--legacy` |
+| `py-doc build` | Build every document described in `py-doc.yml` (generators, lint, documents, site), or one legacy `createdocs` file with `--legacy` |
 | `py-doc docx` | Convert Markdown to Word |
 | `py-doc slides` | Convert Markdown to PowerPoint |
-| `py-doc lint` | Check writing style, glossary terms, acronyms and project conventions |
+| `py-doc lint` | Check writing style, glossary terms, acronyms, structure, links and project conventions; text, CSV, GitHub, JSON or SARIF |
+| `py-doc check` | Check a project without building it: `py-doc.yml`, sources, templates, the site and lint |
+| `py-doc generate` | Write the Markdown that `content.generators` makes: glossaries, indexes, traceability, API references |
+| `py-doc stats` | Count the words, headings, tables, pictures and links of each document |
+| `py-doc diff` | Compare two versions of documents section by section, or against a Git revision |
 | `py-doc c4` | Check, export, draw and edit Structurizr workspaces (`c4 up` opens the live editor) |
 | `py-doc site` | Make and build a web site of the documents with MkDocs or Astro + Starlight |
 | `py-doc import` | Convert a Word document or a PowerPoint deck to Markdown |
@@ -46,7 +50,7 @@ Linux and Windows are supported. See [Installation](docs/guide/01_install.md) fo
 ```bash
 py-doc init my-docs --name "Pump Controller" --c4 --site mkdocs -y
 cd my-docs
-py-doc lint docs                            # check the writing
+py-doc check                                # the project and the writing, without building
 py-doc build                                # build/overview.docx, build/architecture.docx, ...
 py-doc c4 up architecture/workspace.dsl     # arrange the C4 views in Structurizr; Ctrl+C stops it
 py-doc site build                           # site/build/index.html
@@ -56,7 +60,7 @@ py-doc site build                           # site/build/index.html
 
 py-doc documents itself with py-doc. The sources are in [`docs/`](docs), and the [`py-doc.yml`](py-doc.yml) at the root of this repository builds them: `py-doc build` for Word, HTML and PDF, `py-doc site build` for the web site.
 
-- **User guide**: [introduction](docs/guide/00_introduction.md), [installation](docs/guide/01_install.md), [projects and `py-doc.yml`](docs/guide/02_projects.md), [writing](docs/guide/03_writing.md), [outputs and templates](docs/guide/04_outputs.md), [importing](docs/guide/05_import.md), [C4 architecture](docs/guide/06_c4.md), [linting](docs/guide/07_lint.md), [web sites](docs/guide/08_sites.md), [reference](docs/guide/09_reference.md), [legacy build files and document numbers](docs/guide/10_legacy.md).
+- **User guide**: [introduction](docs/guide/00_introduction.md), [installation](docs/guide/01_install.md), [projects and `py-doc.yml`](docs/guide/02_projects.md), [writing](docs/guide/03_writing.md), [outputs and templates](docs/guide/04_outputs.md), [importing](docs/guide/05_import.md), [C4 architecture](docs/guide/06_c4.md), [linting](docs/guide/07_lint.md), [web sites](docs/guide/08_sites.md), [reference](docs/guide/09_reference.md), [legacy build files and document numbers](docs/guide/10_legacy.md), [generators, the build pipeline and analysis](docs/guide/11_pipeline.md).
 - **[Requirements](docs/requirements/00_introduction.md)**: what py-doc must do and how well, with the status of every requirement and the open issues.
 - **[Architecture](docs/architecture/00_introduction.md)**: how py-doc is built, with C4 chapters generated from [its Structurizr model](docs/architecture/workspace.dsl), and the decisions behind it.
 - **[Examples](examples/README.md)**: a small project that uses every feature, with a command for each output.
@@ -85,7 +89,9 @@ src/
 │   ├── pptx_import.py    # PowerPoint to Markdown
 │   ├── runtime/          # the tool container: image, runner, doctor, setup
 │   ├── markdown/         # parser and front matter, used by the linter
-│   ├── lint/             # rules, structure rules, markdownlint, Vale
+│   ├── lint/             # rules, structure rules, markdownlint, Vale, JSON and SARIF output
+│   ├── generators/       # content generators and py-doc generate
+│   ├── analysis/         # py-doc stats, check and diff
 │   ├── migrate.py        # createdocs to py-doc.yml
 │   └── report.py         # the JSON build report
 ├── pydoc2docx/           # old import names, kept as aliases
