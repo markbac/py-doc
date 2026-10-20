@@ -40,7 +40,10 @@ def build_parser() -> argparse.ArgumentParser:
     init = actions.add_parser("init", help="Make the site project (mkdocs.yml, or an Astro + Starlight project) if it is not there")
     common(init)
     init.add_argument("--engine", choices=SITE_ENGINES, help="The site generator (default: site.engine in py-doc.yml)")
-    for name, text in (("generate", "Write the pages and the navigation"), ("build", "Write the pages, then build the site in the tool container")):
+    for name, text in (
+        ("generate", "Run content.generators, then write the pages and the navigation"),
+        ("build", "Run content.generators, write the pages, then build the site in the tool container"),
+    ):
         sub = actions.add_parser(name, help=text)
         common(sub)
         sub.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")

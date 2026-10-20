@@ -45,7 +45,7 @@ _DELEGATES = {
     "new": ("Start a document here in the legacy format, with the next number from doc-numbers.yml", run_new),
     "docx": ("Convert Markdown to Word (.docx)", run_docx),
     "slides": ("Convert Markdown to PowerPoint (.pptx)", run_slides),
-    "lint": ("Check Markdown for writing style and glossary use", run_lint),
+    "lint": ("Check the writing, structure and links of Markdown", run_lint),
     "tools": ("Build and inspect the tool container image", run_tools),
     "c4": ("Check, export and draw Structurizr workspaces", run_c4),
     "import": ("Convert a Word (.docx) or PowerPoint (.pptx) file to Markdown", run_import),

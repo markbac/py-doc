@@ -49,7 +49,7 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
     """Run the linter and return the exit status: 0 clean, 1 issues found, 2 errors."""
     parser = argparse.ArgumentParser(
         prog="py-doclint" if legacy else "py-doc lint",
-        description="Check Markdown for writing style, glossary terms, acronyms and project conventions",
+        description="Check Markdown for writing style, glossary terms, acronyms, structure, links and project conventions",
         epilog=EXAMPLES,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -166,7 +166,7 @@ def _vale_command(args: argparse.Namespace, linter: DocLinter) -> int:
         return 0
     runner = linter.vale_runner(base)
     if args.check_engines:
-        print("builtin: available (DOC001 to DOC009)")
+        print("builtin: available (DOC001 to DOC013)")
         if runner is None:
             print("vale: not used (off, or not installed)")
             print(f"  {vale.INSTALL_HELP}")

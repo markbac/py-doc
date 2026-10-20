@@ -34,8 +34,8 @@ Failures raise `py_doc.ConversionError` (unreadable or unsupported input, bad te
 | Status | Meaning |
 |---|---|
 | `0` | Done, or only info and (without `--strict`) warnings reported |
-| `1` | A document, file, diagram or tool failed, the configuration is wrong, an output exists and was not replaced, or lint found an error (or a warning with `--strict`) |
-| `2` | The environment: no Docker, no image, an unsupported platform, a file that is not Word or PowerPoint, or a lint target that is missing or unreadable |
+| `1` | A document, file, diagram, generator or tool failed, or the configuration is wrong. Or an output exists and was not replaced, lint or `check` found an error (or a warning with `--strict`), or `diff --exit-code` found a change |
+| `2` | The environment: no Docker, no image, or an unsupported platform. Or a file that is not Word or PowerPoint, a lint, `stats` or `diff` target that is missing or unreadable, or a Git command that failed |
 
 ## Old names
 

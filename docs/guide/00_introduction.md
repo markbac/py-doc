@@ -21,12 +21,17 @@ This guide is for the people who write and build documentation with py-doc. The 
 |---|---|
 | `py-doc init` | Starts a project: `py-doc.yml`, a first document, and optionally a C4 model, templates and a site |
 | `py-doc new` | Starts a legacy document, or numbers an existing Markdown file, from `doc-numbers.yml` at the repository root |
-| `py-doc build` | Builds every document described in `py-doc.yml` |
+| `py-doc build` | Builds every document described in `py-doc.yml`, after its generators and, on request, lint, and then the site |
 | `py-doc docx` | Converts Markdown files to Word |
 | `py-doc slides` | Converts Markdown files to PowerPoint |
-| `py-doc lint` | Checks writing style, glossary terms, acronyms and project conventions |
+| `py-doc lint` | Checks writing style, glossary terms, acronyms, structure, links and project conventions |
+| `py-doc check` | Checks a project without building it |
+| `py-doc generate` | Writes the Markdown that the content generators make |
+| `py-doc stats` | Counts the words, headings, tables, pictures and links of each document |
+| `py-doc diff` | Compares two versions of documents section by section |
 | `py-doc c4` | Checks, exports, draws and edits Structurizr workspaces |
 | `py-doc site` | Makes and builds a web site of the documents with MkDocs or Astro + Starlight |
+| `py-doc poster` | Builds self-contained HTML posters from Markdown, and prints them to PDF |
 | `py-doc import` | Converts a Word document or a PowerPoint deck to Markdown |
 | `py-doc template` | Checks and lists the styles of a Word or PowerPoint template |
 | `py-doc tools`, `doctor`, `setup` | Builds and checks the tool container, and installs Docker Engine |
@@ -46,6 +51,9 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 1. [Web sites](08_sites.md): MkDocs and Astro + Starlight.
 1. [Reference](09_reference.md): the Python API, exit statuses and troubleshooting.
 1. [Legacy build files](10_legacy.md): `createdocs` build files, new documents, document numbers and migration.
+1. [Generators, the build pipeline and analysis](11_pipeline.md): content generators, what `py-doc build` runs, and `check`, `stats` and `diff`.
+1. [Posters](12_posters.md): every setting, block and theme of `py-doc poster`.
+1. [Writing a poster](13_writing_posters.md): a poster from a blank file to a printed page.
 
 ## The examples
 

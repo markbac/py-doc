@@ -199,7 +199,7 @@ def run_init(argv: Sequence[str] | None = None) -> int:
 CONFIG = """\
 # py-doc project: `py-doc build` builds every document below, `py-doc lint docs` checks the writing.
 # Every key is checked when the file loads, so a typo is an error that names its place. Paths are
-# relative to this file. The README of py-doc lists every setting.
+# relative to this file. The user guide of py-doc lists every setting (docs/guide/02_projects.md).
 
 project:
   name: {name}
@@ -236,6 +236,18 @@ lint:
   glossary: {{}}        # the right spelling, then the wrong ones: {{MQTT: [mqtt, Mqtt]}}
   acronyms:
     min_length: 3
+
+# What `py-doc build` does around the documents. Off by default; `--lint` and `--site` turn them on once.
+# build:
+#   lint: on                        # off, on (an error stops the build) or strict (a warning does too)
+#   lint_report: build/lint.sarif   # the lint issues for code scanning (.sarif, .json or .csv)
+#   site: true                      # build the site after the documents
+
+# Markdown made from other sources before the build, for documents to list as sources:
+# content:
+#   generators:
+#     - {{type: glossary, source: glossary.yml, output: build/generated/glossary.md}}
+#     - {{type: documents, output: build/generated/documents.md}}
 """
 
 ARCHITECTURE_DOC = """\

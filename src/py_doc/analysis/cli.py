@@ -66,7 +66,7 @@ def run_stats(argv: list[str]) -> int:
     parser.add_argument("targets", nargs="*", metavar="TARGET", help="Documents of py-doc.yml, or Markdown files and folders (default: every document)")
     parser.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
     parser.add_argument("--lint", action="store_true", help="Also count the lint issues of each")
-    parser.add_argument("--format", choices=("text", "json"), default="text")
+    parser.add_argument("--format", choices=("text", "json"), default="text", help="text, a table (default), or json")
     _noise(parser)
     args = parser.parse_args(argv)
     configure_logging(quiet=args.quiet, verbose=args.verbose)
@@ -74,7 +74,7 @@ def run_stats(argv: list[str]) -> int:
         project = _project(args.config, Path.cwd())
     except ConfigError as exc:
         print(f"Error: {exc}", file=sys.stderr)
-        return 2
+        return 1
 
     groups: dict[str, list[Path]] = {}
     for target in args.targets or ([] if project is None else project.own_documents):
@@ -178,10 +178,10 @@ def run_check(argv: list[str]) -> int:
         project = _project(args.config, Path.cwd())
     except ConfigError as exc:
         print(f"Error: {exc}", file=sys.stderr)
-        return 2
+        return 1
     if project is None:
         print("Error: No py-doc.yml found here or in a parent folder", file=sys.stderr)
-        return 2
+        return 1
     problems = check_project(project)
     for problem in problems:
         print(f"Error: {problem}", file=sys.stderr)
@@ -237,7 +237,7 @@ def run_diff(argv: list[str]) -> int:
     parser.add_argument("paths", nargs="*", metavar="PATH", help="OLD NEW files, or with --rev the files and folders to compare (default: the sources of py-doc.yml)")
     parser.add_argument("--rev", metavar="REVISION", help="Compare the working files with this Git revision")
     parser.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
-    parser.add_argument("--format", choices=("text", "json"), default="text")
+    parser.add_argument("--format", choices=("text", "json"), default="text", help="text, a list per file (default), or json")
     parser.add_argument("--exit-code", action="store_true", help="Exit with status 1 when anything changed")
     _noise(parser)
     args = parser.parse_args(argv)
