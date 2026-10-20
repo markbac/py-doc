@@ -31,6 +31,7 @@ documents:
       - docs/guide/09_reference.md
       - docs/guide/10_legacy.md
       - docs/guide/11_pipeline.md
+      - docs/guide/12_posters.md
     outputs:
       docx: {toc: true}
       html: {toc: true}
