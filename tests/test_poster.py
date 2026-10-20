@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import base64
+import json
 import re
+import types
 import textwrap
 from pathlib import Path
 
+import jsonschema
 import pytest
 import yaml
+
+import py_doc
 
 from py_doc import poster_blocks
 from py_doc.app import main
@@ -660,7 +665,7 @@ def test_a_pdf_that_is_not_a_pdf_is_an_error(tmp_path):
 def test_the_pdf_setting_and_the_pdf_option(tmp_path, drawn, monkeypatch, capsys):
     printed = []
     monkeypatch.setattr("py_doc.poster_cli.connect", lambda settings: object())
-    monkeypatch.setattr("py_doc.poster_cli.print_pdf", lambda runtime, page, pdf: printed.append(pdf))
+    monkeypatch.setattr("py_doc.poster.print_pdf", lambda runtime, page, pdf: printed.append(pdf))
     monkeypatch.chdir(tmp_path)
     write(tmp_path, "## A\n\nText.\n")
     project(tmp_path, {"wall": {"source": "poster.md", "pdf": True}, "desk": {"source": "poster.md", "pdf": "print/desk.pdf"},
@@ -698,3 +703,95 @@ def test_the_document_number_and_version_of_the_front_matter_are_the_defaults(tm
     assert '<div class="docinfo"><span>Version 3.1</span></div>' in page  # the footer's own wins
     page, _ = build(write(tmp_path, "## A\n\nText.\n"), lambda: object())
     assert 'class="docinfo"' not in page
+
+
+# --- py-doc build ---------------------------------------------------------------------------------
+
+
+@pytest.fixture
+def documents(monkeypatch):
+    """py-doc build without pandoc: each document 'builds' and the names are recorded."""
+    built = []
+
+    def build_document(config, doc, formats, *args, **kwargs):
+        built.append((doc.id, formats))
+        return []
+
+    monkeypatch.setattr("py_doc.app.build_document", build_document)
+    monkeypatch.setattr("py_doc.app.connect", lambda settings: types.SimpleNamespace(image="tools:test", engine=None))
+    monkeypatch.setattr("py_doc.poster.print_pdf", lambda runtime, page, pdf: pdf.write_bytes(b"%PDF-1.7\n"))
+    return built
+
+
+def build_project(tmp_path, documents=True):
+    write(tmp_path, "## A\n\nText.\n")
+    (tmp_path / "guide.md").write_text("# Guide\n\nText.\n", encoding="utf-8")
+    data = {"posters": {"wall": {"source": "poster.md"}, "desk": {"source": "poster.md", "pdf": True}}, "reports": {"path": "build/report.json"}}
+    if documents:
+        data["documents"] = {"guide": {"sources": ["guide.md"]}}
+    (tmp_path / "py-doc.yml").write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+
+def test_build_makes_the_documents_then_every_poster(tmp_path, drawn, documents, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    build_project(tmp_path)
+    assert main(["build"]) == 0
+    assert [name for name, _ in documents] == ["guide"]
+    assert (tmp_path / "build" / "wall.html").is_file() and (tmp_path / "build" / "desk.html").is_file()
+    assert (tmp_path / "build" / "desk.pdf").is_file() and not (tmp_path / "build" / "wall.pdf").exists()
+    report = json.loads((tmp_path / "build" / "report.json").read_text(encoding="utf-8"))
+    assert [s["step"] for s in report["steps"]][-3:] == ["documents", "posters", "verify"]
+    assert {"step": "posters", "status": "ok", "detail": "2 of 2 built"} in report["steps"]
+    outputs = {o["path"]: o["format"] for d in report["documents"] for o in d["outputs"]}
+    assert outputs == {"build/wall.html": "html", "build/desk.html": "html", "build/desk.pdf": "pdf"}
+    jsonschema.validate(report, json.loads((Path(py_doc.__file__).parent / "report.schema.json").read_text(encoding="utf-8")))
+
+
+def test_build_names_documents_or_posters(tmp_path, drawn, documents, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    build_project(tmp_path)
+    assert main(["build", "wall"]) == 0
+    assert documents == [] and (tmp_path / "build" / "wall.html").is_file() and not (tmp_path / "build" / "desk.html").exists()
+    assert main(["build", "guide"]) == 0
+    assert [name for name, _ in documents] == ["guide"] and not (tmp_path / "build" / "desk.html").exists()
+    assert main(["build", "nothing"]) == 1
+    assert "Unknown document(s) or poster(s): nothing. Defined: guide; posters: wall, desk" in capsys.readouterr().err
+
+
+def test_build_format_poster_builds_only_the_posters_and_another_format_none(tmp_path, drawn, documents, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    build_project(tmp_path)
+    assert main(["build", "-f", "poster"]) == 0
+    assert documents == [] and (tmp_path / "build" / "wall.html").is_file()
+    (tmp_path / "build" / "wall.html").unlink()
+    assert main(["build", "-f", "docx"]) == 0
+    assert documents == [("guide", ["docx"])] and not (tmp_path / "build" / "wall.html").exists()
+
+
+def test_build_of_a_project_with_only_posters(tmp_path, drawn, documents, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    build_project(tmp_path, documents=False)
+    assert main(["build"]) == 0
+    assert (tmp_path / "build" / "wall.html").is_file()
+
+
+def test_build_reports_a_poster_that_fails_and_still_builds_the_others(tmp_path, drawn, documents, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    build_project(tmp_path)
+    (tmp_path / "bad.md").write_text("No sections.\n", encoding="utf-8")
+    config = yaml.safe_load((tmp_path / "py-doc.yml").read_text(encoding="utf-8"))
+    config["posters"]["wall"]["source"] = "bad.md"
+    (tmp_path / "py-doc.yml").write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
+    assert main(["build"]) == 1
+    assert "wall: " in capsys.readouterr().err and (tmp_path / "build" / "desk.html").is_file()
+    report = json.loads((tmp_path / "build" / "report.json").read_text(encoding="utf-8"))
+    assert {"step": "posters", "status": "failed", "detail": "1 of 2 built"} in report["steps"]
+
+
+def test_build_passes_variables_and_conditions_to_posters(tmp_path, drawn, documents, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    write(tmp_path, "## A\n\nVersion {{version}}.\n\n[[IF: internal]]\nSecret.\n[[ENDIF]]\n")
+    (tmp_path / "py-doc.yml").write_text("posters:\n  wall: {source: poster.md}\n", encoding="utf-8")
+    assert main(["build", "--var", "version=3", "--condition", "internal=false"]) == 0
+    page = (tmp_path / "build" / "wall.html").read_text(encoding="utf-8")
+    assert "Version 3." in page and "Secret." not in page

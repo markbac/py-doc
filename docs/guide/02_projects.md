@@ -119,8 +119,10 @@ lint:
 ## Building
 
 ```bash
-py-doc build                      # every document
+py-doc build                      # every document, then every poster
 py-doc build c4-guide -f pptx     # one document, one format
+py-doc build launch               # one poster, by its name under posters:
+py-doc build -f poster            # only the posters
 py-doc build --var version=2.1 --condition internal=true
 py-doc build --keep-going         # list every broken diagram, not just the first
 py-doc build --lint --site        # generate, lint, build the documents, then the site

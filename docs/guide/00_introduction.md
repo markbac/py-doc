@@ -54,6 +54,8 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 1. [Generators, the build pipeline and analysis](11_pipeline.md): content generators, what `py-doc build` runs, and `check`, `stats` and `diff`.
 1. [Posters](12_posters.md): every setting, block and theme of `py-doc poster`.
 1. [Writing a poster](13_writing_posters.md): a poster from a blank file to a printed page.
+1. [Writing a document](14_writing_documents.md): a technical document from an outline to a reviewed Word, PDF or HTML file.
+1. [Writing a slide deck](15_writing_slides.md): a PowerPoint deck in Markdown, with notes, columns and diagrams.
 
 ## The examples
 

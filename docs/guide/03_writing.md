@@ -4,6 +4,8 @@ title: Writing
 
 # Writing
 
+This chapter is the reference for the Markdown py-doc reads. For a walk through writing one from a blank file, read [Writing a document](14_writing_documents.md), [Writing a slide deck](15_writing_slides.md) or [Writing a poster](13_writing_posters.md).
+
 Pandoc reads the Markdown: its own flavour, with fenced divs, raw HTML, table captions, strikethrough and task lists. Footnotes, definition lists, maths and the rest of pandoc Markdown work too. py-doc adds front matter, callouts, markers, includes, conditions, variables and diagrams.
 
 ## Supported Markdown

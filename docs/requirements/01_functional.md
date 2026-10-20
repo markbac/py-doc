@@ -110,6 +110,7 @@ title: Functional requirements
 | FR-136 | A poster shall take the py-doc Markdown of documents: includes, conditions, variables, captions and callouts. | Should | Met |
 | FR-137 | A poster shall have full-width sections, timelines, trends in the stats, a references list, and charts drawn without the tool container. Its footer shall have three texts, logos and a QR code. | Could | Met |
 | FR-138 | `py-doc poster` shall print a poster to a one-page PDF of its paper size and orientation, with the Chromium of the tool container. | Should | Met |
+| FR-139 | `py-doc build` shall build the posters of `py-doc.yml` after the documents, with their PDFs, and `-f poster` and a poster's name shall choose them. | Should | Met |
 
 ## Tool container
 

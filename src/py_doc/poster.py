@@ -27,7 +27,7 @@ from py_doc.poster_settings import SettingsError, layer, merge
 from py_doc.poster_themes import apply_overrides, load_theme
 from py_doc.runtime import Mount, Runtime
 
-__all__ = ["PosterError", "build", "print_pdf"]
+__all__ = ["PosterError", "build", "print_pdf", "write_poster"]
 
 PDF_TIMEOUT = 300
 
@@ -522,6 +522,24 @@ def footer_html(footer, ctx):
             f'<span class="fr">{text("right")}</span>'
             + (f'<div class="logos">{logos}</div>' if logos else "") + qr + "</footer>"
             + (f'<div class="docinfo">{docinfo}</div>' if docinfo else ""))
+
+
+def write_poster(source: Path, output: Path, runtime: Callable[[], Runtime], settings: dict | None = None,
+                 defaults: dict | None = None, pdf: bool | None = None):
+    """Build the poster ``source`` into ``output``, and print its PDF when its settings or ``pdf`` ask.
+
+    ``pdf`` (``--pdf`` or ``--no-pdf``) wins over the ``pdf`` setting. Returns the build state and the files written.
+    """
+    page, ctx = build(source, runtime, settings, defaults)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(page, encoding="utf-8")
+    files = [output]
+    wanted = ctx.settings.get("pdf") if pdf is None else pdf
+    if wanted:
+        target = wanted if isinstance(wanted, Path) else output.with_suffix(".pdf")
+        print_pdf(ctx.runtime(), page, target)
+        files.append(target)
+    return ctx, files
 
 
 def print_pdf(runtime: Runtime, page: str, pdf: Path) -> None:

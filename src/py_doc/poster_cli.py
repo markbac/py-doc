@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import sys
 from pathlib import Path
 
 from py_doc._logging import configure_logging
 from py_doc.config import ConfigError, PosterConfig, find_config, load_config
 from py_doc.errors import ConversionError, exit_status
-from py_doc.poster import build, print_pdf
+from py_doc.poster import write_poster
 from py_doc.poster_settings import SettingsError, layer, merge
 from py_doc.poster_themes import BUILTIN
 from py_doc.runtime import RuntimeSettings, connect
@@ -63,17 +64,13 @@ def run_poster(argv: list[str]) -> int:
         )
         settings = project.runtime if project else RuntimeSettings()
         defaults = project.poster if project else {}
+        runtime = functools.cache(lambda: connect(settings))  # one container check for every poster
         for job in jobs:
             out = Path(args.output) if args.output else job.output
-            page, ctx = build(job.source, lambda: connect(settings), merge(job.settings, command_line), defaults)
-            out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(page, encoding="utf-8")
+            ctx, files = write_poster(job.source, out, runtime, merge(job.settings, command_line), defaults, args.pdf)
             print(f"wrote {out} ({ctx.n} diagrams, {ctx.failed} failed)")
-            pdf = ctx.settings.get("pdf") if args.pdf is None else args.pdf
-            if pdf:
-                pdf = pdf if isinstance(pdf, Path) else out.with_suffix(".pdf")
-                print_pdf(ctx.runtime(), page, pdf)
-                print(f"wrote {pdf}")
+            for extra in files[1:]:
+                print(f"wrote {extra}")
     except (ConfigError, ConversionError, SettingsError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return exit_status(exc)

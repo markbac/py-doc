@@ -15,6 +15,8 @@ py-doc poster g460.md --var version=2.1 --condition internal=true
 py-doc poster --pdf                       # every poster, and a one-page PDF of each
 ```
 
+`py-doc build` builds the posters of `py-doc.yml` too, after the documents, with their PDFs when they have `pdf: true`. `py-doc build NAME` builds one poster or document, and `py-doc build -f poster` builds only the posters. `--var` and `--condition` reach the posters as they reach the documents.
+
 For a step-by-step introduction, read [Writing a poster](13_writing_posters.md) first. This chapter is the reference.
 
 The examples in `examples/poster/` show three kinds, and `examples/py-doc.yml` lists them under `posters:`:
