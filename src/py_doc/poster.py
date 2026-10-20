@@ -1,28 +1,29 @@
 """``py-doc poster``: one self-contained HTML poster from a Markdown file.
 
-The conventions are in docs/guide/12_posters.md. Diagram fences are drawn by the tool container, like
-in every other output, and embedded as PNG pictures.
+The conventions are in docs/guide/12_posters.md. The settings come in layers (see poster_settings), the
+blocks are in poster_blocks and the colours and fonts in poster_themes. Includes, conditions, variables,
+captions and callouts are written as in every other py-doc document.
 """
 
 from __future__ import annotations
 
 import base64
-import html
-import json
 import logging
 import mimetypes
 import re
-import shlex
 from collections.abc import Callable
 from pathlib import Path
 
-from markdown_it import MarkdownIt
+import yaml
 
-from py_doc.diagrams import BY_FENCE, DiagramError
-from py_doc.diagrams.render import draw_cached
-from py_doc.errors import ConversionError, ToolFailed
-from py_doc.poster_themes import Theme, load_theme, logo_path
+from py_doc.directives import Fence, expand
+from py_doc.pandoc.source import split_front_matter
+from py_doc.poster_blocks import MD, Ctx, PosterError, block_html, esc, inline, parse_opts, qr_svg
+from py_doc.poster_settings import SettingsError, layer, merge
+from py_doc.poster_themes import apply_overrides, load_theme
 from py_doc.runtime import Runtime
+
+__all__ = ["PosterError", "build"]
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,12 @@ body{margin:0;background:var(--backdrop)}
 @page{size:__PAPER__;margin:0}
 .poster{width:__W__px;margin:0 auto;background:var(--page);color:var(--text);font-family:var(--font-body);display:flex;flex-direction:column;min-height:__H__px}
 header{background:var(--header);padding:34px 40px 28px;text-align:center;border-bottom:10px solid var(--accent);position:relative}
-header.logo{padding-left:300px;padding-right:300px}
+header.logo-left,header.logo-right{padding-left:300px;padding-right:300px}
+header.align-left{text-align:left}
+header.align-left.logo-right{padding-left:40px}
+header.align-left.logo-left{padding-right:40px}
 header img{position:absolute;left:40px;top:50%;transform:translateY(-50%);max-height:120px;max-width:230px}
+header.logo-right img{left:auto;right:40px}
 h1{margin:0;font-size:68px;line-height:1.05;color:var(--header-text);font-weight:700;font-family:var(--font-heading)}
 .subtitle{font-size:36px;color:var(--subtitle);line-height:1.15;margin-top:10px}
 .byline{font-size:20px;color:var(--byline);margin-top:10px}
@@ -44,6 +49,9 @@ main{padding:24px 40px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
 .stat+.stat{border-left:5px solid var(--accent)}
 .stat b{display:block;font-size:50px;line-height:1;color:var(--strong)}
 .stat span{display:block;font-size:18px;color:var(--muted);margin-top:8px}
+.trend{display:block;font-style:normal;font-weight:700;font-size:17px;margin-top:6px}
+.trend.good{color:var(--good)}
+.trend.bad{color:var(--bad)}
 .abstract{background:var(--secondary);color:var(--on-secondary);padding:18px 28px;font-size:19px;line-height:1.45;text-align:center}
 .abstract p{margin:0}
 .cols{display:flex;gap:28px;align-items:flex-start}
@@ -64,6 +72,27 @@ section h2 span{color:var(--highlight);font-weight:600}
 .body pre code{background:none;padding:0;font-size:13.5px}
 .body blockquote{margin:0 0 10px;background:var(--callout);border:1px solid var(--callout-border);padding:8px 12px;font-size:14px}
 .body blockquote p{margin:0}
+.body blockquote.callout{background:color-mix(in srgb,var(--k) 9%,var(--surface));border:1px solid color-mix(in srgb,var(--k) 40%,var(--surface));border-left:5px solid var(--k)}
+.callout.note{--k:var(--note)}
+.callout.tip{--k:var(--tip)}
+.callout.important{--k:var(--important)}
+.callout.warning{--k:var(--warning)}
+.callout.caution{--k:var(--caution)}
+.body blockquote.callout strong:first-child,.callout-title{color:var(--k)}
+.body .callout-title{font-size:12px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-bottom:2px}
+.timeline{display:flex;margin:0 0 10px;position:relative;padding-top:10px}
+.timeline:before{content:"";position:absolute;left:0;right:0;top:16px;border-top:3px solid var(--border)}
+.tl-item{flex:1;min-width:0;position:relative;padding:22px 8px 0 0;display:flex;flex-direction:column;font-size:14px;line-height:1.3}
+.tl-item i{position:absolute;top:0;left:0;width:15px;height:15px;border-radius:50%;border:3px solid var(--page)}
+.tl-item b{color:var(--strong)}
+.tl-item small{color:var(--muted);font-size:12.5px}
+.timeline.vertical{flex-direction:column;padding:0 0 0 26px;gap:12px}
+.timeline.vertical:before{top:0;bottom:0;left:7px;right:auto;border-top:0;border-left:3px solid var(--border)}
+.timeline.vertical .tl-item{padding:0}
+.timeline.vertical .tl-item i{left:-26px;top:1px}
+.chart{display:block;width:100%;height:auto;color:var(--muted);font-family:var(--font-body)}
+.qr{display:inline-flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 10px;background:var(--surface);padding:8px;border:1px solid var(--border)}
+.qr .cap{font-size:13px;color:var(--muted)}
 .body p.caption{font-size:14px;line-height:1.4;color:var(--muted)}
 .body p.caption strong{color:var(--text)}
 .fig{background:var(--surface);border:1px solid var(--border);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin:0 0 10px}
@@ -102,9 +131,17 @@ section h2 span{color:var(--highlight);font-weight:600}
 .block{flex:1;border-left:5px solid var(--accent);padding:2px 0 2px 14px}
 .block h3{margin:0;font-size:21px;color:var(--strong);font-family:var(--font-heading)}
 .block .body{font-size:15.5px;margin-top:4px}
-footer{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--border);padding-top:14px;margin-top:auto}
-footer b{font-size:26px;color:var(--strong)}
-footer span{font-size:15px;color:var(--muted)}
+.refs{font-size:13px;line-height:1.4;color:var(--muted)}
+.refs b{color:var(--strong);font-size:14px}
+.refs ol,.refs ul{margin:4px 0 0;padding-left:22px;columns:2;column-gap:28px}
+.refs p{margin:4px 0 0}
+footer{display:flex;align-items:center;gap:24px;border-top:2px solid var(--border);padding-top:14px;margin-top:auto}
+footer .fl{flex:1;font-size:26px;color:var(--strong)}
+footer .fc{flex:1;text-align:center;font-size:15px;color:var(--muted)}
+footer .fr{flex:1;text-align:right;font-size:15px;color:var(--muted)}
+footer .logos{display:flex;gap:18px;align-items:center}
+footer .logos img{max-height:56px;max-width:160px}
+footer .fqr{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
 @media print{body{background:none}.poster{margin:0}}
 """
 
@@ -136,225 +173,17 @@ RATIO = 1.4142  # height to width of A paper
 COLUMNS = {"portrait": 2, "landscape": 3}
 
 
-def mermaid_init(theme):
-    """A Mermaid theme that matches the poster's. Skipped if the diagram has its own init."""
-    c = theme.colours
-    variables = {
-        "fontFamily": theme.fonts["body"], "fontSize": "16px", "primaryColor": c["diagram-fill"],
-        "primaryBorderColor": c["primary"], "primaryTextColor": "#1d1f27", "lineColor": c["primary"],
-        "secondaryColor": "#f3f3f7", "tertiaryColor": "#ffffff", "clusterBkg": "#f3f6fb",
-        "clusterBorder": c["secondary"], "edgeLabelBackground": "#ffffff",
-    }  # fmt: skip
-    return "%%{init: " + json.dumps({"theme": "base", "themeVariables": variables}) + "}%%\n"
-
-FENCE = re.compile(r"(?ms)^```[ \t]*([\w+-]+)([^\n]*)\n(.*?)^```[ \t]*$")
-TOK = re.compile(r"\[([^\]|]+)(?:\|([^\]]+))?\]|-(?:([^>\[\]]*?)-)?>")
-
-
-MD = MarkdownIt("commonmark").enable("table")
-
-
-class PosterError(ConversionError):
-    """The Markdown cannot be made into a poster."""
-
-
-class Ctx:
-    """Per-build state shared by all blocks."""
-
-    def __init__(self, base, runtime, theme=None):
-        self.base = base
-        self.theme = theme or Theme()
-        self._connect, self._runtime = runtime, None
-        self.n = 0
-        self.failed = 0
-
-    def runtime(self):
-        """The tool container, started on the first diagram, so a poster without one needs no Docker."""
-        if self._runtime is None:
-            self._runtime = self._connect()
-        return self._runtime
-
-
-def esc(s):
-    return html.escape(s, quote=True)
-
-
-def inline(s):
-    return MD.renderInline(s)
-
-
-def parse_opts(info):
-    try:
-        toks = shlex.split(info)
-    except ValueError:
-        toks = info.split()
-    return {k.lower(): v for k, _, v in (t.partition("=") for t in toks)}
-
-
-# ---------------------------------------------------------------------------
-# Diagram fences -> the tool container -> embedded image
-# ---------------------------------------------------------------------------
-
-def render_diagram(lang, code, ctx):
-    ctx.n += 1
-    if lang == "mermaid" and "%%{init" not in code:
-        code = mermaid_init(ctx.theme) + code
-    return draw_cached(ctx.runtime(), BY_FENCE[lang], code, "png", False, ctx.base)
-
-
-def diagram_html(lang, code, opts, ctx):
-    try:
-        path = render_diagram(lang, code, ctx)
-        mime = mimetypes.guess_type(path.name)[0] or "image/png"
-        data = base64.b64encode(path.read_bytes()).decode()
-        return f'<img alt="{esc(opts.get("alt", lang + " diagram"))}" src="data:{mime};base64,{data}">'
-    except (ToolFailed, DiagramError) as exc:  # a broken diagram must not stop the poster
-        ctx.failed += 1
-        lines = (getattr(exc, "output", None) or str(exc) or type(exc).__name__).strip().splitlines()
-        errs = [line.strip() for line in lines if "error" in line.lower()]
-        msg = (errs or lines or [type(exc).__name__])[0 if errs else -1].strip()[:160]
-        logger.warning(f"{lang} diagram not rendered: {msg}")
-        return (f'<pre><code>{esc(code)}</code></pre>'
-                f'<p class="caption">{esc(lang)} diagram could not be rendered: {esc(msg)}</p>')
-
-
-# ---------------------------------------------------------------------------
-# Poster blocks: cards, lcd, and the figure kinds (segments, flow, lanes)
-# ---------------------------------------------------------------------------
-
-def cards_html(code, opts, ctx):
-    rows = [[c.strip() for c in line.split("|")] for line in code.splitlines() if line.strip()]
-    style = opts.get("style", "title")
-    cols = int(opts.get("cols", min(len(rows), 4) or 1))
-    out = ""
-    for r in rows:
-        head, text, colour = ("", r[0], None) if len(r) == 1 else (r[0], r[1], r[2] if len(r) > 2 else None)
-        top = f' style="border-top:4px solid {ctx.theme.colour(colour, "secondary")}"' if style == "top" else ""
-        h = f'<div class="ch">{inline(head)}</div>' if head else ""
-        out += f'<div class="card {esc(style)}"{top}>{h}<div class="ct">{inline(text)}</div></div>'
-    return f'<div class="cards" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
-
-
-def lcd_html(code):
-    screens = [[]]
-    for line in code.splitlines():
-        if line.strip():
-            screens[-1].append(line)
-        elif screens[-1]:
-            screens.append([])
-    out = ""
-    for s in screens:
-        if not s:
-            continue
-        shown = "".join(f"<div>{esc(x)}</div>" for x in s if not x.startswith("--"))
-        cap = " ".join(x[2:].strip() for x in s if x.startswith("--"))
-        out += (f'<div class="lcd"><div class="scr">{shown}</div>'
-                + (f'<div class="cap">{esc(cap)}</div>' if cap else "") + "</div>")
-    return f'<div class="lcds">{out}</div>'
-
-
-def kv_split(code):
-    meta, rest = {}, []
-    for line in code.splitlines():
-        m = re.match(r"^(title|height):\s*(.*)$", line.strip(), re.I)
-        if m:
-            meta[m.group(1).lower()] = m.group(2)
-        else:
-            rest.append(line)
-    return meta, rest
-
-
-def segments_part(code, ctx):
-    meta, lines = kv_split(code)
-    rows, notes = [], []
-    for line in lines:
-        (rows if re.match(r"^\s*\d+(\.\d+)?\s*\|", line) else notes).append(line)
-    cells, detailed = "", False
-    for r in (c for c in ([x.strip() for x in line.split("|")] for line in rows)):
-        label = r[1] if len(r) > 1 else ""
-        det = r[2] if len(r) > 2 else ""
-        detailed = detailed or bool(det)
-        cells += (f'<div style="flex:{r[0]};background:{ctx.theme.colour(r[3] if len(r) > 3 else None)}">{inline(label)}'
-                  + (f"<small>{inline(det)}</small>" if det else "") + "</div>")
-    h = meta.get("height") or ("64" if detailed else "36")
-    return meta.get("title"), f'<div class="bar" style="min-height:{h}px">{cells}</div>', "\n".join(notes).strip()
-
-
-def flow_part(code, ctx):
-    meta, lines = kv_split(code)
-    rows, notes = "", []
-    for line in lines:
-        if "->" not in line or "[" not in line:
-            notes.append(line)
-            continue
-        parts = ""
-        for m in TOK.finditer(line):
-            if m.group(1) is not None:
-                if m.group(2):
-                    parts += f'<div class="node" style="background:{ctx.theme.colour(m.group(2))}">{inline(m.group(1))}</div>'
-                else:
-                    parts += f'<div class="node out">{inline(m.group(1))}</div>'
-            else:
-                label = (m.group(3) or "").strip()
-                parts += f'<div class="arr">{inline(label) + "<br>" if label else ""}<i>→</i></div>'
-        rows += f'<div class="flow">{parts}</div>'
-    return meta.get("title"), rows, "\n".join(notes).strip()
-
-
-def lanes_part(code, ctx):
-    meta, lines = kv_split(code)
-    lanes, notes = "", []
-    for line in lines:
-        if "|" not in line:
-            notes.append(line)
-            continue
-        label, *cells = [c.strip() for c in line.split("|")]
-        cells = [c.replace("-", "‑") for c in cells]  # non-breaking hyphen keeps "wake-up" whole
-        inner = "".join(
-            f'<div class="cell fill">{inline(c[1:].strip())}</div>' if c.startswith("*")
-            else f'<div class="cell dash">{inline(c)}</div>' for c in cells)
-        lanes += f'<div class="lane"><b>{esc(label)}</b><div class="cells">{inner}</div></div>'
-    return meta.get("title"), f'<div class="lanes">{lanes}</div>', "\n".join(notes).strip()
-
-
-FIG_KINDS = {"segments": segments_part, "flow": flow_part, "lanes": lanes_part}
-
-
-def figure_html(parts, ctx):
-    out = ""
-    for title, inner, notes in parts:
-        out += f'<div class="fig-title">{esc(title)}</div>' if title else ""
-        out += inner
-        out += f'<div class="fig-notes">{render(notes, ctx)}</div>' if notes else ""
-    return f'<div class="fig">{out}</div>'
-
-
-def block_html(lang, opts, code, ctx):
-    """HTML for a fence we handle, or None to leave it as an ordinary code block."""
-    if lang in BY_FENCE:
-        return diagram_html(lang, code, opts, ctx)
-    if lang == "cards":
-        return cards_html(code, opts, ctx)
-    if lang == "lcd":
-        return lcd_html(code)
-    if lang in FIG_KINDS:
-        return figure_html([FIG_KINDS[lang](code, ctx)], ctx)
-    if lang == "figure":  # several kinds in one box, split by +++ lines, each starting with @kind
-        parts = []
-        for sub in re.split(r"(?m)^\+\+\+\s*$", code):
-            kind, _, body = sub.strip("\n").partition("\n")
-            kind = kind.strip().lstrip("@").lower()
-            if kind not in FIG_KINDS:
-                logger.warning(f"unknown figure part '{kind}'")
-                continue
-            parts.append(FIG_KINDS[kind](body, ctx))
-        return figure_html(parts, ctx)
-    return None
-
-
 # ---------------------------------------------------------------------------
 # Markdown -> HTML
 # ---------------------------------------------------------------------------
+
+FENCE = re.compile(r"(?ms)^```[ \t]*([\w+-]+)([^\n]*)\n(.*?)^```[ \t]*$")
+CALLOUTS = ("note", "tip", "important", "warning", "caution")
+_CAPTION = re.compile(r"^\s*\[\[CAPTION:\s*(?:Figure|Table)\s*\]\]\s*(?P<text>.*)$", re.I)
+_STYLE = re.compile(r"^\s*\[\[STYLE:[^\]]*\]\]\s*")
+_DROPPED = re.compile(r"^\s*(\[\[(LANDSCAPE|PORTRAIT)\]\]|::: \{\.pagebreak\}|:::)\s*$")
+_ATTRIBUTES = re.compile(r"\s*\{(?P<attrs>[^{}]*)\}\s*$")
+
 
 def embed_images(text, base):
     def sub(m):
@@ -370,6 +199,33 @@ def embed_images(text, base):
     return re.sub(r"!\[([^\]]*)\]\(([^)\s]+)\)", sub, text)
 
 
+def prepare(text):
+    """py-doc's own markers, outside code: a ``[[CAPTION:]]`` line is a caption, the page and Word markers go."""
+    out, fence = [], Fence()
+    for line in text.splitlines():
+        if fence.inside(line):
+            out.append(line)
+        elif m := _CAPTION.match(line):
+            out += ["", f"@@CAPTION@@ {m['text']}", ""]
+        elif not _DROPPED.match(line):
+            out.append(_STYLE.sub("", line))
+    return "\n".join(out)
+
+
+def callouts(out):
+    """Both spellings of a py-doc callout, ``> [!WARNING]`` and ``> **Warning:**``, as callout boxes."""
+    kinds = "|".join(CALLOUTS)
+
+    def marked(m):
+        kind = m.group(1).lower()
+        return f'<blockquote class="callout {kind}"><p class="callout-title">{kind.title()}</p><p>'
+
+    out = re.sub(rf"<blockquote>\s*<p>\[!({kinds})\]\s*", marked, out, flags=re.I)
+    out = re.sub(rf"<blockquote>(\s*<p><strong>({kinds}):?</strong>)",
+                 lambda m: f'<blockquote class="callout {m.group(2).lower()}">{m.group(1)}', out, flags=re.I)
+    return out.replace("<p></p>", "")
+
+
 def render(text, ctx):
     stash = []
 
@@ -381,21 +237,10 @@ def render(text, ctx):
         return f"\n@@BLK{len(stash) - 1}@@\n"
 
     text = FENCE.sub(take, embed_images(text, ctx.base))
-    out = MD.render(text)
+    out = callouts(MD.render(text))
     out = re.sub(r"<p>(<strong>)?Fig\.", lambda m: f'<p class="caption">{m.group(1) or ""}Fig.', out)
+    out = out.replace("<p>@@CAPTION@@ ", '<p class="caption">')
     return re.sub(r"<p>@@BLK(\d+)@@</p>", lambda m: stash[int(m.group(1))], out)
-
-
-def parse_front_matter(text):
-    m = re.match(r"\A---\s*\n(.*?)\n---\s*\n", text, re.S)
-    meta = {}
-    if m:
-        for line in m.group(1).splitlines():
-            if ":" in line and not line.startswith("#"):
-                k, v = line.split(":", 1)
-                meta[k.strip().lower()] = v.strip()
-        text = text[m.end():]
-    return meta, text
 
 
 def heading_html(h):
@@ -405,15 +250,43 @@ def heading_html(h):
     return esc(h)
 
 
+def heading_attributes(heading, where):
+    """A section heading and its ``{.wide colour=red}``: whether it spans every column, and its colour."""
+    m = _ATTRIBUTES.search(heading)
+    if not m:
+        return heading.strip(), False, None
+    wide, colour = False, None
+    for item in parse_opts(m["attrs"]):
+        if item == ".wide":
+            wide = True
+        elif item == "colour" or item == "color":
+            colour = parse_opts(m["attrs"])[item]
+        else:
+            logger.warning(f"{where}: heading '{heading.strip()}' has '{item}', which a poster does not use")
+    return heading[: m.start()].strip(), wide, colour
+
+
 def parse_stats(text):
+    """``value | label | change | good or bad`` rows. The change and its verdict are optional."""
     rows = [line.strip() for line in text.splitlines() if line.strip().startswith("|")]
     rows = [r for r in rows if not re.match(r"^\|[\s:|-]+\|?$", r)][1:]  # drop separator and header row
     out = []
     for r in rows:
         cells = [c.strip() for c in r.strip("|").split("|")]
         if len(cells) >= 2:
-            out.append((cells[0], cells[1]))
+            out.append((cells[0], cells[1], cells[2] if len(cells) > 2 else "", cells[3].lower() if len(cells) > 3 else ""))
     return out
+
+
+def trend_html(change, verdict):
+    if not change:
+        return ""
+    up = change.startswith("+") or change.lower().startswith("up")
+    down = change.startswith(("-", "−")) or change.lower().startswith("down")
+    arrow = "▲" if up else "▼" if down else "▶"
+    good = verdict == "good" if verdict in ("good", "bad") else not down
+    kind = "good" if good else "bad"
+    return f'<em class="trend {kind}">{arrow} {esc(change)}</em>'
 
 
 def number(meta, key, default, md_path, least=1):
@@ -438,7 +311,7 @@ def columns_of(sections, count, split, md_path):
             raise PosterError(f"{md_path}: split needs {count - 1} number(s) of sections, leaving at least one for the last column")
         cuts = [sum(sizes[: i + 1]) for i in range(len(sizes))]
         return [sections[a:b] for a, b in zip([0, *cuts], [*cuts, len(sections)])]
-    total, acc, columns = sum(len(c) for _, c in sections), 0, [[]]
+    total, acc, columns = sum(len(c) for _, c, _ in sections), 0, [[]]
     for i, section in enumerate(sections):
         left, open_columns = len(sections) - i, count - len(columns)
         if columns[-1] and open_columns and (acc >= total * len(columns) / count or left <= open_columns):
@@ -448,52 +321,111 @@ def columns_of(sections, count, split, md_path):
     return columns
 
 
-def build(md_path, runtime: Callable[[], Runtime], theme: str | Path | None = None, default_theme: str | Path | None = None):
+def _choice(meta, key, choices, md_path):
+    value = str(meta.get(key, choices[0])).lower()
+    if value == "center":
+        value = "centre"
+    if value not in choices:
+        raise PosterError(f"{md_path}: {key} must be {' or '.join(choices)}, not '{value}'")
+    return value
+
+
+def read_settings(md_path, settings=None, defaults=None):
+    """The poster's settings and its Markdown body: the project defaults, the front matter, then ``settings``."""
+    text = md_path.read_text(encoding="utf-8-sig")
+    front, body = split_front_matter(text)
+    body = "\n" * text[: len(text) - len(body)].count("\n") + body  # so a directive's line number is the file's
+    try:
+        data = yaml.safe_load(front) if front else {}
+    except yaml.YAMLError as exc:
+        raise PosterError(f"{md_path}: the front matter is not valid YAML: {exc}") from None
+    try:
+        front_layer = layer(data or {}, md_path.parent, f"{md_path} front matter", strict=False)
+    except SettingsError as exc:
+        raise PosterError(str(exc)) from None
+    meta = merge(defaults, front_layer, settings)
+    variables = meta.get("variables") or {}
+    for key in ("title", "subtitle", "byline"):
+        if key in meta:
+            meta[key] = fill(meta[key], variables)
+    if meta.get("footer"):
+        meta["footer"] = {k: fill(v, variables) if isinstance(v, str) else v for k, v in meta["footer"].items()}
+    return meta, body
+
+
+def fill(text, variables):
+    """``{{name}}`` in a setting's text, from the variables. An unknown name is left as written."""
+    return re.sub(r"\{\{\s*(\w+)\s*\}\}", lambda m: str(variables.get(m[1], m[0])), text)
+
+
+def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None, defaults: dict | None = None):
     """The poster page for ``md_path`` and the build state (diagrams drawn and failed).
 
-    A theme is a built-in name or a theme file. ``theme`` wins over the front matter's, and
-    ``default_theme`` (the project's) is used when neither names one. A relative ``theme`` path is
-    from the working folder, a front matter one from the Markdown file.
+    ``defaults`` (the ``poster:`` section of py-doc.yml) are under the front matter, and ``settings`` (the
+    poster's entry under ``posters:``, then the command line) are over it. Both are checked layers from
+    :func:`py_doc.poster_settings.layer`.
     """
     md_path = Path(md_path)
-    meta, body = parse_front_matter(md_path.read_text(encoding="utf-8"))
-    if theme:
-        loaded = load_theme(theme, Path.cwd())
-    elif meta.get("theme"):
-        loaded = load_theme(meta["theme"], md_path.parent)
-    else:
-        loaded = load_theme(default_theme, Path.cwd())
-    if meta.get("logo"):
-        loaded.logo = logo_path(meta["logo"], md_path.parent, str(md_path))
-    ctx = Ctx(md_path.parent, runtime, loaded)
+    meta, body = read_settings(md_path, settings, defaults)
+    theme = load_theme(meta.get("theme"), Path.cwd())
+    apply_overrides(theme, meta, str(md_path))
+    ctx = Ctx(md_path.parent, runtime, theme, render, str(md_path))
+    body = prepare(expand(body, md_path, meta.get("variables"), meta.get("conditions")))
     h1 = re.search(r"(?m)^# +(.+)$", body)
     title = meta.get("title") or (h1.group(1) if h1 else md_path.stem)
 
     parts = re.split(r"(?m)^## +(.+)$", body)
-    stats, abstract, summary, sections = [], "", None, []
+    stats, abstract, summary, references, sections = [], "", None, "", []
     for heading, content in zip(parts[1::2], parts[2::2]):
-        key = heading.strip().lower()
+        heading, wide, colour = heading_attributes(heading, md_path)
+        key = heading.lower()
         if key == "stats":
             stats = parse_stats(content)
         elif key == "abstract":
             abstract = render(content.strip(), ctx)
         elif key == "summary":
             summary = content
+        elif key == "references":
+            references = render(content.strip(), ctx)
         else:
-            sections.append((heading.strip(), content.strip()))
+            sections.append((heading, content.strip(), {"wide": wide, "colour": colour}))
     if not sections:
         raise PosterError(f"{md_path}: no sections found (expected '## Heading' blocks)")
 
-    orientation = meta.get("orientation", "portrait").lower()
-    if orientation not in COLUMNS:
-        raise PosterError(f"{md_path}: orientation must be portrait or landscape")
-    columns = columns_of(sections, number(meta, "columns", COLUMNS[orientation], md_path), meta.get("split"), md_path)
+    orientation = _choice(meta, "orientation", ("portrait", "landscape"), md_path)
+    count = number(meta, "columns", COLUMNS[orientation], md_path)
+    if meta.get("split") and any(extra["wide"] for _, _, extra in sections):
+        raise PosterError(f"{md_path}: split cannot be used with wide sections; the columns are balanced between them")
 
-    def sec(h, c):
-        return f'<section><h2>{heading_html(h)}</h2><div class="body">{render(c, ctx)}</div></section>'
+    def sec(h, c, extra):
+        style = f' style="background:{ctx.theme.colour(extra["colour"])}"' if extra["colour"] else ""
+        wide = ' class="wide"' if extra["wide"] else ""
+        return f'<section{wide}><h2{style}>{heading_html(h)}</h2><div class="body">{render(c, ctx)}</div></section>'
 
-    cols = "".join(f'<div class="col">{"".join(sec(h, c) for h, c in column)}</div>' for column in columns)
-    stats_html = "".join(f'<div class="stat"><b>{esc(v)}</b><span>{esc(label)}</span></div>' for v, label in stats)
+    groups, run = [], []  # the column groups, and a wide section between two of them
+    for section in sections:
+        if section[2]["wide"]:
+            if run:
+                groups.append(run)
+            groups.append(section)
+            run = []
+        else:
+            run.append(section)
+    if run:
+        groups.append(run)
+    middle = ""
+    for group in groups:
+        if isinstance(group, tuple):
+            middle += sec(*group)
+        else:
+            columns = columns_of(group, count, meta.get("split"), md_path)
+            cols = "".join(f'<div class="col">{"".join(sec(*s) for s in column)}</div>' for column in columns)
+            middle += f'<div class="cols">{cols}</div>'
+
+    stats_html = "".join(
+        f'<div class="stat"><b>{esc(v)}</b><span>{esc(label)}</span>{trend_html(change, verdict)}</div>'
+        for v, label, change, verdict in stats
+    )
 
     summary_html = ""
     if summary:
@@ -502,12 +434,12 @@ def build(md_path, runtime: Callable[[], Runtime], theme: str | Path | None = No
         blocks = "".join(
             f'<div class="block"><h3>{esc(h.strip())}</h3><div class="body">{render(c.strip(), ctx)}</div></div>'
             for h, c in zip(chunks[1::2], chunks[2::2]))
-        summary_html = (f'<div class="banner">{esc(banner)}</div>' if banner else "") + \
+        summary_html = (f'<div class="banner">{inline(banner)}</div>' if banner else "") + \
                        (f'<div class="blocks">{blocks}</div>' if blocks else "")
 
     # minimum layout width, the script widens it until the content fits
     width = number(meta, "width", 1400 if orientation == "portrait" else 1800, md_path, least=400)
-    paper = meta.get("paper", "a1").lower()
+    paper = str(meta.get("paper", "a1")).lower()
     if paper not in PAPER_MM:
         raise PosterError(f"{md_path}: paper must be one of {', '.join(PAPER_MM)}")
     ratio = RATIO if orientation == "portrait" else 1 / RATIO
@@ -517,7 +449,6 @@ def build(md_path, runtime: Callable[[], Runtime], theme: str | Path | None = No
     script = (SCRIPT.replace("__RATIO__", f"{ratio:.4f}").replace("__MIN__", str(width))
               .replace("__PAPER_PX__", str(paper_mm[0] / 25.4 * 96)))
     fonts = ctx.theme.fonts.get("stylesheet")
-    logo = ctx.theme.logo_uri()
     page = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -529,15 +460,14 @@ def build(md_path, runtime: Callable[[], Runtime], theme: str | Path | None = No
 </head>
 <body>
 <div class="poster {orientation}">
-<header{' class="logo"' if logo else ""}>{f'<img alt="Logo" src="{logo}">' if logo else ""}<h1>{esc(title)}</h1>
-{f'<div class="subtitle">{esc(meta["subtitle"])}</div>' if meta.get("subtitle") else ""}
-{f'<div class="byline">{esc(meta["byline"])}</div>' if meta.get("byline") else ""}</header>
+{header_html(meta, title, ctx, md_path)}
 <main>
 {f'<div class="stats">{stats_html}</div>' if stats_html else ""}
 {f'<div class="abstract">{abstract}</div>' if abstract else ""}
-<div class="cols">{cols}</div>
+{middle}
 {summary_html}
-<footer><b>{esc(meta.get("footer-left", ""))}</b><span>{esc(meta.get("footer-right", ""))}</span></footer>
+{f'<div class="refs"><b>References</b>{references}</div>' if references else ""}
+{footer_html(meta.get("footer") or {}, ctx)}
 </main>
 </div>
 <script>{script}</script>
@@ -545,3 +475,35 @@ def build(md_path, runtime: Callable[[], Runtime], theme: str | Path | None = No
 </html>
 """
     return page, ctx
+
+
+def header_html(meta, title, ctx, md_path):
+    header = meta.get("header") or {}
+    align = _choice(header, "align", ("centre", "left"), md_path)
+    side = _choice(header, "logo", ("left", "right", "none"), md_path)
+    logo = ctx.theme.logo_uri() if side != "none" else None
+    classes = [f"align-{align}"] + ([f"logo-{side}"] if logo else [])
+    subtitle = f'<div class="subtitle">{esc(meta["subtitle"])}</div>' if meta.get("subtitle") else ""
+    byline = f'<div class="byline">{esc(meta["byline"])}</div>' if meta.get("byline") else ""
+    picture = f'<img alt="Logo" src="{logo}">' if logo else ""
+    return f'<header class="{" ".join(classes)}">{picture}<h1>{esc(title)}</h1>\n{subtitle}\n{byline}</header>'
+
+
+def footer_html(footer, ctx):
+    def text(key):
+        value = footer.get(key)
+        return inline(str(value)) if value not in (None, "") else ""
+
+    logos = ""
+    for path in footer.get("logos") or []:
+        if not path.is_file():
+            raise PosterError(f"{ctx.where}: footer logo not found: {path}")
+        mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
+        logos += f'<img alt="Logo" src="data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}">'
+    qr = ""
+    if footer.get("qr"):
+        label = f'<span>{text("qr-label")}</span>' if footer.get("qr-label") else ""
+        qr = f'<div class="fqr">{qr_svg(str(footer["qr"]), ctx.theme.colours["strong"], 96)}{label}</div>'
+    return (f'<footer><b class="fl">{text("left")}</b><span class="fc">{text("centre")}</span>'
+            f'<span class="fr">{text("right")}</span>'
+            + (f'<div class="logos">{logos}</div>' if logos else "") + qr + "</footer>")

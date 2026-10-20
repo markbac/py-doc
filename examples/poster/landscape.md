@@ -2,10 +2,6 @@
 title: Commissioning an SN-100 network
 subtitle: From an empty building to readings on the dashboard in one day
 byline: Example Instruments field engineering
-footer-left: Example Instruments
-footer-right: Example landscape poster, py-doc poster poster/landscape.md
-orientation: landscape
-theme: brand/example-instruments.yml
 paper: a1
 ---
 
@@ -89,7 +85,7 @@ title: Signal strength at the node (dBm)
 
 A weak node works, but it retries more and its cell lasts less.
 
-## 6. Troubleshoot: when a node will not join
+## 6. Troubleshoot: when a node will not join {.wide colour=slate}
 
 | Display | Do this |
 |---|---|

@@ -48,6 +48,13 @@ COLOUR_ROLES = {
     "lcd-text": "text on the display screen",
     "lcd-border": "the edge of the display screen",
     "diagram-fill": "Mermaid boxes",
+    "note": "a Note callout",
+    "tip": "a Tip callout",
+    "important": "an Important callout",
+    "warning": "a Warning callout",
+    "caution": "a Caution callout",
+    "good": "a trend that is good news",
+    "bad": "a trend that is bad news",
 }
 
 DEFAULT_COLOURS = {
@@ -56,6 +63,8 @@ DEFAULT_COLOURS = {
     "accent": "#4a7fc1", "accent-text": "#2f5f9f", "primary": "#2a3150", "on-primary": "#ffffff", "strong": "#2a3150", "secondary": "#3f74b8",
     "on-secondary": "#ffffff", "highlight": "#7cc0f2", "code": "#e4e8f1", "callout": "#fbeee0", "callout-border": "#e3b88a",
     "lcd": "#b7c79a", "lcd-text": "#1f2a14", "lcd-border": "#3b3b40", "diagram-fill": "#e8eef8",
+    "note": "#3f74b8", "tip": "#2e6b3a", "important": "#6b4bb4", "warning": "#b4540a", "caution": "#a3322b",
+    "good": "#2e6b3a", "bad": "#a3322b",
 }  # fmt: skip
 
 DEFAULT_PALETTE = {
@@ -79,6 +88,8 @@ BUILTIN = {
             "muted": "#a3abba", "header": "#0b0e14", "accent": "#f2a541", "accent-text": "#f2c27a", "primary": "#2b3a55",
             "secondary": "#33507e", "highlight": "#f2c27a", "strong": "#f2f4f8", "subtitle": "#f2c27a", "code": "#2b3446",
             "callout": "#3a2e1c", "callout-border": "#8a6a35", "diagram-fill": "#dfe6f2",
+            "note": "#7aa7e6", "tip": "#6fcf8a", "important": "#b49af0", "warning": "#f2a541", "caution": "#f08a80",
+            "good": "#6fcf8a", "bad": "#f08a80",
         },
     },
     "print": {  # less ink: a white page and header, light boxes, and fonts every computer has
@@ -150,6 +161,13 @@ def _apply(theme: Theme, data: dict, where: str, folder: Path | None) -> None:
         theme.fonts[name] = None if value is None else str(value)
     if data.get("logo"):
         theme.logo = logo_path(data["logo"], folder or Path.cwd(), where)
+
+
+def apply_overrides(theme: Theme, settings: dict, where: str) -> None:
+    """Colours, palette, fonts and logo set beside the theme (in py-doc.yml or the front matter), over it."""
+    _apply(theme, {key: settings[key] for key in ("colours", "palette", "fonts") if settings.get(key)}, where, None)
+    if settings.get("logo"):
+        theme.logo = logo_path(settings["logo"], Path.cwd(), where)
 
 
 def logo_path(value, folder: Path, where: str) -> Path:

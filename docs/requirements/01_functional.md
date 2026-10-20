@@ -101,7 +101,10 @@ title: Functional requirements
 | FR-131 | A poster shall keep the proportions of A paper, portrait or landscape, fit its content at the narrowest layout that holds it, and print on one page of the chosen size. | Should | Met |
 | FR-132 | A poster shall draw its diagram fences in the tool container, and a diagram that cannot be drawn shall be shown as code with a warning, without stopping the poster. | Should | Met |
 | FR-133 | The colours, fonts, block palette and logo of a poster shall come from a theme: a built-in one, or a theme file that changes a built-in one, chosen on the command line, in the front matter or in `py-doc.yml`. | Should | Met |
-| FR-134 | A mistake in a poster's front matter or theme shall stop the build with the file and the key. | Must | Met |
+| FR-134 | A mistake in a poster's settings, theme or blocks shall stop the build with the file and the key. | Must | Met |
+| FR-135 | A poster's settings (orientation, layout, theme, colours, logo, header, footer, variables and conditions) shall be set in `py-doc.yml` for every poster or for one named poster, in the front matter, or on the command line, each over the one before. | Should | Met |
+| FR-136 | A poster shall take the py-doc Markdown of documents: includes, conditions, variables, captions and callouts. | Should | Met |
+| FR-137 | A poster shall have full-width sections, a footer with three texts, logos and a QR code, timelines, trends in the stats, a references list, and charts drawn without the tool container. | Could | Met |
 
 ## Tool container
 

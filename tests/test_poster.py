@@ -7,11 +7,12 @@ import textwrap
 from pathlib import Path
 
 import pytest
+import yaml
 
-from py_doc import poster
+from py_doc import poster_blocks
 from py_doc.app import main
 from py_doc.config import ConfigError, parse_config
-from py_doc.errors import ToolFailed
+from py_doc.errors import ConversionError, ToolFailed
 from py_doc.poster import PosterError, build
 from py_doc.poster_themes import ThemeError
 
@@ -100,7 +101,7 @@ def drawn(tmp_path, monkeypatch):
         picture.write_bytes(PNG)
         return picture
 
-    monkeypatch.setattr(poster, "draw_cached", draw)
+    monkeypatch.setattr(poster_blocks, "draw_cached", draw)
     return texts
 
 
@@ -127,7 +128,7 @@ def test_the_page_has_every_part_of_the_poster(tmp_path, drawn):
     assert '<div class="cell fill">Scheduled wake‑up</div>' in page
     assert '<div class="fig-notes"><p>A note under the lanes.</p>' in page
     assert '<div class="banner">The valve is safe.</div>' in page and "<h3>Safe</h3>" in page
-    assert "<b>G460</b><span>October 2026</span>" in page
+    assert '<b class="fl">G460</b><span class="fc"></span><span class="fr">October 2026</span>' in page
     assert "size:420mm 594mm" in page
     assert (ctx.n, ctx.failed) == (1, 0)
 
@@ -157,7 +158,7 @@ def test_a_broken_diagram_is_shown_as_code_and_the_poster_is_still_built(tmp_pat
     def fail(*args, **kwargs):
         raise ToolFailed("mmdc", 1, "Parse error on line 1\nmore detail")
 
-    monkeypatch.setattr(poster, "draw_cached", fail)
+    monkeypatch.setattr(poster_blocks, "draw_cached", fail)
     page, ctx = build(write(tmp_path), lambda: object())
     assert ctx.failed == 1
     assert "<pre><code>graph LR; A--&gt;B</code></pre>" in page
@@ -299,7 +300,7 @@ def test_a_theme_file_extends_a_built_in_theme_and_brings_a_logo_palette_and_fon
     page, _ = build(write(tmp_path, text), lambda: object())
     assert "--primary:#0f5e5e;" in page and "--page:#141923;" in page  # its own colour, and the dark theme's
     assert "--font-body:'Brand Sans', Arial, sans-serif" in page and "fonts.googleapis.com" not in page
-    assert '<header class="logo"><img alt="Logo" src="data:image/svg+xml;base64,' in page
+    assert '<header class="align-centre logo-left"><img alt="Logo" src="data:image/svg+xml;base64,' in page
     assert page.count('<div class="node" style="background:#0f5e5e">') == 2
     assert '"primaryBorderColor": "#0f5e5e"' in drawn[0][1] and "Brand Sans" in drawn[0][1]
 
@@ -311,11 +312,11 @@ def test_the_front_matter_logo_wins_over_the_themes(tmp_path, drawn):
     assert 'src="data:image/png;base64,' in page
 
 
-def test_the_theme_argument_wins_over_the_front_matter_and_the_project_default_comes_last(tmp_path, drawn):
+def test_settings_win_over_the_front_matter_and_the_defaults_come_last(tmp_path, drawn):
     text = "---\ntheme: dark\n---\n## A\n\nText.\n"
-    assert "--page:#ffffff;" in build(write(tmp_path, text), lambda: object(), theme="print")[0]
-    assert "--page:#141923;" in build(write(tmp_path, text), lambda: object(), default_theme="print")[0]
-    assert "--page:#ffffff;" in build(write(tmp_path, "## A\n\nText.\n"), lambda: object(), default_theme="print")[0]
+    assert "--page:#ffffff;" in build(write(tmp_path, text), lambda: object(), settings={"theme": "print"})[0]
+    assert "--page:#141923;" in build(write(tmp_path, text), lambda: object(), defaults={"theme": "print"})[0]
+    assert "--page:#ffffff;" in build(write(tmp_path, "## A\n\nText.\n"), lambda: object(), defaults={"theme": "print"})[0]
 
 
 @pytest.mark.parametrize(
@@ -357,10 +358,256 @@ def test_the_project_sets_the_default_theme_and_the_command_line_wins(tmp_path, 
     assert "--page:#ffffff;" in (tmp_path / "poster.html").read_text(encoding="utf-8")
 
 
-def test_a_project_poster_theme_must_be_text(tmp_path):
-    with pytest.raises(ConfigError, match="poster.theme must be str"):
-        parse_config({"poster": {"theme": 3}}, tmp_path)
-    with pytest.raises(ConfigError, match="unknown key 'colours' in poster"):
-        parse_config({"poster": {"colours": {}}}, tmp_path)
-    assert parse_config({"poster": {"theme": "brand.yml"}}, tmp_path).poster_theme == tmp_path / "brand.yml"
-    assert parse_config({"poster": {"theme": "dark"}}, tmp_path).poster_theme == "dark"
+def test_the_poster_section_takes_every_poster_setting(tmp_path):
+    with pytest.raises(ConfigError, match="unknown key 'colors' in poster"):
+        parse_config({"poster": {"colors": {}}}, tmp_path)
+    with pytest.raises(ConfigError, match="poster.colours must be a mapping"):
+        parse_config({"poster": {"colours": "red"}}, tmp_path)
+    with pytest.raises(ConfigError, match="poster.columns must be a whole number"):
+        parse_config({"poster": {"columns": 2.5}}, tmp_path)
+    with pytest.raises(ConfigError, match="unknown key 'middle' in poster.footer"):
+        parse_config({"poster": {"footer": {"middle": "x"}}}, tmp_path)
+    config = parse_config({"poster": {"theme": "brand.yml", "logo": "logo.svg", "footer": {"logos": ["a.png"]}}}, tmp_path)
+    assert config.poster["theme"] == tmp_path / "brand.yml" and config.poster["logo"] == tmp_path / "logo.svg"
+    assert config.poster["footer"]["logos"] == [tmp_path / "a.png"]
+    assert parse_config({"poster": {"theme": "dark"}}, tmp_path).poster["theme"] == "dark"
+
+
+# --- py-doc.yml posters ---------------------------------------------------------------------------
+
+
+def project(tmp_path, posters, defaults=None):
+    data = {"posters": posters}
+    if defaults:
+        data["poster"] = defaults
+    (tmp_path / "py-doc.yml").write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
+
+def test_a_poster_of_py_doc_yml_has_its_source_output_and_settings(tmp_path):
+    config = parse_config({"posters": {"sn100": {"source": "p.md", "orientation": "landscape", "colours": {"primary": "#123456"}}}}, tmp_path)
+    poster = config.posters["sn100"]
+    assert (poster.source, poster.output) == (tmp_path / "p.md", tmp_path / "build" / "sn100.html")
+    assert poster.settings == {"orientation": "landscape", "colours": {"primary": "#123456"}}
+    with pytest.raises(ConfigError, match="posters.x needs a source"):
+        parse_config({"posters": {"x": {"orientation": "landscape"}}}, tmp_path)
+    with pytest.raises(ConfigError, match="unknown key 'orientaton' in posters.x"):
+        parse_config({"posters": {"x": {"source": "p.md", "orientaton": "landscape"}}}, tmp_path)
+
+
+def test_every_poster_of_py_doc_yml_is_built_with_its_entry_over_the_front_matter(tmp_path, drawn, monkeypatch, capsys):
+    monkeypatch.setattr("py_doc.poster_cli.connect", lambda settings: object())
+    monkeypatch.chdir(tmp_path)
+    write(tmp_path, "---\norientation: portrait\ncolours: {primary: '#111111', accent: '#222222'}\n---\n## A\n\nText.\n")
+    project(
+        tmp_path,
+        {"wall": {"source": "poster.md", "output": "out/wall.html", "orientation": "landscape", "colours": {"primary": "#333333"}},
+         "desk": {"source": "poster.md"}},
+        defaults={"colours": {"secondary": "#444444", "accent": "#555555"}},
+    )  # fmt: skip
+    assert main(["poster"]) == 0
+    wall = (tmp_path / "out" / "wall.html").read_text(encoding="utf-8")
+    desk = (tmp_path / "build" / "desk.html").read_text(encoding="utf-8")
+    assert 'class="poster landscape"' in wall and "--primary:#333333;" in wall
+    assert "--accent:#222222;" in wall and "--secondary:#444444;" in wall  # front matter over defaults, defaults kept
+    assert 'class="poster portrait"' in desk and "--primary:#111111;" in desk
+    assert main(["poster", "desk"]) == 0
+    assert main(["poster", "nothing"]) == 1
+    assert "is not a Markdown file or a poster of py-doc.yml. The posters of py-doc.yml are: wall, desk" in capsys.readouterr().err
+    assert main(["poster", "-o", "x.html"]) == 1
+
+
+def test_without_posters_the_command_asks_for_one(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    assert main(["poster"]) == 1
+    assert "no poster given" in capsys.readouterr().err
+
+
+def test_the_command_line_sets_variables_and_conditions(tmp_path, drawn, monkeypatch):
+    monkeypatch.setattr("py_doc.poster_cli.connect", lambda settings: object())
+    source = write(tmp_path, "## A\n\nVersion {{version}}.\n\n[[IF: internal]]\nSecret.\n[[ENDIF]]\n")
+    assert main(["poster", str(source), "--var", "version=2.1", "--condition", "internal=false"]) == 0
+    page = (tmp_path / "poster.html").read_text(encoding="utf-8")
+    assert "Version 2.1." in page and "Secret." not in page
+
+
+# --- py-doc syntax --------------------------------------------------------------------------------
+
+
+def test_includes_conditions_and_variables_from_the_settings(tmp_path, drawn):
+    (tmp_path / "part.md").write_text("Included {{name}}.\n", encoding="utf-8")
+    (tmp_path / "code.py").write_text("print('hi')\n", encoding="utf-8")
+    text = "---\nvariables: {name: text}\nconditions: {internal: true}\n---\n## A\n\n[[INCLUDE: part.md]]\n\n[[INCLUDE-CODE: code.py]]\n\n[[NOT: internal]]\nPublic.\n[[ENDIF]]\n"
+    page, _ = build(write(tmp_path, text), lambda: object())
+    assert "Included text." in page and "Public." not in page
+    assert '<pre><code class="language-python">print(\'hi\')' in page
+
+
+def test_a_missing_include_is_an_error_with_the_file(tmp_path):
+    with pytest.raises(ConversionError, match="included file not found"):
+        build(write(tmp_path, "## A\n\n[[INCLUDE: missing.md]]\n"), lambda: object())
+
+
+def test_captions_callouts_and_word_markers(tmp_path, drawn):
+    text = textwrap.dedent(
+        """\
+        ## A
+
+        [[CAPTION:Figure]] The valve.
+
+        ```dot
+        digraph { a -> b }
+        ```
+
+        > [!WARNING]
+        > Disconnect the battery first.
+
+        > **Tip:** use the app.
+
+        > A plain quote.
+
+        [[LANDSCAPE]]
+        [[STYLE:Lead Paragraph]] Lead text.
+
+        [[PAGEBREAK]]
+
+        ```markdown
+        [[CAPTION:Figure]] shown as code
+        ```
+        """
+    )
+    page, _ = build(write(tmp_path, text), lambda: object())
+    assert '<p class="caption">The valve.</p>' in page
+    assert '<blockquote class="callout warning"><p class="callout-title">Warning</p><p>Disconnect the battery first.</p>' in page
+    assert '<blockquote class="callout tip">\n<p><strong>Tip:</strong> use the app.</p>' in page
+    assert "<blockquote>\n<p>A plain quote.</p>" in page
+    assert "<p>Lead text.</p>" in page
+    assert "LANDSCAPE" not in page and "pagebreak" not in page and ":::" not in page
+    assert "[[CAPTION:Figure]] shown as code" in page
+
+
+def test_a_front_matter_key_that_is_not_a_setting_is_ignored_with_a_warning(tmp_path, drawn, caplog):
+    build(write(tmp_path, "---\nauthor: A. Writer\n---\n## A\n\nText.\n"), lambda: object())
+    assert "'author' is not a poster setting, so it is ignored" in caplog.text
+
+
+def test_front_matter_that_is_not_yaml_is_an_error(tmp_path):
+    with pytest.raises(PosterError, match="front matter is not valid YAML"):
+        build(write(tmp_path, "---\ntitle: [unclosed\n---\n## A\n\nText.\n"), lambda: object())
+
+
+# --- layout ---------------------------------------------------------------------------------------
+
+
+def test_a_wide_section_spans_the_columns_and_splits_them_into_groups(tmp_path, drawn):
+    text = "## 1. A\n\nOne.\n\n## 2. B\n\nTwo.\n\n## 3. Wide {.wide colour=red}\n\nAll across.\n\n## 4. C\n\nThree.\n\n## 5. D\n\nFour.\n"
+    page, _ = build(write(tmp_path, text), lambda: object())
+    assert page.count('<div class="cols">') == 2
+    assert '<section class="wide"><h2 style="background:#a3322b">3. Wide</h2>' in page
+    assert page.index("2. B") < page.index("3. Wide") < page.index("4. C")
+    with pytest.raises(PosterError, match="split cannot be used with wide sections"):
+        build(write(tmp_path, "---\nsplit: 1\n---\n" + text), lambda: object())
+
+
+def test_an_unknown_heading_attribute_is_a_warning(tmp_path, drawn, caplog):
+    page, _ = build(write(tmp_path, "## A {.narrow}\n\nText.\n"), lambda: object())
+    assert "<h2>A</h2>" in page and "has '.narrow', which a poster does not use" in caplog.text
+
+
+def test_the_header_aligns_and_puts_the_logo_on_either_side_or_none(tmp_path, drawn):
+    (tmp_path / "logo.png").write_bytes(PNG)
+    base = "logo: logo.png\n"
+    page, _ = build(write(tmp_path, f"---\n{base}header: {{align: left, logo: right}}\n---\n## A\n\nText.\n"), lambda: object())
+    assert '<header class="align-left logo-right"><img alt="Logo"' in page
+    page, _ = build(write(tmp_path, f"---\n{base}header: {{logo: none}}\n---\n## A\n\nText.\n"), lambda: object())
+    assert '<header class="align-centre"><h1>' in page
+    with pytest.raises(PosterError, match="align must be centre or left, not 'middle'"):
+        build(write(tmp_path, "---\nheader: {align: middle}\n---\n## A\n\nText.\n"), lambda: object())
+
+
+def test_the_footer_has_three_texts_logos_and_a_qr_code(tmp_path, drawn):
+    (tmp_path / "a.png").write_bytes(PNG)
+    text = "---\nfooter: {left: '**SN-100**', centre: Middle, right: Right, logos: [a.png], qr: 'https://example.com/sn100', qr-label: Scan me}\n---\n## A\n\nText.\n"
+    page, _ = build(write(tmp_path, text), lambda: object())
+    assert '<b class="fl"><strong>SN-100</strong></b><span class="fc">Middle</span><span class="fr">Right</span>' in page
+    assert '<div class="logos"><img alt="Logo" src="data:image/png;base64,' in page
+    assert '<div class="fqr"><svg' in page and "<span>Scan me</span>" in page
+    with pytest.raises(PosterError, match="footer logo not found"):
+        build(write(tmp_path, "---\nfooter: {logos: [missing.png]}\n---\n## A\n\nText.\n"), lambda: object())
+
+
+def test_the_old_footer_keys_still_work(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\nfooter-left: L\nfooter-right: R\n---\n## A\n\nText.\n"), lambda: object())
+    assert '<b class="fl">L</b>' in page and '<span class="fr">R</span>' in page
+
+
+# --- blocks ---------------------------------------------------------------------------------------
+
+
+def test_stats_show_a_trend_whose_colour_follows_its_direction_or_verdict(tmp_path, drawn):
+    text = "## Stats\n\n| Value | Label | Change | Verdict |\n|---|---|---|---|\n| 5 y | Life | +14 % | |\n| 4 s | Join | -7 s | good |\n| 3 | Faults | +1 | bad |\n| 2 | Same | 0 | |\n\n## A\n\nText.\n"
+    page, _ = build(write(tmp_path, text), lambda: object())
+    assert '<em class="trend good">▲ +14 %</em>' in page
+    assert '<em class="trend good">▼ -7 s</em>' in page
+    assert '<em class="trend bad">▲ +1</em>' in page
+    assert '<em class="trend good">▶ 0</em>' in page
+
+
+def test_a_timeline_is_a_row_or_a_column_of_milestones(tmp_path, drawn):
+    code = "Jan 2026 | Design | frozen | coral\nMar 2026 | Pilot"
+    page, _ = build(write(tmp_path, f"## A\n\n```timeline\n{code}\n```\n\n```timeline vertical\n{code}\n```\n"), lambda: object())
+    assert '<i style="background:coral"></i><b>Jan 2026</b><span>Design</span><small>frozen</small>' in page
+    assert '<i style="background:#4a7fc1"></i><b>Mar 2026</b><span>Pilot</span></div>' in page  # the accent by default
+    assert '<div class="timeline vertical">' in page
+
+
+@pytest.mark.parametrize("kind", ["column", "bar", "line"])
+def test_a_chart_is_svg_in_the_theme_colours(tmp_path, drawn, kind):
+    code = f'```chart type={kind} title="Messages a day" unit=" msg"\nseries: 2.0, 2.1\nMon | 1440 | 900\nTue | 1440 | -50\n```'
+    page, _ = build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
+    svg = page.split('<svg class="chart"', 1)[1].split("</svg>", 1)[0]
+    assert '<div class="fig-title">Messages a day</div>' in page
+    assert "#3f74b8" in svg and "#4a7fc1" in svg  # secondary, then accent
+    assert ">2.0</text>" in svg and ">2.1</text>" in svg and ">Mon</text>" in svg
+
+
+@pytest.mark.parametrize(
+    "code, message",
+    [
+        ("```chart type=pie\nA | 1\n```", "chart type must be one of column, bar, line"),
+        ("```chart\nA | lots\n```", "needs numbers after the label"),
+        ("```chart\nA\n```", "has no value"),
+        ("```chart\n```", "at least one"),
+        ("```qr\n```", "needs the text or address"),
+    ],
+)
+def test_a_block_mistake_is_an_error(tmp_path, code, message):
+    with pytest.raises(PosterError, match=message):
+        build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
+
+
+def test_a_qr_block_draws_the_code_with_its_label(tmp_path, drawn):
+    page, _ = build(write(tmp_path, '## A\n\n```qr size=200 label="The manual"\nhttps://example.com/manual\n```\n'), lambda: object())
+    assert '<div class="qr"><svg' in page and '<div class="cap">The manual</div>' in page
+    assert 'stroke="#2a3150"' in page
+
+
+def test_references_are_a_list_above_the_footer(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "## A\n\nText [1].\n\n## References\n\n1. SN-100 datasheet, SN-DS-001.\n1. MQTT 5.0, OASIS.\n"), lambda: object())
+    refs = page.split('<div class="refs">', 1)[1]
+    assert refs.startswith("<b>References</b><ol>") and "<li>MQTT 5.0, OASIS.</li>" in refs
+    assert refs.index("</ol>") < refs.index("<footer>")
+
+
+def test_a_directive_mistake_names_the_line_of_the_file(tmp_path):
+    with pytest.raises(ConversionError, match=r"poster.md:7: included file not found"):
+        build(write(tmp_path, "---\ntitle: T\n---\n## A\n\nText.\n[[INCLUDE: missing.md]]\n"), lambda: object())
+
+
+def test_text_too_long_for_a_qr_code_is_an_error(tmp_path):
+    with pytest.raises(PosterError, match="too long for a QR code"):
+        build(write(tmp_path, "## A\n\n```qr\n" + "x" * 8000 + "\n```\n"), lambda: object())
+
+
+def test_the_old_and_new_footer_keys_combine(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\nfooter-left: L\nfooter: {right: R}\n---\n## A\n\nText.\n"), lambda: object())
+    assert '<b class="fl">L</b>' in page and '<span class="fr">R</span>' in page

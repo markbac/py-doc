@@ -43,7 +43,7 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 | `docs/release-notes.md` | A short document whose version comes from Git (`version: git`) |
 | `docs/interfaces.md` | Interface specifications for a sample library system (OpenAPI, AsyncAPI, gRPC and GraphQL), each included from its own file in `docs/includes/apis/`, and a PlantUML use case diagram |
 | `docs/deck/slides.md` | The deck: section slides, bullets, columns, incremental lists, both kinds of speaker notes, diagrams, a picture, a table, maths, callouts, code, an include, a condition, a page break |
-| `poster/` | Three one-page HTML posters (`py-doc poster`). `poster.md` is portrait in the default theme, with every kind of block. `landscape.md` is landscape, in three columns, in the theme of a made-up company (`brand/example-instruments.yml`, with its logo). `release.md` uses the built-in dark theme. They are outside `docs/` because posters have no `[[CAPTION:]]` markers |
+| `poster/` | Three one-page HTML posters, listed under `posters:` in `py-doc.yml`. `poster.md` is portrait in the default theme, with every kind of block, a chart, a timeline, trends, a full-width section and a QR code, all set in its front matter. `landscape.md` has only the words: its orientation, theme (`brand/example-instruments.yml`, a made-up company with its logo), header and footer are in `py-doc.yml`. `release.md` uses the dark theme, a two-series chart and a `{{version}}` variable. They are outside `docs/` because posters have no `[[CAPTION:]]` markers |
 | `docs/includes/` | Files pulled in with `[[INCLUDE:]]` and `[[INCLUDE-CODE:]]` |
 | `templates/sensor.docx` | The Word template: logo, title page with `Replace-with-*` placeholders, header, footer with page numbers, callout styles, a `Lead Paragraph` style, `[[INSERTCONTENT]]` where the body goes |
 | `templates/sensor_Draft.docx` | The same template with a red "DRAFT" header. A document with `status: Draft` uses it without being told to |
@@ -69,9 +69,8 @@ py-doc build deck                                    # build/deck.pptx
 py-doc build release-notes                           # build/release-notes-<git version>.docx, needs a Git commit
 py-doc build architecture                            # build/architecture.docx and architecture.html
 py-doc build interfaces                              # build/interfaces.docx and interfaces.html
-py-doc poster poster/poster.md                       # poster/poster.html, one self-contained page
-py-doc poster poster/landscape.md                    # poster/landscape.html, landscape and branded
-py-doc poster poster/release.md --theme print        # poster/release.html, in the low-ink print theme
+py-doc poster                                        # build/sensor-node.html, build/posters/commissioning.html, build/release.html
+py-doc poster poster/release.md --theme print        # poster/release.html, the file alone, in the low-ink print theme
 py-doc import word/design_review.docx -o imported    # imported/design_review.md and imported/design_review/
 py-doc docx imported/design_review.md                # imported/design_review.docx: the round trip
 py-doc import build/deck.pptx -o imported            # imported/deck.md: the deck back as Markdown

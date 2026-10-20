@@ -156,3 +156,30 @@ site:
   engine: mkdocs                       # or starlight (Astro + Starlight)
   dir: site
   documents: [guide, datasheet, architecture]
+
+# Posters for `py-doc poster`: one self-contained HTML page each. `py-doc poster` builds them all,
+# `py-doc poster commissioning` one. Settings in layers: `poster` (every poster), then the front matter
+# of the Markdown file, then the poster's own entry here, then the command line.
+poster:
+  footer:
+    centre: Example Instruments
+posters:
+  sensor-node:
+    source: poster/poster.md       # every setting is in its front matter
+  commissioning:
+    source: poster/landscape.md    # its front matter has the words; the look is set here
+    output: build/posters/commissioning.html
+    orientation: landscape
+    theme: poster/brand/example-instruments.yml
+    colours:
+      accent: "#d9573a"             # one colour changed over the theme
+    header: {align: left, logo: left}
+    footer:
+      left: SN-100 commissioning
+      right: Example landscape poster, `py-doc poster commissioning`
+      qr: https://example.com/commissioning
+      qr-label: The full checklist
+  release:
+    source: poster/release.md
+    variables: {version: "2.1"}
+

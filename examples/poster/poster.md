@@ -2,20 +2,24 @@
 title: SN-100 Sensor Node
 subtitle: Five years of readings from one coin cell
 byline: A. Writer, Product Engineering
-footer-left: SN-100
-footer-right: Example poster, py-doc poster poster/poster.md
 paper: a1
 width: 1150
+footer:
+  left: SN-100
+  centre: Product Engineering
+  right: Example poster, `py-doc poster poster/poster.md`
+  qr: https://example.com/sn-100
+  qr-label: Datasheet
 ---
 
 ## Stats
 
-| Value | Label |
-|---|---|
-| 2 uA | Sleep current |
-| 5 years | Battery life at one reading a minute |
-| 0.2 °C | Temperature accuracy |
-| 1 KB | Firmware update block |
+| Value | Label | Change | Verdict |
+|---|---|---|---|
+| 2 uA | Sleep current | -0.5 uA | good |
+| 5 years | Battery life at one reading a minute | +14 % | |
+| 0.2 °C | Temperature accuracy | | |
+| 1 KB | Firmware update block | | |
 
 ## Abstract
 
@@ -51,6 +55,13 @@ title: One minute of the node's time (not to scale)
 
 Sending costs the most, so the node sends only when a reading has changed by more than the reporting threshold.
 
+```chart type=bar title="Charge per minute (uC)" unit=" uC"
+Asleep | 116
+Measure | 300
+Send | 12000
+```
+
+> [!WARNING]
 > Keep the reporting threshold above the sensor noise, or the node sends every reading and the cell lasts months, not years.
 
 ## 3. Behaviour: one reading
@@ -84,6 +95,15 @@ RETRY 3/5
 | `E01` | Sensor not found on I2C |
 | `E02` | Broker refused the connection |
 | `E03` | Battery below 2.2 V |
+
+## 5. Roadmap: what comes next {.wide}
+
+```timeline
+Jan 2026 | Pilot | 200 nodes in two buildings | navy
+Apr 2026 | Firmware 2.1 | Sends only what changed | blue
+Jul 2026 | Display option | For installers | green
+Oct 2026 | Ten-year cell | Twice the life | amber
+```
 
 ## Summary
 

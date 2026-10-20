@@ -1,21 +1,25 @@
 ---
-title: SN-100 firmware 2.1
+title: SN-100 firmware {{version}}
 subtitle: Longer life, faster joins, safer updates
 byline: Release notes for installers and support
-footer-left: Firmware 2.1
-footer-right: Example dark poster, py-doc poster poster/release.md
+footer:
+  left: Firmware {{version}}
+  right: Example dark poster, `py-doc poster poster/release.md`
+variables:
+  version: "2.1"
 theme: dark
 paper: a3
 width: 1100
+split: 2
 ---
 
 ## Stats
 
-| Value | Label |
-|---|---|
-| +14 % | Battery life |
-| 4 s | Typical join, was 11 s |
-| 2 | Firmware copies kept |
+| Value | Label | Change | Verdict |
+|---|---|---|---|
+| 5.7 years | Battery life | +14 % | |
+| 4 s | Typical join | -7 s | good |
+| 2 | Firmware copies kept | +1 | |
 
 ## Abstract
 
@@ -25,10 +29,11 @@ Firmware 2.1 sends less, joins faster and can always go back to the last version
 
 The node now compares each reading with the last one sent and stays quiet when nothing has changed.
 
-```segments
-title: Messages a day, 2.0 against 2.1
-6 | 2.0 | 1440 messages | grey
-4 | 2.1 | about 900 | blue
+```chart type=column title="Messages a day"
+series: 2.0, 2.1
+Office | 1440 | 610
+Warehouse | 1440 | 980
+Cold store | 1440 | 1210
 ```
 
 ## 2. Joining: faster
@@ -55,7 +60,13 @@ Report | The result goes to the broker either way | navy
 | 2.0 | Update over the air, no visit needed |
 | 1.x | Update to 2.0 first, then 2.1 |
 
-> Do not update a node whose battery shows below 2.4 V. The update stops and the node keeps 2.0.
+> **Warning:** do not update a node whose battery shows below 2.4 V. The update stops and the node keeps 2.0.
+
+```timeline vertical
+1 May | Pilot sites | 200 nodes
+15 May | Every site | Over the air, overnight
+1 June | 2.0 retired | No more 2.0 updates
+```
 
 ## Summary
 
@@ -68,3 +79,8 @@ Nothing changes on site. Joining is simply quicker.
 ### Support
 
 Every update reports its result, so a failed node is visible at once.
+
+## References
+
+1. SN-100 Datasheet, SN-DS-001.
+1. SN-100 release notes, firmware {{version}}.
