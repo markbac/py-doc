@@ -483,7 +483,7 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
            .replace("__H__", str(round(width * ratio))).replace("__PAPER__", "{}mm {}mm".format(*paper_mm)))
     script = (SCRIPT.replace("__RATIO__", f"{ratio:.4f}").replace("__MIN__", str(width))
               .replace("__PAPER_PX__", str(paper_mm[0] / 25.4 * 96)))
-    faces, link = font_css(ctx.theme, bool(meta.get("embed_fonts")), str(md_path))
+    faces, link = font_css(ctx.theme, meta.get("embed_fonts") or False, str(md_path))
     fonts = ctx.theme.fonts.get("stylesheet") if link else None
     page = f"""<!doctype html>
 <html lang="en">

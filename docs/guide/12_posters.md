@@ -80,7 +80,7 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 | `document_number`, `version` | None | The document's number and version, shown small under the footer, unless `footer.document` or `footer.version` names others |
 | `variables`, `conditions` | None | Values for `{{name}}` and `[[IF:]]`, as for documents |
 | `pdf` | `false` | `true` prints a one-page PDF beside the page, and a path prints it there. `--pdf` and `--no-pdf` win |
-| `embed_fonts` | `false` | `true` puts the theme's web fonts inside the page, so it and its PDF look the same offline. See [Fonts inside the page](#fonts-inside-the-page). `--embed-fonts` and `--no-embed-fonts` win |
+| `embed_fonts` | `false` | `true` puts the theme's web fonts inside the page, so it and its PDF look the same offline. A list of subsets, such as `[latin, latin-ext]`, puts in only those. See [Fonts inside the page](#fonts-inside-the-page). `--embed-fonts` and `--no-embed-fonts` win |
 
 `footer-left` and `footer-right` in the front matter still work, as `footer.left` and `footer.right`.
 
@@ -278,7 +278,18 @@ poster:
   embed_fonts: true
 ```
 
-Embedded fonts make the page larger: the default theme's fonts add about 1.9 MB, and the example brand's about 0.5 MB. More than 5 MB of fonts is reported with a warning, because the page is then slow to send and open.
+Embedded fonts make the page larger. A web font comes in subsets, one for each set of characters, and `embed_fonts` can name the ones to keep:
+
+```yaml
+embed_fonts: [latin, latin-ext]   # English and the other Western and Central European languages
+```
+
+| Theme | Every subset | `[latin, latin-ext]` | `[latin]` |
+|---|---|---|---|
+| `default` | 713 KB | 368 KB | 200 KB |
+| The example brand | 513 KB | 315 KB | 128 KB |
+
+The subset names are the ones Google Fonts gives, such as `latin`, `latin-ext`, `cyrillic`, `greek` and `vietnamese`. A character that no kept subset has is drawn in the fallback font. A variable font that the stylesheet lists once for each weight is put in the page once. More than 5 MB of fonts is reported with a warning, because the page is then slow to send and open.
 
 > **Important:** A font's licence decides whether it may be put inside a file you send. The fonts of Google Fonts are under licences that allow it. Check the licence of a bought or brand font before you embed it.
 
