@@ -433,7 +433,7 @@ Every update reports its result.
 1. Stand back from the screen. Can you read the section text from two steps away at the size it will print?
 1. Check every number, name and date against its source.
 1. Scan the QR code with a phone.
-1. Lint it with `py-doc lint posters/`, and fix every warning. It checks the glossary, acronyms and wording, but not document rules such as captions.
+1. Lint it with `py-doc lint posters/`, and fix every warning. It checks the glossary and wording, but not document rules such as captions, acronym definitions or the passive voice.
 1. Build the PDF and open it. Check it is one page of the right paper size and orientation.
 
 ## When something goes wrong
