@@ -260,11 +260,11 @@ def _pipeline(args: argparse.Namespace, config, names: list[str], runtime, repor
             return 1
         step("generate", "ok", f"{len(chosen)} generator(s), {len(changed)} file(s) changed")
 
-    # 2. lint the sources of the documents being built
+    # 2. lint the sources of the documents and posters being built
     lint_mode = args.lint or config.build.lint
     lint_report = Path(args.lint_report).resolve() if args.lint_report else config.build.lint_report
     if lint_mode != "off":
-        status = _lint_sources(config, names, lint_mode, lint_report, runtime)
+        status = _lint_sources(config, names, lint_mode, lint_report, runtime, posters)
         step("lint", "failed" if status else "ok")
         if status:
             _error("Lint found problems, so nothing was built. Fix them, or build with --no-lint")
@@ -366,9 +366,9 @@ def _build_posters(args: argparse.Namespace, config, names: list[str], runtime, 
     return status, written
 
 
-def _lint_sources(config, names: list[str], mode: str, output: Path | None, runtime) -> int:
-    """Lint every source of the documents (bundles: of theirs), except the files generators write: nobody edits
-    those, so the project's writing rules do not apply. Prints the issues; returns the lint exit status."""
+def _lint_sources(config, names: list[str], mode: str, output: Path | None, runtime, posters=()) -> int:
+    """Lint every source of the documents (bundles: of theirs) and of the ``posters``, except the files generators
+    write: nobody edits those, so the project's writing rules do not apply. Prints the issues; returns the lint exit status."""
     from .lint import DocLinter
     from .lint.cli import exit_status as lint_status
     from .lint.cli import render as render_lint
@@ -378,7 +378,7 @@ def _lint_sources(config, names: list[str], mode: str, output: Path | None, runt
     files = sorted({
         s.file.resolve() for name in names for s in config.documents[name].sources
         if s.include and s.structurizr is None and s.file.suffix.lower() in (".md", ".markdown") and s.file.exists()
-    } - generated)  # fmt: skip
+    } - generated | {config.posters[name].source.resolve() for name in posters if config.posters[name].source.exists()})  # fmt: skip
     if not files:
         return 0
     try:

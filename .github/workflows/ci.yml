@@ -97,7 +97,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           py-doc lint docs --strict
-          cd examples && py-doc lint docs --strict
+          cd examples && py-doc lint docs poster --strict
 
   build:
     name: Build package

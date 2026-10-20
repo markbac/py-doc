@@ -95,7 +95,8 @@ class DocLinter:
                 LintIssue(file, p.line, RULE_DIRECTIVE, "Directive", p.message, severity)
                 for p in directives.check(text, file)
             ]
-        issues += structure.check_file(file, text, self.config.structure)
+        if file.resolve() not in self.config.posters:  # captions and the like are document conventions, not a poster's
+            issues += structure.check_file(file, text, self.config.structure)
         return sorted(issues, key=lambda issue: (issue.line, issue.rule))
 
     @property

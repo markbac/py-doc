@@ -967,3 +967,35 @@ def test_the_page_balances_the_columns_by_height_unless_split_chooses(tmp_path, 
     assert "function balance()" in page and "balance();return p.scrollHeight" in page  # on every width it tries
     page, _ = build(write(tmp_path, "---\nsplit: 2\n---\n" + SECTIONS), lambda: object())
     assert '<div class="cols">' in page and "data-balance>" not in page
+
+
+# --- lint -----------------------------------------------------------------------------------------
+
+EXAMPLE_POSTERS = Path(__file__).parent.parent / "examples" / "poster"
+
+
+def test_the_example_posters_lint_clean_without_the_document_structure_rules(monkeypatch, capsys):
+    monkeypatch.chdir(EXAMPLE_POSTERS.parent)
+    assert main(["lint", "poster", "--engine", "builtin", "--strict"]) == 0
+    assert "structure/" not in capsys.readouterr().out
+
+
+def test_the_same_markdown_as_a_document_gets_the_structure_rules(tmp_path, monkeypatch, capsys):
+    """A poster has no [[CAPTION:]] markers, which the example project's structure rules ask of a document."""
+    import shutil
+
+    copy = tmp_path / "not-a-poster.md"
+    shutil.copy(EXAMPLE_POSTERS / "poster.md", copy)
+    monkeypatch.chdir(EXAMPLE_POSTERS.parent)
+    main(["lint", str(copy), "--engine", "builtin", "--config", "py-doc.yml"])
+    assert "structure/diagram-missing-caption" in capsys.readouterr().out
+
+
+def test_build_lint_reads_the_posters_too(tmp_path, drawn, documents, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    write(tmp_path, "## A\n\nWe do this in order to save power.\n")
+    (tmp_path / "py-doc.yml").write_text("posters:\n  wall: {source: poster.md}\n", encoding="utf-8")
+    assert main(["build", "--strict"]) == 1
+    out = capsys.readouterr()
+    assert "poster.md" in out.out and "DOC002" in out.out  # 'in order to' is a wordy phrase
+    assert not (tmp_path / "build" / "wall.html").exists()
