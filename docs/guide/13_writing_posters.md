@@ -305,7 +305,7 @@ poster:
   footer: {centre: Example Instruments}
 ```
 
-Change one colour for one poster beside the theme with `colours:`, such as `colours: {accent: "#d9573a"}`. [Posters](12_posters.md) lists every colour and what it paints.
+Change one colour for one poster beside the theme with `colours:`, such as `colours: {accent: "#d9573a"}`. Set `embed_fonts: true` to put the theme's fonts inside the page, so a poster you send by email, or print to PDF, keeps them without internet. [Posters](12_posters.md) lists every colour and what it paints.
 
 ## Reuse text
 

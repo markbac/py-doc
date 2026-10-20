@@ -23,6 +23,7 @@ from py_doc.diagrams.registry import PUPPETEER, TOOLS
 from py_doc.directives import Fence, expand
 from py_doc.pandoc.source import split_front_matter
 from py_doc.poster_blocks import MD, Ctx, PosterError, block_html, esc, inline, parse_opts, qr_svg
+from py_doc.poster_fonts import font_css
 from py_doc.poster_settings import SettingsError, layer, merge
 from py_doc.poster_themes import apply_overrides, load_theme
 from py_doc.runtime import Mount, Runtime
@@ -460,7 +461,8 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
            .replace("__H__", str(round(width * ratio))).replace("__PAPER__", "{}mm {}mm".format(*paper_mm)))
     script = (SCRIPT.replace("__RATIO__", f"{ratio:.4f}").replace("__MIN__", str(width))
               .replace("__PAPER_PX__", str(paper_mm[0] / 25.4 * 96)))
-    fonts = ctx.theme.fonts.get("stylesheet")
+    faces, link = font_css(ctx.theme, bool(meta.get("embed_fonts")), str(md_path))
+    fonts = ctx.theme.fonts.get("stylesheet") if link else None
     page = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -468,7 +470,7 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{esc(title)}</title>
 {f'<link rel="stylesheet" href="{esc(fonts)}">' if fonts else ""}
-<style>{css}</style>
+<style>{faces}{css}</style>
 </head>
 <body>
 <div class="poster {orientation}">

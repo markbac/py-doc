@@ -104,6 +104,19 @@ BUILTIN = {
 _COLOUR = re.compile(r"^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|[a-zA-Z]+|(rgb|hsl)a?\([^;{}]*\))$")
 
 
+FONT_SUFFIXES = (".woff2", ".woff", ".ttf", ".otf")
+
+
+@dataclass(frozen=True)
+class FontFile:
+    """A font file of a theme (``fonts.files``), embedded in the page as one @font-face rule."""
+
+    family: str
+    path: Path
+    weight: str = "400"
+    style: str = "normal"
+
+
 class ThemeError(ConversionError):
     """A theme cannot be found or has a mistake."""
 
@@ -113,6 +126,7 @@ class Theme:
     colours: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_COLOURS))
     palette: dict[str, str] = field(default_factory=lambda: dict(DEFAULT_PALETTE))
     fonts: dict[str, str | None] = field(default_factory=lambda: dict(DEFAULT_FONTS))
+    font_files: list[FontFile] = field(default_factory=list)
     logo: Path | None = None
 
     def colour(self, name: str | None, default: str = "primary") -> str:
@@ -151,8 +165,11 @@ def _apply(theme: Theme, data: dict, where: str, folder: Path | None) -> None:
     for name, value in (data.get("palette") or {}).items():
         theme.palette[str(name).lower()] = _checked(value, f"{where}: palette.{name}")
     for name, value in (data.get("fonts") or {}).items():
+        if name == "files":
+            theme.font_files = _font_files(value, folder, where)
+            continue
         if name not in DEFAULT_FONTS:
-            raise ThemeError(f"{where}: unknown font '{name}'. Fonts: {', '.join(DEFAULT_FONTS)}")
+            raise ThemeError(f"{where}: unknown font '{name}'. Fonts: {', '.join(DEFAULT_FONTS)}, files")
         if value is not None and name == "stylesheet":
             if not re.match(r"^https?://[^\s\"'<>]+$", str(value)):
                 raise ThemeError(f"{where}: fonts.stylesheet must be an http or https address")
@@ -161,6 +178,35 @@ def _apply(theme: Theme, data: dict, where: str, folder: Path | None) -> None:
         theme.fonts[name] = None if value is None else str(value)
     if data.get("logo"):
         theme.logo = logo_path(data["logo"], folder or Path.cwd(), where)
+
+
+def _font_files(value, folder: Path | None, where: str) -> list[FontFile]:
+    """``fonts.files``: a list of {family, file, weight, style}, each file relative to ``folder``."""
+    if not isinstance(value, list):
+        raise ThemeError(f"{where}: fonts.files must be a list of {{family, file, weight, style}}")
+    files = []
+    for number, item in enumerate(value, 1):
+        place = f"{where}: fonts.files[{number}]"
+        if not isinstance(item, dict) or not item.get("family") or not item.get("file"):
+            raise ThemeError(f"{place} needs a family and a file")
+        unknown = set(item) - {"family", "file", "weight", "style"}
+        if unknown:
+            raise ThemeError(f"{place}: unknown key '{sorted(unknown)[0]}'. Allowed: family, file, weight, style")
+        family, weight, style = str(item["family"]).strip(), str(item.get("weight", 400)).strip(), str(item.get("style", "normal")).strip()
+        if re.search(r"['\"\\;{}<>]", family):
+            raise ThemeError(f"{place}: the family '{family}' has a character a font name cannot have")
+        if not re.fullmatch(r"[1-9]00( [1-9]00)?", weight):
+            raise ThemeError(f"{place}: weight must be 100 to 900, or a range such as '100 900', not '{weight}'")
+        if style not in ("normal", "italic"):
+            raise ThemeError(f"{place}: style must be normal or italic, not '{style}'")
+        path = Path(str(item["file"]))
+        path = path if path.is_absolute() else (folder or Path.cwd()) / path
+        if path.suffix.lower() not in FONT_SUFFIXES:
+            raise ThemeError(f"{place}: {path.name} is not a font file ({', '.join(FONT_SUFFIXES)})")
+        if not path.is_file():
+            raise ThemeError(f"{place}: font file not found: {path}")
+        files.append(FontFile(family, path, weight, style))
+    return files
 
 
 def apply_overrides(theme: Theme, settings: dict, where: str) -> None:

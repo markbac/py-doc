@@ -41,6 +41,10 @@ def run_poster(argv: list[str]) -> int:
     parser.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
     parser.add_argument("--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a [[IF:]] condition")
     parser.add_argument(
+        "--embed-fonts", action=argparse.BooleanOptionalAction, default=None,
+        help="Download the theme's web fonts once and put them inside the page (default: the embed_fonts setting)",
+    )  # fmt: skip
+    parser.add_argument(
         "--pdf", action=argparse.BooleanOptionalAction, default=None,
         help="Also print each poster to a one-page PDF beside its page (default: the pdf setting)",
     )  # fmt: skip
@@ -60,7 +64,8 @@ def run_poster(argv: list[str]) -> int:
             print("Error: --output needs exactly one poster", file=sys.stderr)
             return 1
         command_line = layer(
-            {"theme": args.theme, "variables": dict(args.var), "conditions": _conditions(args.condition)}, Path.cwd(), "the command line"
+            {"theme": args.theme, "variables": dict(args.var), "conditions": _conditions(args.condition), "embed_fonts": args.embed_fonts},
+            Path.cwd(), "the command line",
         )
         settings = project.runtime if project else RuntimeSettings()
         defaults = project.poster if project else {}
