@@ -26,7 +26,7 @@ footer:
 | 61 | Nodes returned this quarter | -18 | good |
 | 5.2 years | B10 cell life | +0.4 years | |
 
-## Introduction {.abstract}
+## Introduction {.abstract style=quote}
 
 This review covers every SN-100 node in service from 1 July to 30 September 2026. The return rate fell for the third quarter running, to 0.51 % a year, just above the 0.50 % target. Condensation in cold stores is now the largest single cause, and a coated sensor ships from batch 26-40. Life tests put the B10 cell life at 5.2 years, so nine cells in ten outlast the five years on the datasheet.
 
@@ -247,7 +247,7 @@ Nodes with a coated sensor ship from November. Nothing changes on site, and your
 https://example.com/reliability/sn-rr-2026-q3
 ```
 
-## In short {.summary}
+## In short {.summary style=line}
 
 The return rate is at target, the cell outlasts its promise, and the one growing cause has a fix in production.
 
