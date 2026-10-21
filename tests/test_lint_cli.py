@@ -167,7 +167,10 @@ class TestCommandLine:
 
     def test_installed_module_runs_as_a_script(self, tree):
         result = subprocess.run(
-            [sys.executable, "-m", "py_doc.lint.cli", str(tree), "--strict"], capture_output=True, text=True, check=False
+            [sys.executable, "-m", "py_doc.lint.cli", str(tree), "--strict"],
+            capture_output=True,
+            text=True,
+            check=False,
         )
         assert result.returncode == 1
         assert "setup.md:3: warning DOC001" in result.stdout

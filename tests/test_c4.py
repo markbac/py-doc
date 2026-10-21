@@ -148,7 +148,11 @@ def test_the_model_matches_the_workspace(ws):
 def test_a_missing_field_is_named():
     with pytest.raises(WorkspaceError, match=r"model.softwareSystems\[0\].containers\[1\] has no field 'name'"):
         workspace_from_dict(
-            {"model": {"softwareSystems": [{"id": "1", "name": "S", "containers": [{"id": "2", "name": "A"}, {"id": "3"}]}]}}
+            {
+                "model": {
+                    "softwareSystems": [{"id": "1", "name": "S", "containers": [{"id": "2", "name": "A"}, {"id": "3"}]}]
+                }
+            }
         )
     with pytest.raises(WorkspaceError, match="no field 'model'"):
         workspace_from_dict({})
@@ -237,13 +241,20 @@ def test_output_is_stable_and_has_no_times(ws):
 
 def test_levels_and_systems_limit_the_pages(ws):
     assert sorted(pages(ws, levels=["context", "relationships"])) == ["01_context.md", "04_relationships.md"]
-    assert "Internet Banking System" not in pages(ws, systems=["Mainframe Banking System"])["01_context.md"].split("## Software systems")[1].split("|")[3]
+    assert (
+        "Internet Banking System"
+        not in pages(ws, systems=["Mainframe Banking System"])["01_context.md"]
+        .split("## Software systems")[1]
+        .split("|")[3]
+    )
     with pytest.raises(ValueError, match="Unknown level"):
         pages(ws, levels=["nope"])
 
 
 def test_templates_can_be_replaced(ws):
-    assert "Landscape of Big Bank plc." in pages(ws, templates={"context": "Landscape of {workspace}."})["01_context.md"]
+    assert (
+        "Landscape of Big Bank plc." in pages(ws, templates={"context": "Landscape of {workspace}."})["01_context.md"]
+    )
 
 
 def test_generated_pages_pass_the_linter(ws, tmp_path, capsys):
@@ -352,7 +363,10 @@ def test_a_staged_dsl_keeps_its_saved_layouts(project, box):
     run = [c for c in box.engine_calls if c[0] == "run"][0]
     staged = Path(next(a for a in run if a.startswith("type=bind")).split("source=")[1].split(",target")[0])
     assert staged != project.resolve() and (staged / "workspace.json").read_text() == '{"views": "with layouts"}'
-    assert "STRUCTURIZR_EDITABLE=false" in run and ["--user", "1000:1000"] == run[run.index("--user") : run.index("--user") + 2]
+    assert (
+        "STRUCTURIZR_EDITABLE=false" in run
+        and ["--user", "1000:1000"] == run[run.index("--user") : run.index("--user") + 2]
+    )
     stack.down()
 
 
@@ -569,8 +583,14 @@ def test_the_source_is_read_with_its_options(tmp_path):
 @pytest.mark.parametrize(
     ("body", "message"),
     [
-        ("      - structurizr: w.json\n        levels: [cake]\n", r"documents.arch.sources\[0\].levels has unknown level 'cake'"),
-        ("      - structurizr: w.json\n        diagrams: {engine: magic}\n", "diagrams.engine must be browser or source"),
+        (
+            "      - structurizr: w.json\n        levels: [cake]\n",
+            r"documents.arch.sources\[0\].levels has unknown level 'cake'",
+        ),
+        (
+            "      - structurizr: w.json\n        diagrams: {engine: magic}\n",
+            "diagrams.engine must be browser or source",
+        ),
         ("      - structurizr: w.json\n        diagrams: {format: gif}\n", "diagrams.format must be one of png, svg"),
         ("      - structurizr: w.json\n        page_brek: true\n", "page_brek"),
     ],
@@ -613,7 +633,10 @@ def test_the_source_engine_embeds_labelled_diagram_source(tmp_path, project, box
     )
     (page,) = expand(config.documents["arch"].sources, "arch", tmp_path, lambda: box, config.c4)
     text = page.file.read_text(encoding="utf-8")
-    assert "Diagram source (mermaid) of the view 'System Context for Internet Banking'" in text and "```mermaid\ngraph TD" in text
+    assert (
+        "Diagram source (mermaid) of the view 'System Context for Internet Banking'" in text
+        and "```mermaid\ngraph TD" in text
+    )
     assert not any(c[0] == "node" for c in box.calls)
 
 
@@ -751,7 +774,9 @@ class _Waiting:
 
     def run(self, argv, **kwargs):
         assert argv[3] == "http://localhost:8080/workspace/1/diagrams"
-        assert argv[:2] == ["node", "-e"] and kwargs["network"] == "container:py-doc-c4-local"  # probed as localhost, the only name Local answers to
+        assert (
+            argv[:2] == ["node", "-e"] and kwargs["network"] == "container:py-doc-c4-local"
+        )  # probed as localhost, the only name Local answers to
         self.calls.append("probe")
         self.failures -= 1
         return ToolResult(1 if self.failures >= 0 else 0, "", "")
@@ -790,7 +815,15 @@ def test_the_wait_gives_up_after_the_limit_with_clean_logs(quick, tmp_path):
 
 def test_structurizr_bookkeeping_properties_are_left_out():
     ws = workspace_from_dict(
-        {"name": "w", "model": {"softwareSystems": [{"id": "1", "name": "S", "properties": {"structurizr.dsl.identifier": "s", "owner": "Team"}}]}, "views": {}}
+        {
+            "name": "w",
+            "model": {
+                "softwareSystems": [
+                    {"id": "1", "name": "S", "properties": {"structurizr.dsl.identifier": "s", "owner": "Team"}}
+                ]
+            },
+            "views": {},
+        }
     )
     (system,) = ws.elements.values()
     assert system.properties == {"owner": "Team"}

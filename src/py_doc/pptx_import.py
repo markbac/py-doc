@@ -103,7 +103,11 @@ class _Deck:
         if SUBTITLE in kinds:  # pandoc puts the author and the date on later lines of the subtitle
             lines = kinds[SUBTITLE].text_frame.text.replace(LINE_BREAK, "\n").strip().splitlines()
             self.subtitle = _plain(lines[0]) if lines else None
-        others = [s for s in _shapes(slide) if not (s.is_placeholder and s.placeholder_format.type in (*TITLES, SUBTITLE, *FURNITURE))]
+        others = [
+            s
+            for s in _shapes(slide)
+            if not (s.is_placeholder and s.placeholder_format.type in (*TITLES, SUBTITLE, *FURNITURE))
+        ]
         if others:  # more than a title slide: keep its content as a slide of its own
             self._slide(slide, skip_title=True)
         return True
@@ -300,7 +304,11 @@ def _is_picture(shape) -> bool:
 
 def _is_caption(shape, below) -> bool:
     """``below`` is one short line of text right under ``shape``, as pandoc writes a caption."""
-    if not below.has_text_frame or below.has_text_frame and len([p for p in below.text_frame.paragraphs if p.text.strip()]) != 1:
+    if (
+        not below.has_text_frame
+        or below.has_text_frame
+        and len([p for p in below.text_frame.paragraphs if p.text.strip()]) != 1
+    ):
         return False
     if _marker(below.text_frame.paragraphs[0], False) or _is_code(below.text_frame.paragraphs[0]):
         return False

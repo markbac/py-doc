@@ -39,7 +39,9 @@ def plan(ws: Workspace, out_dir: Path, formats: tuple[str, ...], keys: list[str]
     chosen = [v for v in ws.views if keys is None or v.key in keys]
     missing = sorted(set(keys or []) - {v.key for v in chosen})
     if missing:
-        raise RenderError(f"The workspace has no view '{missing[0]}'. Views: {', '.join(v.key for v in ws.views) or 'none'}")
+        raise RenderError(
+            f"The workspace has no view '{missing[0]}'. Views: {', '.join(v.key for v in ws.views) or 'none'}"
+        )
     empty = [v.key for v in chosen if not v.element_ids and v.kind not in ("filtered", "image")]
     if empty:
         raise RenderError(f"These views are empty, so they cannot be drawn: {', '.join(empty)}")
@@ -68,7 +70,9 @@ def render_views(
     out_dir.mkdir(parents=True, exist_ok=True)
     for old in planned.files:
         old.unlink(missing_ok=True)  # a leftover from an earlier run must not pass for a new picture
-    stack = stack or Stack(runtime, workspace_file, **({"image": image} if image else {}), **({"port": port} if port else {}))
+    stack = stack or Stack(
+        runtime, workspace_file, **({"image": image} if image else {}), **({"port": port} if port else {})
+    )
     started = stack.up()
     failures: dict[str, str] = {}
     try:
@@ -76,11 +80,19 @@ def render_views(
             argv = ["node", SCRIPT, stack.url, fmt, "--output", out_dir.resolve()]
             if keys and len(keys) == 1:
                 argv += ["--view", keys[0]]
-            result = runtime.run(argv, mounts=[Mount(out_dir.resolve(), writable=True)], network=stack.network, timeout=TIMEOUT, check=False)
+            result = runtime.run(
+                argv,
+                mounts=[Mount(out_dir.resolve(), writable=True)],
+                network=stack.network,
+                timeout=TIMEOUT,
+                check=False,
+            )
             output = f"{result.stdout}\n{result.stderr}"
             named = _FAILED.search(output)
             if result.returncode == 1 or (result.returncode not in (0, 2)):
-                raise RenderError(f"Exporting {fmt} pictures failed (exit status {result.returncode}):\n{output.strip()}")
+                raise RenderError(
+                    f"Exporting {fmt} pictures failed (exit status {result.returncode}):\n{output.strip()}"
+                )
             if named:
                 for key in (k.strip() for k in named.group(1).split(",")):
                     failures[f"{key}.{fmt}"] = "the browser could not draw it"

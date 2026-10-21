@@ -47,7 +47,9 @@ def test_a_scaffold_never_replaces_a_file(tmp_path):
 
 
 def test_an_existing_mkdocs_yml_with_python_tags_is_read(tmp_path):
-    (tmp_path / "mkdocs.yml").write_text("docs_dir: pages\nmarkdown_extensions:\n  - x: !!python/name:foo.bar\n", encoding="utf-8")
+    (tmp_path / "mkdocs.yml").write_text(
+        "docs_dir: pages\nmarkdown_extensions:\n  - x: !!python/name:foo.bar\n", encoding="utf-8"
+    )
     engine = engine_for("mkdocs", tmp_path)
     assert engine.content == tmp_path / "pages"
     assert "INHERIT" in engine.check()[0]
@@ -56,10 +58,14 @@ def test_an_existing_mkdocs_yml_with_python_tags_is_read(tmp_path):
 def test_the_mkdocs_navigation_has_a_section_per_document(tmp_path):
     engine = engine_for("mkdocs", tmp_path)
     engine.scaffold("x")
-    nav = engine.write_nav([
-        NavSection("Guide", "guide", [NavPage("Overview", "guide/overview.md"), NavPage("Design", "guide/design.md")]),
-        NavSection("Notes", "notes", [NavPage("Release notes", "notes/notes.md")]),
-    ])
+    nav = engine.write_nav(
+        [
+            NavSection(
+                "Guide", "guide", [NavPage("Overview", "guide/overview.md"), NavPage("Design", "guide/design.md")]
+            ),
+            NavSection("Notes", "notes", [NavPage("Release notes", "notes/notes.md")]),
+        ]
+    )
     data = yaml.safe_load(nav.read_text(encoding="utf-8"))
     assert data["nav"] == [
         {"Home": "index.md"},
@@ -71,16 +77,26 @@ def test_the_mkdocs_navigation_has_a_section_per_document(tmp_path):
 def test_hand_written_pages_follow_the_documents_in_the_navigation(tmp_path):
     engine = engine_for("mkdocs", tmp_path)
     engine.scaffold("x")
-    nav = engine.write_nav([NavSection("Guide", "guide", [NavPage("Overview", "guide/overview.md")])], {"Blog": "blog/index.md"})
-    assert yaml.safe_load(nav.read_text(encoding="utf-8"))["nav"][-2:] == [{"Overview": "guide/overview.md"}, {"Blog": "blog/index.md"}]
+    nav = engine.write_nav(
+        [NavSection("Guide", "guide", [NavPage("Overview", "guide/overview.md")])], {"Blog": "blog/index.md"}
+    )
+    assert yaml.safe_load(nav.read_text(encoding="utf-8"))["nav"][-2:] == [
+        {"Overview": "guide/overview.md"},
+        {"Blog": "blog/index.md"},
+    ]
     sidebar = engine_for("starlight", tmp_path / "astro").write_nav([], {"Blog": "blog/index.md", "About": "about.md"})
-    assert json.loads(sidebar.read_text(encoding="utf-8")) == [{"label": "Blog", "link": "/blog/"}, {"label": "About", "link": "/about/"}]
+    assert json.loads(sidebar.read_text(encoding="utf-8")) == [
+        {"label": "Blog", "link": "/blog/"},
+        {"label": "About", "link": "/about/"},
+    ]
 
 
 def test_a_target_config_inherits_the_navigation_through_mkdocs_yml(tmp_path):
     engine = engine_for("mkdocs", tmp_path)
     engine.scaffold("x")
-    (tmp_path / "mkdocs.tarf.yml").write_text("INHERIT: mkdocs.yml\nsite_url: https://tarf.example/\nsite_dir: build-tarf\n", encoding="utf-8")
+    (tmp_path / "mkdocs.tarf.yml").write_text(
+        "INHERIT: mkdocs.yml\nsite_url: https://tarf.example/\nsite_dir: build-tarf\n", encoding="utf-8"
+    )
     assert engine.check("mkdocs.tarf.yml") == []
     assert engine.site_dir("mkdocs.tarf.yml") == tmp_path / "build-tarf" and engine.site_dir() == tmp_path / "build"
     (tmp_path / "mkdocs.alone.yml").write_text("site_name: alone\n", encoding="utf-8")
@@ -97,9 +113,13 @@ def test_a_new_starlight_site_passes_the_sidebar_to_starlight(tmp_path):
     assert engine.exists() and engine.check() == []
     package = json.loads((tmp_path / "package.json").read_text(encoding="utf-8"))
     assert "@astrojs/starlight" in package["dependencies"] and package["scripts"]["build"] == "astro build"
-    assert "import sidebar from './src/py-doc-sidebar.json'" in (tmp_path / "astro.config.mjs").read_text(encoding="utf-8")
+    assert "import sidebar from './src/py-doc-sidebar.json'" in (tmp_path / "astro.config.mjs").read_text(
+        encoding="utf-8"
+    )
     engine.write_nav([NavSection("Guide", "guide", [])])
-    assert json.loads((tmp_path / STARLIGHT_SIDEBAR).read_text(encoding="utf-8")) == [{"label": "Guide", "items": [{"autogenerate": {"directory": "guide"}}]}]
+    assert json.loads((tmp_path / STARLIGHT_SIDEBAR).read_text(encoding="utf-8")) == [
+        {"label": "Guide", "items": [{"autogenerate": {"directory": "guide"}}]}
+    ]
 
 
 def test_a_starlight_site_without_the_sidebar_is_told_how(tmp_path):
@@ -153,7 +173,10 @@ def project(tmp_path):
         "Energy $E = mc^2$ and\n\n$$t = C/I$$\n\n> [!NOTE]\n> Read this first.\n\n![The board](images/board.png)\n\n[[CAPTION:Table]] Pins\n\n| Pin | Use |\n|---|---|\n| 1 | Power |\n",
         encoding="utf-8",
     )
-    (docs / "02_design.md").write_text("# Design\n\n## Flow\n\nBack to the [overview](01_overview.md).\n\n::: {.pagebreak}\n:::\n\nDone.\n", encoding="utf-8")
+    (docs / "02_design.md").write_text(
+        "# Design\n\n## Flow\n\nBack to the [overview](01_overview.md).\n\n::: {.pagebreak}\n:::\n\nDone.\n",
+        encoding="utf-8",
+    )
     (tmp_path / "py-doc.yml").write_text(
         "project: {name: Sensor}\ndocuments:\n  guide:\n    sources: [docs/01_overview.md, {file: docs/02_design.md, heading_offset: 1, page_break: true}]\n"
         "    variables: {version: '1.0'}\nsite: {engine: ENGINE}\n",
@@ -189,14 +212,23 @@ def test_mkdocs_pages_have_admonitions_links_pictures_and_captions(project, pand
     nav = yaml.safe_load((project / "site" / MKDOCS_NAV).read_text(encoding="utf-8"))["nav"]
     assert nav[-1] == {"Sensor guide": [{"Overview": "guide/01-overview.md"}, {"Design": "guide/02-design.md"}]}
     assert set(json.loads((project / "site" / MANIFEST).read_text(encoding="utf-8"))["files"]) == {
-        "docs/guide/01-overview.md", "docs/guide/02-design.md", f"docs/guide/media/{picture.name}", "docs/guide/.gitignore",
+        "docs/guide/01-overview.md",
+        "docs/guide/02-design.md",
+        f"docs/guide/media/{picture.name}",
+        "docs/guide/.gitignore",
     }
 
 
 @needs_sh
 def test_the_first_page_links_the_built_downloads(project, pandoc_runtime, caplog):
-    text = (project / "py-doc.yml").read_text(encoding="utf-8").replace("site: {engine: ENGINE}", "site: {engine: ENGINE, downloads: [pdf, docx]}")
-    text = text.replace("    variables: {version: '1.0'}\n", "    variables: {version: '1.0'}\n    outputs: {docx: {}, pdf: {}}\n")
+    text = (
+        (project / "py-doc.yml")
+        .read_text(encoding="utf-8")
+        .replace("site: {engine: ENGINE}", "site: {engine: ENGINE, downloads: [pdf, docx]}")
+    )
+    text = text.replace(
+        "    variables: {version: '1.0'}\n", "    variables: {version: '1.0'}\n    outputs: {docx: {}, pdf: {}}\n"
+    )
     (project / "py-doc.yml").write_text(text, encoding="utf-8")
     (project / "build").mkdir()
     (project / "build" / "guide.pdf").write_bytes(b"%PDF-1.7 test")
@@ -208,7 +240,10 @@ def test_the_first_page_links_the_built_downloads(project, pandoc_runtime, caplo
     assert (docs / "downloads" / "guide.pdf").read_bytes() == b"%PDF-1.7 test"
     assert "Download" not in (docs / "02-design.md").read_text(encoding="utf-8"), "only the first page links them"
     assert "guide.docx is not there" in caplog.text and "py-doc build guide" in caplog.text
-    assert "docs/guide/downloads/guide.pdf" in json.loads((project / "site" / MANIFEST).read_text(encoding="utf-8"))["files"]
+    assert (
+        "docs/guide/downloads/guide.pdf"
+        in json.loads((project / "site" / MANIFEST).read_text(encoding="utf-8"))["files"]
+    )
 
 
 @needs_sh
@@ -216,7 +251,9 @@ def test_starlight_pages_have_asides_an_order_and_no_repeated_title(project, pan
     config, runtime = _site(project, "starlight", pandoc_runtime)
     generate_site(config, runtime)
     overview = (project / "site" / "src" / "content" / "docs" / "guide" / "01-overview.md").read_text(encoding="utf-8")
-    assert overview.startswith("---\ntitle: Overview\nsidebar:\n  order: 1\n---\n\nVersion 1.0. See [the design](/guide/02-design/#flow).")
+    assert overview.startswith(
+        "---\ntitle: Overview\nsidebar:\n  order: 1\n---\n\nVersion 1.0. See [the design](/guide/02-design/#flow)."
+    )
     assert ":::note\nRead this first.\n:::" in overview
 
 
@@ -235,19 +272,26 @@ def test_a_page_py_doc_did_not_write_is_left_alone(project, pandoc_runtime):
 def test_a_page_whose_source_is_gone_is_removed(project, pandoc_runtime):
     config, runtime = _site(project, "mkdocs", pandoc_runtime)
     generate_site(config, runtime)
-    text = (project / "py-doc.yml").read_text(encoding="utf-8").replace(", {file: docs/02_design.md, heading_offset: 1, page_break: true}", "")
+    text = (
+        (project / "py-doc.yml")
+        .read_text(encoding="utf-8")
+        .replace(", {file: docs/02_design.md, heading_offset: 1, page_break: true}", "")
+    )
     (project / "py-doc.yml").write_text(text, encoding="utf-8")
     generate_site(load_config(project / "py-doc.yml"), runtime)
     assert not (project / "site" / "docs" / "guide" / "02-design.md").exists()
     assert (project / "site" / "docs" / "index.md").is_file(), "a page py-doc did not write stays"
 
 
-
 def _with_posters(project, engine_name):
     (project / "posters").mkdir()
     (project / "posters" / "launch.md").write_text("---\ntitle: Launch & go\n---\n## A\n\nText.\n", encoding="utf-8")
     (project / "posters" / "plain.md").write_text("## B\n\nText.\n", encoding="utf-8")
-    text = (project / "py-doc.yml").read_text(encoding="utf-8").replace("site: {engine: ENGINE}", "site: {engine: ENGINE, posters: [launch, plain]}")
+    text = (
+        (project / "py-doc.yml")
+        .read_text(encoding="utf-8")
+        .replace("site: {engine: ENGINE}", "site: {engine: ENGINE, posters: [launch, plain]}")
+    )
     text += "posters:\n  launch: {source: posters/launch.md}\n  plain: {source: posters/plain.md}\n  other: {source: posters/plain.md}\n"
     (project / "py-doc.yml").write_text(text.replace("ENGINE", engine_name), encoding="utf-8")
     (project / "build").mkdir()
@@ -283,7 +327,10 @@ def test_starlight_serves_the_posters_from_public(project, pandoc_runtime):
     generate_site(config, runtime)
     assert (project / "site" / "public" / "posters" / "plain.html").is_file()
     index = (project / "site" / "src" / "content" / "docs" / "posters" / "index.md").read_text(encoding="utf-8")
-    assert index == "---\ntitle: Posters\n---\n\n- [Launch & go](/posters/launch.html) · [PDF](/posters/launch.pdf)\n- [plain](/posters/plain.html)\n"
+    assert (
+        index
+        == "---\ntitle: Posters\n---\n\n- [Launch & go](/posters/launch.html) · [PDF](/posters/launch.pdf)\n- [plain](/posters/plain.html)\n"
+    )
     sidebar = json.loads((project / "site" / STARLIGHT_SIDEBAR).read_text(encoding="utf-8"))
     assert sidebar[-1] == {"label": "Posters", "link": "/posters/"}
 
@@ -294,7 +341,8 @@ def test_site_posters_must_be_posters_of_py_doc_yml(tmp_path):
         load_config(tmp_path / "py-doc.yml")
     (tmp_path / "p.md").write_text("## A\n", encoding="utf-8")
     (tmp_path / "py-doc.yml").write_text(
-        "documents: {posters: {sources: [p.md]}}\nposters: {a: {source: p.md}}\nsite: {engine: mkdocs, posters: [a]}\n", encoding="utf-8"
+        "documents: {posters: {sources: [p.md]}}\nposters: {a: {source: p.md}}\nsite: {engine: mkdocs, posters: [a]}\n",
+        encoding="utf-8",
     )
     with pytest.raises(ConfigError, match="a document of the site has that name"):
         load_config(tmp_path / "py-doc.yml")
@@ -328,33 +376,64 @@ def _page(slug_: str, title: str) -> Page:
 
 
 def test_the_navigation_nests_by_folder_with_the_index_page_first():
-    items = nav_items([_page("index", "Primers"), _page("cloud/kafka", "Kafka"), _page("cloud/index", "Cloud and messaging"),
-                       _page("iot-and-embedded/mqtt", "MQTT"), _page("cloud/deep/x", "X")])
+    items = nav_items(
+        [
+            _page("index", "Primers"),
+            _page("cloud/kafka", "Kafka"),
+            _page("cloud/index", "Cloud and messaging"),
+            _page("iot-and-embedded/mqtt", "MQTT"),
+            _page("cloud/deep/x", "X"),
+        ]
+    )
     assert items[0] == NavPage("Primers", "primers/index.md")
     cloud, iot = items[1:]
     assert cloud.title == "Cloud and messaging" and cloud.folder == "primers/cloud"
-    assert cloud.pages[:2] == [NavPage("Cloud and messaging", "primers/cloud/index.md"), NavPage("Kafka", "primers/cloud/kafka.md")]
+    assert cloud.pages[:2] == [
+        NavPage("Cloud and messaging", "primers/cloud/index.md"),
+        NavPage("Kafka", "primers/cloud/kafka.md"),
+    ]
     assert cloud.pages[2] == NavSection("Deep", "primers/cloud/deep", [NavPage("X", "primers/cloud/deep/x.md")])
     assert iot.title == "Iot and embedded", "a folder without an index page is named after the folder"
 
 
 def test_nested_navigation_for_mkdocs_and_starlight(tmp_path):
-    section = NavSection("Primers", "primers", nav_items([_page("index", "Primers"), _page("cloud/index", "Cloud"), _page("cloud/kafka", "Kafka")]))
+    section = NavSection(
+        "Primers",
+        "primers",
+        nav_items([_page("index", "Primers"), _page("cloud/index", "Cloud"), _page("cloud/kafka", "Kafka")]),
+    )
     engine = engine_for("mkdocs", tmp_path)
     nav = yaml.safe_load(engine.write_nav([section]).read_text(encoding="utf-8"))["nav"]
-    assert nav == [{"Primers": [{"Primers": "primers/index.md"}, {"Cloud": [{"Cloud": "primers/cloud/index.md"}, {"Kafka": "primers/cloud/kafka.md"}]}]}]
+    assert nav == [
+        {
+            "Primers": [
+                {"Primers": "primers/index.md"},
+                {"Cloud": [{"Cloud": "primers/cloud/index.md"}, {"Kafka": "primers/cloud/kafka.md"}]},
+            ]
+        }
+    ]
     sidebar = json.loads(engine_for("starlight", tmp_path / "astro").write_nav([section]).read_text(encoding="utf-8"))
-    assert sidebar == [{"label": "Primers", "items": [
-        {"slug": "primers"}, {"label": "Cloud", "items": [{"slug": "primers/cloud"}, {"slug": "primers/cloud/kafka"}]},
-    ]}]
+    assert sidebar == [
+        {
+            "label": "Primers",
+            "items": [
+                {"slug": "primers"},
+                {"label": "Cloud", "items": [{"slug": "primers/cloud"}, {"slug": "primers/cloud/kafka"}]},
+            ],
+        }
+    ]
 
 
 def test_a_site_path_must_stay_below_the_document_folder(tmp_path):
     for bad in ("../x", "/x", "a//b", "."):
-        (tmp_path / "py-doc.yml").write_text(f"documents:\n  a: {{sources: [{{file: a.md, site_path: '{bad}'}}]}}\n", encoding="utf-8")
+        (tmp_path / "py-doc.yml").write_text(
+            f"documents:\n  a: {{sources: [{{file: a.md, site_path: '{bad}'}}]}}\n", encoding="utf-8"
+        )
         with pytest.raises(ConfigError, match="site_path"):
             load_config(tmp_path / "py-doc.yml")
-    (tmp_path / "py-doc.yml").write_text("documents:\n  a: {sources: [{file: a.md, site_path: cloud/Kafka.md}]}\n", encoding="utf-8")
+    (tmp_path / "py-doc.yml").write_text(
+        "documents:\n  a: {sources: [{file: a.md, site_path: cloud/Kafka.md}]}\n", encoding="utf-8"
+    )
     assert load_config(tmp_path / "py-doc.yml").documents["a"].sources[0].site_path == "cloud/Kafka"
 
 
@@ -370,25 +449,36 @@ def test_pages_keep_their_folders_and_the_nav_nests(nested, pandoc_runtime):
     assert f"](media/{picture.name})" in kafka, "a picture goes beside its page"
     assert "[Kafka](../cloud/kafka.md)" in (docs / "architecture" / "c4.md").read_text(encoding="utf-8")
     nav = yaml.safe_load((nested / "site" / MKDOCS_NAV).read_text(encoding="utf-8"))["nav"]
-    assert nav[-1] == {"Primers": [
-        {"Primers": "primers/index.md"},
-        {"Cloud and messaging": [{"Cloud and messaging": "primers/cloud/index.md"}, {"Kafka": "primers/cloud/kafka.md"}]},
-        {"Architecture": [{"C4": "primers/architecture/c4.md"}]},
-    ]}
+    assert nav[-1] == {
+        "Primers": [
+            {"Primers": "primers/index.md"},
+            {
+                "Cloud and messaging": [
+                    {"Cloud and messaging": "primers/cloud/index.md"},
+                    {"Kafka": "primers/cloud/kafka.md"},
+                ]
+            },
+            {"Architecture": [{"C4": "primers/architecture/c4.md"}]},
+        ]
+    }
 
 
 @needs_sh
 def test_starlight_links_reach_pages_in_folders(nested, pandoc_runtime):
     config, runtime = _site(nested, "starlight", pandoc_runtime)
     generate_site(config, runtime)
-    kafka = (nested / "site" / "src" / "content" / "docs" / "primers" / "cloud" / "kafka.md").read_text(encoding="utf-8")
+    kafka = (nested / "site" / "src" / "content" / "docs" / "primers" / "cloud" / "kafka.md").read_text(
+        encoding="utf-8"
+    )
     assert "[C4](/primers/architecture/c4/)" in kafka and "[the primers](/primers/)" in kafka
 
 
 @needs_sh
 def test_a_site_path_moves_a_page_and_a_clash_is_reported(nested, pandoc_runtime):
     text = (nested / "py-doc.yml").read_text(encoding="utf-8")
-    moved = text.replace("- content/primers/architecture/c4.md", "- {file: content/primers/architecture/c4.md, site_path: cloud/c4}")
+    moved = text.replace(
+        "- content/primers/architecture/c4.md", "- {file: content/primers/architecture/c4.md, site_path: cloud/c4}"
+    )
     (nested / "py-doc.yml").write_text(moved, encoding="utf-8")
     config, runtime = _site(nested, "mkdocs", pandoc_runtime)
     generate_site(config, runtime)
@@ -402,7 +492,9 @@ def test_a_site_path_moves_a_page_and_a_clash_is_reported(nested, pandoc_runtime
 
 
 def test_a_site_must_be_made_first(project):
-    (project / "py-doc.yml").write_text((project / "py-doc.yml").read_text(encoding="utf-8").replace("ENGINE", "mkdocs"), encoding="utf-8")
+    (project / "py-doc.yml").write_text(
+        (project / "py-doc.yml").read_text(encoding="utf-8").replace("ENGINE", "mkdocs"), encoding="utf-8"
+    )
     with pytest.raises(ConversionError, match="py-doc site init"):
         generate_site(load_config(project / "py-doc.yml"), lambda: None)
 
@@ -411,7 +503,9 @@ def test_a_site_must_be_made_first(project):
 
 
 def test_site_init_makes_the_site_named_in_py_doc_yml(project, monkeypatch, capsys):
-    (project / "py-doc.yml").write_text((project / "py-doc.yml").read_text(encoding="utf-8").replace("ENGINE", "starlight"), encoding="utf-8")
+    (project / "py-doc.yml").write_text(
+        (project / "py-doc.yml").read_text(encoding="utf-8").replace("ENGINE", "starlight"), encoding="utf-8"
+    )
     monkeypatch.chdir(project)
     assert main(["site", "init"]) == 0
     assert (project / "site" / "astro.config.mjs").is_file() and "Next: py-doc site build" in capsys.readouterr().out
@@ -423,7 +517,12 @@ def test_site_init_makes_the_site_named_in_py_doc_yml(project, monkeypatch, caps
 def test_site_build_checks_the_targets_before_building(project, monkeypatch, capsys):
     text = (project / "py-doc.yml").read_text(encoding="utf-8")
     monkeypatch.chdir(project)
-    (project / "py-doc.yml").write_text(text.replace("site: {engine: ENGINE}", "site: {engine: mkdocs, targets: {github: mkdocs.yml, tarf: mkdocs.tarf.yml}}"), encoding="utf-8")
+    (project / "py-doc.yml").write_text(
+        text.replace(
+            "site: {engine: ENGINE}", "site: {engine: mkdocs, targets: {github: mkdocs.yml, tarf: mkdocs.tarf.yml}}"
+        ),
+        encoding="utf-8",
+    )
     engine_for("mkdocs", project / "site").scaffold("x")
     (project / "site" / "mkdocs.tarf.yml").write_text("INHERIT: mkdocs.yml\n", encoding="utf-8")
     assert main(["site", "build", "--target", "other"]) == 1

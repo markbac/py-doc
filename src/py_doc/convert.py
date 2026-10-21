@@ -55,9 +55,13 @@ class _Converter:
                 return
             raise FileNotFoundError(f"{self.kind} template not found: {path}")
         if path.suffix.lower() in self.template_suffixes and not zipfile.is_zipfile(path):
-            raise ConversionError(f"Cannot read {self.kind} template '{path}': it is not a valid {' or '.join(self.template_suffixes)} file")
+            raise ConversionError(
+                f"Cannot read {self.kind} template '{path}': it is not a valid {' or '.join(self.template_suffixes)} file"
+            )
         if path.suffix.lower() not in self.template_suffixes:
-            raise ConversionError(f"The {self.kind} template must be one of {', '.join(self.template_suffixes)}: {path}")
+            raise ConversionError(
+                f"The {self.kind} template must be one of {', '.join(self.template_suffixes)}: {path}"
+            )
 
     def convert_file(self, md_path: Path, output_path: Path) -> Path:
         return self._render(md_path, output_path, self.fmt, self.template_path, self.options)

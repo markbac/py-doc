@@ -8,8 +8,17 @@ import pytest
 from py_doc.lint.config import C4_RULES
 from py_doc.config import ConfigError, find_config, load_config, parse_config
 
-NEW_RULES = {"DOC005": "warning", "DOC006": "warning", "DOC007": "warning", "DOC008": "info", "DOC009": "info",
-             "DOC010": "info", "DOC011": "error", "DOC012": "warning", "DOC013": "info"}
+NEW_RULES = {
+    "DOC005": "warning",
+    "DOC006": "warning",
+    "DOC007": "warning",
+    "DOC008": "info",
+    "DOC009": "info",
+    "DOC010": "info",
+    "DOC011": "error",
+    "DOC012": "warning",
+    "DOC013": "info",
+}
 
 
 def write(tmp_path, text: str):
@@ -101,7 +110,10 @@ documents:
         ("- a", "the configuration must be a mapping"),
         ("documents:\n  g: {}", "documents.g.sources must be a list"),
         ("documents:\n  g: {sources: []}", "documents.g.sources must be a list"),
-        ("documents:\n  g: {sources: [{page_brek: true, file: a.md}]}", "unknown key 'page_brek' in documents.g.sources[0]"),
+        (
+            "documents:\n  g: {sources: [{page_brek: true, file: a.md}]}",
+            "unknown key 'page_brek' in documents.g.sources[0]",
+        ),
         ("documents:\n  g: {sources: [{title: x}]}", "documents.g.sources[0] needs a 'file'"),
         ("documents:\n  g: {sources: [{file: a.md, heading_offset: x}]}", "heading_offset must be int"),
         ("documents:\n  g: {sources: [{file: a.md, heading_offset: true}]}", "heading_offset must be int"),
@@ -139,7 +151,10 @@ class TestLint:
 
     def test_rule_severity_and_off(self, tmp_path):
         lint = self.load(tmp_path, "  rules:\n    DOC001: error\n    DOC002: off\n    DOC003: warning\n")
-        assert lint.severities == {"DOC001": "error", "DOC002": "warning", "DOC003": "warning", "DOC004": "error"} | NEW_RULES | C4_RULES
+        assert (
+            lint.severities
+            == {"DOC001": "error", "DOC002": "warning", "DOC003": "warning", "DOC004": "error"} | NEW_RULES | C4_RULES
+        )
         assert lint.disabled_rules == {"DOC002"}
 
     def test_glossary_and_phrases_extend_the_defaults(self, tmp_path):
@@ -160,7 +175,9 @@ class TestLint:
 
 
 def test_the_content_and_build_sections(tmp_path):
-    config = load_config(write(tmp_path, "content: {generators: [{type: glossary, output: g.md}]}\nbuild: {lint: on}\n"))
+    config = load_config(
+        write(tmp_path, "content: {generators: [{type: glossary, output: g.md}]}\nbuild: {lint: on}\n")
+    )
     assert [(g.name, g.type) for g in config.generators] == [("g", "glossary")] and config.build.lint == "on"
     with pytest.raises(ConfigError, match="build.lint must be one of off, on, strict"):
         load_config(write(tmp_path, "build: {lint: loud}\n"))
@@ -183,10 +200,18 @@ def test_the_site_section(tmp_path):
 
 def test_the_site_downloads_and_targets(tmp_path):
     docs = "documents:\n  guide: {sources: [a.md]}\n"
-    config = load_config(write(tmp_path, docs + "site: {engine: mkdocs, downloads: [pdf, docx], targets: {github: mkdocs.yml, tarf: mkdocs.tarf.yml}}\n"))
+    config = load_config(
+        write(
+            tmp_path,
+            docs
+            + "site: {engine: mkdocs, downloads: [pdf, docx], targets: {github: mkdocs.yml, tarf: mkdocs.tarf.yml}}\n",
+        )
+    )
     assert config.site.downloads == ["pdf", "docx"]
     assert config.site.targets == {"github": "mkdocs.yml", "tarf": "mkdocs.tarf.yml"}
-    assert load_config(write(tmp_path, docs + "site: {engine: mkdocs, pages: {Blog: blog/index.md}}\n")).site.pages == {"Blog": "blog/index.md"}
+    assert load_config(write(tmp_path, docs + "site: {engine: mkdocs, pages: {Blog: blog/index.md}}\n")).site.pages == {
+        "Blog": "blog/index.md"
+    }
     with pytest.raises(ConfigError, match="site.downloads names 'epub'"):
         load_config(write(tmp_path, docs + "site: {engine: mkdocs, downloads: [epub]}\n"))
     with pytest.raises(ConfigError, match="site.targets needs engine: mkdocs"):
@@ -207,7 +232,9 @@ def test_parse_config_accepts_a_dict():
 def test_the_example_in_the_user_guide_loads(tmp_path):
     import re
 
-    readme = Path(__file__).parent.parent / "docs" / "guide" / "02_projects.md"  # the configuration example of the user guide
+    readme = (
+        Path(__file__).parent.parent / "docs" / "guide" / "02_projects.md"
+    )  # the configuration example of the user guide
     block = re.search(r"```yaml\n(project:.*?)```", readme.read_text(encoding="utf-8"), re.S).group(1)
     config = load_config(write(tmp_path, block))
     assert list(config.documents) == ["c4-guide", "api", "handbook"]
@@ -245,12 +272,16 @@ def test_bundles_combine_documents_and_build_beside_them(tmp_path):
     assert handbook.bundle == ["guide", "api"] and handbook.meta["title"] == "Handbook"
     assert [(s.file.name, s.page_break) for s in handbook.sources] == [("a.md", False), ("b.md", False), ("c.md", True)]
     assert handbook.variables == {"x": 1, "y": 2}
-    assert config.output_formats(handbook) == ["docx", "pdf"] and config.output_formats(config.documents["api"]) == ["pdf"]
+    assert config.output_formats(handbook) == ["docx", "pdf"] and config.output_formats(config.documents["api"]) == [
+        "pdf"
+    ]
     assert set(config.lint.documents) == {"guide", "api"}
     with pytest.raises(ConfigError, match="names 'gone', which is not under documents"):
         load_config(write(tmp_path, "documents:\n  guide: {sources: [a.md]}\nbundles:\n  b: {documents: [gone]}\n"))
     with pytest.raises(ConfigError, match="has the name of a document"):
-        load_config(write(tmp_path, "documents:\n  guide: {sources: [a.md]}\nbundles:\n  guide: {documents: [guide]}\n"))
+        load_config(
+            write(tmp_path, "documents:\n  guide: {sources: [a.md]}\nbundles:\n  guide: {documents: [guide]}\n")
+        )
 
 
 def test_site_groups(tmp_path):

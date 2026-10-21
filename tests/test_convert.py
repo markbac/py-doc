@@ -14,7 +14,9 @@ from py_doc.convert import DocxConverter, SlidesConverter
 from py_doc.errors import ConversionError
 
 
-@pytest.mark.parametrize("option", ["engine", "keep_template_body", "keep_template_slides", "title_layout", "content_layout"])
+@pytest.mark.parametrize(
+    "option", ["engine", "keep_template_body", "keep_template_slides", "title_layout", "content_layout"]
+)
 def test_retired_options_are_refused_with_what_to_do(tmp_path, option):
     fmt = "pptx" if option in ("keep_template_slides", "title_layout", "content_layout") else "docx"
     data = {"documents": {"g": {"sources": ["a.md"], "outputs": {fmt: {option: "x"}}}}}
@@ -43,7 +45,11 @@ def test_a_dotx_template_is_accepted(tmp_path, pandoc_runtime):
 
 def test_a_potx_template_is_accepted(tmp_path, pandoc_runtime):
     template = tmp_path / "t.pptx"
-    template.write_bytes(subprocess.run(["pandoc", "--print-default-data-file", "reference.pptx"], capture_output=True, check=True).stdout)
+    template.write_bytes(
+        subprocess.run(
+            ["pandoc", "--print-default-data-file", "reference.pptx"], capture_output=True, check=True
+        ).stdout
+    )
     with zipfile.ZipFile(template) as z:
         data = {i.filename: z.read(i.filename) for i in z.infolist()}
     data["[Content_Types].xml"] = data["[Content_Types].xml"].replace(b"presentation.main+xml", b"template.main+xml")
@@ -105,10 +111,11 @@ def test_docx_convert_twin_produces_html(tmp_path, pandoc_runtime):
 
 def test_slides_convert_twin_produces_html_with_notes(tmp_path, pandoc_runtime):
     md = tmp_path / "talk.md"
-    md.write_text("# Title\n\n## First Slide\n\n- point\n\n<!-- notes: Remember to emphasize this -->\n", encoding="utf-8")
+    md.write_text(
+        "# Title\n\n## First Slide\n\n- point\n\n<!-- notes: Remember to emphasize this -->\n", encoding="utf-8"
+    )
     out = SlidesConverter().convert_twin(md, tmp_path / "talk.html")
     assert out.is_file()
     html_text = out.read_text(encoding="utf-8")
     assert "First Slide" in html_text
     assert "Remember to emphasize this" in html_text
-

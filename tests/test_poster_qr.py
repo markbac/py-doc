@@ -24,9 +24,12 @@ class TestPayloads:
         assert payload("text", "Two\nlines") == "Two\nlines"
 
     def test_a_contact_card(self):
-        card = payload("vcard", "name: Jane van der Berg\norg: Example; Instruments\ntel: +44 1234 567890\ntel: +44 1234 567891\n"
-                                "mobile: +44 7700 900123\nemail: jane@example.com\nurl: https://example.com\n"
-                                "address: 1 High Street, Leeds, LS1 1AA, UK\nnote: Ask for Jane, or the desk")
+        card = payload(
+            "vcard",
+            "name: Jane van der Berg\norg: Example; Instruments\ntel: +44 1234 567890\ntel: +44 1234 567891\n"
+            "mobile: +44 7700 900123\nemail: jane@example.com\nurl: https://example.com\n"
+            "address: 1 High Street, Leeds, LS1 1AA, UK\nnote: Ask for Jane, or the desk",
+        )
         assert card.split("\r\n") == [
             "BEGIN:VCARD", "VERSION:3.0", "N:Berg;Jane van der;;;", "FN:Jane van der Berg", "ORG:Example\\; Instruments",
             "TEL;TYPE=WORK,VOICE:+44 1234 567890", "TEL;TYPE=WORK,VOICE:+44 1234 567891", "TEL;TYPE=CELL:+44 7700 900123",
@@ -35,13 +38,20 @@ class TestPayloads:
         ]  # fmt: skip
 
     def test_an_event_with_times_and_an_all_day_one(self):
-        event = payload("event", "title: Commissioning, day 1\nstart: 2026-11-03 09:00\nend: 2026-11-03 17:30\nlocation: Site B")
+        event = payload(
+            "event", "title: Commissioning, day 1\nstart: 2026-11-03 09:00\nend: 2026-11-03 17:30\nlocation: Site B"
+        )
         lines = event.split("\r\n")
-        assert lines[:3] == ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//py-doc//poster//EN"] and lines[-2:] == ["END:VEVENT", "END:VCALENDAR"]
+        assert lines[:3] == ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//py-doc//poster//EN"] and lines[-2:] == [
+            "END:VEVENT",
+            "END:VCALENDAR",
+        ]
         assert "DTSTART:20261103T090000" in lines and "DTEND:20261103T173000" in lines
         assert "SUMMARY:Commissioning\\, day 1" in lines and "LOCATION:Site B" in lines
         all_day = payload("event", "title: Open day\nstart: 2026-11-03\nend: 2026-11-04").split("\r\n")
-        assert "DTSTART;VALUE=DATE:20261103" in all_day and "DTEND;VALUE=DATE:20261105" in all_day  # the day after the last
+        assert (
+            "DTSTART;VALUE=DATE:20261103" in all_day and "DTEND;VALUE=DATE:20261105" in all_day
+        )  # the day after the last
         one_hour = payload("event", "title: Call\nstart: 2026-11-03 09:00Z").split("\r\n")
         assert "DTSTART:20261103T090000Z" in one_hour and "DTEND:20261103T100000Z" in one_hour
 
@@ -50,7 +60,7 @@ class TestPayloads:
         assert payload("event", text) == payload("event", text)
 
     def test_wifi_email_phone_sms_and_geo(self):
-        assert payload("wifi", "ssid: Site;Guest\npassword: p:a\"ss") == 'WIFI:T:WPA;S:Site\\;Guest;P:p\\:a\\"ss;;'
+        assert payload("wifi", 'ssid: Site;Guest\npassword: p:a"ss') == 'WIFI:T:WPA;S:Site\\;Guest;P:p\\:a\\"ss;;'
         assert payload("wifi", "ssid: Open\nhidden: yes") == "WIFI:T:nopass;S:Open;H:true;;"
         assert payload("email", "to: help@example.com\nsubject: Unit 7 & 8\nbody: Hello there") == (
             "mailto:help@example.com?subject=Unit%207%20%26%208&body=Hello%20there"
@@ -72,7 +82,11 @@ class TestPayloads:
             ("event", "title: T", "needs a 'start:' line"),
             ("event", "title: T\nstart: 3 November", "start must be YYYY-MM-DD"),
             ("event", "title: T\nstart: 2026-11-03 10:00\nend: 2026-11-03 09:00", "end is before start"),
-            ("event", "title: T\nstart: 2026-11-03\nend: 2026-11-03 09:00", "must both be dates, or both dates and times"),
+            (
+                "event",
+                "title: T\nstart: 2026-11-03\nend: 2026-11-03 09:00",
+                "must both be dates, or both dates and times",
+            ),
             ("wifi", "ssid: S\nsecurity: WPA", "needs a 'password:' line"),
             ("wifi", "ssid: S\nsecurity: magic\npassword: x", "security must be WPA, WEP or none"),
             ("phone", "number: call me", "is not a phone number"),
@@ -86,7 +100,15 @@ class TestPayloads:
             payload(kind, text)
 
     def test_types_and_their_other_names(self):
-        assert [kind_of(k) for k in (None, "contact", "vcf", "ical", "calendar", "tel", "mailto")] == ["url", "vcard", "vcard", "event", "event", "phone", "email"]
+        assert [kind_of(k) for k in (None, "contact", "vcf", "ical", "calendar", "tel", "mailto")] == [
+            "url",
+            "vcard",
+            "vcard",
+            "event",
+            "event",
+            "phone",
+            "email",
+        ]
         with pytest.raises(QrError, match="type must be one of url, text, vcard"):
             kind_of("barcode")
 

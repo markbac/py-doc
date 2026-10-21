@@ -6,7 +6,7 @@ import stat
 import sys
 from pathlib import Path
 
-SCRIPT = '''#!{python}
+SCRIPT = """#!{python}
 import json, sys
 from pathlib import Path
 args = sys.argv[1:]
@@ -25,7 +25,7 @@ if {crash!r}:
 files = [a for a in args if not a.startswith("-")]
 canned = json.loads(Path({canned!r}).read_text()) if Path({canned!r}).exists() else {{}}
 print(json.dumps({{f: canned.get(Path(f).name, []) for f in files}}))
-'''
+"""
 
 
 def install(folder: Path, monkeypatch, *, canned: dict | None = None, version="3.9.1", crash="", sync_code=0) -> Path:
@@ -37,7 +37,9 @@ def install(folder: Path, monkeypatch, *, canned: dict | None = None, version="3
     data.write_text(json.dumps(canned or {}))
     log = folder / "calls.log"
     script = folder / ("vale.bat" if sys.platform == "win32" else "vale")
-    body = SCRIPT.format(python=sys.executable, log=str(log), canned=str(data), version=version, crash=crash, sync_code=sync_code)
+    body = SCRIPT.format(
+        python=sys.executable, log=str(log), canned=str(data), version=version, crash=crash, sync_code=sync_code
+    )
     if sys.platform == "win32":
         (folder / "vale.py").write_text(body.split("\n", 1)[1])
         script.write_text(f'@"{sys.executable}" "%~dp0vale.py" %*\n')
@@ -48,5 +50,19 @@ def install(folder: Path, monkeypatch, *, canned: dict | None = None, version="3
     return log
 
 
-def alert(check="PyDoc.WeaselWords", line=1, message="'very' is a weasel word.", severity="suggestion", span=(3, 6), action=None):
-    return {"Check": check, "Line": line, "Message": message, "Severity": severity, "Span": list(span), "Action": action or {"Name": "", "Params": None}}
+def alert(
+    check="PyDoc.WeaselWords",
+    line=1,
+    message="'very' is a weasel word.",
+    severity="suggestion",
+    span=(3, 6),
+    action=None,
+):
+    return {
+        "Check": check,
+        "Line": line,
+        "Message": message,
+        "Severity": severity,
+        "Span": list(span),
+        "Action": action or {"Name": "", "Params": None},
+    }

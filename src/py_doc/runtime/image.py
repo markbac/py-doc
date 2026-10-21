@@ -128,7 +128,11 @@ def exists(runtime: Runtime) -> bool:
         where = "Docker in WSL" if runtime.windows else "Docker"
         raise EnvironmentProblem(
             f"{where} did not answer within {STARTUP_TIMEOUT:g} seconds. It may be stuck: "
-            + ("run `wsl --shutdown` and try again" if runtime.windows else "restart it, for example `sudo systemctl restart docker`")
+            + (
+                "run `wsl --shutdown` and try again"
+                if runtime.windows
+                else "restart it, for example `sudo systemctl restart docker`"
+            )
         ) from exc
     return found.returncode == 0
 

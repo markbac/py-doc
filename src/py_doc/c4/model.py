@@ -167,7 +167,12 @@ def _props(value: Any) -> dict[str, str]:
 
 def _sections(items: Any) -> list[Section]:
     return [
-        Section(str(s.get("title") or ""), str(s.get("content") or ""), str(s.get("format") or "Markdown"), int(s.get("order") or 0))
+        Section(
+            str(s.get("title") or ""),
+            str(s.get("content") or ""),
+            str(s.get("format") or "Markdown"),
+            int(s.get("order") or 0),
+        )
         for s in sorted(items or [], key=lambda s: int(s.get("order") or 0))
     ]
 
@@ -234,7 +239,9 @@ def workspace_from_dict(data: dict) -> Workspace:
         for m, c in enumerate(raw.get("containers") or []):
             container = _element(c, "container", f"model.softwareSystems[{n}].containers[{m}]", system, ws)
             for k, comp in enumerate(c.get("components") or []):
-                _element(comp, "component", f"model.softwareSystems[{n}].containers[{m}].components[{k}]", container, ws)
+                _element(
+                    comp, "component", f"model.softwareSystems[{n}].containers[{m}].components[{k}]", container, ws
+                )
 
     def deployment(raw: dict, where: str, parent: Element | None) -> None:
         node = _element(raw, "deploymentNode", where, parent, ws)

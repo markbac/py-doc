@@ -35,7 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
     actions = parser.add_subparsers(dest="action", metavar="action", required=True)
 
     def common(sub: argparse.ArgumentParser, many: bool = True) -> None:
-        sub.add_argument("workspace", nargs="?", default=".", help="A .dsl or workspace.json file, or a folder to search (default: .)")
+        sub.add_argument(
+            "workspace",
+            nargs="?",
+            default=".",
+            help="A .dsl or workspace.json file, or a folder to search (default: .)",
+        )
         sub.add_argument("-c", "--config", help="py-doc.yml to read (default: the nearest one)")
         noise = sub.add_mutually_exclusive_group()
         noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
@@ -48,10 +53,14 @@ def build_parser() -> argparse.ArgumentParser:
     export = actions.add_parser("export", help="Write diagrams, diagram source or Markdown for workspaces")
     common(export)
     export.add_argument("-o", "--output", default="c4_exports", help="Output folder (default: c4_exports)")
-    export.add_argument("-f", "--formats", nargs="+", choices=FORMATS, default=["svg", "plantuml", "mermaid"], help="Formats to write")
+    export.add_argument(
+        "-f", "--formats", nargs="+", choices=FORMATS, default=["svg", "plantuml", "mermaid"], help="Formats to write"
+    )
     export.add_argument("--views", nargs="+", metavar="KEY", help="Draw only these views")
     export.add_argument("--levels", nargs="+", choices=LEVELS, help="Levels of Markdown to write (default: all)")
-    export.add_argument("--url", help="A Structurizr Local or server that is already running, as the tool container can reach it")
+    export.add_argument(
+        "--url", help="A Structurizr Local or server that is already running, as the tool container can reach it"
+    )
     export.add_argument("--dry-run", action="store_true", help="List what would be written and write nothing")
 
     lock = actions.add_parser("lock", help="Pin the Structurizr Local image by digest in c4-images.lock")
@@ -120,7 +129,12 @@ def _stack(args: argparse.Namespace, files: list[Path], runtime, c4: C4Settings,
     if len(files) != 1:
         raise ConversionError(f"{len(files)} workspaces found. Name one: {', '.join(str(f) for f in files)}")
     stack = Stack(
-        runtime(), files[0], image=resolve_image(c4.image, root), port=c4.port or SERVER_PORT, live=True, state=root / ".py-doc"
+        runtime(),
+        files[0],
+        image=resolve_image(c4.image, root),
+        port=c4.port or SERVER_PORT,
+        live=True,
+        state=root / ".py-doc",
     )
     if args.action == "status":
         print(stack.status())
@@ -195,7 +209,9 @@ def _export(args: argparse.Namespace, files: list[Path], runtime, c4: C4Settings
     return 0
 
 
-def _export_one(args: argparse.Namespace, file: Path, out: Path, runtime, c4: C4Settings, cache: Path, root: Path) -> None:
+def _export_one(
+    args: argparse.Namespace, file: Path, out: Path, runtime, c4: C4Settings, cache: Path, root: Path
+) -> None:
     formats = list(dict.fromkeys(args.formats))
     cli = StructurizrCli(runtime, c4.cli)
     ws = load_workspace(workspace_json(file, cache, runtime, c4.cli))
@@ -204,13 +220,20 @@ def _export_one(args: argparse.Namespace, file: Path, out: Path, runtime, c4: C4
     if args.dry_run:
         names = [f"{out}/{p.name}" for fmt in formats if fmt in DRAWN for p in plan(ws, out, (fmt,), args.views).files]
         names += [f"{out}/{fmt}/" for fmt in formats if fmt in TEXT_FORMATS]
-        names += [f"{out}/markdown/{page}" for page in (generate(ws, file.name, levels=args.levels) if "markdown" in formats else {})]
+        names += [
+            f"{out}/markdown/{page}"
+            for page in (generate(ws, file.name, levels=args.levels) if "markdown" in formats else {})
+        ]
         print("\n".join(sorted(names)) or "Nothing to write")
         return
     drawn = tuple(f for f in formats if f in DRAWN)
     pictures: dict[str, str] = {}
     if drawn:
-        stack = ExternalStack(args.url) if args.url else Stack(runtime(), file, image=resolve_image(c4.image, root), port=c4.port or SERVER_PORT)
+        stack = (
+            ExternalStack(args.url)
+            if args.url
+            else Stack(runtime(), file, image=resolve_image(c4.image, root), port=c4.port or SERVER_PORT)
+        )
         files = render_views(ws, file, out, runtime(), formats=drawn, keys=args.views, stack=stack)
         pictures = {p.stem: p.name for p in files if p.suffix == f".{drawn[0]}"}
     for fmt in (f for f in formats if f in TEXT_FORMATS):
@@ -220,6 +243,8 @@ def _export_one(args: argparse.Namespace, file: Path, out: Path, runtime, c4: C4
     if "markdown" in formats:
         folder = out / "markdown"
         folder.mkdir(parents=True, exist_ok=True)
-        for name, text in generate(ws, file.name, levels=args.levels, images={k: f"../{v}" for k, v in pictures.items()}).items():
+        for name, text in generate(
+            ws, file.name, levels=args.levels, images={k: f"../{v}" for k, v in pictures.items()}
+        ).items():
             (folder / name).write_text(text, encoding="utf-8")
     print(f"Exported '{ws.name}' to {out}")

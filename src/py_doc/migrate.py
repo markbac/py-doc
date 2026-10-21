@@ -178,9 +178,18 @@ def migrate(paths: list[Path], config_dir: Path, source_format: str = "createdoc
         for key, reason in _UNUSED_CLI.items():
             if cli.get(key):
                 result.note("warning", yaml_path, f"cli.{key} was left out: {reason}")
-        built = {"docx": flags["emit-docx"], "pptx": flags["emit-pptx"], "pdf": flags["emit-pdf"], "html": flags["emit-html"]}
+        built = {
+            "docx": flags["emit-docx"],
+            "pptx": flags["emit-pptx"],
+            "pdf": flags["emit-pdf"],
+            "html": flags["emit-html"],
+        }
         if not any(built.values()):
-            result.note("warning", yaml_path, "createdocs built no Word, PowerPoint, PDF or HTML file for this document. py-doc builds a Word file")
+            result.note(
+                "warning",
+                yaml_path,
+                "createdocs built no Word, PowerPoint, PDF or HTML file for this document. py-doc builds a Word file",
+            )
             built["docx"] = True
         outputs: dict[str, Any] = {}
         for fmt, wanted in built.items():

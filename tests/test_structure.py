@@ -37,7 +37,13 @@ class TestRegexLine:
         assert found("```\n[[X]]\n```\n\nuse `[[X]]` here\n\n[[X]]\n", rule) == [(7, "r/hr", "warning")]
 
     def test_scope_prefix_and_exclude(self):
-        rule = {"id": "r/q", "type": "regex-line", "pattern": r"\*\*Note\*\*", "scope_prefix": ">", "exclude_pattern": "ok"}
+        rule = {
+            "id": "r/q",
+            "type": "regex-line",
+            "pattern": r"\*\*Note\*\*",
+            "scope_prefix": ">",
+            "exclude_pattern": "ok",
+        }
         assert found("> **Note** x\n**Note** y\n> **Note** ok\n", rule) == [(1, "r/q", "warning")]
 
     def test_disabled_rules_do_nothing(self):
@@ -51,7 +57,13 @@ class TestOtherTypes:
 
     def test_broken_link_path_include_and_anchor_skipping(self, tmp_path):
         (tmp_path / "there.md").write_text("x", encoding="utf-8")
-        rule = {"id": "r/link", "type": "path-exists", "severity": "error", "pattern": r"\[[^\]]*\]\(([^)\s]+)\)", "message": "{target}"}
+        rule = {
+            "id": "r/link",
+            "type": "path-exists",
+            "severity": "error",
+            "pattern": r"\[[^\]]*\]\(([^)\s]+)\)",
+            "message": "{target}",
+        }
         text = "[a](there.md) [b](gone.md#x) [c](https://x.org/a) [d](#top) [e](the%20re.md)\n"
         issues = check_file(tmp_path / "a.md", text, rules(rule))
         assert [i.message for i in issues] == ["gone.md", "the re.md"]
@@ -61,9 +73,18 @@ class TestOtherTypes:
             "id": "r/if", "type": "balanced-markers", "severity": "error", "open_pattern": r"\[\[IF:[^\]]*\]\]",
             "close_pattern": r"\[\[ENDIF\]\]", "unmatched_open_message": "open {marker}", "unmatched_close_message": "close",
         }  # fmt: skip
-        assert found("[[IF: a]]\n[[ENDIF]]\n[[ENDIF]]\n[[IF: b]]\n", rule) == [(3, "r/if", "error"), (4, "r/if", "error")]
+        assert found("[[IF: a]]\n[[ENDIF]]\n[[ENDIF]]\n[[IF: b]]\n", rule) == [
+            (3, "r/if", "error"),
+            (4, "r/if", "error"),
+        ]
 
-    CAPTION = {"id": "r/cap", "type": "requires-caption", "block": "table", "required_pattern": r"\[\[CAPTION:Table\]\]", "message": "caption"}
+    CAPTION = {
+        "id": "r/cap",
+        "type": "requires-caption",
+        "block": "table",
+        "required_pattern": r"\[\[CAPTION:Table\]\]",
+        "message": "caption",
+    }
 
     def test_table_needs_a_caption_on_the_next_line(self):
         table = "| a |\n|---|\n| 1 |\n"
@@ -106,11 +127,25 @@ class TestAnchors:
 
     @pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc is not installed")
     @pytest.mark.parametrize(
-        "heading", ["Daily Volume Profile (R6029)", "11000/0 - Daily", "`Code` and *emphasis*", "[Link](x.md) text", "123", "Über uns", "a.b_c-d", "Q&A: what?"]
+        "heading",
+        [
+            "Daily Volume Profile (R6029)",
+            "11000/0 - Daily",
+            "`Code` and *emphasis*",
+            "[Link](x.md) text",
+            "123",
+            "Über uns",
+            "a.b_c-d",
+            "Q&A: what?",
+        ],
     )
     def test_agrees_with_pandoc(self, heading):
         html = subprocess.run(
-            ["pandoc", "-f", "markdown", "-t", "html"], input=f"# {heading}\n", capture_output=True, encoding="utf-8", check=True
+            ["pandoc", "-f", "markdown", "-t", "html"],
+            input=f"# {heading}\n",
+            capture_output=True,
+            encoding="utf-8",
+            check=True,
         ).stdout
         assert f'id="{anchor(heading)}"' in html
 
@@ -153,7 +188,10 @@ class TestConfiguration:
             ({"id": "a", "type": "regex-line", "pattern": "x", "severity": "loud"}, "severity must be one of"),
             ({"id": "a", "type": "path-exists", "pattern": "x"}, "needs a group"),
             ({"id": "a", "type": "requires-caption", "block": "box", "required_pattern": "x"}, "block must be one of"),
-            ({"id": "a", "type": "requires-caption", "block": "line", "required_pattern": "x"}, "needs 'trigger_pattern'"),
+            (
+                {"id": "a", "type": "requires-caption", "block": "line", "required_pattern": "x"},
+                "needs 'trigger_pattern'",
+            ),
         ],
     )
     def test_mistakes_name_the_rule(self, entry, message):
@@ -182,15 +220,21 @@ class TestConfiguration:
         assert [(i.rule, i.severity) for i in report.issues] == [("s/hr", "error")]
 
     def test_rules_from_a_file_and_errors_are_config_errors(self, tmp_path):
-        (tmp_path / "rules.yaml").write_text(yaml.safe_dump({"rules": [{"id": "x", "type": "regex-line", "pattern": "a"}]}), encoding="utf-8")
-        assert [r.id for r in load_config(self.write(tmp_path, "lint: {structure: rules.yaml}\n")).lint.structure] == ["x"]
+        (tmp_path / "rules.yaml").write_text(
+            yaml.safe_dump({"rules": [{"id": "x", "type": "regex-line", "pattern": "a"}]}), encoding="utf-8"
+        )
+        assert [r.id for r in load_config(self.write(tmp_path, "lint: {structure: rules.yaml}\n")).lint.structure] == [
+            "x"
+        ]
         with pytest.raises(ConfigError, match="not found"):
             load_config(self.write(tmp_path, "lint: {structure: gone.yaml}\n"))
         with pytest.raises(ConfigError, match="has type 'bad'"):
             load_config(self.write(tmp_path, "lint:\n  structure: [{id: x, type: bad}]\n"))
 
     def test_documents_are_taken_from_the_configuration(self, tmp_path):
-        config = load_config(self.write(tmp_path, "documents:\n  d: {sources: [a.md, {file: b.md, include: false}]}\n")).lint
+        config = load_config(
+            self.write(tmp_path, "documents:\n  d: {sources: [a.md, {file: b.md, include: false}]}\n")
+        ).lint
         assert config.documents == {"d": [tmp_path / "a.md"]}
 
 
@@ -228,7 +272,9 @@ class TestBundleMapping:
             "[[IF: x]]\ntext\n\n![pic](img.png)\n\n| a |\n|---|\n| 1 |\n\n[l](#intro) [m](#nope)\n",
             encoding="utf-8",
         )
-        config = load_config_text(tmp_path, "lint: {structure: %s}\ndocuments:\n  d: {sources: [a.md]}\n" % EXAMPLE.as_posix())
+        config = load_config_text(
+            tmp_path, "lint: {structure: %s}\ndocuments:\n  d: {sources: [a.md]}\n" % EXAMPLE.as_posix()
+        )
         report = DocLinter(config=config).lint_path(a)
         got = sorted({(i.line, i.rule) for i in report.issues if i.rule.startswith("structure/")})
         assert got == [

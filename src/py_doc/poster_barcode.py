@@ -13,7 +13,17 @@ import html
 import barcode
 
 TYPES = ("code128", "code39", "ean13", "ean8", "upca", "itf14")
-ALIASES = {"128": "code128", "39": "code39", "ean": "ean13", "ean-13": "ean13", "ean-8": "ean8", "upc": "upca", "upc-a": "upca", "itf": "itf14", "itf-14": "itf14"}
+ALIASES = {
+    "128": "code128",
+    "39": "code39",
+    "ean": "ean13",
+    "ean-13": "ean13",
+    "ean-8": "ean8",
+    "upc": "upca",
+    "upc-a": "upca",
+    "itf": "itf14",
+    "itf-14": "itf14",
+}
 _GS1 = {"ean13": 13, "ean8": 8, "upca": 12, "itf14": 14}  # digits with the check digit
 _CODE39 = set("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-. $/+%")
 # The clear space each side, in modules. An ITF narrow bar is two modules, and ITF-14 needs ten of them
@@ -47,17 +57,23 @@ def checked(kind: str, data: str) -> str:
         digits = data.replace(" ", "").replace("-", "")
         size = _GS1[kind]
         if not digits.isdigit() or len(digits) not in (size - 1, size):
-            raise BarcodeError(f"{kind} takes {size - 1} digits (the check digit is worked out) or {size} with the check digit, not '{data}'")
+            raise BarcodeError(
+                f"{kind} takes {size - 1} digits (the check digit is worked out) or {size} with the check digit, not '{data}'"
+            )
         if len(digits) == size:
             if gs1_check_digit(digits[:-1]) != digits[-1]:
-                raise BarcodeError(f"the check digit of {digits} should be {gs1_check_digit(digits[:-1])}, not {digits[-1]}: is a digit mistyped?")
+                raise BarcodeError(
+                    f"the check digit of {digits} should be {gs1_check_digit(digits[:-1])}, not {digits[-1]}: is a digit mistyped?"
+                )
             return digits
         return digits + gs1_check_digit(digits)
     if kind == "code39":
         upper = data.upper()
         bad = sorted(set(upper) - _CODE39)
         if bad:
-            raise BarcodeError(f"code39 has only A to Z, 0 to 9 and - . $ / + % and space, not {' '.join(repr(c) for c in bad)}")
+            raise BarcodeError(
+                f"code39 has only A to Z, 0 to 9 and - . $ / + % and space, not {' '.join(repr(c) for c in bad)}"
+            )
         return upper
     if any(ord(c) > 126 or (ord(c) < 32) for c in data):
         raise BarcodeError("code128 takes printable ASCII only")
@@ -105,13 +121,20 @@ def _digit_groups(kind: str, data: str) -> list[tuple[str, float, float, str]]:
     if kind == "ean13":  # guards at modules 0-2, 45-49 and 92-94
         return [(data[0], -1.5, -1.5, "end"), (data[1:7], 3, 45, "middle"), (data[7:], 50, 92, "middle")]
     if kind == "upca":
-        return [(data[0], -1.5, -1.5, "end"), (data[1:6], 10, 45, "middle"), (data[6:11], 50, 85, "middle"), (data[11], 96.5, 96.5, "start")]
+        return [
+            (data[0], -1.5, -1.5, "end"),
+            (data[1:6], 10, 45, "middle"),
+            (data[6:11], 50, 85, "middle"),
+            (data[11], 96.5, 96.5, "start"),
+        ]
     if kind == "ean8":  # guards at modules 0-2, 31-35 and 64-66
         return [(data[:4], 3, 31, "middle"), (data[4:], 36, 64, "middle")]
     return []
 
 
-def barcode_svg(kind: str, data: str, colour: str, width: int = 240, height: int = 70, text: bool = True, check: bool = False) -> str:
+def barcode_svg(
+    kind: str, data: str, colour: str, width: int = 240, height: int = 70, text: bool = True, check: bool = False
+) -> str:
     """An inline SVG ``width`` pixels wide: quiet zones, the bars, and the human-readable text under them."""
     modules = pattern(kind, data, check)
     quiet = QUIET[kind]
@@ -133,14 +156,18 @@ def barcode_svg(kind: str, data: str, colour: str, width: int = 240, height: int
             continue
         if run_start is not None:
             h = guard_h if run_kind == "G" else bar_h
-            rects.append(f'<rect x="{x0 + run_start * unit:.3f}" y="{top:.3f}" width="{(i - run_start) * unit:.3f}" height="{h:.3f}"/>')
+            rects.append(
+                f'<rect x="{x0 + run_start * unit:.3f}" y="{top:.3f}" width="{(i - run_start) * unit:.3f}" height="{h:.3f}"/>'
+            )
             run_start, run_kind = None, None
         if m in "1G":
             run_start, run_kind = i, m
     if bearer:  # bars all round the symbol, as printed on cartons
         b = bearer * unit
         inner_w, inner_h = width - 2 * b, bar_h + 2 * b
-        rects.append(f'<path fill-rule="evenodd" d="M0,0H{width:.3f}V{inner_h:.3f}H0Z M{b:.3f},{b:.3f}V{bar_h + b:.3f}H{inner_w + b:.3f}V{b:.3f}Z"/>')
+        rects.append(
+            f'<path fill-rule="evenodd" d="M0,0H{width:.3f}V{inner_h:.3f}H0Z M{b:.3f},{b:.3f}V{bar_h + b:.3f}H{inner_w + b:.3f}V{b:.3f}Z"/>'
+        )
     label = ""
     if text:
         y = (bar_h + 2 * bearer * unit if bearer else bar_h) + font * 0.95

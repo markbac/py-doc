@@ -85,8 +85,16 @@ def _metadata_file(metadata: Metadata, fmt: str, markdown: str) -> dict[str, Any
 
 _OFFICE = "application/vnd.openxmlformats-officedocument"
 _TEMPLATE_TYPES = {  # template file type -> (its content type, the document one, the document suffix)
-    ".dotx": (f"{_OFFICE}.wordprocessingml.template.main+xml", f"{_OFFICE}.wordprocessingml.document.main+xml", ".docx"),
-    ".potx": (f"{_OFFICE}.presentationml.template.main+xml", f"{_OFFICE}.presentationml.presentation.main+xml", ".pptx"),
+    ".dotx": (
+        f"{_OFFICE}.wordprocessingml.template.main+xml",
+        f"{_OFFICE}.wordprocessingml.document.main+xml",
+        ".docx",
+    ),
+    ".potx": (
+        f"{_OFFICE}.presentationml.template.main+xml",
+        f"{_OFFICE}.presentationml.presentation.main+xml",
+        ".pptx",
+    ),
 }
 
 
@@ -169,7 +177,10 @@ def _command(job: PandocJob, runtime: Runtime, work: Path, reference: Path | Non
             argv.append("--toc")
     else:  # pdf
         argv += ["--pdf-engine=xelatex"]
-        argv += ["--template", job.template if job.template is not None else _required(RESOURCES / "latex_template.tex", "LaTeX template")]
+        argv += [
+            "--template",
+            job.template if job.template is not None else _required(RESOURCES / "latex_template.tex", "LaTeX template"),
+        ]
         if options.get("toc", True):
             argv.append("--toc")
     if fmt in ("pdf", "html") and options.get("number_sections", False):
@@ -200,7 +211,9 @@ def convert(runtime: Runtime, job: PandocJob) -> Path:
                         f"The template {job.template.name} has no style {', '.join(missing)}, so callouts of "
                         "those kinds are plain paragraphs. Add a paragraph style with that name to give them a box"
                     )
-        (work / "metadata.yaml").write_text(yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        (work / "metadata.yaml").write_text(
+            yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False), encoding="utf-8"
+        )
         argv, mounts = _command(job, runtime, work, reference)
         result = runtime.run(argv, mounts=mounts, workdir=work, timeout=TIMEOUT)
         for line in result.stderr.splitlines():

@@ -45,7 +45,12 @@ def find_blocks(text: str) -> list[Block]:
                 end = index + 1
                 while end < len(lines):
                     closing = _OPEN.match(lines[end])
-                    if closing and closing["fence"][0] == marker[0] and len(closing["fence"]) >= len(marker) and not closing["info"]:
+                    if (
+                        closing
+                        and closing["fence"][0] == marker[0]
+                        and len(closing["fence"]) >= len(marker)
+                        and not closing["info"]
+                    ):
                         break
                     end += 1
                 body = "\n".join(lines[index + 1 : min(end, len(lines))])

@@ -161,7 +161,9 @@ class MkDocs(Engine):
             nav.append({"Home": "index.md"})
         for section in sections:
             entries = _mkdocs_entries(section.pages)
-            nav.append(entries[0] if len(entries) == 1 and not section.nested else {section.title: entries})  # one page: no section
+            nav.append(
+                entries[0] if len(entries) == 1 and not section.nested else {section.title: entries}
+            )  # one page: no section
         nav += [{title: path} for title, path in (pages or {}).items()]
         path = self.root / MKDOCS_NAV
         header = "# Written by py-doc site from py-doc.yml. mkdocs.yml takes it in with INHERIT: py-doc-nav.yml\n"
@@ -174,7 +176,9 @@ class MkDocs(Engine):
             return [f"{path} is not there. site.targets names it"]
         config = self._config(config_file)
         if config_file and self.root / str(config.get("docs_dir") or "docs") != self.content:
-            return [f"{path} reads its pages from {config.get('docs_dir')}, but py-doc writes them to {self.content}. Leave docs_dir to {self.marker}"]
+            return [
+                f"{path} reads its pages from {config.get('docs_dir')}, but py-doc writes them to {self.content}. Leave docs_dir to {self.marker}"
+            ]
         if MKDOCS_NAV in config.get("INHERITS", []):
             return []
         if "nav" in config:
@@ -189,13 +193,21 @@ class MkDocs(Engine):
         config = self.root / (config_file or self.marker)
         if config_file and not config.is_file():
             raise ConversionError(f"{config} is not there, so that site cannot be built. site.targets names it")
-        runtime.run(["mkdocs", "build", "--config-file", config], mounts=[Mount(self.root, writable=True)], workdir=self.root, timeout=TIMEOUT)
+        runtime.run(
+            ["mkdocs", "build", "--config-file", config],
+            mounts=[Mount(self.root, writable=True)],
+            workdir=self.root,
+            timeout=TIMEOUT,
+        )
         return self.site_dir(config_file)
 
 
 def _mkdocs_entries(items: list[NavPage | NavSection]) -> list[dict]:
     """A page as {title: path}, a folder as {title: [its entries]}: with navigation.indexes, its index page leads it."""
-    return [{item.title: _mkdocs_entries(item.pages)} if isinstance(item, NavSection) else {item.title: item.path} for item in items]
+    return [
+        {item.title: _mkdocs_entries(item.pages)} if isinstance(item, NavSection) else {item.title: item.path}
+        for item in items
+    ]
 
 
 MKDOCS_YML = """\
@@ -266,7 +278,9 @@ class Starlight(Engine):
         sidebar = []
         for section in sections:
             # A flat document lists its folder; one with folders lists its pages, so a group takes its index page's title
-            items = _starlight_items(section.pages) if section.nested else [{"autogenerate": {"directory": section.folder}}]
+            items = (
+                _starlight_items(section.pages) if section.nested else [{"autogenerate": {"directory": section.folder}}]
+            )
             sidebar.append({"label": section.title, "items": items})
         for title, page in (pages or {}).items():
             link = "/" + page.removesuffix(".md").removesuffix("index").strip("/")
@@ -291,7 +305,14 @@ class Starlight(Engine):
         mounts = [Mount(self.root, writable=True)]
         env = {"ASTRO_TELEMETRY_DISABLED": "1"}
         # npm install keeps to package-lock.json when it matches package.json, and brings it up to date when not
-        runtime.run(["npm", "install", "--no-audit", "--no-fund"], mounts=mounts, workdir=self.root, network=True, env=env, timeout=TIMEOUT)
+        runtime.run(
+            ["npm", "install", "--no-audit", "--no-fund"],
+            mounts=mounts,
+            workdir=self.root,
+            network=True,
+            env=env,
+            timeout=TIMEOUT,
+        )
         runtime.run(["npx", "astro", "build"], mounts=mounts, workdir=self.root, env=env, timeout=TIMEOUT)
         return self.root / "dist"
 

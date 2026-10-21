@@ -64,7 +64,9 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
     parser.add_argument(
         "--exclude", action="append", default=[], metavar="DIR", help="Also skip directories with this name"
     )
-    parser.add_argument("--config", metavar="FILE", help="py-doc.yml to read (default: the nearest one above the first target)")
+    parser.add_argument(
+        "--config", metavar="FILE", help="py-doc.yml to read (default: the nearest one above the first target)"
+    )
     parser.add_argument(
         "--engine", choices=("auto", "builtin", "vale"), default="auto",
         help="auto runs the built-in rules and Vale when it is installed, builtin skips Vale, vale uses Vale for the text rules",
@@ -74,9 +76,15 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         help="text (default), csv for a spreadsheet, github for workflow annotations, json, or sarif for code scanning",
     )  # fmt: skip
     parser.add_argument("--output", metavar="FILE", help="Write the report to this file instead of standard output")
-    parser.add_argument("--show-vale-config", action="store_true", help="Print the Vale configuration py-doc would use and exit")
-    parser.add_argument("--check-engines", action="store_true", help="Report whether Vale is found, its version and its folder")
-    parser.add_argument("--sync", action="store_true", help="Download the Vale packages in lint.vale.packages (vale sync)")
+    parser.add_argument(
+        "--show-vale-config", action="store_true", help="Print the Vale configuration py-doc would use and exit"
+    )
+    parser.add_argument(
+        "--check-engines", action="store_true", help="Report whether Vale is found, its version and its folder"
+    )
+    parser.add_argument(
+        "--sync", action="store_true", help="Download the Vale packages in lint.vale.packages (vale sync)"
+    )
     parser.add_argument(
         "--print-example-rules", action="store_true", help="Print an example set of structure rules and exit"
     )
@@ -98,7 +106,10 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         return 2
     config.exclude_dirs = config.exclude_dirs | frozenset(args.exclude)
     linter = DocLinter(
-        config=config, runtime=lambda: connect(settings), engine=args.engine, extra_checks=_model_checks(args, config, settings)
+        config=config,
+        runtime=lambda: connect(settings),
+        engine=args.engine,
+        extra_checks=_model_checks(args, config, settings),
     )
     try:
         if args.show_vale_config or args.check_engines or args.sync:
@@ -135,12 +146,15 @@ def _model_checks(args: argparse.Namespace, config: LintConfig, settings: Runtim
 
         for file in files:
             try:
-                ws = load_workspace(workspace_json(file, project.root / ".py-doc" / "c4" / "json", runtime, project.c4.cli))
+                ws = load_workspace(
+                    workspace_json(file, project.root / ".py-doc" / "c4" / "json", runtime, project.c4.cli)
+                )
             except EnvironmentProblem as exc:
                 logger.warning("The model rules for %s were skipped: %s", file.name, exc)
                 continue
             found += [
-                LintIssue(file.resolve(), 1, i.rule, "C4 model", i.message, i.severity) for i in check_model(ws, file, config)
+                LintIssue(file.resolve(), 1, i.rule, "C4 model", i.message, i.severity)
+                for i in check_model(ws, file, config)
             ]
         return found
 

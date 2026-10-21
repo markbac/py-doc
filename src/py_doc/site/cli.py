@@ -28,7 +28,9 @@ def _assignment(text: str) -> tuple[str, str]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="py-doc site", description="A web site of the documents, made with MkDocs or Astro + Starlight")
+    parser = argparse.ArgumentParser(
+        prog="py-doc site", description="A web site of the documents, made with MkDocs or Astro + Starlight"
+    )
     actions = parser.add_subparsers(dest="action", metavar="action", required=True)
 
     def common(sub: argparse.ArgumentParser) -> None:
@@ -37,7 +39,9 @@ def build_parser() -> argparse.ArgumentParser:
         noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
         noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
 
-    init = actions.add_parser("init", help="Make the site project (mkdocs.yml, or an Astro + Starlight project) if it is not there")
+    init = actions.add_parser(
+        "init", help="Make the site project (mkdocs.yml, or an Astro + Starlight project) if it is not there"
+    )
     common(init)
     init.add_argument("--engine", choices=SITE_ENGINES, help="The site generator (default: site.engine in py-doc.yml)")
     for name, text in (
@@ -46,11 +50,26 @@ def build_parser() -> argparse.ArgumentParser:
     ):
         sub = actions.add_parser(name, help=text)
         common(sub)
-        sub.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
-        sub.add_argument("--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set an [[IF:]] condition")
+        sub.add_argument(
+            "--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}"
+        )
+        sub.add_argument(
+            "--condition",
+            action="append",
+            default=[],
+            metavar="NAME=VALUE",
+            type=_assignment,
+            help="Set an [[IF:]] condition",
+        )
         sub.add_argument("--no-generate", action="store_true", help="Do not run content.generators first")
         if name == "build":
-            sub.add_argument("--target", action="append", default=[], metavar="NAME", help="Build only this site of site.targets (default: every one)")
+            sub.add_argument(
+                "--target",
+                action="append",
+                default=[],
+                metavar="NAME",
+                help="Build only this site of site.targets (default: every one)",
+            )
     return parser
 
 
@@ -110,7 +129,9 @@ def _targets(config: ProjectConfig, chosen: list[str]) -> list[tuple[str | None,
     for name, config_file in picked:
         out = engine.site_dir(config_file)
         if out in outs:
-            raise ConfigError(f"site.targets {outs[out]} and {name} both build to {out}. Give each config file its own site_dir")
+            raise ConfigError(
+                f"site.targets {outs[out]} and {name} both build to {out}. Give each config file its own site_dir"
+            )
         outs[out] = name
     return picked
 
@@ -119,7 +140,10 @@ def _init(config: ProjectConfig, chosen: str | None) -> int:
     site = config.site
     name = chosen or (site.engine if site else None)
     if name is None:
-        print("Error: say which site to make: --engine mkdocs or --engine starlight, or set site.engine in py-doc.yml", file=sys.stderr)
+        print(
+            "Error: say which site to make: --engine mkdocs or --engine starlight, or set site.engine in py-doc.yml",
+            file=sys.stderr,
+        )
         return 1
     if site is not None and chosen and site.engine != chosen:
         print(f"Error: py-doc.yml says site.engine: {site.engine}, not {chosen}", file=sys.stderr)
@@ -133,7 +157,9 @@ def _init(config: ProjectConfig, chosen: str | None) -> int:
     if not written:
         print(f"The {name} site in {root} is already there. Nothing was changed")
     if site is None:
-        print(f"Add this to {config.root / 'py-doc.yml'} to fill it:\n\nsite:\n  engine: {name}\n  dir: {root.relative_to(config.root).as_posix()}\n")
+        print(
+            f"Add this to {config.root / 'py-doc.yml'} to fill it:\n\nsite:\n  engine: {name}\n  dir: {root.relative_to(config.root).as_posix()}\n"
+        )
     else:
         print("Next: py-doc site build")
     return 0

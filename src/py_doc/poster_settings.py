@@ -71,7 +71,11 @@ def layer(data: dict, folder: Path, where: str, strict: bool = True) -> dict:
         elif key == "logo":
             out[key] = _path(value, folder, place)
         elif key == "embed_fonts":  # true: every font of the stylesheet; a list: only those subsets, such as latin
-            if isinstance(value, list) and value and all(isinstance(v, str) and re.fullmatch(r"[a-z][a-z0-9-]*", v) for v in value):
+            if (
+                isinstance(value, list)
+                and value
+                and all(isinstance(v, str) and re.fullmatch(r"[a-z][a-z0-9-]*", v) for v in value)
+            ):
                 out[key] = [str(v) for v in value]
             elif isinstance(value, bool):
                 out[key] = value
@@ -91,7 +95,9 @@ def layer(data: dict, folder: Path, where: str, strict: bool = True) -> dict:
     files = out.get("fonts", {}).get("files")
     if isinstance(files, list):  # a font file is from this layer's file, as a logo is
         out["fonts"]["files"] = [
-            {**item, "file": str(_path(item["file"], folder, f"{where}.fonts.files"))} if isinstance(item, dict) and item.get("file") else item
+            {**item, "file": str(_path(item["file"], folder, f"{where}.fonts.files"))}
+            if isinstance(item, dict) and item.get("file")
+            else item
             for item in files
         ]
     if "header" in out:

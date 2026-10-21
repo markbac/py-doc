@@ -15,12 +15,21 @@ class TestStats:
     def test_counts_prose_and_blocks(self):
         text = "---\ntitle: x y z\n---\n\n# Title\n\nOne two [three](a.md).\n\n```\nnot words here\n```\n\n| A | B |\n|---|---|\n| c | d |\n\n![alt](p.png)\n"
         stats = text_stats(text)
-        assert (stats.words, stats.headings, stats.code_blocks, stats.tables, stats.images, stats.links) == (9, 1, 1, 1, 1, 1)  # the alt text counts
+        assert (stats.words, stats.headings, stats.code_blocks, stats.tables, stats.images, stats.links) == (
+            9,
+            1,
+            1,
+            1,
+            1,
+            1,
+        )  # the alt text counts
 
     def test_the_command_reports_each_document_and_the_total(self, tmp_path, monkeypatch, capsys):
         (tmp_path / "a.md").write_text("# A\n\nOne two.\n", encoding="utf-8")
         (tmp_path / "b.md").write_text("# B\n\nThree.\n", encoding="utf-8")
-        (tmp_path / "py-doc.yml").write_text("documents:\n  guide: {sources: [a.md, b.md]}\n  notes: {sources: [b.md]}\n", encoding="utf-8")
+        (tmp_path / "py-doc.yml").write_text(
+            "documents:\n  guide: {sources: [a.md, b.md]}\n  notes: {sources: [b.md]}\n", encoding="utf-8"
+        )
         monkeypatch.chdir(tmp_path)
         assert main(["stats", "--format", "json", "--lint"]) == 0
         data = json.loads(capsys.readouterr().out)

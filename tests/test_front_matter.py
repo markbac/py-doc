@@ -31,7 +31,9 @@ def test_aliases_map_to_the_standard_keys():
     assert (result.document_id, result.keywords, result.title) == ("X-1", "a, b", "Cased")
 
 
-@pytest.mark.parametrize(("value", "expected"), [("2026-10-05", "2026-10-05"), ("2026-10-05 09:30:00", "2026-10-05T09:30:00")])
+@pytest.mark.parametrize(
+    ("value", "expected"), [("2026-10-05", "2026-10-05"), ("2026-10-05 09:30:00", "2026-10-05T09:30:00")]
+)
 def test_dates_are_written_in_iso_form(value, expected):
     assert meta(f"---\ndate: {value}\n---\n").date == expected
 

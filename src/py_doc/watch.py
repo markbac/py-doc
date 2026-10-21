@@ -95,8 +95,14 @@ def serve(state: State, port: int) -> ThreadingHTTPServer:
                 script = RELOAD.replace("__VERSION__", str(version))
                 return self._send(200, "text/html; charset=utf-8", page.replace("</body>", script + "</body>", 1))
             if not name:
-                links = "".join(f'<li><a href="/{html.escape(urllib.parse.quote(n))}.html">{html.escape(n)}</a></li>' for n in pages)
-                return self._send(200, "text/html; charset=utf-8", f"<!doctype html><title>{html.escape(state.title)}</title><ul>{links}</ul>")
+                links = "".join(
+                    f'<li><a href="/{html.escape(urllib.parse.quote(n))}.html">{html.escape(n)}</a></li>' for n in pages
+                )
+                return self._send(
+                    200,
+                    "text/html; charset=utf-8",
+                    f"<!doctype html><title>{html.escape(state.title)}</title><ul>{links}</ul>",
+                )
             self._send(404, "text/plain", f"No page {name}")
 
         def _send(self, code: int, kind: str, body: str) -> None:
@@ -116,8 +122,15 @@ def serve(state: State, port: int) -> ThreadingHTTPServer:
     return server
 
 
-def watch(build: Build, errors: tuple[type[Exception], ...], port: int = 0, open_browser: bool = True,
-          stop: threading.Event | None = None, interval: float = INTERVAL, title: str = "py-doc preview") -> int:
+def watch(
+    build: Build,
+    errors: tuple[type[Exception], ...],
+    port: int = 0,
+    open_browser: bool = True,
+    stop: threading.Event | None = None,
+    interval: float = INTERVAL,
+    title: str = "py-doc preview",
+) -> int:
     """Build, serve, and build again on every change, until Ctrl+C or ``stop``. Returns the exit status."""
     state, stop = State(title=title), stop or threading.Event()
 

@@ -130,12 +130,16 @@ def _pages_of(config: ProjectConfig, name: str, runtime, variables: dict, condit
     sources = [replace(s, heading_offset=0, page_break=False) for s in sources if s.include]
     joined = join_sources(sources, {**doc.variables, **variables}, {**doc.conditions, **conditions}, doc.id)
     metadata = _combine_metadata(doc, joined.metadata, joined.first_heading, config.root)
-    slugs = _slugs(name, [file for file, _ in joined.parts], [s for s in doc.sources if s.include and s.structurizr is None])
+    slugs = _slugs(
+        name, [file for file, _ in joined.parts], [s for s in doc.sources if s.include and s.structurizr is None]
+    )
     pages: list[Page] = []
     for order, ((file, text), name_) in enumerate(zip(joined.parts, slugs, strict=True), start=1):
         title = first_heading(text) or (metadata.title if order == 1 else file.stem)
         rendered = render_parts([(file, text)], "html", runtime, mermaid=config.mermaid)
-        pages.append(Page(name, file, name_, title, order, rendered.markdown, rendered.pictures, version=metadata.version))
+        pages.append(
+            Page(name, file, name_, title, order, rendered.markdown, rendered.pictures, version=metadata.version)
+        )
     if pages:
         pages[0].meta = page_meta(metadata)
     return metadata.title or name, pages
@@ -287,13 +291,21 @@ def _convert(pages: list[Page], engine: str, runtime: Runtime) -> None:
         filters = " ".join(f"--lua-filter '{runtime.container_path(RESOURCES / name)}'" for name in FILTERS)
         for number, page in enumerate(pages):
             (work / f"{number}.md").write_text(page.markdown, encoding="utf-8", newline="\n")
-            source, target = runtime.container_path(work / f"{number}.md"), runtime.container_path(work / f"{number}.out")
+            source, target = (
+                runtime.container_path(work / f"{number}.md"),
+                runtime.container_path(work / f"{number}.out"),
+            )
             lines.append(
                 f"pandoc '{source}' --from={INPUT_FORMAT} {filters} -M site-engine={engine} "
                 f"--to={OUTPUT_FORMAT} --wrap=none --output '{target}'"
             )
         (work / "pages.sh").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
-        result = runtime.run(["sh", work / "pages.sh"], mounts=[Mount(RESOURCES), Mount(work, writable=True)], workdir=work, timeout=TIMEOUT)
+        result = runtime.run(
+            ["sh", work / "pages.sh"],
+            mounts=[Mount(RESOURCES), Mount(work, writable=True)],
+            workdir=work,
+            timeout=TIMEOUT,
+        )
         for line in result.stderr.splitlines():
             if line.startswith("[WARNING]"):
                 logger.warning(f"pandoc: {line.removeprefix('[WARNING]').strip()}")
@@ -325,14 +337,18 @@ def _write(pages: list[Page], engine: Engine, extra: dict[Path, bytes] | None = 
             front.update(page.meta)  # MkDocs makes every key page.meta, for a theme or a plugin
         header = "---\n" + yaml.safe_dump(front, allow_unicode=True, sort_keys=False) + "---\n\n"
         files[content / page.path] = (header + text.rstrip() + "\n").encode("utf-8")
-        files[content / page.document / ".gitignore"] = b"# Written by py-doc site: built from the sources, so not kept in Git\n*\n"
+        files[content / page.document / ".gitignore"] = (
+            b"# Written by py-doc site: built from the sources, so not kept in Git\n*\n"
+        )
 
     def relative(path: Path) -> str:
         return path.relative_to(engine.root).as_posix()
 
     clashes = [path for path in files if path.exists() and relative(path) not in before]
     if clashes:
-        raise ConversionError(f"{clashes[0]} is already there and py-doc did not write it, so it is left alone. Move it, or leave the document out of site.documents")
+        raise ConversionError(
+            f"{clashes[0]} is already there and py-doc did not write it, so it is left alone. Move it, or leave the document out of site.documents"
+        )
     for old in sorted(before - {relative(p) for p in files}):
         (engine.root / old).unlink(missing_ok=True)  # a page or picture of an earlier run that is gone now
     for path, data in files.items():

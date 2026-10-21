@@ -93,9 +93,17 @@ def test_duplicates_of_the_builtin_rules_are_dropped():
 
 def test_alerts_are_mapped(tmp_path):
     f = tmp_path / "a.md"
-    text = json.dumps({str(f): [alert(check="Style.Rule", severity="suggestion", action={"Name": "replace", "Params": ["to"]})]})
+    text = json.dumps(
+        {str(f): [alert(check="Style.Rule", severity="suggestion", action={"Name": "replace", "Params": ["to"]})]}
+    )
     (issue,) = parse_output(text, [f])
-    assert (issue.rule, issue.category, issue.severity, issue.suggestion, issue.column) == ("Style.Rule", "Style", "info", "to", 3)
+    assert (issue.rule, issue.category, issue.severity, issue.suggestion, issue.column) == (
+        "Style.Rule",
+        "Style",
+        "info",
+        "to",
+        3,
+    )
     with pytest.raises(Exception, match="not JSON"):
         parse_output("oops", [f])
 
@@ -103,8 +111,14 @@ def test_alerts_are_mapped(tmp_path):
 def test_generated_files_follow_the_definition(tmp_path):
     settings = parse_vale(
         {
-            "packages": ["write-good"], "spelling": "en-GB", "min_alert_level": "warning",
-            "rules": {"PyDoc.SentenceLength": {"level": "error", "max": 20}, "PyDoc.PassiveVoice": "off", "write-good.Weasel": "error"},
+            "packages": ["write-good"],
+            "spelling": "en-GB",
+            "min_alert_level": "warning",
+            "rules": {
+                "PyDoc.SentenceLength": {"level": "error", "max": 20},
+                "PyDoc.PassiveVoice": "off",
+                "write-good.Weasel": "error",
+            },
             "terms": {"Kubernetes": ["k8s"]},
             "avoid": [{"pattern": r"\bsimply\b", "message": "No.", "level": "error"}],
         },
@@ -116,7 +130,9 @@ def test_generated_files_follow_the_definition(tmp_path):
     assert "PyDoc.PassiveVoice = NO" in ini and "write-good.Weasel = error" in ini
     sentence = yaml.safe_load((tmp_path / "vale/styles/PyDoc/SentenceLength.yml").read_text())
     assert sentence["max"] == 20
-    assert sentence["message"] == "Sentence is %d words long. Try to keep it under 20."  # Vale gives the count as a number
+    assert (
+        sentence["message"] == "Sentence is %d words long. Try to keep it under 20."
+    )  # Vale gives the count as a number
     assert yaml.safe_load((tmp_path / "vale/styles/PyDoc/Terms.yml").read_text())["swap"]["k8s"] == "Kubernetes"
     assert yaml.safe_load((tmp_path / "vale/styles/PyDoc/Terms.yml").read_text())["swap"]["lwm2m"] == "LwM2M"
     assert yaml.safe_load((tmp_path / "vale/styles/PyDoc/Avoid1.yml").read_text())["level"] == "error"
@@ -159,7 +175,9 @@ def test_a_broken_definition_fails_with_status_2_before_vale_runs(project, tmp_p
 
 
 def test_rules_files_merge_in_order_and_inline_wins(project, tmp_path):
-    (project / "base.yml").write_text("rules:\n  PyDoc.PassiveVoice: error\n  PyDoc.WeaselWords: error\n", encoding="utf-8")
+    (project / "base.yml").write_text(
+        "rules:\n  PyDoc.PassiveVoice: error\n  PyDoc.WeaselWords: error\n", encoding="utf-8"
+    )
     (project / "team.yml").write_text("rules:\n  PyDoc.WeaselWords: off\n", encoding="utf-8")
     settings = parse_vale({"rules_file": ["base.yml", "team.yml"], "rules": {"PyDoc.PassiveVoice": "warning"}}, project)
     assert settings.rules["PyDoc.PassiveVoice"].level == "warning"
@@ -205,7 +223,9 @@ def test_the_schema_accepts_a_full_definition():
 
 @pytest.mark.skipif(shutil.which("vale") is None, reason="Vale is not installed")
 def test_end_to_end_with_the_real_vale(project, capsys):
-    (project / "docs" / "a.md").write_text("# A\n\nThis is very good. TODO: finish.\n\n```\nvery TODO\n```\n", encoding="utf-8")
+    (project / "docs" / "a.md").write_text(
+        "# A\n\nThis is very good. TODO: finish.\n\n```\nvery TODO\n```\n", encoding="utf-8"
+    )
     assert lint(project, "--engine", "vale") == 0
     out = capsys.readouterr().out
     assert "PyDoc.WeaselWords" in out and "PyDoc.Placeholders" in out
@@ -219,7 +239,9 @@ def test_the_placeholder_words_are_not_in_the_accepted_vocabulary(project, tmp_p
     folder = tmp_path / "vale"
     config = LintConfig()
     build_workspace(config.vale, config, folder)
-    accepted = (folder / "styles" / "config" / "vocabularies" / "PyDoc" / "accept.txt").read_text(encoding="utf-8").split()
+    accepted = (
+        (folder / "styles" / "config" / "vocabularies" / "PyDoc" / "accept.txt").read_text(encoding="utf-8").split()
+    )
     assert "API" in accepted and not {"TODO", "FIXME", "TBD"} & set(accepted)
 
 

@@ -135,9 +135,12 @@ def test_the_page_has_every_part_of_the_poster(tmp_path, drawn):
     assert "1. Valve: <span>when it closes</span>" in page
     assert '<p class="caption">Fig. 1 The valve states.</p>' in page
     assert 'class="cards" style="grid-template-columns:repeat(2,minmax(0,1fr))"' in page
-    assert 'border-top:4px solid #2e6b3a' in page
+    assert "border-top:4px solid #2e6b3a" in page
     assert "<blockquote>" in page
-    assert '<div class="lcd"><div class="scr"><div>C 0012.340m3</div><div>Gas ON</div></div><div class="cap">Credit, supply on</div>' in page
+    assert (
+        '<div class="lcd"><div class="scr"><div>C 0012.340m3</div><div>Gas ON</div></div><div class="cap">Credit, supply on</div>'
+        in page
+    )
     assert '<div class="fig-title">Day</div>' in page and 'class="bar" style="min-height:64px"' in page
     assert '<div class="node" style="background:#a3322b">CLOSED</div>' in page
     assert '<div class="cell fill">Scheduled wake‑up</div>' in page
@@ -164,7 +167,13 @@ def test_a_tool_that_draws_only_png_gives_a_png(tmp_path, drawn):
 
 
 def test_a_mermaid_diagram_with_its_own_theme_keeps_it(tmp_path, drawn):
-    build(write(tmp_path, "## A\n\n```mermaid\n%%{init: {}}%%\ngraph LR; A-->B\n```\n\n```mermaid\n---\nconfig: {look: classic}\n---\ngraph LR; C-->D\n```\n"), lambda: object())
+    build(
+        write(
+            tmp_path,
+            "## A\n\n```mermaid\n%%{init: {}}%%\ngraph LR; A-->B\n```\n\n```mermaid\n---\nconfig: {look: classic}\n---\ngraph LR; C-->D\n```\n",
+        ),
+        lambda: object(),
+    )
     assert drawn[0][1] == "%%{init: {}}%%\ngraph LR; A-->B"
     assert drawn[1][1] == "---\nconfig: {look: classic}\n---\ngraph LR; C-->D"
 
@@ -221,7 +230,9 @@ def test_the_command_writes_the_page_next_to_the_markdown(tmp_path, drawn, monke
     assert (tmp_path / "out.html").is_file()
 
 
-@pytest.mark.parametrize("spelling", ["./poster.md", "sub/../poster.md"] + ([".\\poster.md"] if os.name == "nt" else []))
+@pytest.mark.parametrize(
+    "spelling", ["./poster.md", "sub/../poster.md"] + ([".\\poster.md"] if os.name == "nt" else [])
+)
 def test_a_file_is_found_however_its_path_is_written(tmp_path, drawn, monkeypatch, spelling):
     monkeypatch.setattr("py_doc.poster_cli.connect", lambda settings: object())
     write(tmp_path)
@@ -261,7 +272,9 @@ def test_the_example_posters_build(drawn, monkeypatch, name, title):
     page, ctx = build(EXAMPLES / f"{name}.md", lambda: object())
     assert f"<title>{title}</title>" in page
     assert ctx.failed == 0
-    assert "image not found" not in page and "](" not in page.split("</style>", 1)[1], "every picture and link is embedded or rendered"
+    assert "image not found" not in page and "](" not in page.split("</style>", 1)[1], (
+        "every picture and link is embedded or rendered"
+    )
 
 
 def test_an_example_poster_built_on_its_own_has_the_layout_it_was_written_for(drawn):
@@ -389,7 +402,9 @@ def test_settings_win_over_the_front_matter_and_the_defaults_come_last(tmp_path,
     text = "---\ntheme: dark\n---\n## A\n\nText.\n"
     assert "--page:#ffffff;" in build(write(tmp_path, text), lambda: object(), settings={"theme": "print"})[0]
     assert "--page:#141923;" in build(write(tmp_path, text), lambda: object(), defaults={"theme": "print"})[0]
-    assert "--page:#ffffff;" in build(write(tmp_path, "## A\n\nText.\n"), lambda: object(), defaults={"theme": "print"})[0]
+    assert (
+        "--page:#ffffff;" in build(write(tmp_path, "## A\n\nText.\n"), lambda: object(), defaults={"theme": "print"})[0]
+    )
 
 
 @pytest.mark.parametrize(
@@ -440,7 +455,9 @@ def test_the_poster_section_takes_every_poster_setting(tmp_path):
         parse_config({"poster": {"columns": 2.5}}, tmp_path)
     with pytest.raises(ConfigError, match="unknown key 'middle' in poster.footer"):
         parse_config({"poster": {"footer": {"middle": "x"}}}, tmp_path)
-    config = parse_config({"poster": {"theme": "brand.yml", "logo": "logo.svg", "footer": {"logos": ["a.png"]}}}, tmp_path)
+    config = parse_config(
+        {"poster": {"theme": "brand.yml", "logo": "logo.svg", "footer": {"logos": ["a.png"]}}}, tmp_path
+    )
     assert config.poster["theme"] == tmp_path / "brand.yml" and config.poster["logo"] == tmp_path / "logo.svg"
     assert config.poster["footer"]["logos"] == [tmp_path / "a.png"]
     assert parse_config({"poster": {"theme": "dark"}}, tmp_path).poster["theme"] == "dark"
@@ -457,7 +474,10 @@ def project(tmp_path, posters, defaults=None):
 
 
 def test_a_poster_of_py_doc_yml_has_its_source_output_and_settings(tmp_path):
-    config = parse_config({"posters": {"sn100": {"source": "p.md", "orientation": "landscape", "colours": {"primary": "#123456"}}}}, tmp_path)
+    config = parse_config(
+        {"posters": {"sn100": {"source": "p.md", "orientation": "landscape", "colours": {"primary": "#123456"}}}},
+        tmp_path,
+    )
     poster = config.posters["sn100"]
     assert (poster.source, poster.output) == (tmp_path / "p.md", tmp_path / "build" / "sn100.html")
     assert poster.settings == {"orientation": "landscape", "colours": {"primary": "#123456"}}
@@ -470,7 +490,9 @@ def test_a_poster_of_py_doc_yml_has_its_source_output_and_settings(tmp_path):
 def test_every_poster_of_py_doc_yml_is_built_with_its_entry_over_the_front_matter(tmp_path, drawn, monkeypatch, capsys):
     monkeypatch.setattr("py_doc.poster_cli.connect", lambda settings: object())
     monkeypatch.chdir(tmp_path)
-    write(tmp_path, "---\norientation: portrait\ncolours: {primary: '#111111', accent: '#222222'}\n---\n## A\n\nText.\n")
+    write(
+        tmp_path, "---\norientation: portrait\ncolours: {primary: '#111111', accent: '#222222'}\n---\n## A\n\nText.\n"
+    )
     project(
         tmp_path,
         {"wall": {"source": "poster.md", "output": "out/wall.html", "orientation": "landscape", "colours": {"primary": "#333333"}},
@@ -485,7 +507,10 @@ def test_every_poster_of_py_doc_yml_is_built_with_its_entry_over_the_front_matte
     assert 'class="poster portrait"' in desk and "--primary:#111111;" in desk
     assert main(["poster", "desk"]) == 0
     assert main(["poster", "nothing"]) == 1
-    assert "is not a Markdown file or a poster of py-doc.yml. The posters of py-doc.yml are: wall, desk" in capsys.readouterr().err
+    assert (
+        "is not a Markdown file or a poster of py-doc.yml. The posters of py-doc.yml are: wall, desk"
+        in capsys.readouterr().err
+    )
     assert main(["poster", "-o", "x.html"]) == 1
 
 
@@ -512,7 +537,7 @@ def test_includes_conditions_and_variables_from_the_settings(tmp_path, drawn):
     text = "---\nvariables: {name: text}\nconditions: {internal: true}\n---\n## A\n\n[[INCLUDE: part.md]]\n\n[[INCLUDE-CODE: code.py]]\n\n[[NOT: internal]]\nPublic.\n[[ENDIF]]\n"
     page, _ = build(write(tmp_path, text), lambda: object())
     assert "Included text." in page and "Public." not in page
-    assert '<pre><code class="language-python">print(\'hi\')' in page
+    assert "<pre><code class=\"language-python\">print('hi')" in page
 
 
 def test_a_missing_include_is_an_error_with_the_file(tmp_path):
@@ -550,7 +575,10 @@ def test_captions_callouts_and_word_markers(tmp_path, drawn):
     )
     page, _ = build(write(tmp_path, text), lambda: object())
     assert '<p class="caption"><strong>Figure 1:</strong> The valve.</p>' in page
-    assert '<blockquote class="callout warning"><p class="callout-title">Warning</p><p>Disconnect the battery first.</p>' in page
+    assert (
+        '<blockquote class="callout warning"><p class="callout-title">Warning</p><p>Disconnect the battery first.</p>'
+        in page
+    )
     assert '<blockquote class="callout tip">\n<p><strong>Tip:</strong> use the app.</p>' in page
     assert "<blockquote>\n<p>A plain quote.</p>" in page
     assert "<p>Lead text.</p>" in page
@@ -604,15 +632,26 @@ def test_every_kind_of_section_takes_a_style_and_a_colour(tmp_path, drawn):
         "## In short {.summary style=line colour=navy}\n\nThe point.\n\n### Then\n\nMore.\n\n"
         "## Sources {.references style=list colour=grey}\n\n1. A paper.\n"
     )
-    page = build(write(tmp_path, "---\npalette: {teal: '#0f5e5e', coral: '#e8684a'}\n---\n" + text), lambda: object())[0]
+    page = build(write(tmp_path, "---\npalette: {teal: '#0f5e5e', coral: '#e8684a'}\n---\n" + text), lambda: object())[
+        0
+    ]
     body = page.split("<main>", 1)[1]
     assert '<div class="stats s-tiles" style="--c:#0f5e5e">' in body
     assert '<div class="abstract s-quote" style="--c:#e8684a"><p>Because.' in body
-    assert '<section class="s-card" style="--c:#b4540a"><h2>1. A</h2>' in body and '<section class="s-line"><h2>2. B</h2>' in body
+    assert (
+        '<section class="s-card" style="--c:#b4540a"><h2>1. A</h2>' in body
+        and '<section class="s-line"><h2>2. B</h2>' in body
+    )
     assert '<div class="summary s-line" style="--c:#2a3150"><div class="banner">The point.</div>' in body
     assert '<div class="refs s-list" style="--c:#4a4f5c"><b>Sources</b>' in body
     css = page.split("<style>", 1)[1]
-    for rule in ("section.s-card{", ".stats.s-tiles .stat{background:var(--c,var(--primary))", ".abstract.s-quote{", ".summary.s-line .block{", ".refs.s-list ol"):
+    for rule in (
+        "section.s-card{",
+        ".stats.s-tiles .stat{background:var(--c,var(--primary))",
+        ".abstract.s-quote{",
+        ".summary.s-line .block{",
+        ".refs.s-list ol",
+    ):
         assert rule in css, rule
 
 
@@ -655,7 +694,9 @@ def test_an_unknown_heading_attribute_is_a_warning(tmp_path, drawn, caplog):
 def test_the_header_aligns_and_puts_the_logo_on_either_side_or_none(tmp_path, drawn):
     (tmp_path / "logo.png").write_bytes(PNG)
     base = "logo: logo.png\n"
-    page, _ = build(write(tmp_path, f"---\n{base}header: {{align: left, logo: right}}\n---\n## A\n\nText.\n"), lambda: object())
+    page, _ = build(
+        write(tmp_path, f"---\n{base}header: {{align: left, logo: right}}\n---\n## A\n\nText.\n"), lambda: object()
+    )
     assert '<header class="align-left logo-right"><img alt="Logo"' in page
     page, _ = build(write(tmp_path, f"---\n{base}header: {{logo: none}}\n---\n## A\n\nText.\n"), lambda: object())
     assert '<header class="align-centre"><h1>' in page
@@ -667,7 +708,9 @@ def test_the_footer_has_three_texts_logos_and_a_qr_code(tmp_path, drawn):
     (tmp_path / "a.png").write_bytes(PNG)
     text = "---\nfooter: {left: '**SN-100**', centre: Middle, right: Right, logos: [a.png], qr: 'https://example.com/sn100', qr-label: Scan me}\n---\n## A\n\nText.\n"
     page, _ = build(write(tmp_path, text), lambda: object())
-    assert '<b class="fl"><strong>SN-100</strong></b><span class="fc">Middle</span><span class="fr">Right</span>' in page
+    assert (
+        '<b class="fl"><strong>SN-100</strong></b><span class="fc">Middle</span><span class="fr">Right</span>' in page
+    )
     assert '<div class="logos"><img alt="Logo" src="data:image/png;base64,' in page
     assert '<div class="fqr"><svg' in page and "<span>Scan me</span>" in page
     with pytest.raises(PosterError, match="footer logo not found"):
@@ -693,7 +736,9 @@ def test_stats_show_a_trend_whose_colour_follows_its_direction_or_verdict(tmp_pa
 
 def test_a_timeline_is_a_row_or_a_column_of_milestones(tmp_path, drawn):
     code = "Jan 2026 | Design | frozen | coral\nMar 2026 | Pilot"
-    page, _ = build(write(tmp_path, f"## A\n\n```timeline\n{code}\n```\n\n```timeline vertical\n{code}\n```\n"), lambda: object())
+    page, _ = build(
+        write(tmp_path, f"## A\n\n```timeline\n{code}\n```\n\n```timeline vertical\n{code}\n```\n"), lambda: object()
+    )
     assert '<i style="background:coral"></i><b>Jan 2026</b><span>Design</span><small>frozen</small>' in page
     assert '<i style="background:#4a7fc1"></i><b>Mar 2026</b><span>Pilot</span></div>' in page  # the accent by default
     assert '<div class="timeline vertical">' in page
@@ -715,11 +760,20 @@ def chart_svg(tmp_path, options, rows="series: Measured, Target\nQ1 | 2.9 | 2.5\
 
 
 def test_a_line_chart_takes_min_step_values_markers_area_dashed_and_an_axis_title(tmp_path, drawn):
-    svg = chart_svg(tmp_path, 'type=line min=2 max=3 step=0.25 values=last unit=" V" area=yes markers=no dashed=Target axis="Cell (V)"')
-    assert [label for label in re.findall(r'text-anchor="end"[^>]*>([\d.]+)</text>', svg)] == ["2", "2.25", "2.5", "2.75", "3"]
+    svg = chart_svg(
+        tmp_path,
+        'type=line min=2 max=3 step=0.25 values=last unit=" V" area=yes markers=no dashed=Target axis="Cell (V)"',
+    )
+    assert [label for label in re.findall(r'text-anchor="end"[^>]*>([\d.]+)</text>', svg)] == [
+        "2",
+        "2.25",
+        "2.5",
+        "2.75",
+        "3",
+    ]
     assert re.findall(r">([\d.]+ V)</text>", svg) == ["2.6 V", "2.5 V"], "only the last value of each series"
     assert "<circle" not in svg and svg.count("<polygon") == 2 and svg.count('stroke-dasharray="10 6"') == 1
-    assert 'rotate(-90' in svg and ">Cell (V)</text>" in svg
+    assert "rotate(-90" in svg and ">Cell (V)</text>" in svg
     labels = re.findall(r'y="([\d.]+)" text-anchor="middle"[^>]*>(2\.\d) V</text>', svg)
     assert float(labels[1][0]) - float(labels[0][0]) >= 16, "two labels at one point do not overlap"
     svg = chart_svg(tmp_path, "type=line")
@@ -727,7 +781,14 @@ def test_a_line_chart_takes_min_step_values_markers_area_dashed_and_an_axis_titl
 
 
 def test_column_and_bar_values_can_be_left_out_and_their_axis_named(tmp_path, drawn):
-    assert re.findall(r">([\d.]+)</text>", chart_svg(tmp_path, "type=column values=none step=1")) == ["0", "1", "2", "3", "4", "5"]
+    assert re.findall(r">([\d.]+)</text>", chart_svg(tmp_path, "type=column values=none step=1")) == [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+    ]
     svg = chart_svg(tmp_path, 'type=bar values=last axis="Charge (uC)"')
     assert re.findall(r">([\d.]+)</text>", svg) == ["2.6", "2.5"] and ">Charge (uC)</text>" in svg
 
@@ -768,16 +829,24 @@ def test_steps_are_numbered_from_start_in_columns_with_their_colours(tmp_path, d
     code = "```steps cols=2 start=3\nFit the gateway | Before any node\nJoin | | coral\n```"
     page, _ = build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
     assert '<ol class="steps" start="3" style="grid-template-columns:repeat(2,minmax(0,1fr))">' in page
-    assert '<b class="num" style="background:#2a3150">3</b><div><div class="ch">Fit the gateway</div><div class="ct">Before any node</div>' in page
+    assert (
+        '<b class="num" style="background:#2a3150">3</b><div><div class="ch">Fit the gateway</div><div class="ct">Before any node</div>'
+        in page
+    )
     assert '<b class="num" style="background:coral">4</b><div><div class="ch">Join</div></div>' in page
 
 
 def test_a_gallery_embeds_its_pictures_with_captions_cropped_to_one_height(tmp_path, drawn):
     (tmp_path / "a.png").write_bytes(PNG)
     (tmp_path / "b.svg").write_bytes(SVG)
-    page, _ = build(write(tmp_path, "## A\n\n```gallery height=160\na.png | The *gateway*\nb.svg\n```\n"), lambda: object())
+    page, _ = build(
+        write(tmp_path, "## A\n\n```gallery height=160\na.png | The *gateway*\nb.svg\n```\n"), lambda: object()
+    )
     assert '<div class="gallery" style="grid-template-columns:repeat(2,minmax(0,1fr))">' in page
-    assert '<img alt="The gateway" src="data:image/png;base64,' in page and "<figcaption>The <em>gateway</em></figcaption>" in page
+    assert (
+        '<img alt="The gateway" src="data:image/png;base64,' in page
+        and "<figcaption>The <em>gateway</em></figcaption>" in page
+    )
     assert 'src="data:image/svg+xml;base64,' in page and 'alt="b"' in page
     assert page.count('style="height:160px;object-fit:cover"') == 2
 
@@ -803,41 +872,65 @@ def block(tmp_path, code):
 
 def test_progress_bars_fill_towards_their_targets_and_say_when_they_are_met(tmp_path, drawn):
     html = block(tmp_path, '```progress unit=" nodes"\nJoined | 48 | 50\nLabelled | 1,200 | 1,000\n```')
-    assert '<span>Joined</span><b>48 nodes of 50 nodes</b>' in html and 'width:96.0%;background:#4a7fc1' in html
-    assert '<b>1,200 nodes of 1,000 nodes &#10003;</b>' in html and 'width:100.0%;background:#2e6b3a' in html, "capped, and met"
-    html = block(tmp_path, "```progress better=lower show=percent\nReturn rate | 0.51 | 0.50\nDead on arrival | 0.1 | 0.5\n```")
-    assert '<b>102 %</b>' in html and 'background:#a3322b' in html, "over a ceiling is bad news"
-    assert '<b>20 % &#10003;</b>' in html
+    assert "<span>Joined</span><b>48 nodes of 50 nodes</b>" in html and "width:96.0%;background:#4a7fc1" in html
+    assert "<b>1,200 nodes of 1,000 nodes &#10003;</b>" in html and "width:100.0%;background:#2e6b3a" in html, (
+        "capped, and met"
+    )
+    html = block(
+        tmp_path, "```progress better=lower show=percent\nReturn rate | 0.51 | 0.50\nDead on arrival | 0.1 | 0.5\n```"
+    )
+    assert "<b>102 %</b>" in html and "background:#a3322b" in html, "over a ceiling is bad news"
+    assert "<b>20 % &#10003;</b>" in html
 
 
 def test_a_checklist_has_done_open_and_failed_items(tmp_path, drawn):
-    html = block(tmp_path, "```checklist cols=2\n[x] Signal -95 dBm or better\n[ ] Label photo\n[!] First reading within *2 min*\n```")
+    html = block(
+        tmp_path,
+        "```checklist cols=2\n[x] Signal -95 dBm or better\n[ ] Label photo\n[!] First reading within *2 min*\n```",
+    )
     assert '<ul class="checklist" style="grid-template-columns:repeat(2,minmax(0,1fr))">' in html
     assert '<li class="done"><span class="box">&#10003;</span><span>Signal -95 dBm or better</span></li>' in html
     assert '<li class="open"><span class="box"></span><span>Label photo</span></li>' in html
-    assert '<li class="failed"><span class="box">&#10007;</span><span>First reading within <em>2 min</em></span></li>' in html
+    assert (
+        '<li class="failed"><span class="box">&#10007;</span><span>First reading within <em>2 min</em></span></li>'
+        in html
+    )
 
 
 def test_compare_puts_a_header_over_matched_rows_and_stresses_the_last_column(tmp_path, drawn):
-    html = block(tmp_path, "```compare\n| Firmware 2.0 | Firmware 2.1\nJoin | 11 s | 4 s\nMessages a day | 1,440 | 610\n```")
-    assert 'grid-template-columns:minmax(0,1.2fr) repeat(2,minmax(0,1fr))' in html
+    html = block(
+        tmp_path, "```compare\n| Firmware 2.0 | Firmware 2.1\nJoin | 11 s | 4 s\nMessages a day | 1,440 | 610\n```"
+    )
+    assert "grid-template-columns:minmax(0,1.2fr) repeat(2,minmax(0,1fr))" in html
     assert '<div class="cmp-h">Firmware 2.0</div><div class="cmp-h last">Firmware 2.1</div>' in html
     assert '<div class="cmp-l">Join</div><div class="cmp-v">11 s</div><div class="cmp-v last">4 s</div>' in html
 
 
 def test_people_have_their_photo_or_their_initials(tmp_path, drawn):
     (tmp_path / "jp.png").write_bytes(PNG)
-    html = block(tmp_path, "```people\nJaya Patel | Product engineering | jp@example.com | jp.png\nRuth Osei-Mensah | Field support\n```")
+    html = block(
+        tmp_path,
+        "```people\nJaya Patel | Product engineering | jp@example.com | jp.png\nRuth Osei-Mensah | Field support\n```",
+    )
     assert '<div class="person"><img alt="Jaya Patel" src="data:image/png;base64,' in html
     assert '<div class="ch">Jaya Patel</div><div>Product engineering</div><div>jp@example.com</div>' in html
-    assert '<b style="background:#2a3150">RO</b><div><div class="ch">Ruth Osei-Mensah</div><div>Field support</div></div>' in html
+    assert (
+        '<b style="background:#2a3150">RO</b><div><div class="ch">Ruth Osei-Mensah</div><div>Field support</div></div>'
+        in html
+    )
     assert 'style="grid-template-columns:repeat(2,minmax(0,1fr))"' in html
 
 
 def test_highlights_show_figures_in_large_type_in_their_colours(tmp_path, drawn):
     html = block(tmp_path, "```highlight\n0 | Failed updates | in 200 pilot nodes | good\n4 s | Typical join\n```")
-    assert '<div class="hl" style="border-color:#2e6b3a"><b style="color:#2e6b3a">0</b><span>Failed updates</span><small>in 200 pilot nodes</small></div>' in html
-    assert '<div class="hl" style="border-color:#4a7fc1"><b style="color:#4a7fc1">4 s</b><span>Typical join</span></div>' in html
+    assert (
+        '<div class="hl" style="border-color:#2e6b3a"><b style="color:#2e6b3a">0</b><span>Failed updates</span><small>in 200 pilot nodes</small></div>'
+        in html
+    )
+    assert (
+        '<div class="hl" style="border-color:#4a7fc1"><b style="color:#4a7fc1">4 s</b><span>Typical join</span></div>'
+        in html
+    )
 
 
 @pytest.mark.parametrize(
@@ -867,18 +960,30 @@ def test_lcd_screens_in_columns_and_rows(tmp_path, drawn, info, columns):
 
 
 def test_two_lcd_screens_sit_side_by_side_as_before(tmp_path, drawn):
-    page, _ = build(write(tmp_path, "## A\n\n```lcd\nJOINED GW-2\n-- Good signal\n\nT 21.4 C\n-- First reading\n```\n"), lambda: object())
+    page, _ = build(
+        write(tmp_path, "## A\n\n```lcd\nJOINED GW-2\n-- Good signal\n\nT 21.4 C\n-- First reading\n```\n"),
+        lambda: object(),
+    )
     assert '<div class="lcds" style="grid-template-columns:repeat(2,minmax(0,1fr))">' in page
 
 
 def test_a_qr_block_draws_the_code_with_its_label(tmp_path, drawn):
-    page, _ = build(write(tmp_path, '## A\n\n```qr size=200 label="The manual"\nhttps://example.com/manual\n```\n'), lambda: object())
+    page, _ = build(
+        write(tmp_path, '## A\n\n```qr size=200 label="The manual"\nhttps://example.com/manual\n```\n'),
+        lambda: object(),
+    )
     assert '<div class="qr"><svg' in page and '<div class="cap">The manual</div>' in page
     assert 'stroke="#2a3150"' in page
 
 
 def test_references_are_a_list_above_the_footer(tmp_path, drawn):
-    page, _ = build(write(tmp_path, "## A\n\nText [1].\n\n## References {.references}\n\n1. SN-100 datasheet, SN-DS-001.\n1. MQTT 5.0, OASIS.\n"), lambda: object())
+    page, _ = build(
+        write(
+            tmp_path,
+            "## A\n\nText [1].\n\n## References {.references}\n\n1. SN-100 datasheet, SN-DS-001.\n1. MQTT 5.0, OASIS.\n",
+        ),
+        lambda: object(),
+    )
     refs = page.split('<div class="refs s-columns">', 1)[1]
     assert refs.startswith("<b>References</b><ol>") and "<li>MQTT 5.0, OASIS.</li>" in refs
     assert refs.index("</ol>") < refs.index("<footer>")
@@ -903,7 +1008,9 @@ def test_the_old_and_new_footer_keys_combine(tmp_path, drawn):
 @pytest.mark.parametrize("orientation", ["portrait", "landscape"])
 def test_the_poster_is_never_taller_than_its_page(tmp_path, drawn, paper, orientation):
     """A poster even a fraction of a millimetre taller than the page prints a second, empty page."""
-    page, _ = build(write(tmp_path, f"---\npaper: {paper}\norientation: {orientation}\n---\n## A\n\nText.\n"), lambda: object())
+    page, _ = build(
+        write(tmp_path, f"---\npaper: {paper}\norientation: {orientation}\n---\n## A\n\nText.\n"), lambda: object()
+    )
     ratio = float(re.search(r"R=([\d.]+)", page)[1])
     width, height = (int(x) for x in re.search(r"size:(\d+)mm (\d+)mm", page).groups())
     assert width * ratio <= height and height - width * ratio < 0.1  # under a tenth of a millimetre short
@@ -919,7 +1026,9 @@ class PrintingRuntime:
         self.calls, self.output = [], output
 
     def run(self, argv, *, mounts=(), workdir=None, env=None, timeout=None, **_):
-        self.calls.append({"argv": argv, "mounts": mounts, "env": env, "page": Path(argv[2]).read_text(encoding="utf-8")})
+        self.calls.append(
+            {"argv": argv, "mounts": mounts, "env": env, "page": Path(argv[2]).read_text(encoding="utf-8")}
+        )
         Path(argv[3]).write_bytes(self.output)
 
 
@@ -961,7 +1070,9 @@ def test_the_pdf_setting_and_the_pdf_option(tmp_path, drawn, monkeypatch, capsys
 def test_the_pdf_gets_the_web_fonts_the_page_only_links(tmp_path, drawn, monkeypatch):
     pages, asked = [], []
     monkeypatch.setattr("py_doc.poster.print_pdf", lambda runtime, page, pdf: pages.append(page))
-    monkeypatch.setattr("py_doc.poster.web_faces", lambda sheet, where, **kw: asked.append(kw) or "@font-face{font-family:X}")
+    monkeypatch.setattr(
+        "py_doc.poster.web_faces", lambda sheet, where, **kw: asked.append(kw) or "@font-face{font-family:X}"
+    )
     source = write(tmp_path, "## A\n\nText.\n")
     write_poster(source, tmp_path / "p.html", lambda: object(), pdf=True)
     page = (tmp_path / "p.html").read_text(encoding="utf-8")
@@ -996,13 +1107,16 @@ def test_the_footer_shows_the_document_and_version_in_small_type(tmp_path, drawn
 
 
 def test_the_document_number_and_version_of_the_front_matter_are_the_defaults(tmp_path, drawn):
-    page, _ = build(write(tmp_path, "---\ndocument_number: SN-PO-004\nversion: '3.0'\n---\n## A\n\nText.\n"), lambda: object())
+    page, _ = build(
+        write(tmp_path, "---\ndocument_number: SN-PO-004\nversion: '3.0'\n---\n## A\n\nText.\n"), lambda: object()
+    )
     assert '<div class="docinfo"><span>SN-PO-004</span><span>Version 3.0</span></div>' in page
-    page, _ = build(write(tmp_path, "---\nversion: '3.0'\nfooter: {version: 3.1}\n---\n## A\n\nText.\n"), lambda: object())
+    page, _ = build(
+        write(tmp_path, "---\nversion: '3.0'\nfooter: {version: 3.1}\n---\n## A\n\nText.\n"), lambda: object()
+    )
     assert '<div class="docinfo"><span>Version 3.1</span></div>' in page  # the footer's own wins
     page, _ = build(write(tmp_path, "## A\n\nText.\n"), lambda: object())
     assert 'class="docinfo"' not in page
-
 
 
 def test_version_git_is_the_git_describe_of_the_poster_folder(tmp_path, drawn, monkeypatch):
@@ -1021,9 +1135,12 @@ def test_version_git_outside_a_repository_is_an_error(tmp_path, drawn, monkeypat
         build(write(tmp_path, "---\nversion: git\n---\n## A\n\nText.\n"), lambda: object())
 
 
-
 def test_the_project_mermaid_settings_go_under_the_theme_colours(tmp_path, drawn):
-    build(write(tmp_path, "## A\n\n```mermaid\ngraph LR\n```\n"), lambda: object(), mermaid={"look": "classic", "theme": "neutral"})
+    build(
+        write(tmp_path, "## A\n\n```mermaid\ngraph LR\n```\n"),
+        lambda: object(),
+        mermaid={"look": "classic", "theme": "neutral"},
+    )
     config = json.loads(drawn[0][1].split("\n")[1])["config"]
     assert config["look"] == "classic" and config["theme"] == "base"  # the poster theme's colours win
     assert config["themeVariables"]["primaryColor"]
@@ -1050,7 +1167,10 @@ def documents(monkeypatch):
 def build_project(tmp_path, documents=True):
     write(tmp_path, "## A\n\nText.\n")
     (tmp_path / "guide.md").write_text("# Guide\n\nText.\n", encoding="utf-8")
-    data = {"posters": {"wall": {"source": "poster.md"}, "desk": {"source": "poster.md", "pdf": True}}, "reports": {"path": "build/report.json"}}
+    data = {
+        "posters": {"wall": {"source": "poster.md"}, "desk": {"source": "poster.md", "pdf": True}},
+        "reports": {"path": "build/report.json"},
+    }
     if documents:
         data["documents"] = {"guide": {"sources": ["guide.md"]}}
     (tmp_path / "py-doc.yml").write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
@@ -1068,14 +1188,20 @@ def test_build_makes_the_documents_then_every_poster(tmp_path, drawn, documents,
     assert {"step": "posters", "status": "ok", "detail": "2 of 2 built"} in report["steps"]
     outputs = {o["path"]: o["format"] for d in report["documents"] for o in d["outputs"]}
     assert outputs == {"build/wall.html": "html", "build/desk.html": "html", "build/desk.pdf": "pdf"}
-    jsonschema.validate(report, json.loads((Path(py_doc.__file__).parent / "report.schema.json").read_text(encoding="utf-8")))
+    jsonschema.validate(
+        report, json.loads((Path(py_doc.__file__).parent / "report.schema.json").read_text(encoding="utf-8"))
+    )
 
 
 def test_build_names_documents_or_posters(tmp_path, drawn, documents, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     build_project(tmp_path)
     assert main(["build", "wall"]) == 0
-    assert documents == [] and (tmp_path / "build" / "wall.html").is_file() and not (tmp_path / "build" / "desk.html").exists()
+    assert (
+        documents == []
+        and (tmp_path / "build" / "wall.html").is_file()
+        and not (tmp_path / "build" / "desk.html").exists()
+    )
     assert main(["build", "guide"]) == 0
     assert [name for name, _ in documents] == ["guide"] and not (tmp_path / "build" / "desk.html").exists()
     assert main(["build", "nothing"]) == 1
@@ -1173,7 +1299,9 @@ def web(tmp_path, monkeypatch):
 
 def font_theme(tmp_path, extra=""):
     (tmp_path / "theme.yml").write_text(
-        "fonts:\n  body: \"'Brand Sans', Arial, sans-serif\"\n  stylesheet: https://fonts.example.com/css?family=Brand\n" + extra, encoding="utf-8"
+        "fonts:\n  body: \"'Brand Sans', Arial, sans-serif\"\n  stylesheet: https://fonts.example.com/css?family=Brand\n"
+        + extra,
+        encoding="utf-8",
     )
 
 
@@ -1181,12 +1309,18 @@ def test_a_theme_s_font_files_are_embedded(tmp_path, drawn):
     (tmp_path / "fonts").mkdir()
     (tmp_path / "fonts" / "Brand-Bold.woff2").write_bytes(WOFF2)
     (tmp_path / "theme.yml").write_text(
-        "fonts:\n  heading: \"'Brand', Arial, sans-serif\"\n  files:\n    - {family: Brand, file: fonts/Brand-Bold.woff2, weight: 700}\n", encoding="utf-8"
+        "fonts:\n  heading: \"'Brand', Arial, sans-serif\"\n  files:\n    - {family: Brand, file: fonts/Brand-Bold.woff2, weight: 700}\n",
+        encoding="utf-8",
     )
     page, _ = build(write(tmp_path, "---\ntheme: theme.yml\n---\n## A\n\nText.\n"), lambda: object())
     data = base64.b64encode(WOFF2).decode()
-    assert f"@font-face{{font-family:'Brand';font-weight:700;font-style:normal;font-display:swap;src:url(data:font/woff2;base64,{data}) format('woff2')}}" in page
-    assert '<link rel="stylesheet" href="https://fonts.googleapis.com/' in page  # the default stylesheet is still linked
+    assert (
+        f"@font-face{{font-family:'Brand';font-weight:700;font-style:normal;font-display:swap;src:url(data:font/woff2;base64,{data}) format('woff2')}}"
+        in page
+    )
+    assert (
+        '<link rel="stylesheet" href="https://fonts.googleapis.com/' in page
+    )  # the default stylesheet is still linked
 
 
 def test_font_files_named_in_py_doc_yml_are_from_py_doc_yml(tmp_path):
@@ -1201,7 +1335,7 @@ def test_font_files_named_in_py_doc_yml_are_from_py_doc_yml(tmp_path):
     [
         ("files: x", "fonts.files must be a list"),
         ("files:\n    - {file: a.woff2}", r"fonts.files\[1\] needs a family and a file"),
-        ("files:\n    - {family: \"A'; }\", file: a.woff2}", "has a character a font name cannot have"),
+        ('files:\n    - {family: "A\'; }", file: a.woff2}', "has a character a font name cannot have"),
         ("files:\n    - {family: A, file: a.woff2, weight: bold}", "weight must be 100 to 900"),
         ("files:\n    - {family: A, file: a.woff2, style: oblique}", "style must be normal or italic"),
         ("files:\n    - {family: A, file: a.png}", "is not a font file"),
@@ -1277,7 +1411,10 @@ def test_embed_fonts_is_true_false_or_a_list_of_subsets(tmp_path):
     for bad in ("yes", [], ["Latin!"], [3]):
         with pytest.raises(ConfigError, match="poster.embed_fonts must be true, false or a list of subsets"):
             parse_config({"poster": {"embed_fonts": bad}}, tmp_path)
-    assert parse_config({"poster": {"embed_fonts": ["latin", "latin-ext"]}}, tmp_path).poster["embed_fonts"] == ["latin", "latin-ext"]
+    assert parse_config({"poster": {"embed_fonts": ["latin", "latin-ext"]}}, tmp_path).poster["embed_fonts"] == [
+        "latin",
+        "latin-ext",
+    ]
 
 
 SUBSET_CSS = """/* cyrillic */
@@ -1303,14 +1440,18 @@ def test_embed_fonts_with_subsets_keeps_and_downloads_only_those(tmp_path, drawn
     pages["https://fonts.example.com/css?family=Brand"] = SUBSET_CSS.encode()
     pages["https://fonts.example.com/brand-cyrillic.woff2"] = b"cyrillic"
     font_theme(tmp_path)
-    page, _ = build(write(tmp_path, "---\ntheme: theme.yml\nembed_fonts: [latin]\n---\n## A\n\nText.\n"), lambda: object())
+    page, _ = build(
+        write(tmp_path, "---\ntheme: theme.yml\nembed_fonts: [latin]\n---\n## A\n\nText.\n"), lambda: object()
+    )
     assert "brand-cyrillic" not in " ".join(asked) and base64.b64encode(b"cyrillic").decode() not in page
     assert page.count("@font-face") == 2  # the latin face, and the one with no subset named
     assert "<link" not in page
 
 
 def test_figures_and_tables_are_numbered_down_the_poster_includes_too(tmp_path, drawn):
-    (tmp_path / "part.md").write_text("[[CAPTION:Table]] Pins\n\n| Pin | Use |\n|---|---|\n| 1 | Power |\n", encoding="utf-8")
+    (tmp_path / "part.md").write_text(
+        "[[CAPTION:Table]] Pins\n\n| Pin | Use |\n|---|---|\n| 1 | Power |\n", encoding="utf-8"
+    )
     text = "## A\n\n[[CAPTION:Figure]] One\n\n[[CAPTION:Table]] First\n\n## B\n\n[[INCLUDE: part.md]]\n\n[[CAPTION:figure]] Two\n"
     page, _ = build(write(tmp_path, text), lambda: object())
     captions = re.findall(r'<p class="caption"><strong>(\w+ \d+):</strong> (\w+)</p>', page)
@@ -1318,7 +1459,9 @@ def test_figures_and_tables_are_numbered_down_the_poster_includes_too(tmp_path, 
 
 
 def test_a_flow_section_may_go_on_in_the_next_column(tmp_path, drawn, caplog):
-    page, _ = build(write(tmp_path, "## A {.flow}\n\nOne.\n\n## B {.wide .flow}\n\nTwo.\n\n## C\n\nThree.\n"), lambda: object())
+    page, _ = build(
+        write(tmp_path, "## A {.flow}\n\nOne.\n\n## B {.wide .flow}\n\nTwo.\n\n## C\n\nThree.\n"), lambda: object()
+    )
     assert '<section class="breakable s-bar"><h2>A</h2>' in page and '<section class="wide s-bar"><h2>B</h2>' in page
     assert "is wide, so .flow and cols= are ignored" in caplog.text
     assert 'section.continued h2::after{content:" (continued)"' in page and "classList.add('continued')" in page
@@ -1380,10 +1523,14 @@ def test_one_font_file_for_several_weights_is_embedded_once():
     from py_doc.poster_fonts import merge_weights
 
     rule = "/* latin */\n@font-face {{\n  font-family: 'Mono';\n  font-weight: {w};\n  src: url(https://f.example/mono.woff2) format('woff2');\n}}\n"
-    css = merge_weights(rule.format(w=500) + rule.format(w=600) + rule.format(w=700).replace("mono.woff2", "mono-bold.woff2"))
+    css = merge_weights(
+        rule.format(w=500) + rule.format(w=600) + rule.format(w=700).replace("mono.woff2", "mono-bold.woff2")
+    )
     assert css.count("@font-face") == 2 and css.count("mono.woff2") == 1
     assert "font-weight:500 600;" in css and "font-weight:700;" in css
-    assert merge_weights("@font-face { font-weight: bold; src: url(https://f.example/a.woff2); }").count("bold") == 1  # left alone
+    assert (
+        merge_weights("@font-face { font-weight: bold; src: url(https://f.example/a.woff2); }").count("bold") == 1
+    )  # left alone
 
 
 # --- py-doc poster --watch ------------------------------------------------------------------------

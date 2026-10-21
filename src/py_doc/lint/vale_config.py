@@ -148,7 +148,9 @@ def _merge(settings: ValeSettings, data: dict, where: str, root: Path, depth: in
         settings.min_alert_level = _level(data["min_alert_level"], f"{where}.min_alert_level")
     if "packages" in data:
         packages = data["packages"]
-        if not isinstance(packages, list) or not all(isinstance(p, str) and re.fullmatch(r"[\w.-]+", p) for p in packages):
+        if not isinstance(packages, list) or not all(
+            isinstance(p, str) and re.fullmatch(r"[\w.-]+", p) for p in packages
+        ):
             raise ValeConfigError(f"{where}.packages must be a list of package names")
         settings.packages = list(dict.fromkeys([*settings.packages, *packages]))
     if "spelling" in data:

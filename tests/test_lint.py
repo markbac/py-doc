@@ -96,7 +96,10 @@ class TestCodeAndMarkupAreNotProse:
         assert lint("Write to api@example.com.\n") == []
 
     def test_html_and_comments_are_skipped(self):
-        assert lint('<!-- a dtls comment -->\n\n<div class="json">\napi\n</div>\n\nInline <span class="api">ok</span>\n') == []
+        assert (
+            lint('<!-- a dtls comment -->\n\n<div class="json">\napi\n</div>\n\nInline <span class="api">ok</span>\n')
+            == []
+        )
 
     def test_front_matter_is_skipped(self):
         assert lint("---\ntitle: api and json notes\n---\n\n# Notes\n") == []
@@ -158,9 +161,7 @@ class TestAcronyms:
 
     def test_use_before_the_definition_is_reported_with_the_definition_line(self):
         issues = lint("The PSK is used.\n\nPre-Shared Key (PSK) comes later.\n")
-        assert [(i.line, i.message) for i in issues] == [
-            (1, "Acronym 'PSK' is used before it is defined on line 3.")
-        ]
+        assert [(i.line, i.message) for i in issues] == [(1, "Acronym 'PSK' is used before it is defined on line 3.")]
 
     def test_reverse_form_defines_the_acronym(self):
         assert lint("PSK (Pre-Shared Key) is defined.\n\nThe PSK is used.\n") == []
@@ -228,7 +229,9 @@ class TestResultsAndOrdering:
 
     def test_issue_text_form_has_file_line_severity_rule_and_message(self):
         (issue,) = DocLinter().lint_text("a dtls b\n", file="docs/a.md")
-        assert str(issue).startswith(str(Path("docs/a.md")) + ":1: warning DOC001 [Glossary] Incorrect term capitalization 'dtls'.")
+        assert str(issue).startswith(
+            str(Path("docs/a.md")) + ":1: warning DOC001 [Glossary] Incorrect term capitalization 'dtls'."
+        )
 
     def test_crlf_and_byte_order_mark_do_not_change_line_numbers(self, tmp_path):
         path = tmp_path / "a.md"

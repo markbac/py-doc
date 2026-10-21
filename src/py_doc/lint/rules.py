@@ -89,7 +89,9 @@ def _expands(words: list[str], acronym: str) -> bool:
     letters = iter(acronym.lower())
     if words[0][0].lower() != acronym[0].lower():
         return False
-    return all(any(letter == word[0].lower() for letter in letters) for word in words if word.lower() not in _STOP_WORDS)
+    return all(
+        any(letter == word[0].lower() for letter in letters) for word in words if word.lower() not in _STOP_WORDS
+    )
 
 
 def _definitions(text: str) -> list[tuple[str, int]]:
@@ -206,7 +208,11 @@ def image_alt(file: Path, document: n.Document, config: LintConfig) -> list[Lint
     """A picture without alt text, which a screen reader cannot describe and a caption cannot come from."""
     return [
         LintIssue(
-            file, node.line, RULE_IMAGE_ALT, "Accessibility", f"Picture '{node.url}' has no alt text.",
+            file,
+            node.line,
+            RULE_IMAGE_ALT,
+            "Accessibility",
+            f"Picture '{node.url}' has no alt text.",
             suggestion="Describe the picture between the brackets: ![What it shows](file.png)",
         )  # fmt: skip
         for node in n.walk(document)
@@ -280,7 +286,11 @@ def unclosed_fences(file: Path, document: n.Document, config: LintConfig) -> lis
     """A code fence that is never closed, so the rest of the file becomes code."""
     return [
         LintIssue(
-            file, node.line, RULE_UNCLOSED_FENCE, "Structure", "Code fence is never closed: the rest of the file is code.",
+            file,
+            node.line,
+            RULE_UNCLOSED_FENCE,
+            "Structure",
+            "Code fence is never closed: the rest of the file is code.",
             suggestion="Close it with the same fence (``` or ~~~) on a line of its own",
         )  # fmt: skip
         for node in n.walk(document)
@@ -299,7 +309,11 @@ def required_sections(doc_id: str, files: list[Path], found: list[str], config: 
     have = {_bare(text) for text in found}
     return [
         LintIssue(
-            files[0], 1, RULE_REQUIRED_SECTION, "Structure", f"Document '{doc_id}' has no '{section}' section.",
+            files[0],
+            1,
+            RULE_REQUIRED_SECTION,
+            "Structure",
+            f"Document '{doc_id}' has no '{section}' section.",
             suggestion=f"Add a heading '{section}'",
         )  # fmt: skip
         for section in wanted

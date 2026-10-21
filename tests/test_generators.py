@@ -18,7 +18,9 @@ def project(tmp_path, generators: str, documents: str = "documents:\n  guide: {s
         "| ID | Text |\n|---|---|\n| FR-001 | Works |\n\nSee FR-001 and FR-002.\n",
         encoding="utf-8",
     )
-    (tmp_path / "py-doc.yml").write_text(documents + "content:\n  generators:\n" + textwrap.indent(generators, "    "), encoding="utf-8")
+    (tmp_path / "py-doc.yml").write_text(
+        documents + "content:\n  generators:\n" + textwrap.indent(generators, "    "), encoding="utf-8"
+    )
     return load_config(tmp_path / "py-doc.yml")
 
 
@@ -56,16 +58,24 @@ class TestBuiltins:
         assert text.index("| Alpha | First. |") < text.index("| Zeta | Last. |")
 
     def test_documents_index_and_toc(self, tmp_path):
-        text = generated(tmp_path, "- {type: documents, output: out.md}\n- {type: toc, document: guide, output: toc.md}\n")
+        text = generated(
+            tmp_path, "- {type: documents, output: out.md}\n- {type: toc, document: guide, output: toc.md}\n"
+        )
         assert "| [Guide](intro.md) | GD-7 | 2.0 | Draft |" in text
-        assert (tmp_path / "toc.md").read_text(encoding="utf-8").splitlines()[2:] == ["- [Intro](intro.md#intro)", "  - [Scope](intro.md#scope)"]
+        assert (tmp_path / "toc.md").read_text(encoding="utf-8").splitlines()[2:] == [
+            "- [Intro](intro.md#intro)",
+            "  - [Scope](intro.md#scope)",
+        ]
 
     def test_adr_index(self, tmp_path):
         (tmp_path / "adr").mkdir()
         (tmp_path / "adr" / "0001-a.md").write_text("# Use A\n\n## Status\n\nAccepted\n", encoding="utf-8")
         (tmp_path / "adr" / "0002-b.md").write_text("---\nstatus: Superseded\n---\n\n# Use B\n", encoding="utf-8")
         text = generated(tmp_path, "- {type: adr-index, source: adr, output: out.md}\n")
-        assert "| 0001 | [Use A](adr/0001-a.md) | Accepted |  |" in text and "| 0002 | [Use B](adr/0002-b.md) | Superseded |  |" in text
+        assert (
+            "| 0001 | [Use A](adr/0001-a.md) | Accepted |  |" in text
+            and "| 0002 | [Use B](adr/0002-b.md) | Superseded |  |" in text
+        )
 
     def test_requirements_traceability(self, tmp_path):
         text = generated(tmp_path, "- {type: requirements, sources: ['*.md'], output: out.md}\n")
@@ -83,9 +93,14 @@ class TestBuiltins:
             encoding="utf-8",
         )
         text = generated(
-            tmp_path, "- {type: openapi, engine: summary, source: o.yml, output: out.md}\n- {type: asyncapi, engine: summary, source: a.yml, output: a.md}\n"
+            tmp_path,
+            "- {type: openapi, engine: summary, source: o.yml, output: out.md}\n- {type: asyncapi, engine: summary, source: a.yml, output: a.md}\n",
         )
-        assert "| `GET` | `/pets` | List pets |" in text and "| `POST` | `/pets` | addPet |" in text and "- `Pet`: A pet" in text
+        assert (
+            "| `GET` | `/pets` | List pets |" in text
+            and "| `POST` | `/pets` | addPet |" in text
+            and "- `Pet`: A pet" in text
+        )
         assert "| `pets/added` | subscribe | PetAdded | New pet |" in (tmp_path / "a.md").read_text(encoding="utf-8")
         with pytest.raises(GeneratorError, match="not an OpenAPI description"):
             generated(tmp_path, "- {type: openapi, engine: summary, source: a.yml, output: out.md}\n")
@@ -114,9 +129,14 @@ class TestBuiltins:
             generated(tmp_path, f"- {{type: command, run: {failing}, output: out.md}}\n")
 
     def test_a_python_function_of_your_own(self, tmp_path, monkeypatch):
-        (tmp_path / "mygen.py").write_text("def make(spec, project):\n    return f'# {spec.name} from {project.name}'\n", encoding="utf-8")
+        (tmp_path / "mygen.py").write_text(
+            "def make(spec, project):\n    return f'# {spec.name} from {project.name}'\n", encoding="utf-8"
+        )
         monkeypatch.syspath_prepend(str(tmp_path))
-        text = generated(tmp_path, "- {type: python, callable: 'mygen:make', name: custom, output: out.md}\n", )
+        text = generated(
+            tmp_path,
+            "- {type: python, callable: 'mygen:make', name: custom, output: out.md}\n",
+        )
         assert text == "# custom from None\n"
 
 
@@ -140,7 +160,7 @@ class TestApiMarkdown:
         raw = (
             '<h1 id="pets-api">Pets API v1</h1>\n\n> Scroll down for code samples, example requests and responses.\n\n'
             '<h2 id="pets-api-default">Default &amp; more</h2>\n\n<aside class="success">\nThis operation does not require authentication\n</aside>\n\n'
-            "```yaml\n# not a heading\n```\n\n# Schemas\n\n<a id=\"schemapet\"></a>\n\n* <a href=\"https://x.org/v1\">https://x.org/v1</a>\n"
+            '```yaml\n# not a heading\n```\n\n# Schemas\n\n<a id="schemapet"></a>\n\n* <a href="https://x.org/v1">https://x.org/v1</a>\n'
         )
         assert clean_markdown(raw, heading_offset=1, title="Pets reference", nest=True) == (
             "## Pets reference\n\n#### Default & more\n\n> [!NOTE]\n> This operation does not require authentication\n\n"
@@ -157,7 +177,10 @@ class TestApiMarkdown:
             project(tmp_path, "- {type: asyncapi, validate: false, source: o.yml, output: out.md}\n")
 
 
-@pytest.mark.skipif(not all(shutil.which(tool) for tool in ("redocly", "widdershins")), reason="Redocly CLI and Widdershins are not installed")
+@pytest.mark.skipif(
+    not all(shutil.which(tool) for tool in ("redocly", "widdershins")),
+    reason="Redocly CLI and Widdershins are not installed",
+)
 def test_openapi_reference_with_the_real_tools(tmp_path, pandoc_runtime):
     from pathlib import Path
 

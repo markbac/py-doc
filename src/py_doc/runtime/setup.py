@@ -131,7 +131,9 @@ def install(runtime: Runtime, user: str, run: Run = subprocess.run) -> None:
     except FileNotFoundError as exc:
         raise EnvironmentProblem(f"'{argv[0]}' was not found") from exc
     if done.returncode == UNSUPPORTED:
-        raise EnvironmentProblem("py-doc setup supports Ubuntu and Debian. Install Docker Engine yourself: https://docs.docker.com/engine/install/")
+        raise EnvironmentProblem(
+            "py-doc setup supports Ubuntu and Debian. Install Docker Engine yourself: https://docs.docker.com/engine/install/"
+        )
     if done.returncode != 0:
         raise EnvironmentProblem(f"The setup script stopped with exit status {done.returncode}. Its output is above")
 

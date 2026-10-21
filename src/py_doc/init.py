@@ -38,12 +38,21 @@ class Choices:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="py-doc init", description="Start a documentation project: py-doc.yml, a first document and more")
+    parser = argparse.ArgumentParser(
+        prog="py-doc init", description="Start a documentation project: py-doc.yml, a first document and more"
+    )
     parser.add_argument("folder", nargs="?", default=".", type=Path, help="Where to make it (default: here)")
     parser.add_argument("--name", help="The project name (default: the folder name)")
     parser.add_argument("--site", choices=(*SITE_ENGINES, "none"), help="Also make a web site project")
-    parser.add_argument("--c4", action="store_true", default=None, help="Also make a Structurizr C4 model and a document from it")
-    parser.add_argument("--templates", action="store_true", default=None, help="Also write Word and PowerPoint templates (needs the tool container)")
+    parser.add_argument(
+        "--c4", action="store_true", default=None, help="Also make a Structurizr C4 model and a document from it"
+    )
+    parser.add_argument(
+        "--templates",
+        action="store_true",
+        default=None,
+        help="Also write Word and PowerPoint templates (needs the tool container)",
+    )
     parser.add_argument("-y", "--yes", action="store_true", help="Ask nothing: take the defaults for what is not given")
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
@@ -69,7 +78,11 @@ def choose(args: argparse.Namespace, folder: Path, ask: Callable[[str], str] | N
         while site not in (*SITE_ENGINES, "none"):
             site = _ask(f"Web site: {', '.join(SITE_ENGINES)} or none", "none", ask).lower()
     c4 = args.c4 if args.c4 is not None else (_yes("A C4 architecture model (Structurizr)?", ask) if ask else False)
-    templates = args.templates if args.templates is not None else (_yes("Word and PowerPoint templates?", ask) if ask else False)
+    templates = (
+        args.templates
+        if args.templates is not None
+        else (_yes("Word and PowerPoint templates?", ask) if ask else False)
+    )
     return Choices(name, None if site in (None, "none") else site, c4, templates)
 
 
@@ -88,7 +101,9 @@ def config_text(choices: Choices) -> str:
         text = text.replace("    # template: templates/reference.docx", "    template: templates/reference.docx")
         text = text.replace("    # template: templates/reference.pptx", "    template: templates/reference.pptx")
     if choices.c4:
-        text = text.replace("\n# A JSON report", "\n" + ARCHITECTURE_DOC.replace("{name}", choices.name) + "# A JSON report", 1)
+        text = text.replace(
+            "\n# A JSON report", "\n" + ARCHITECTURE_DOC.replace("{name}", choices.name) + "# A JSON report", 1
+        )
     if choices.site:
         text += SITE.format(engine=choices.site)
     return text
@@ -99,7 +114,9 @@ def make_project(folder: Path, choices: Choices, runtime=connect) -> list[Path]:
     folder = Path(folder)
     for name in CONFIG_NAMES:
         if (folder / name).exists():
-            raise ConversionError(f"{folder / name} is already there: this folder is a py-doc project. Nothing was changed")
+            raise ConversionError(
+                f"{folder / name} is already there: this folder is a py-doc project. Nothing was changed"
+            )
     files = project_files(choices)
     try:  # a configuration that would not load is a bug: say so before anything is written
         parse_config(yaml.safe_load(files["py-doc.yml"]), folder.resolve())
@@ -161,7 +178,11 @@ def _templates(folder: Path, runtime) -> list[Path]:
             written.append(wanted[0])
         if not wanted[1].exists():
             made = work / "reference.pptx"
-            box.run(["pandoc", "-o", made, "--print-default-data-file", "reference.pptx"], mounts=[Mount(work, writable=True)], workdir=work)
+            box.run(
+                ["pandoc", "-o", made, "--print-default-data-file", "reference.pptx"],
+                mounts=[Mount(work, writable=True)],
+                workdir=work,
+            )
             wanted[1].write_bytes(made.read_bytes())
             written.append(wanted[1])
     return written

@@ -124,7 +124,9 @@ def _language(style) -> str | None:
     return lang.get(qn("w:val")) if lang is not None else None
 
 
-def _check_word(document, report: TemplateReport, prefix: str = "Replace-with-", marker_text: str = "[[INSERTCONTENT]]") -> None:
+def _check_word(
+    document, report: TemplateReport, prefix: str = "Replace-with-", marker_text: str = "[[INSERTCONTENT]]"
+) -> None:
     styles = styles_of(document)
     counts = {kind: sum(1 for k, _ in styles.values() if k == kind) for kind in ("paragraph", "character", "table")}
     report.add(
@@ -151,7 +153,9 @@ def _check_word(document, report: TemplateReport, prefix: str = "Replace-with-",
         report.add("WARN", "Pandoc styles", f"Not in the template, so pandoc's defaults are used: {', '.join(absent)}")
 
     if "Caption" not in styles:
-        report.add("WARN", "Caption style", "No 'Caption' style: [[CAPTION:Figure]] lines fall back to the default look")
+        report.add(
+            "WARN", "Caption style", "No 'Caption' style: [[CAPTION:Figure]] lines fall back to the default look"
+        )
     elif styles["Caption"][0] != "paragraph":
         report.add("FAIL", "Caption style", f"Caption must be a paragraph style, not a {styles['Caption'][0]} style")
     elif _bold(styles["Caption"][1]):
@@ -160,14 +164,20 @@ def _check_word(document, report: TemplateReport, prefix: str = "Replace-with-",
     if "Table Grid" not in styles:
         report.add("WARN", "Table style", "No 'Table Grid' table style: tables use the Word default")
     elif styles["Table Grid"][0] != "table":
-        report.add("FAIL", "Table style", f"'Table Grid' exists but is a {styles['Table Grid'][0]} style, not a table style")
+        report.add(
+            "FAIL", "Table style", f"'Table Grid' exists but is a {styles['Table Grid'][0]} style, not a table style"
+        )
 
     for name in ("Source Code", "Verbatim Char"):
         if name in styles and not styles[name][1].font.no_proof:
             report.add("INFO", "Code spelling", f"{name} has spell-check on")
 
     soft = [n for n, (kind, s) in styles.items() if kind == "paragraph" and n.lower().startswith("heading")]
-    loose = [n for n in soft if not (styles[n][1].paragraph_format.keep_with_next and styles[n][1].paragraph_format.keep_together)]
+    loose = [
+        n
+        for n in soft
+        if not (styles[n][1].paragraph_format.keep_with_next and styles[n][1].paragraph_format.keep_together)
+    ]
     if not soft:
         report.add("WARN", "Headings", "No heading styles")
     elif loose:
@@ -279,7 +289,12 @@ def inventory(path: Path) -> list[tuple[str, ...]]:
             rows.append((type_name, name, "bold" if _bold(style) else "", following.name if following else ""))
         return sorted(rows)
     return [
-        (layout.name, ", ".join(sorted({str(p.placeholder_format.type).split(".")[-1].split(" ")[0] for p in layout.placeholders})))
+        (
+            layout.name,
+            ", ".join(
+                sorted({str(p.placeholder_format.type).split(".")[-1].split(" ")[0] for p in layout.placeholders})
+            ),
+        )
         for layout in opened.slide_layouts
     ]
 
@@ -299,7 +314,9 @@ def _definition(style) -> tuple[str, ...]:
         "size": size,
         "bold": font.bold,
         "italic": font.italic,
-        "colour": str(font.color.rgb) if font.color is not None and font.color.type is not None and font.color.rgb else None,
+        "colour": str(font.color.rgb)
+        if font.color is not None and font.color.type is not None and font.color.rgb
+        else None,
         "keep with next": fmt.keep_with_next if fmt is not None else None,
         "keep together": fmt.keep_together if fmt is not None else None,
         "space before": fmt.space_before.pt if fmt is not None and fmt.space_before else None,
@@ -331,8 +348,12 @@ def compare(first: Path, second: Path) -> list[tuple[str, str, str]]:
                     changed = sorted(set(one) ^ set(two))
                     rows.append(("differs", name, "; ".join(changed)))
         return rows
-    left = {layout.name: sorted(str(p.placeholder_format.type) for p in layout.placeholders) for layout in a.slide_layouts}
-    right = {layout.name: sorted(str(p.placeholder_format.type) for p in layout.placeholders) for layout in b.slide_layouts}
+    left = {
+        layout.name: sorted(str(p.placeholder_format.type) for p in layout.placeholders) for layout in a.slide_layouts
+    }
+    right = {
+        layout.name: sorted(str(p.placeholder_format.type) for p in layout.placeholders) for layout in b.slide_layouts
+    }
     for name in sorted(left.keys() | right.keys()):
         if name not in right:
             rows.append(("only in first", name, ""))

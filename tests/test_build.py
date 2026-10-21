@@ -16,7 +16,9 @@ from py_doc.errors import ConversionError
 @pytest.fixture
 def project(tmp_path, pandoc_runtime):
     (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "index.md").write_text("---\ntitle: From front matter\nauthor: Ann\n---\n# Intro\n\nHello.\n", encoding="utf-8")
+    (tmp_path / "docs" / "index.md").write_text(
+        "---\ntitle: From front matter\nauthor: Ann\n---\n# Intro\n\nHello.\n", encoding="utf-8"
+    )
     (tmp_path / "docs" / "part.md").write_text("# Part\n\n## Detail\n\ntext\n", encoding="utf-8")
 
     def make(yaml_text: str, name: str = "g", formats=None):
@@ -36,7 +38,9 @@ def headings(path) -> list[str]:
 
 
 def test_sources_are_joined_in_order_with_a_page_break_before_marked_ones(project, tmp_path):
-    [out] = project("documents:\n  g:\n    sources:\n      - docs/index.md\n      - {file: docs/part.md, page_break: true}\n")
+    [out] = project(
+        "documents:\n  g:\n    sources:\n      - docs/index.md\n      - {file: docs/part.md, page_break: true}\n"
+    )
     assert out == tmp_path / "build" / "g.docx"
     assert headings(out) == ["Intro", "Part", "Detail"]
     assert page_breaks(out) == 1
@@ -57,11 +61,16 @@ def test_page_break_on_the_first_source_adds_nothing(project):
 def test_heading_offset_and_title(project):
     [out] = project("documents:\n  g:\n    sources:\n      - {file: docs/part.md, heading_offset: 1, title: Renamed}\n")
     assert headings(out) == ["Renamed", "Detail"]
-    assert [p.style.name for p in Document(str(out)).paragraphs if p.style.name.startswith("Heading")] == ["Heading 2", "Heading 3"]
+    assert [p.style.name for p in Document(str(out)).paragraphs if p.style.name.startswith("Heading")] == [
+        "Heading 2",
+        "Heading 3",
+    ]
 
 
 def test_excluded_sources_are_skipped_and_all_excluded_is_an_error(project):
-    [out] = project("documents:\n  g:\n    sources:\n      - docs/index.md\n      - {file: docs/missing.md, include: false}\n")
+    [out] = project(
+        "documents:\n  g:\n    sources:\n      - docs/index.md\n      - {file: docs/missing.md, include: false}\n"
+    )
     assert "Hello." in texts(out)
     with pytest.raises(ConversionError, match="no sources"):
         project("documents:\n  g:\n    sources:\n      - {file: docs/index.md, include: false}\n")
@@ -94,7 +103,9 @@ def test_images_resolve_against_their_own_source_folder(project, tmp_path):
 
 
 def test_formats_listed_by_the_document_are_all_built(project, tmp_path):
-    written = project("documents:\n  g:\n    sources: [docs/index.md, docs/part.md]\n    outputs: {docx: {}, pptx: {path: deck/g.pptx}}\n")
+    written = project(
+        "documents:\n  g:\n    sources: [docs/index.md, docs/part.md]\n    outputs: {docx: {}, pptx: {path: deck/g.pptx}}\n"
+    )
     assert [p.name for p in written] == ["g.docx", "g.pptx"]
     assert titles(tmp_path / "deck" / "g.pptx")[0] == "From front matter"
 

@@ -59,7 +59,13 @@ class SectionChange:
         def side(section: Section | None):
             return None if section is None else {"section": section.title, "level": section.level, "line": section.line}
 
-        return {"kind": self.kind, "old": side(self.old), "new": side(self.new), "words_added": self.words_added, "words_removed": self.words_removed}
+        return {
+            "kind": self.kind,
+            "old": side(self.old),
+            "new": side(self.new),
+            "words_added": self.words_added,
+            "words_removed": self.words_removed,
+        }
 
 
 def sections(text: str) -> list[Section]:

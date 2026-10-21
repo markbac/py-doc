@@ -66,7 +66,9 @@ def ensure_fntdata_content_type(path: Path) -> None:
         types = zin.read(name).decode("utf-8")
         if 'Extension="fntdata"' in types:
             return
-        types = types.replace("</Types>", '<Default Extension="fntdata" ContentType="application/x-fontdata"/></Types>', 1)
+        types = types.replace(
+            "</Types>", '<Default Extension="fntdata" ContentType="application/x-fontdata"/></Types>', 1
+        )
         temporary = path.with_name(path.name + ".tmp")
         with zipfile.ZipFile(temporary, "w", zipfile.ZIP_DEFLATED) as zout:
             for item in zin.infolist():
@@ -140,7 +142,9 @@ def finish_pptx(path: Path, metadata: Metadata, options: dict[str, Any]) -> None
             without_footer += 1
         lines = _lines(slide)
         if lines > LINES_PER_SLIDE:
-            logger.warning(f"Slide {number} has {lines} lines, which is likely too many to read. Split it with another heading")
+            logger.warning(
+                f"Slide {number} has {lines} lines, which is likely too many to read. Split it with another heading"
+            )
     if without_footer:
         logger.warning(f"The layout of {without_footer} slide(s) has no footer placeholder, so they have no footer")
     presentation.save(str(path))

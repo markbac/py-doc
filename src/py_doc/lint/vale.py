@@ -71,7 +71,9 @@ class HostRunner:
     def run(self, argv, *, writable=False, network=False):
         command = [self.binary, *[str(a) for a in argv]]
         try:
-            done = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", timeout=TIMEOUT, check=False)
+            done = subprocess.run(
+                command, capture_output=True, text=True, encoding="utf-8", timeout=TIMEOUT, check=False
+            )
         except FileNotFoundError as exc:
             raise EnvironmentProblem(f"Vale was not found at '{self.binary}'. {INSTALL_HELP}") from exc
         except subprocess.TimeoutExpired as exc:
@@ -116,7 +118,11 @@ class Workspace:
 
 
 def _rule_levels(settings: ValeSettings) -> dict[str, str]:
-    return {rule_id: ("NO" if rule.off else rule.level) for rule_id, rule in settings.rules.items() if rule.off or rule.level}
+    return {
+        rule_id: ("NO" if rule.off else rule.level)
+        for rule_id, rule in settings.rules.items()
+        if rule.off or rule.level
+    }
 
 
 def build_workspace(settings: ValeSettings, config: LintConfig, folder: Path) -> Workspace:
@@ -137,7 +143,12 @@ def build_workspace(settings: ValeSettings, config: LintConfig, folder: Path) ->
     # DOC001 to DOC003 turned off in py-doc.yml also turn off their Vale rules.
     off = {
         stem
-        for stem, rule in (("Terms", RULE_GLOSSARY), ("Wordy", RULE_REDUNDANT), ("Redundant", RULE_REDUNDANT), ("Acronyms", RULE_ACRONYM))
+        for stem, rule in (
+            ("Terms", RULE_GLOSSARY),
+            ("Wordy", RULE_REDUNDANT),
+            ("Redundant", RULE_REDUNDANT),
+            ("Acronyms", RULE_ACRONYM),
+        )
         if rule in config.disabled_rules
     }
     for name, text in _bundled():
@@ -249,7 +260,9 @@ def check_version(runner: Runner) -> tuple[int, ...]:
         raise ValeError(f"Vale did not report its version: {(out + err).strip() or 'no output'}")
     if version < MIN_VERSION:
         needed = ".".join(map(str, MIN_VERSION))
-        raise EnvironmentProblem(f"Vale {'.'.join(map(str, version))} is too old. py-doc needs {needed} or newer. {INSTALL_HELP}")
+        raise EnvironmentProblem(
+            f"Vale {'.'.join(map(str, version))} is too old. py-doc needs {needed} or newer. {INSTALL_HELP}"
+        )
     return version
 
 
@@ -291,15 +304,11 @@ def parse_output(text: str, files: list[Path]) -> list[LintIssue]:
             suggestion = str(params[0]) if action.get("Name") == "replace" and params else None
             span = alert.get("Span") or []
             column = int(span[0]) if span else None
-            issues.append(
-                LintIssue(path, line, check, check.split(".")[0], message, severity, suggestion, column)
-            )
+            issues.append(LintIssue(path, line, check, check.split(".")[0], message, severity, suggestion, column))
     return issues
 
 
-def run_vale(
-    files: list[Path], runner: Runner, ini: Path, settings: ValeSettings, base: Path
-) -> list[LintIssue]:
+def run_vale(files: list[Path], runner: Runner, ini: Path, settings: ValeSettings, base: Path) -> list[LintIssue]:
     """Run Vale on ``files``. Raises :class:`ValeError` when it fails, so a broken run is never a clean one."""
     files = selected([f.resolve() for f in files], settings, base)
     if not files:

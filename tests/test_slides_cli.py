@@ -53,7 +53,11 @@ def test_split_level_out_of_range_is_a_usage_error(deck_md, monkeypatch):
 @pytest.mark.parametrize("flag", ["-t", "--template", "-r", "--reference"])
 def test_template_and_its_old_names(flag, deck_md, tmp_path, monkeypatch):
     template = tmp_path / "t.pptx"
-    template.write_bytes(subprocess.run(["pandoc", "--print-default-data-file", "reference.pptx"], capture_output=True, check=True).stdout)
+    template.write_bytes(
+        subprocess.run(
+            ["pandoc", "--print-default-data-file", "reference.pptx"], capture_output=True, check=True
+        ).stdout
+    )
     prs = Presentation(str(template))
     prs.slide_width = Inches(8)
     prs.save(str(template))

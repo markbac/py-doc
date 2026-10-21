@@ -38,7 +38,12 @@ def summary(report: LintReport) -> dict:
     counts = {severity: 0 for severity in ("error", "warning", "info")}
     for issue in report.issues:
         counts[issue.severity] = counts.get(issue.severity, 0) + 1
-    return {"files_scanned": report.files_scanned, "issues": len(report.issues), **counts, "files_failed": len(report.errors)}
+    return {
+        "files_scanned": report.files_scanned,
+        "issues": len(report.issues),
+        **counts,
+        "files_failed": len(report.errors),
+    }
 
 
 def to_json(report: LintReport, issues: list[LintIssue], errors: list[FileResult]) -> str:
@@ -75,13 +80,24 @@ def to_sarif(issues: list[LintIssue], errors: list[FileResult]) -> str:
             }
         )
     run = {
-        "tool": {"driver": {"name": "py-doc", "version": __version__, "informationUri": "https://github.com/markbac/py-doc", "rules": list(rules.values())}},
+        "tool": {
+            "driver": {
+                "name": "py-doc",
+                "version": __version__,
+                "informationUri": "https://github.com/markbac/py-doc",
+                "rules": list(rules.values()),
+            }
+        },
         "results": results,
         "invocations": [
             {
                 "executionSuccessful": not errors,
                 "toolExecutionNotifications": [
-                    {"level": "error", "message": {"text": result.error}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": _path(result.file)}}}]}
+                    {
+                        "level": "error",
+                        "message": {"text": result.error},
+                        "locations": [{"physicalLocation": {"artifactLocation": {"uri": _path(result.file)}}}],
+                    }
                     for result in errors
                 ],
             }

@@ -36,13 +36,22 @@ class Recorder:
 @pytest.fixture
 def windows(tmp_path, monkeypatch):
     engine = install(tmp_path, monkeypatch)
-    runtime = Runtime("tools:test", docker=["definitely-not-docker-xyz"], wsl_exe=engine.wsl, wsl_distro="Ubuntu", platform_name="windows")
+    runtime = Runtime(
+        "tools:test",
+        docker=["definitely-not-docker-xyz"],
+        wsl_exe=engine.wsl,
+        wsl_distro="Ubuntu",
+        platform_name="windows",
+    )
     return engine, runtime
 
 
 def settle(monkeypatch, runtime):
     monkeypatch.setattr("py_doc.tools_cli.make_runtime", lambda settings: runtime)
-    monkeypatch.setattr("py_doc.tools_cli.settings_from_config", lambda path: __import__("py_doc.runtime", fromlist=["RuntimeSettings"]).RuntimeSettings())
+    monkeypatch.setattr(
+        "py_doc.tools_cli.settings_from_config",
+        lambda path: __import__("py_doc.runtime", fromlist=["RuntimeSettings"]).RuntimeSettings(),
+    )
 
 
 def test_the_script_adds_the_user_and_turns_on_systemd_only_in_wsl():
@@ -87,7 +96,10 @@ def test_a_windows_setup_runs_as_root_in_the_distro_then_restarts_it(windows, mo
     engine, runtime = windows
     settle(monkeypatch, runtime)
     recorder = Recorder()
-    assert run_setup(["--yes"], run=recorder) in (0, 2)  # the fake docker stays missing, so the check at the end may fail
+    assert run_setup(["--yes"], run=recorder) in (
+        0,
+        2,
+    )  # the fake docker stays missing, so the check at the end may fail
     commands = [call[0] for call in recorder.calls]
     root = next(c for c in commands if "--user" in c and c[-2:] == ["bash", "-s"])
     assert root[root.index("-d") + 1] == "Ubuntu" and root[root.index("--user") + 1] == "root"

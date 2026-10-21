@@ -71,7 +71,9 @@ class DocLinter:
         """
         self.runtime = runtime
         self.engine = engine
-        self.extra_checks = list(extra_checks or [])  # checks of things other than Markdown, such as a Structurizr model
+        self.extra_checks = list(
+            extra_checks or []
+        )  # checks of things other than Markdown, such as a Structurizr model
         self.config = config or LintConfig()
         if glossary is not None:
             self.config.glossary = glossary
@@ -128,7 +130,9 @@ class DocLinter:
             files = [s.resolve() for s in sources if s.exists()]
             if not files or not scanned.intersection(files):
                 continue
-            titles = [title for file in files if (tree := self._parsed(file)) is not None for title in rules.headings(tree)]
+            titles = [
+                title for file in files if (tree := self._parsed(file)) is not None for title in rules.headings(tree)
+            ]
             found += rules.required_sections(doc_id, files, titles, self.config)
         report.add([self._graded(issue) for issue in found])
 
@@ -136,7 +140,11 @@ class DocLinter:
         """One spelling of each hyphenated word over every file linted together."""
         if RULE_TERMINOLOGY in self.config.disabled_rules:
             return
-        prose = [(r.file, segments(tree)) for r in report.results if r.error is None and (tree := self._parsed(r.file)) is not None]
+        prose = [
+            (r.file, segments(tree))
+            for r in report.results
+            if r.error is None and (tree := self._parsed(r.file)) is not None
+        ]
         report.add([self._graded(issue) for issue in rules.terminology(prose, self.config)])
 
     def _document_acronyms(self, report: LintReport) -> None:
@@ -241,13 +249,17 @@ class DocLinter:
         files = [result.file for result in report.results if result.error is None]
         try:
             if settings.config is not None:
-                logger.info("Using %s as it is: lint.vale rules, terms and avoid patterns are not applied", settings.config)
+                logger.info(
+                    "Using %s as it is: lint.vale rules, terms and avoid patterns are not applied", settings.config
+                )
                 ini = settings.config
             else:
                 ini = vale.build_workspace(settings, self.config, self.vale_folder()).ini
                 absent = vale.missing_packages(settings, self.vale_folder())
                 if absent:
-                    raise ConversionError(f"Vale packages not downloaded: {', '.join(absent)}. Run `py-doc lint --sync`.")
+                    raise ConversionError(
+                        f"Vale packages not downloaded: {', '.join(absent)}. Run `py-doc lint --sync`."
+                    )
             found = vale.run_vale(files, runner, ini, settings, Path.cwd())
         except vale.ValeError as exc:  # a broken run is an error on every file, never a clean result
             for result in report.results:

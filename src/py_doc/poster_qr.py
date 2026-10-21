@@ -13,7 +13,16 @@ from datetime import date, datetime, timedelta
 from urllib.parse import quote
 
 TYPES = ("url", "text", "vcard", "event", "wifi", "email", "phone", "sms", "geo")
-ALIASES = {"contact": "vcard", "vcf": "vcard", "ical": "event", "ics": "event", "calendar": "event", "tel": "phone", "mail": "email", "mailto": "email"}
+ALIASES = {
+    "contact": "vcard",
+    "vcf": "vcard",
+    "ical": "event",
+    "ics": "event",
+    "calendar": "event",
+    "tel": "phone",
+    "mail": "email",
+    "mailto": "email",
+}
 EXTENSIONS = {".vcf": "vcard", ".vcard": "vcard", ".ics": "event", ".ical": "event"}
 KEYS = {
     "vcard": ("name", "first", "last", "org", "title", "tel", "mobile", "email", "url", "address", "note"),
@@ -48,7 +57,15 @@ def payload(kind: str, text: str) -> str:
     if re.match(r"^\s*(BEGIN:V|WIFI:|MAILTO:|TEL:|SMSTO:|GEO:)", text, re.IGNORECASE):
         return text.strip()  # already in the standard form, such as a .vcf file's text
     fields = _fields(kind, text)
-    return {"vcard": _vcard, "event": _event, "wifi": _wifi, "email": _email, "phone": _phone, "sms": _sms, "geo": _geo}[kind](fields)
+    return {
+        "vcard": _vcard,
+        "event": _event,
+        "wifi": _wifi,
+        "email": _email,
+        "phone": _phone,
+        "sms": _sms,
+        "geo": _geo,
+    }[kind](fields)
 
 
 def _fields(kind: str, text: str) -> dict[str, list[str]]:
@@ -102,9 +119,13 @@ def _vcard(fields: dict) -> str:
     lines += [f"TEL;TYPE=CELL:{n}" for n in fields.get("mobile", [])]
     lines += [f"EMAIL;TYPE=INTERNET:{e}" for e in fields.get("email", [])]
     lines += [f"URL:{u}" for u in fields.get("url", [])]
-    for address in fields.get("address", []):  # one line, its parts separated by commas: street, town, postcode, country
+    for address in fields.get(
+        "address", []
+    ):  # one line, its parts separated by commas: street, town, postcode, country
         parts = [p.strip() for p in address.split(",")]
-        street, town, code, country = (parts + ["", "", "", ""])[:4] if len(parts) <= 4 else (", ".join(parts[:-3]), *parts[-3:])
+        street, town, code, country = (
+            (parts + ["", "", "", ""])[:4] if len(parts) <= 4 else (", ".join(parts[:-3]), *parts[-3:])
+        )
         lines.append(f"ADR;TYPE=WORK:;;{_v(street)};{_v(town)};;{_v(code)};{_v(country)}")
     if fields.get("note"):
         lines.append(f"NOTE:{_v(_one(fields, 'note', 'vcard'))}")
@@ -144,7 +165,10 @@ def _event(fields: dict) -> str:
         if end < start:
             raise QrError("type=event: end is before start")
     else:
-        end, end_utc = (start + timedelta(days=1) if not isinstance(start, datetime) else start + timedelta(hours=1)), utc
+        end, end_utc = (
+            (start + timedelta(days=1) if not isinstance(start, datetime) else start + timedelta(hours=1)),
+            utc,
+        )
     if isinstance(start, datetime):
         timing = [f"DTSTART:{_ical(start, utc)}", f"DTEND:{_ical(end, end_utc)}"]
     else:  # an all-day event ends on the day after its last day
@@ -184,7 +208,9 @@ def _wifi(fields: dict) -> str:
         raise QrError(f"type=wifi: security {security} needs a 'password:' line")
     security = "WPA" if security in ("WPA2", "WPA3", "SAE") else security  # what the WIFI: form names WPA2 and WPA3
     hidden = _one(fields, "hidden", "wifi").lower() in ("true", "yes", "1")
-    text = f"WIFI:T:{security};S:{_w(ssid)};" + (f"P:{_w(password)};" if password else "") + ("H:true;" if hidden else "")
+    text = (
+        f"WIFI:T:{security};S:{_w(ssid)};" + (f"P:{_w(password)};" if password else "") + ("H:true;" if hidden else "")
+    )
     return text + ";"
 
 

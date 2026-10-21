@@ -75,7 +75,7 @@ log.write(json.dumps({"argv": sys.argv[1:], "java": os.environ.get("JAVA_TOOL_OP
 
 class TestScan:
     def test_finds_diagram_fences_in_all_spellings(self):
-        text = "a\n```plantuml title=\"Ctx\"\nA -> B\n```\n\n~~~puml\nX\n~~~\n\n:::mermaid\ngraph TD\n:::\n\n::: mermaid\nflowchart\n:::\n"
+        text = 'a\n```plantuml title="Ctx"\nA -> B\n```\n\n~~~puml\nX\n~~~\n\n:::mermaid\ngraph TD\n:::\n\n::: mermaid\nflowchart\n:::\n'
         blocks = find_blocks(text)
         assert [(b.fence, b.line) for b in blocks] == [("plantuml", 2), ("puml", 6), ("mermaid", 10), ("mermaid", 14)]
         assert blocks[0].body == "A -> B" and blocks[0].options == {"title": "Ctx"}
@@ -158,10 +158,12 @@ class TestDot:
 
     def test_png_with_density_and_alt_text(self, tmp_path, host):
         _, runtime = host
-        rendered = render_parts(part(tmp_path, f"before\n\n```dot title=\"Flow\"\n{self.DOT}\n```\n\nafter\n"), "docx", runtime)
-        (name, path), = rendered.pictures.items()
+        rendered = render_parts(
+            part(tmp_path, f'before\n\n```dot title="Flow"\n{self.DOT}\n```\n\nafter\n'), "docx", runtime
+        )
+        ((name, path),) = rendered.pictures.items()
         assert name.startswith("diagrams/") and path.read_bytes().startswith(b"\x89PNG")
-        assert '![Flow](' + name + ')' in rendered.markdown and "digraph" not in rendered.markdown
+        assert "![Flow](" + name + ")" in rendered.markdown and "digraph" not in rendered.markdown
         from PIL import Image
 
         assert Image.open(path).info["dpi"][0] == pytest.approx(192, abs=1)
@@ -208,13 +210,19 @@ class TestDot:
         bad = "```dot\ndigraph { a -> \n```\n\n"
         with pytest.raises(DiagramError) as exc:
             render_parts(part(tmp_path, bad + bad), "docx", runtime, keep_going=True)
-        assert "2 diagram(s) failed" in str(exc.value) and "doc.md:1:" in str(exc.value) and "doc.md:5:" in str(exc.value)
+        assert (
+            "2 diagram(s) failed" in str(exc.value) and "doc.md:1:" in str(exc.value) and "doc.md:5:" in str(exc.value)
+        )
 
     @needs_pandoc
     def test_a_broken_diagram_stops_the_build_and_writes_nothing(self, tmp_path, host):
         _, runtime = host
-        (tmp_path / "g.md").write_text("# G\n\n```dot\ndigraph { a -> b }\n```\n\n```dot\ndigraph { a -> \n```\n", encoding="utf-8")
-        (tmp_path / "py-doc.yml").write_text("documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {}\n", encoding="utf-8")
+        (tmp_path / "g.md").write_text(
+            "# G\n\n```dot\ndigraph { a -> b }\n```\n\n```dot\ndigraph { a -> \n```\n", encoding="utf-8"
+        )
+        (tmp_path / "py-doc.yml").write_text(
+            "documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {}\n", encoding="utf-8"
+        )
         config = load_config(tmp_path / "py-doc.yml")
         with pytest.raises(DiagramError, match=r"g\.md:7"):
             build_document(config, config.documents["g"], runtime=runtime)
@@ -225,8 +233,10 @@ class TestDot:
         from docx import Document
 
         _, runtime = host
-        (tmp_path / "g.md").write_text(f"# G\n\n```dot title=\"Flow\"\n{self.DOT}\n```\n", encoding="utf-8")
-        (tmp_path / "py-doc.yml").write_text("documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {}\n      html: {}\n", encoding="utf-8")
+        (tmp_path / "g.md").write_text(f'# G\n\n```dot title="Flow"\n{self.DOT}\n```\n', encoding="utf-8")
+        (tmp_path / "py-doc.yml").write_text(
+            "documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {}\n      html: {}\n", encoding="utf-8"
+        )
         config = load_config(tmp_path / "py-doc.yml")
         docx, html = build_document(config, config.documents["g"], runtime=runtime)
         assert len(Document(str(docx)).inline_shapes) == 1
@@ -253,14 +263,25 @@ def test_a_diagram_has_one_caption_its_own_or_else_the_tools(tmp_path, pandoc_ru
     picture = png(tmp_path / "pic.png")
     monkeypatch.setattr(diagrams.render, "draw_cached", lambda *args, **kwargs: picture)
     (tmp_path / "g.md").write_text(text, encoding="utf-8")
-    (tmp_path / "py-doc.yml").write_text("documents:\n  g:\n    sources: [g.md]\n    outputs: {docx: {}, html: {}, pptx: {}}\n", encoding="utf-8")
+    (tmp_path / "py-doc.yml").write_text(
+        "documents:\n  g:\n    sources: [g.md]\n    outputs: {docx: {}, html: {}, pptx: {}}\n", encoding="utf-8"
+    )
     config = load_config(tmp_path / "py-doc.yml")
-    docx, html, pptx = sorted(build_document(config, config.documents["g"], runtime=lambda: pandoc_runtime), key=lambda p: p.suffix)
-    captions = [p.text for p in Document(str(docx)).paragraphs if p.style.name == "Caption" or p.text.startswith("Figure")]
+    docx, html, pptx = sorted(
+        build_document(config, config.documents["g"], runtime=lambda: pandoc_runtime), key=lambda p: p.suffix
+    )
+    captions = [
+        p.text for p in Document(str(docx)).paragraphs if p.style.name == "Caption" or p.text.startswith("Figure")
+    ]
     assert len(captions) == 1 and captions[0].endswith(expected)
     body = html.read_text(encoding="utf-8")
     assert re.findall(r"<figcaption[^>]*>(.*?)</figcaption>", body, re.S) == [expected] and "[[CAPTION" not in body
-    shown = [shape.text_frame.text for slide in Presentation(str(pptx)).slides for shape in slide.shapes if shape.has_text_frame]
+    shown = [
+        shape.text_frame.text
+        for slide in Presentation(str(pptx)).slides
+        for shape in slide.shapes
+        if shape.has_text_frame
+    ]
     assert shown.count(expected) == 1
 
 
@@ -276,7 +297,7 @@ def test_a_width_on_a_diagram_or_picture_is_a_share_of_the_text_width(tmp_path, 
     section.page_width, section.left_margin, section.right_margin = Cm(21), Cm(2), Cm(2)
     template.save(tmp_path / "T.docx")
     (tmp_path / "g.md").write_text(
-        "# G\n\n```dot width=\"100%\"\ndigraph { a -> b }\n```\n\n![half](pic.png){width=50%}\n\n![natural](pic.png)\n",
+        '# G\n\n```dot width="100%"\ndigraph { a -> b }\n```\n\n![half](pic.png){width=50%}\n\n![natural](pic.png)\n',
         encoding="utf-8",
     )
     (tmp_path / "py-doc.yml").write_text(
@@ -304,7 +325,12 @@ class TestOtherTools:
         _, runtime = host
         monkeypatch.setenv("STUB_LOG", str(tmp_path / "stub.log"))
         png_bytes = png(tmp_path / "x.png").read_bytes()
-        stub(tmp_path, monkeypatch, "plantuml", PNG_STUB + f"open(sys.argv[-1].rsplit('.', 1)[0] + '.png', 'wb').write({png_bytes!r})")
+        stub(
+            tmp_path,
+            monkeypatch,
+            "plantuml",
+            PNG_STUB + f"open(sys.argv[-1].rsplit('.', 1)[0] + '.png', 'wb').write({png_bytes!r})",
+        )
         text = "```plantuml\n@startuml\nA -> B\n@enduml\n```\n"
         rendered = render_parts(part(tmp_path, text), "pdf", runtime)
         call = json.loads((tmp_path / "stub.log").read_text(encoding="utf-8").splitlines()[0])
@@ -316,7 +342,12 @@ class TestOtherTools:
         _, runtime = host
         monkeypatch.setenv("STUB_LOG", str(tmp_path / "stub.log"))
         png_bytes = png(tmp_path / "x.png").read_bytes()
-        stub(tmp_path, monkeypatch, "plantuml", PNG_STUB + f"open(sys.argv[-1].rsplit('.', 1)[0] + '.png', 'wb').write({png_bytes!r})")
+        stub(
+            tmp_path,
+            monkeypatch,
+            "plantuml",
+            PNG_STUB + f"open(sys.argv[-1].rsplit('.', 1)[0] + '.png', 'wb').write({png_bytes!r})",
+        )
         text = "```plantuml\n!include part.puml\nA -> B\n```\n"
         for _ in range(2):
             render_parts(part(tmp_path, text), "docx", runtime)
@@ -338,10 +369,18 @@ class TestOtherTools:
         _, runtime = host
         monkeypatch.setenv("STUB_LOG", str(tmp_path / "stub.log"))
         png_bytes = png(tmp_path / "x.png").read_bytes()
-        stub(tmp_path, monkeypatch, "mmdc", PNG_STUB + f"open(sys.argv[sys.argv.index('-o') + 1], 'wb').write({png_bytes!r})")
+        stub(
+            tmp_path,
+            monkeypatch,
+            "mmdc",
+            PNG_STUB + f"open(sys.argv[sys.argv.index('-o') + 1], 'wb').write({png_bytes!r})",
+        )
         text = "```mermaid\ngraph TD;A-->B\n```\n\n[[LANDSCAPE]]\n\n```mermaid\ngraph TD;A-->C\n```\n\n[[PORTRAIT]]\n\n```mermaid\ngraph TD;A-->D\n```\n"
         render_parts(part(tmp_path, text), "docx", runtime)
-        widths = [c["argv"][c["argv"].index("--size") + 1] for c in map(json.loads, (tmp_path / "stub.log").read_text(encoding="utf-8").splitlines())]
+        widths = [
+            c["argv"][c["argv"].index("--size") + 1]
+            for c in map(json.loads, (tmp_path / "stub.log").read_text(encoding="utf-8").splitlines())
+        ]
         assert widths == ["1200", "1800", "1200"]
 
     def test_the_container_runs_diagram_tools_without_a_network(self, tmp_path, monkeypatch):
@@ -369,7 +408,10 @@ def test_the_python_tools_write_svg(tmp_path, script):
     module = {"pikchr_render.py": "pypikchr", "railroad_render.py": "railroad"}[script]
     pytest.importorskip(module)
     source = tmp_path / "in.txt"
-    source.write_text('box "hi"' if module == "pypikchr" else 'Sequence\n  Terminal "SELECT"\n  Optional\n    Terminal "*"\n', encoding="utf-8")
+    source.write_text(
+        'box "hi"' if module == "pypikchr" else 'Sequence\n  Terminal "SELECT"\n  Optional\n    Terminal "*"\n',
+        encoding="utf-8",
+    )
     out = tmp_path / "out.svg"
     done = subprocess.run([sys.executable, str(TOOLS / script), str(source), str(out)], capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
@@ -380,7 +422,11 @@ def test_a_pikchr_syntax_error_fails_loudly(tmp_path):
     pytest.importorskip("pypikchr")
     source = tmp_path / "in.txt"
     source.write_text("this is not pikchr (", encoding="utf-8")
-    done = subprocess.run([sys.executable, str(TOOLS / "pikchr_render.py"), str(source), str(tmp_path / "o.svg")], capture_output=True, text=True)
+    done = subprocess.run(
+        [sys.executable, str(TOOLS / "pikchr_render.py"), str(source), str(tmp_path / "o.svg")],
+        capture_output=True,
+        text=True,
+    )
     assert done.returncode != 0 and not (tmp_path / "o.svg").exists()
 
 
@@ -397,13 +443,17 @@ def test_the_svg_to_png_step_falls_back_to_librsvg_when_inkscape_writes_nothing(
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     (bin_dir / "inkscape").write_text("#!/bin/sh\nexit 0\n")  # finishes, writes nothing
-    (bin_dir / "rsvg-convert").write_text('#!/bin/sh\nwhile [ $# -gt 0 ]; do if [ "$1" = -o ]; then echo png > "$2"; fi; shift; done\n')
+    (bin_dir / "rsvg-convert").write_text(
+        '#!/bin/sh\nwhile [ $# -gt 0 ]; do if [ "$1" = -o ]; then echo png > "$2"; fi; shift; done\n'
+    )
     for tool in bin_dir.iterdir():
         tool.chmod(0o755)
     target = tmp_path / "diagram.png"
     done = subprocess.run(
         ["sh", "-c", _SVG_TO_PNG, "x", str(tmp_path / "diagram.svg"), str(target)],
-        env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"}, capture_output=True, text=True,
+        env={**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}"},
+        capture_output=True,
+        text=True,
     )
     assert done.returncode == 0 and target.read_text() == "png\n" and "librsvg" in done.stderr
 
@@ -437,7 +487,9 @@ class TestMermaidConfig:
         from py_doc.diagrams.render import with_mermaid_config
 
         own = "---\ntitle: Flow\nconfig:\n  theme: forest\n  flowchart: {curve: basis}\n---\nflowchart LR\n  A --> B\n"
-        text = with_mermaid_config(own, {"theme": "neutral", "look": "classic", "flowchart": {"curve": "linear", "padding": 20}})
+        text = with_mermaid_config(
+            own, {"theme": "neutral", "look": "classic", "flowchart": {"curve": "linear", "padding": 20}}
+        )
         assert self.front(text) == {
             "title": "Flow",
             "config": {"theme": "forest", "look": "classic", "flowchart": {"curve": "basis", "padding": 20}},
@@ -459,7 +511,12 @@ class TestMermaidConfig:
             return png(tmp_path / f"{len(texts)}.png")
 
         monkeypatch.setattr("py_doc.diagrams.render.draw_cached", draw)
-        render_parts(part(tmp_path, "```mermaid\ngraph LR\n```\n\n```dot\ndigraph {}\n```\n"), "docx", lambda: None, mermaid={"look": "classic"})
+        render_parts(
+            part(tmp_path, "```mermaid\ngraph LR\n```\n\n```dot\ndigraph {}\n```\n"),
+            "docx",
+            lambda: None,
+            mermaid={"look": "classic"},
+        )
         assert texts[0][0] == "mermaid" and texts[0][1].startswith('---\n{"config": {"look": "classic"}}\n---\n')
         assert texts[1] == ("dot", "digraph {}")
 
