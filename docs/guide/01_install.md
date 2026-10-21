@@ -67,7 +67,7 @@ After a pull, a change of dependencies or the tool image takes effect only after
 
 | Step | What it does |
 |---|---|
-| Code | `git pull --ff-only`, which never merges over your own commits. `-NoPull` skips it |
+| Code | `git pull --ff-only`, which never merges over your own commits. When the pull changes the script itself, the new version runs at once, with the same options. `-NoPull` skips it |
 | Python | py-doc's own virtual environment, `.venv` in the repository, made from Python 3.10 or later when it is missing or broken. `-RecreateVenv` makes it again; `-System` uses the Python on the `PATH` and `-Python` another one instead |
 | Packages | `pip install -e .` (with `-Dev`, `.[dev]`) and `pip check`, so a new dependency is installed. In `.venv`, `pip check` sees only py-doc's packages |
 | Command | `py-doc` starts, and the `py-doc` on the `PATH` is this one. Its folder, `.venv\Scripts`, is put first on your user `PATH` when it is not already, so a new terminal runs it; `-NoPath` leaves the `PATH` alone. An older install found first is named, with the command that removes it |
