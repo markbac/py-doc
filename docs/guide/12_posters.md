@@ -181,7 +181,7 @@ A block colour is one of three things. It can be a name from the theme's palette
 | Fence | Lines | Options |
 |---|---|---|
 | `cards` | `Heading \| Text \| colour`, the colour only for the `top` style | `cols=2`, `style=` `title` (default), `label`, `top` or `plain` |
-| `lcd` | Screens separated by blank lines. A line starting `--` is the caption | |
+| `lcd` | Screens separated by blank lines. A line starting `--` is the caption | `cols=` (default: up to 3). Six screens with `cols=2` are 2 columns and 3 rows |
 | `segments` | `weight \| label \| detail \| colour`, and an optional `title:` and `height:` | |
 | `flow` | `[Filled\|colour]` or `[Outlined]` boxes, joined by `->` or `-label->` arrows | |
 | `lanes` | `Label \| *filled cell \| dashed cell` | |

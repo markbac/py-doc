@@ -141,7 +141,9 @@ def cards_html(code, opts, ctx):
     return f'<div class="cards" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
 
 
-def lcd_html(code):
+def lcd_html(code, opts, ctx):
+    """Screens separated by blank lines, in ``cols=`` columns (default: up to 3) and as many rows as they need.
+    A line starting ``--`` is the screen's caption."""
     screens = [[]]
     for line in code.splitlines():
         if line.strip():
@@ -156,7 +158,9 @@ def lcd_html(code):
         cap = " ".join(x[2:].strip() for x in s if x.startswith("--"))
         out += (f'<div class="lcd"><div class="scr">{shown}</div>'
                 + (f'<div class="cap">{esc(cap)}</div>' if cap else "") + "</div>")
-    return f'<div class="lcds">{out}</div>'
+    count = sum(1 for s in screens if s)
+    cols = _whole(opts, "cols", min(count, 3) or 1, ctx)
+    return f'<div class="lcds" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
 
 
 def kv_split(code):
@@ -568,7 +572,7 @@ def block_html(lang, opts, code, ctx):
     if lang == "cards":
         return cards_html(code, opts, ctx)
     if lang == "lcd":
-        return lcd_html(code)
+        return lcd_html(code, opts, ctx)
     if lang == "timeline":
         return timeline_html(code, opts, ctx)
     if lang == "chart":
