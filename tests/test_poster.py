@@ -264,6 +264,11 @@ def test_the_example_posters_build(drawn, monkeypatch, name, title):
     assert "image not found" not in page and "](" not in page.split("</style>", 1)[1], "every picture and link is embedded or rendered"
 
 
+def test_an_example_poster_built_on_its_own_has_the_layout_it_was_written_for(drawn):
+    page, _ = build(EXAMPLES / "landscape.md", lambda: object())  # as py-doc poster poster/landscape.md does
+    assert 'class="poster landscape"' in page and "size:841mm 594mm" in page
+
+
 def test_the_reliability_example_uses_its_includes_and_conditions(drawn, monkeypatch):
     monkeypatch.setattr("py_doc.poster.git_version", lambda folder: "v1.0-3-gabc1234")
     page, _ = build(EXAMPLES / "reliability.md", lambda: object(), {"conditions": {"internal": True}})

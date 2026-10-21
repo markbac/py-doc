@@ -2,6 +2,7 @@
 title: Commissioning an SN-100 network
 subtitle: From an empty building to readings on the dashboard in one day
 byline: Example Instruments field engineering
+orientation: landscape  # the sections are written for three columns, so the layout goes with the words
 paper: a1
 ---
 
