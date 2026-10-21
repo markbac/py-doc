@@ -1,0 +1,36 @@
+{
+  "name": "vscode-py-doc-preview",
+  "displayName": "py-doc Markdown Preview",
+  "description": "Preview py-doc Markdown in VS Code: numbered captions, Word-style callouts, and page/section markers.",
+  "version": "1.0.0",
+  "publisher": "py-doc",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "main": "./extension.js",
+  "categories": [
+    "Other",
+    "Formatters"
+  ],
+  "keywords": [
+    "py-doc",
+    "markdown",
+    "preview",
+    "docx",
+    "pandoc",
+    "captions",
+    "callouts"
+  ],
+  "contributes": {
+    "markdown.markdownItPlugins": true,
+    "markdown.previewStyles": [
+      "./styles/py-doc-preview.css"
+    ]
+  },
+  "scripts": {
+    "test": "node test/test.js"
+  },
+  "devDependencies": {
+    "markdown-it": "^14.1.0"
+  }
+}

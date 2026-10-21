@@ -23,6 +23,10 @@ Pandoc reads the Markdown: its own flavour, with fenced divs, raw HTML, table ca
 
 py-doc itself never drops a word or a sentence. Anything pandoc cannot represent in a format (raw HTML in Word, for example) is dropped by pandoc, which says so in a warning.
 
+## VS Code preview
+
+A companion VS Code extension in [`editors/vscode/`](../../editors/vscode) provides live preview for py-doc Markdown as you write. It formats numbered captions, Word callout boxes, presentation slide cards, speaker notes, and poster structures (stat strips, card grids, flow sequences) directly in VS Code's built-in Markdown preview (`Ctrl+Shift+V` or `Ctrl+K V`).
+
 ## Front matter
 
 The YAML between `---` lines at the top of the first source of a document gives its properties: `title`, `subtitle`, `author`, `date`, `version`, `status`, `document_number`, `description`, `classification`, `subject`, `keywords`, `category`, `company` and `toc_depth`. A value in `py-doc.yml` wins over the front matter. Every document of py-doc's own repository has front matter, so its properties travel with the file.

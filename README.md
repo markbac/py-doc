@@ -101,6 +101,7 @@ src/
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/
 └── pydoclint/
+editors/                  # editor integrations: VS Code preview extension for documents, slides and posters
 docs/                     # py-doc's own user guide, requirements and architecture
 examples/                 # a project that uses every feature
 tests/
