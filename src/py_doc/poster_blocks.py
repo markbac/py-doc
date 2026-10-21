@@ -21,7 +21,7 @@ from markdown_it import MarkdownIt
 
 from py_doc.diagrams import BY_FENCE, DiagramError
 from py_doc.diagrams.render import draw_cached, with_mermaid_config
-from py_doc import poster_qr
+from py_doc import poster_barcode, poster_qr
 from py_doc.errors import ConversionError, ToolFailed
 from py_doc.poster_themes import Theme
 
@@ -436,6 +436,30 @@ def qr_html(code, opts, ctx):
     return f'<div class="qr">{qr_svg(target, ctx.theme.colours["strong"], size, ecc)}{label}</div>'
 
 
+def barcode_html(code, opts, ctx):
+    """A linear barcode of the block's first line: ``type=`` code128 (default), code39, ean13, ean8, upca or
+    itf14, ``width=`` and ``height=`` in pixels, ``text=no`` to leave out the digits, ``check=yes`` for a
+    Code 39 check character, and ``label=``. A GS1 code takes its digits with or without the check digit."""
+    data = next((line.strip() for line in code.splitlines() if line.strip()), "")
+    try:
+        kind = poster_barcode.kind_of(opts.get("type"))
+        data = poster_barcode.checked(kind, data)
+    except poster_barcode.BarcodeError as exc:
+        raise PosterError(f"{ctx.where}: {exc}") from None
+    flags = {}
+    for name in ("text", "check"):
+        value = opts.get(name, "yes" if name == "text" else "no").lower()
+        if value not in ("yes", "no", "true", "false"):
+            raise PosterError(f"{ctx.where}: {name} must be yes or no, not '{opts[name]}'")
+        flags[name] = value in ("yes", "true")
+    if flags["check"] and kind != "code39":
+        raise PosterError(f"{ctx.where}: check=yes is for code39; {kind} always has its check digit")
+    width, height = _whole(opts, "width", 240, ctx), _whole(opts, "height", 70, ctx)
+    svg = poster_barcode.barcode_svg(kind, data, ctx.theme.colours["strong"], width, height, flags["text"], flags["check"])
+    label = f'<div class="cap">{inline(opts["label"])}</div>' if opts.get("label") else ""
+    return f'<div class="barcode">{svg}{label}</div>'
+
+
 def _whole(opts, name, default, ctx, low=1):
     value = opts.get(name, str(default))
     if not value.isdigit() or int(value) < low:
@@ -599,6 +623,8 @@ def block_html(lang, opts, code, ctx):
         return chart_html(code, opts, ctx)
     if lang == "qr":
         return qr_html(code, opts, ctx)
+    if lang == "barcode":
+        return barcode_html(code, opts, ctx)
     if lang == "steps":
         return steps_html(code, opts, ctx)
     if lang == "gallery":

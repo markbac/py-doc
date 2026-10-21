@@ -102,6 +102,8 @@ section h2 span{color:var(--highlight);font-weight:600}
 .chart{display:block;width:100%;height:auto;color:var(--muted);font-family:var(--font-body)}
 .qr{display:inline-flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 10px;background:var(--surface);padding:8px;border:1px solid var(--border)}
 .qr .cap{font-size:13px;color:var(--muted)}
+.barcode{display:inline-flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 10px;background:#fff;padding:8px;border:1px solid var(--border)}
+.barcode .cap{font-size:13px;color:var(--muted)}
 .body p.caption{font-size:14px;line-height:1.4;color:var(--muted)}
 .body p.caption strong{color:var(--text)}
 .fig{background:var(--surface);border:1px solid var(--border);padding:14px 16px;display:flex;flex-direction:column;gap:10px;margin:0 0 10px}

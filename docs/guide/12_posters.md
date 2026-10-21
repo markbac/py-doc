@@ -189,6 +189,7 @@ A block colour is one of three things. It can be a name from the theme's palette
 | `timeline` | `date \| label \| detail \| colour`, the last two optional | `vertical` for a column instead of a row |
 | `chart` | See [Diagrams and charts](#diagrams-and-charts) | |
 | `qr` | The address or text to encode, or with `type=` the `key: value` lines of a contact, event or other kind. See [QR codes](#qr-codes) | `type=` (default `url`), `file=`, `size=140` (pixels), `label="..."`, `ecc=` `L`, `M` (default), `Q` or `H` |
+| `barcode` | The data to encode, on one line | `type=` `code128` (default), `code39`, `ean13`, `ean8`, `upca` or `itf14`, `width=240` and `height=70` (pixels), `text=no`, `check=yes` (Code 39), `label="..."`. See [Barcodes](#barcodes) |
 | `steps` | `Heading \| text \| colour`, the text and colour optional | `cols=1`, `start=1`: the number of the first step |
 | `gallery` | `picture \| caption`, the picture relative to the Markdown and the caption optional | `cols=3` (or fewer pictures), `height=` in pixels: crop every picture to one height |
 | `progress` | `label \| value \| target \| colour`, the colour optional (default: `good` when met, else `accent`, or `bad` over a ceiling) | `unit=" nodes"`, `show=` `values` (default) or `percent`, `better=` `higher` (default) or `lower`, for a ceiling such as a return rate |
@@ -250,6 +251,33 @@ location: Leeds test lab
 - The more a code holds, the denser it is. A contact or an event needs a larger `size=` than an address to stay easy to scan from a distance. `ecc=` trades size for robustness: `L` makes the smallest code, `H` survives the most damage.
 - A mistake, such as a key the type does not have or a date that is not a date, stops the build with the file and what is wrong.
 - The footer's `qr` encodes an address or text only.
+
+### Barcodes
+
+A `barcode` block draws a linear barcode of its line, in the theme's colour on white, with the digits or text under the bars.
+
+| `type=` | For | Data |
+|---|---|---|
+| `code128` (default) | Serial numbers, part numbers, any short text | Printable ASCII |
+| `code39` | Older equipment and labels | `A` to `Z`, `0` to `9`, space and `- . $ / + %`, letters made capital. `check=yes` adds the check character |
+| `ean13` | Retail products | 12 digits, or 13 with the check digit |
+| `ean8` | Small retail products | 7 digits, or 8 with the check digit |
+| `upca` | Retail products in North America | 11 digits, or 12 with the check digit |
+| `itf14` | Cartons and outer cases (GTIN-14), drawn with its bearer bars | 13 digits, or 14 with the check digit |
+
+````markdown
+```barcode type=ean13 label="SN-100 retail box"
+501234567890
+```
+
+```barcode width=320 label="Serial"
+SN-100-0042
+```
+````
+
+- The check digit of an EAN, UPC or ITF-14 code is worked out when it is left out, and checked when it is given, so a mistyped digit stops the build instead of printing a barcode of another product. Spaces and hyphens in the digits are ignored.
+- EAN and UPC are drawn as on products: longer guard bars, and the digits in their groups between them. The space the scanner needs on each side (the quiet zone) is part of the drawing, so nothing should be put closer than its white box.
+- `width=` is the whole drawing, quiet zones included. Print a retail code no smaller than its standard size: about 140 pixels wide for EAN-13 and UPC-A, 100 for EAN-8 and 400 for ITF-14.
 
 ## Proportions and printing
 
