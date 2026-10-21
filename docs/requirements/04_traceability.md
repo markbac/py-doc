@@ -19,7 +19,7 @@ title: Traceability
 | FR-080 to FR-086, QR-081 | `c4/` | `test_c4.py` |
 | FR-100 to FR-106 | `lint/`, `markdown/` | `test_lint.py`, `test_lint_cli.py`, `test_structure.py`, `test_vale.py`, `test_markdownlint.py`, `test_markdown_ast.py` |
 | FR-120 to FR-127, QR-082 | `site/`, `pandoc/resources/site.lua` | `test_site.py` |
-| FR-130 to FR-139, FR-150 to FR-159 | `poster.py`, `poster_blocks.py`, `poster_fonts.py`, `poster_settings.py`, `poster_themes.py`, `poster_cli.py`, `poster_watch.py`, `config.py`, `app.py`, `lint/linter.py`, `diagrams/tools/poster_pdf.js` | `test_poster.py`, `test_poster_browser.py` |
+| FR-130 to FR-139, FR-150 to FR-160 | `poster.py`, `poster_blocks.py`, `poster_fonts.py`, `poster_settings.py`, `poster_themes.py`, `poster_cli.py`, `poster_watch.py`, `config.py`, `app.py`, `lint/linter.py`, `diagrams/tools/poster_pdf.js` | `test_poster.py`, `test_poster_browser.py` |
 | FR-028 | `diagrams/render.py`, `config.py` | `test_diagrams.py` |
 | FR-128 | `site/pages.py`, `site/engines.py` | `test_site.py` |
 | FR-140 to FR-143, QR-040 to QR-043 | `runtime/`, `tools_cli.py` | `test_runtime.py`, `test_image.py`, `test_setup.py`, `test_doctor.py`, `test_platform.py` |
@@ -51,7 +51,7 @@ The issues of the repository, as reviewed on 18 October 2026, and the requiremen
 | #48 | Site navigation from document metadata | FR-122 | Done: navigation from the documents, their titles and order, `site.groups`, and a hand-made navigation kept |
 | #149 | HTML posters from Markdown: py-doc poster, themes and orientation | FR-130 to FR-135 | Done: `py-doc poster`, portrait and landscape, columns, built-in and file themes, examples |
 | #150 | Poster: full-width sections | FR-137 | Done: `{.wide}` on a section heading, and `{colour=}` for its heading bar |
-| #151 | Poster: callout types, timeline, trend stats and references | FR-136, FR-137 | Done: callouts in both spellings, `timeline`, trends in `## Stats`, `## References`, and `chart` |
+| #151 | Poster: callout types, timeline, trend stats and references | FR-136, FR-137 | Done: callouts in both spellings, `timeline`, trends in the `{.stats}` strip, a `{.references}` list, and `chart` |
 | #152 | Poster: QR code and partner logos in the footer | FR-137 | Done: `footer.qr`, `footer.logos`, and a `qr` block |
 | #153 | Poster: embed theme fonts so a poster looks the same offline | FR-150 | Done: `fonts.files` in a theme, and `embed_fonts` (or `--embed-fonts`) for the stylesheet's web fonts, cached |
 | #161 | A host runtime, to build with the tools on the PATH instead of the container | None yet | Open, low priority |

@@ -14,7 +14,7 @@ paper: a3
 width: 1100
 ---
 
-## Stats
+## Key figures {.stats}
 
 | Value | Label | Change | Verdict |
 |---|---|---|---|
@@ -23,7 +23,7 @@ width: 1100
 | 2 | Firmware copies kept | +1 | |
 | 0 | Failed updates in the pilot | -3 | good |
 
-## Abstract
+## Introduction {.abstract}
 
 Firmware 2.1 sends less, joins faster and can always go back to the last version that worked.
 
@@ -129,7 +129,7 @@ Lena Chen | Firmware release manager | sn100-firmware@example.com
 Ruth Osei | Field support lead | +44 1632 960 100
 ```
 
-## Summary
+## In short {.summary}
 
 Install 2.1 everywhere: it costs one message and saves months of battery.
 
@@ -141,7 +141,7 @@ Nothing changes on site. Joining is quicker.
 
 Every update reports its result, so a failed node is visible at once.
 
-## References
+## References {.references}
 
 1. SN-100 Datasheet, SN-DS-001.
 1. SN-100 release notes, firmware {{version}}.

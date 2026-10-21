@@ -6,7 +6,7 @@ orientation: landscape  # the sections are written for three columns, so the lay
 paper: a1
 ---
 
-## Stats
+## Key figures {.stats}
 
 | Value | Label |
 |---|---|
@@ -15,7 +15,7 @@ paper: a1
 | -95 dBm | Weakest signal accepted |
 | 0 | Tools beyond a phone and a ladder |
 
-## Abstract
+## Introduction {.abstract}
 
 A network of SN-100 nodes reports through gateways to an MQTT broker. Commissioning places the gateways, joins each node, checks its signal and readings, and records where it is. This poster is the checklist the field team follows.
 
@@ -135,7 +135,7 @@ https://example.com/commissioning/upload
 | `E01` | The sensor is not found: return the node, do not open it |
 | `RETRY 5/5` | The broker did not answer: check the gateway's Ethernet, then call support |
 
-## Summary
+## In short {.summary}
 
 Plan the gateways, fit them first, join each node and record where it is.
 

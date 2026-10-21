@@ -28,7 +28,7 @@ The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` li
 
 | Example | What it shows |
 |---|---|
-| `poster.md` | Portrait A1 in the default theme: a picture, a Mermaid diagram, bar and line charts, segments, flow, lanes and `lcd` screens. Also a timeline, a JSON code block and a full-width section. A QR code is in the footer. Every setting is in its front matter |
+| `poster.md` | Portrait A1 in the default theme: a picture, a Mermaid diagram, bar and line charts, segments, flow, lanes and `lcd` screens. Also a timeline, a JSON code block, a full-width section, and a band of three columns (`{cols=3}`) under a band of two. A QR code is in the footer. Every setting is in its front matter |
 | `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a gallery of mounting drawings, an acceptance checklist, handover steps, a QR block and an included table. The words and the layout (orientation, paper) are in the front matter, and the company's look (theme, header, footer) is in `py-doc.yml` |
 | `release.md` | Portrait A3 in the dark theme: a column chart with two series, a before and after `compare` and a Mermaid sequence with notes. Also title cards, a vertical timeline, callouts, `people`, references and a `{{version}}` variable |
 | `reliability.md` | Portrait A0 in the print theme, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, `highlight` figures, `progress` bars, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
@@ -94,53 +94,48 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 
 ## Page structure
 
-A poster is laid out from the top down, always in this order:
+A poster is its header, then its sections in the order of the file, then its footer. What each section is, and how wide, is said in braces at the end of its heading. No heading name has a meaning of its own, so the headings are yours to choose.
 
-1. **Header**: `title`, `subtitle`, `byline` and `logo` from the settings. Without a title, the first `#` heading is the title.
-1. **Stats** and **abstract**: `## Stats` and `## Abstract`, full width, wherever they are in the file.
-1. **The bands**, in the order of the sections. A section whose heading ends in `{.wide}` is a full-width band of its own. The sections between two wide ones are a band of columns, balanced by height.
-1. **Summary** and **references**: `## Summary` and `## References`, full width, wherever they are in the file.
-1. **Footer**: from the `footer` setting, full width at the bottom.
-
-So a poster that goes full width, two columns, full width, two columns, full width is written as:
-
-```markdown
-## 1. Overview {.wide}
-## 2. Left of the first band
-## 3. Right of the first band
-## 4. Results {.wide}
-## 5. Left of the second band
-## 6. Right of the second band
-## 7. Next steps {.wide}
-## Summary
-```
-
-`columns:` sets how many columns every band of columns has.
-
-| Heading | Becomes |
+| Braces | The section is |
 |---|---|
-| `## Stats` | A table of value, label, and optionally a change and a verdict, shown as the strip of figures. The header row is ignored |
-| `## Abstract` | The introduction box |
-| `## 1. Heading: accent` | A section. The text after the first colon is coloured |
-| `## Summary` | The first paragraph is the banner, and each `###` is a block |
-| `## References` | A list in small type above the footer, in two columns |
+| None | A section in a band of columns |
+| `{.wide}` | A section that spans every column, a band of its own |
+| `{.stats}` | The strip of figures: a table of value, label, and optionally a change and a verdict. The header row is ignored |
+| `{.abstract}` | The introduction box |
+| `{.summary}` | The banner, from its first paragraph, then a block for each `###` |
+| `{.references}` | A list in small type, in two columns, under its own heading |
 
-A section heading can end with attributes in braces:
+A stats strip, abstract, summary or references list is full width and has no heading bar: the heading names it in the file, and only a references list shows it. Each goes where it is in the file, so a second stats strip can sit halfway down.
 
-- `{.wide}` makes the section span every column. The sections before it are balanced into the columns above it, and those after it into the columns below. `split` cannot be used with a wide section.
-- `{.flow}` lets the section go on in the next column, between two of its blocks, under its heading again with "(continued)". Use it for a section much taller than the rest. A caption stays with its picture or table. It has no effect with `split` or on a wide section.
-- `{colour=coral}` colours its heading bar, with any block colour.
+The other braces change one section:
 
-Of every way to share the sections out, in order, the page takes those whose tallest column is shortest, and of those the one whose columns are most even.
+- `{cols=3}` gives its band of columns three columns. Give it on any one section of the band. Without it, the band has `columns:` columns.
+- `{.flow}` lets the section go on in the next column, between two of its blocks, under its heading again with "(continued)". Use it for a section much taller than the rest. A caption stays with its picture or table.
+- `{colour=coral}` colours its heading bar, or the box of an abstract or the banner of a summary, with any block colour.
+
+The sections between two full-width parts are a band of columns, balanced by height. Of every way to share them out, in order, the page takes those whose tallest column is shortest, and of those the one whose columns are most even. `split` chooses the columns by hand instead, on a poster with one band of columns.
+
+So a poster that goes full width, two columns, full width, three columns, then a summary is written as:
 
 ```markdown
-## 5. Roadmap: what comes next {.wide}
-## 6. Troubleshoot: when a node will not join {.wide colour=slate}
+## Key figures {.stats}
+## Why this matters {.abstract}
+## 1. Overview {.wide}
+## 2. Left of the first band {cols=2}
+## 3. Right of the first band
+## 4. Results {.wide colour=slate}
+## 5. First of three {cols=3}
+## 6. Second of three
+## 7. Third of three
+## In short {.summary}
+## Sources {.references}
 ```
+
+The header comes from the `title`, `subtitle`, `byline`, `logo` and `header` settings, and the footer from the `footer` setting. They have no section, because they are the same on every page of a project. Without a `title`, the first `#` heading is the title. In a section heading, the text after the first colon is coloured.
 
 ### Trends
 
-A third column in `## Stats` is a change, shown under the label with an arrow. A change that starts with `+` or `up` points up, one that starts with `-` or `down` points down, and anything else points sideways. Up and sideways are good news (`good` colour) and down is bad news (`bad` colour), unless a fourth column says `good` or `bad`:
+A third column in a `{.stats}` table is a change, shown under the label with an arrow. A change that starts with `+` or `up` points up, one that starts with `-` or `down` points down, and anything else points sideways. Up and sideways are good news (`good` colour) and down is bad news (`bad` colour), unless a fourth column says `good` or `bad`:
 
 ```markdown
 | Value | Label | Change | Verdict |
