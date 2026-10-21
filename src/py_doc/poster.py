@@ -166,8 +166,8 @@ section h2 span{color:var(--highlight);font-weight:600}
 .card.plain .ct{margin-top:0;line-height:1.45}
 .card.label .ch{font-size:12.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--accent-text)}
 .card.label .ct{font-size:15px;line-height:1.35}
-.lcds{display:flex;gap:10px;margin:0 0 10px}
-.lcd{flex:1;min-width:0}
+.lcds{display:grid;gap:10px;margin:0 0 10px}
+.lcd{min-width:0}
 .lcd .scr{background:var(--lcd);border:3px solid var(--lcd-border);border-radius:4px;padding:8px 10px;font-family:var(--font-mono);font-size:14.5px;line-height:1.4;color:var(--lcd-text);font-weight:600;white-space:pre}
 .lcd .cap{font-size:13px;line-height:1.3;color:var(--muted);margin-top:6px}
 .banner{background:var(--secondary);color:var(--on-secondary);padding:14px 28px;font-size:22px;line-height:1.35;text-align:center;font-weight:600}

@@ -685,6 +685,7 @@ def test_a_chart_option_mistake_is_an_error(tmp_path, options, message):
         ("```chart\nA\n```", "has no value"),
         ("```chart\n```", "at least one"),
         ("```qr\n```", "needs the text or address"),
+        ("```lcd cols=0\nA\n```", "cols must be a whole number of at least 1"),
     ],
 )
 def test_a_block_mistake_is_an_error(tmp_path, code, message):
@@ -784,6 +785,19 @@ def test_highlights_show_figures_in_large_type_in_their_colours(tmp_path, drawn)
 def test_a_new_block_mistake_is_an_error(tmp_path, code, message):
     with pytest.raises(PosterError, match=message):
         build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
+
+
+@pytest.mark.parametrize("info, columns", [("lcd", 3), ("lcd cols=2", 2), ("lcd cols=6", 6)])
+def test_lcd_screens_in_columns_and_rows(tmp_path, drawn, info, columns):
+    screens = "\n\n".join(f"SCREEN {n}\n-- Caption {n}" for n in range(1, 7))  # six screens
+    page, _ = build(write(tmp_path, f"## A\n\n```{info}\n{screens}\n```\n"), lambda: object())
+    assert f'<div class="lcds" style="grid-template-columns:repeat({columns},minmax(0,1fr))">' in page
+    assert page.count('<div class="lcd">') == 6 and '<div class="cap">Caption 6</div>' in page
+
+
+def test_two_lcd_screens_sit_side_by_side_as_before(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "## A\n\n```lcd\nJOINED GW-2\n-- Good signal\n\nT 21.4 C\n-- First reading\n```\n"), lambda: object())
+    assert '<div class="lcds" style="grid-template-columns:repeat(2,minmax(0,1fr))">' in page
 
 
 def test_a_qr_block_draws_the_code_with_its_label(tmp_path, drawn):
