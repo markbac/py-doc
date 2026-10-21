@@ -101,3 +101,30 @@ def test_module_entry_point_prints_help():
     )
     assert result.returncode == 0
     assert "PowerPoint" in result.stdout
+
+
+def test_slides_watch_mode(tmp_path, monkeypatch):
+    from py_doc.slides_cli import run_slides
+    from py_doc import poster_watch
+
+    src = tmp_path / "deck.md"
+    src.write_text("# Deck\n\n## S1\n\n- a\n", encoding="utf-8")
+
+    called = []
+
+    def fake_watch(build, errors, port=0, open_browser=True, stop=None, interval=0.5, title=""):
+        pages, sources = build()
+        called.append((pages, sources, port, open_browser, title))
+        return 0
+
+    monkeypatch.setattr(poster_watch, "watch", fake_watch)
+    code = run_slides([str(src), "--watch", "--port", "9875", "--no-open"])
+    assert code == 0
+    assert len(called) == 1
+    pages, sources, port, open_browser, title = called[0]
+    assert "deck" in pages
+    assert pages["deck"].is_file()
+    assert (tmp_path / "deck.pptx").is_file()
+    assert port == 9875
+    assert open_browser is False
+    assert "PowerPoint Preview" in title

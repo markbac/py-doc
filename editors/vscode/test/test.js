@@ -210,4 +210,23 @@ digraph G {
   console.log('✓ Image width attributes and diagram fence blocks rendered correctly');
 }
 
-console.log('\nAll 8 test suites passed successfully! 🎉');
+// Test 9: Document format detection
+{
+  const { detectDocumentFormat } = require('../extension');
+
+  // Poster detection
+  assert(detectDocumentFormat('---\ntitle: Poster\ntheme: dark\nsize: a0\n---\n# Poster') === 'poster', 'theme in front-matter means poster');
+  assert(detectDocumentFormat({ getText: () => '# Just doc', fileName: 'c:/docs/sn100-poster.md' }) === 'poster', 'poster in filename means poster');
+
+  // Slides detection
+  assert(detectDocumentFormat('---\ntitle: Deck\nformat: slides\n---\n# Slide 1') === 'slides', 'format: slides means slides');
+  assert(detectDocumentFormat({ getText: () => '# Presentation', fileName: 'c:/decks/talk.md' }) === 'slides', 'talk/deck in filename means slides');
+
+  // Docx default
+  assert(detectDocumentFormat('---\ntitle: Tech Spec\nauthor: Jane\n---\n# Chapter 1') === 'docx', 'standard technical doc defaults to docx');
+  assert(detectDocumentFormat({ getText: () => '# Guide', fileName: 'c:/docs/guide.md' }) === 'docx', 'guide.md defaults to docx');
+
+  console.log('✓ Document format detection for live watch server (docx, slides, poster) works correctly');
+}
+
+console.log('\nAll 9 test suites passed successfully! 🎉');

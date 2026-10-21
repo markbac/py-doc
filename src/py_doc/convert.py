@@ -72,6 +72,24 @@ class _Converter:
             self.options, self.runtime, keep_going=False,
         )  # fmt: skip
 
+    def convert_twin(self, md_path: Path, output_path: Path) -> Path:
+        """Render an HTML preview twin of the document or presentation."""
+        md_path = Path(md_path).resolve()
+        if not md_path.is_file():
+            raise FileNotFoundError(f"Markdown file not found: {md_path}")
+        joined = join_sources([Source(md_path)], {}, {}, md_path.name)
+        if self.fmt == "pptx":
+            from .pandoc.pptx_finish import notes_to_divs
+
+            joined = replace(joined, parts=[(src, notes_to_divs(md)) for src, md in joined.parts])
+        metadata = joined.metadata
+        if not metadata.title:
+            metadata = replace(metadata, title=joined.first_heading or md_path.stem)
+        return render_output(
+            "html", joined, metadata, Path(output_path), md_path.name, [md_path.parent], None,
+            self.options, self.runtime, keep_going=False,
+        )  # fmt: skip
+
 
 class DocxConverter(_Converter):
     """Markdown to a Word document. The template, when given, is the reference document."""

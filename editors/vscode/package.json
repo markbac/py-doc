@@ -28,16 +28,36 @@
   "contributes": {
     "commands": [
       {
-        "command": "pydoc.openPosterWatch",
-        "title": "py-doc: Open Live Poster Preview (via Watch Server)",
+        "command": "pydoc.openLiveWatch",
+        "title": "py-doc: Open Live Preview (HTML Twin Watch Server)",
         "category": "py-doc",
         "icon": "$(eye)"
+      },
+      {
+        "command": "pydoc.openDocxWatch",
+        "title": "py-doc: Open Live Word Document Preview (docx --watch)",
+        "category": "py-doc"
+      },
+      {
+        "command": "pydoc.openSlidesWatch",
+        "title": "py-doc: Open Live Presentation Preview (slides --watch)",
+        "category": "py-doc"
+      },
+      {
+        "command": "pydoc.openPosterWatch",
+        "title": "py-doc: Open Live Poster Preview (poster --watch)",
+        "category": "py-doc"
+      },
+      {
+        "command": "pydoc.stopLiveWatch",
+        "title": "py-doc: Stop Live Preview Server",
+        "category": "py-doc"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "pydoc.openPosterWatch",
+          "command": "pydoc.openLiveWatch",
           "when": "resourceExtname == .md",
           "group": "navigation"
         }

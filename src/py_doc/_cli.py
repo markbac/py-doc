@@ -50,6 +50,22 @@ def add_common_options(parser: argparse.ArgumentParser, kind: str, suffix: str) 
         action="store_true",
         help="Use a default blank document with a warning if the template file is not found (default: fail)",
     )
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Build again on every save, and reload an HTML preview twin in the browser (Ctrl+C stops)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=0,
+        help="With --watch, the local port to serve the preview on (default: a free one)",
+    )
+    parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="With --watch, do not open the browser",
+    )
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -124,6 +140,71 @@ def convert_all(converter: Converter, args: argparse.Namespace, suffix: str, lab
     return status
 
 
+def watch_converter(converter: Converter, args: argparse.Namespace, suffix: str, label: str) -> int:
+    """Watch source files, rebuild the document and an HTML twin preview on every save, and reload in browser."""
+    input_path = Path(args.input).resolve()
+    try:
+        converter.validate_template()
+        if input_path.is_file():
+            if not is_markdown(input_path):
+                logger.warning(f"'{input_path.name}' does not end in .md or .markdown")
+            pairs = [(input_path, output_for_file(input_path, args.output, suffix).resolve())]
+        elif input_path.is_dir():
+            pairs = plan_directory(input_path, args.output, suffix)
+        else:
+            error(f"Path not found: {input_path}")
+            return 1
+    except (FileNotFoundError, ConversionError) as exc:
+        error(str(exc))
+        return exit_status(exc)
+
+    if not pairs:
+        logger.warning(f"No Markdown files found in '{input_path}'")
+        return 0
+
+    def build_all() -> tuple[dict[str, Path], set[Path]]:
+        pages: dict[str, Path] = {}
+        sources: set[Path] = {p[0].resolve() for p in pairs}
+        template_path = getattr(converter, "template_path", None)
+        if template_path:
+            sources.add(template_path.resolve())
+
+        for src, dst in pairs:
+            # 1. Attempt primary document (.docx or .pptx)
+            try:
+                converter.convert_file(src, dst)
+                print(f"wrote {dst}")
+            except PermissionError:
+                logger.warning(f"{dst.name} is open in Word/PowerPoint; skipped writing {dst.suffix}")
+            except ConversionError as exc:
+                if "locked" in str(exc).lower():
+                    logger.warning(f"{dst.name} is open in Word/PowerPoint; skipped writing {dst.suffix}")
+                else:
+                    raise
+
+            # 2. Render HTML preview twin
+            twin_path = dst.with_suffix(".html")
+            if hasattr(converter, "convert_twin"):
+                converter.convert_twin(src, twin_path)
+            else:
+                twin_path = converter.convert_file(src, twin_path)
+            print(f"wrote {twin_path} (HTML preview twin)")
+            pages[src.stem] = twin_path.resolve()
+
+        return pages, sources
+
+    from .poster_watch import watch
+
+    errors = (ConversionError, FileNotFoundError, OSError)
+    return watch(
+        build_all,
+        errors,
+        port=getattr(args, "port", 0),
+        open_browser=not getattr(args, "no_open", False),
+        title=f"{label} Preview",
+    )
+
+
 def deprecation_notice(old: str, new: str) -> str:
     return (
         f"{old} is now part of py-doc. `{new}` does the same, and `py-doc build` builds every document "
@@ -143,4 +224,6 @@ def run(
     configure_logging(quiet=args.quiet, verbose=args.verbose)
     if notice:
         logger.info(notice)
+    if getattr(args, "watch", False):
+        return watch_converter(make_converter(args), args, suffix, label)
     return convert_all(make_converter(args), args, suffix, label)

@@ -46,11 +46,12 @@ Build = Callable[[], tuple[dict[str, Path], set[Path]]]
 class State:
     """The pages being served, the build they are from, and the error of the last build, if it failed."""
 
-    def __init__(self) -> None:
+    def __init__(self, title: str = "Posters") -> None:
         self.lock = threading.Lock()
         self.pages: dict[str, Path] = {}
         self.version = 0
         self.error: str | None = None
+        self.title = title
 
 
 def watched_files(folders: set[Path], files: set[Path], outputs: set[Path]) -> dict[Path, int]:
@@ -94,7 +95,7 @@ def serve(state: State, port: int) -> ThreadingHTTPServer:
                 return self._send(200, "text/html; charset=utf-8", page.replace("</body>", script + "</body>", 1))
             if not name:
                 links = "".join(f'<li><a href="/{html.escape(n)}.html">{html.escape(n)}</a></li>' for n in pages)
-                return self._send(200, "text/html; charset=utf-8", f"<!doctype html><title>Posters</title><ul>{links}</ul>")
+                return self._send(200, "text/html; charset=utf-8", f"<!doctype html><title>{state.title}</title><ul>{links}</ul>")
             self._send(404, "text/plain", f"No poster {name}")
 
         def _send(self, code: int, kind: str, body: str) -> None:
@@ -115,9 +116,9 @@ def serve(state: State, port: int) -> ThreadingHTTPServer:
 
 
 def watch(build: Build, errors: tuple[type[Exception], ...], port: int = 0, open_browser: bool = True,
-          stop: threading.Event | None = None, interval: float = INTERVAL) -> int:
+          stop: threading.Event | None = None, interval: float = INTERVAL, title: str = "py-doc preview") -> int:
     """Build, serve, and build again on every change, until Ctrl+C or ``stop``. Returns the exit status."""
-    state, stop = State(), stop or threading.Event()
+    state, stop = State(title=title), stop or threading.Event()
 
     def rebuild() -> set[Path]:
         started = time.monotonic()

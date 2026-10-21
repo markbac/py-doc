@@ -6,17 +6,36 @@ It formats custom `py-doc` Word (`.docx`) markers, callouts, numbered captions, 
 
 ---
 
-## Two Preview Modes: Instant vs. Watch Server
+## Two Preview Modes: Instant vs. HTML Twin Live Watch
 
-### 1. Instant Editor Preview (`Ctrl+K V` or `Ctrl+Shift+V`)
-* **Zero dependencies, instant typing-latency**: Formats text, callouts, numbered captions, slide cards, poster stat strips, card grids, and Mermaid diagrams directly in the editor as you type.
-* **No Docker required**: Works offline without compiling files.
+This extension provides two complementary ways to preview your documents:
 
-### 2. Live Poster Watch Server (`py-doc poster --watch`)
-* **100% Pixel-Perfect Production Render**: Click the **👁️ (Live Poster Watch)** button in the editor navigation bar (or run `py-doc poster <file> --watch --port 8765 --no-open` in the terminal).
-* **Side-by-Side in VS Code**: Automatically docks a side-by-side browser tab inside VS Code using `Simple Browser`.
-* **Auto-Reloads on Save (`Ctrl+S`)**: Rebuilds the poster in the background and reloads the tab in ~0.7 seconds.
-* **Compiles Every Diagram**: Renders PlantUML, Graphviz, Ditaa, Wavedrom, Vega, Pikchr, and Bytefield diagrams into true vector SVGs via `py-doc`'s container.
+| Capability | Option 3: Instant In-Editor Preview | Option 1: Live Watch Server (HTML Twin) |
+|:---|:---|:---|
+| **Trigger** | `Ctrl+K V` or `Ctrl+Shift+V` (or standard Preview icon) | `👁️` eye icon in editor title bar, or `py-doc ... --watch` |
+| **Speed** | Instant (<1ms), updates on every keystroke | ~1 second on save (`Ctrl+S`) |
+| **Docker / Tooling** | **Zero dependencies**, 100% offline pure JavaScript | Uses `py-doc`'s tool container via Pandoc |
+| **Formats Supported** | Technical Documents, Slide Decks, Posters | Technical Documents (`docx`), Slide Decks (`slides`), Posters (`poster`) |
+| **Diagrams** | Live client SVG preview for Mermaid, PlantUML syntax cards | Full 100% compilation of all 12 diagram engines (Mermaid, PlantUML, Graphviz, Ditaa, Wavedrom, Vega, Pikchr, Bytefield, etc.) |
+| **Where it Displays** | Native VS Code Markdown preview pane | Side-by-side inside VS Code via `Simple Browser` or external browser |
+| **File Lock Tolerance** | Never touches output files | Tolerates open Word/PowerPoint locks; always serves HTML twin reliably |
+
+---
+
+### How Option 1 (Live Watch Server) Works Across All Formats
+
+When you run `py-doc` with `--watch` (or click `👁️` in VS Code):
+1. **Technical Documents (`py-doc docx file.md --watch`)**:
+   - Rebuilds `file.docx` on save (gracefully warning if Word has it open).
+   - Compiles an **HTML twin** (`file.html`) with Pandoc, MathML, admonitions, and all diagrams.
+   - Serves the twin at `http://127.0.0.1:8765` with auto-reload polling.
+2. **Slide Decks (`py-doc slides deck.md --watch`)**:
+   - Rebuilds `deck.pptx` on save.
+   - Compiles an HTML presentation twin with styled slides, columns, and formatted speaker notes (`::: notes` / `<!-- notes: ... -->`).
+   - Serves the twin with auto-reload polling.
+3. **Posters (`py-doc poster poster.md --watch`)**:
+   - Rebuilds the self-contained poster HTML file on save with true vector graphics and barcodes.
+   - Serves the poster with auto-reload polling.
 
 ---
 
@@ -110,4 +129,4 @@ In projects initialized with `py-doc init`, or at the root of `py-doc`:
 npm test
 ```
 
-Runs all 8 test suites validating documents, slides, posters, image dimensions, and diagram features.
+Runs all 9 test suites validating documents, slides, posters, image dimensions, diagram features, and format auto-detection.

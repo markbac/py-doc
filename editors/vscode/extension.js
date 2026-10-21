@@ -742,35 +742,93 @@ try { vscode = require('vscode'); } catch (e) { vscode = null; }
 
 let watchTerminal = null;
 
+function detectDocumentFormat(document) {
+  const text = typeof document.getText === 'function' ? document.getText() : String(document);
+  const frontMatterMatch = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  const frontMatter = frontMatterMatch ? frontMatterMatch[1] : '';
+  const parsed = parseSimpleYaml(frontMatter);
+  const fileName = ((document && document.fileName) || (document && document.name) || '').toLowerCase();
+
+  // 1. Poster detection
+  if (parsed.theme || parsed.size || parsed.columns || parsed.posters || fileName.includes('poster')) {
+    return 'poster';
+  }
+
+  // 2. Slides detection
+  if (parsed.format === 'slides' || parsed.aspect_ratio || parsed.split_level || fileName.includes('slide') || fileName.includes('talk') || fileName.includes('deck')) {
+    return 'slides';
+  }
+
+  // 3. Default to Word document
+  return 'docx';
+}
+
+function launchWatchTerminal(subcommand, filePath, port) {
+  if (!vscode) return;
+
+  if (!watchTerminal || watchTerminal.exitStatus !== undefined) {
+    watchTerminal = vscode.window.createTerminal({
+      name: `py-doc ${subcommand} watch`,
+      iconPath: new vscode.ThemeIcon('eye')
+    });
+  }
+
+  watchTerminal.show(true);
+  watchTerminal.sendText(`py-doc ${subcommand} "${filePath}" --watch --port ${port} --no-open`);
+
+  setTimeout(() => {
+    vscode.commands.executeCommand('simpleBrowser.show', `http://127.0.0.1:${port}`);
+  }, 1500);
+}
+
 function activate(context) {
   if (!vscode) return;
 
-  const disposable = vscode.commands.registerCommand('pydoc.openPosterWatch', async () => {
+  const getActiveFile = () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showErrorMessage('No active Markdown file to watch.');
-      return;
+      vscode.window.showErrorMessage('No active Markdown file to preview.');
+      return null;
     }
+    return editor;
+  };
 
-    const filePath = editor.document.uri.fsPath;
-    const port = 8765;
+  const port = 8765;
 
-    if (!watchTerminal || watchTerminal.exitStatus !== undefined) {
-      watchTerminal = vscode.window.createTerminal({
-        name: 'py-doc poster watch',
-        iconPath: new vscode.ThemeIcon('eye')
-      });
-    }
-
-    watchTerminal.show(true);
-    watchTerminal.sendText(`py-doc poster "${filePath}" --watch --port ${port} --no-open`);
-
-    setTimeout(() => {
-      vscode.commands.executeCommand('simpleBrowser.show', `http://127.0.0.1:${port}`);
-    }, 1500);
+  const liveWatchCmd = vscode.commands.registerCommand('pydoc.openLiveWatch', async () => {
+    const editor = getActiveFile();
+    if (!editor) return;
+    const format = detectDocumentFormat(editor.document);
+    launchWatchTerminal(format, editor.document.uri.fsPath, port);
   });
 
-  context.subscriptions.push(disposable);
+  const docxWatchCmd = vscode.commands.registerCommand('pydoc.openDocxWatch', async () => {
+    const editor = getActiveFile();
+    if (!editor) return;
+    launchWatchTerminal('docx', editor.document.uri.fsPath, port);
+  });
+
+  const slidesWatchCmd = vscode.commands.registerCommand('pydoc.openSlidesWatch', async () => {
+    const editor = getActiveFile();
+    if (!editor) return;
+    launchWatchTerminal('slides', editor.document.uri.fsPath, port);
+  });
+
+  const posterWatchCmd = vscode.commands.registerCommand('pydoc.openPosterWatch', async () => {
+    const editor = getActiveFile();
+    if (!editor) return;
+    launchWatchTerminal('poster', editor.document.uri.fsPath, port);
+  });
+
+  const stopWatchCmd = vscode.commands.registerCommand('pydoc.stopLiveWatch', async () => {
+    if (watchTerminal) {
+      watchTerminal.dispose();
+      watchTerminal = null;
+      vscode.window.showInformationMessage('py-doc live watch server stopped.');
+    }
+  });
+
+  context.subscriptions.push(liveWatchCmd, docxWatchCmd, slidesWatchCmd, posterWatchCmd, stopWatchCmd);
 }
 
 function deactivate() {
@@ -788,5 +846,6 @@ module.exports = {
   deactivate,
   extendMarkdownIt,
   pyDocPlugin,
-  parseSimpleYaml
+  parseSimpleYaml,
+  detectDocumentFormat
 };

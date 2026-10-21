@@ -297,3 +297,29 @@ class TestOptions:
         )
         assert result.returncode == 0
         assert "py-doc2docx" in result.stdout
+
+    def test_docx_watch_mode(self, tmp_path, monkeypatch):
+        from py_doc.cli import run_docx
+        from py_doc import poster_watch
+
+        src = tmp_path / "spec.md"
+        src.write_text("# Spec\n\nText\n", encoding="utf-8")
+
+        called = []
+
+        def fake_watch(build, errors, port=0, open_browser=True, stop=None, interval=0.5, title=""):
+            pages, sources = build()
+            called.append((pages, sources, port, open_browser, title))
+            return 0
+
+        monkeypatch.setattr(poster_watch, "watch", fake_watch)
+        code = run_docx([str(src), "--watch", "--port", "9876", "--no-open"])
+        assert code == 0
+        assert len(called) == 1
+        pages, sources, port, open_browser, title = called[0]
+        assert "spec" in pages
+        assert pages["spec"].is_file()
+        assert (tmp_path / "spec.docx").is_file()
+        assert port == 9876
+        assert open_browser is False
+        assert "Word Preview" in title

@@ -90,3 +90,25 @@ def test_a_template_without_the_layouts_pandoc_needs_is_explained(tmp_path, pand
     (tmp_path / "a.md").write_text("# A\n\n## B\n\n- x\n", encoding="utf-8")
     with pytest.raises(ConversionError, match="no slides"):
         SlidesConverter(template_path=template).convert_file(tmp_path / "a.md", tmp_path / "a.pptx")
+
+
+def test_docx_convert_twin_produces_html(tmp_path, pandoc_runtime):
+    md = tmp_path / "spec.md"
+    md.write_text("# Specification\n\n> [!NOTE]\n> A note box.\n\nParagraph text.\n", encoding="utf-8")
+    out = DocxConverter().convert_twin(md, tmp_path / "spec.html")
+    assert out.is_file()
+    html_text = out.read_text(encoding="utf-8")
+    assert "Specification" in html_text
+    assert "admonition note" in html_text or "note" in html_text
+    assert "A note box." in html_text
+
+
+def test_slides_convert_twin_produces_html_with_notes(tmp_path, pandoc_runtime):
+    md = tmp_path / "talk.md"
+    md.write_text("# Title\n\n## First Slide\n\n- point\n\n<!-- notes: Remember to emphasize this -->\n", encoding="utf-8")
+    out = SlidesConverter().convert_twin(md, tmp_path / "talk.html")
+    assert out.is_file()
+    html_text = out.read_text(encoding="utf-8")
+    assert "First Slide" in html_text
+    assert "Remember to emphasize this" in html_text
+
