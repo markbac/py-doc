@@ -8,9 +8,11 @@
     and the script stops at the first step that fails, with what to do about it.
 
       1. Code         git pull --ff-only (skipped with -NoPull, or when this is not a Git checkout)
-      2. Python       a Python 3.10 or later, the one -Python names or else python or py
-      3. Packages     pip install -e . (with the test tools when -Dev), then pip check
-      4. Command      py-doc runs, and the py-doc on the PATH is this install
+      2. Python       the project's own virtual environment, .venv in this folder, made from a Python 3.10
+                      or later when it is missing or broken (-System or -Python: another Python instead)
+      3. Packages     pip install -e . into it (with the test tools when -Dev), then pip check, which
+                      sees only py-doc's own packages because the environment is py-doc's alone
+      4. Command      py-doc runs, and the py-doc on the PATH is this one (-AddToPath puts it there)
       5. Docker       the container engine answers (py-doc setup installs it when it does not)
       6. Tool image   built when its definition changed (every layer again with -Rebuild),
                       and the images of earlier versions removed unless -KeepOldImages
@@ -33,7 +35,17 @@
     Also run the test suite and lint the documentation.
 
 .PARAMETER Python
-    The Python to install into, such as C:\venvs\py-doc\Scripts\python.exe. Default: python, else py -3.
+    Install into this Python instead of .venv, such as C:\venvs\py-doc\Scripts\python.exe.
+
+.PARAMETER System
+    Install into the Python on the PATH (python, else py -3) instead of .venv. Its other packages can then
+    conflict with py-doc's, which pip check reports.
+
+.PARAMETER RecreateVenv
+    Delete .venv and make it again, such as after a Python upgrade.
+
+.PARAMETER AddToPath
+    Put .venv\Scripts at the front of your user PATH, so py-doc in a new terminal is this one.
 
 .PARAMETER CaFile
     An extra certificate for image builds behind a TLS-inspecting proxy (passed to py-doc tools build).
@@ -43,7 +55,9 @@
 .EXAMPLE
     .\scripts\update.ps1 -Dev -Test
 .EXAMPLE
-    .\scripts\update.ps1 -NoPull -Rebuild -Python .venv\Scripts\python.exe
+    .\scripts\update.ps1 -AddToPath
+.EXAMPLE
+    .\scripts\update.ps1 -NoPull -Rebuild -RecreateVenv
 #>
 [CmdletBinding()]
 param(
@@ -53,6 +67,9 @@ param(
     [switch]$KeepOldImages,
     [switch]$Test,
     [string]$Python,
+    [switch]$System,
+    [switch]$RecreateVenv,
+    [switch]$AddToPath,
     [string]$CaFile
 )
 
@@ -113,49 +130,94 @@ try {
     # 2. Python ----------------------------------------------------------------------------------
     Write-Step "Python"
     $script:PythonArgs = @()
+    $venv = Join-Path $Root '.venv'
+    $venvPython = Join-Path $venv 'Scripts\python.exe'
+    if (-not (Test-Path $venvPython)) { $venvPython = Join-Path $venv 'bin/python' }  # PowerShell on Linux
+
+    # A Python 3.10 or later on the PATH: the base of the virtual environment, or the target with -System
+    function Find-BasePython {
+        foreach ($candidate in @(@('python'), @('py', '-3'), @('python3'))) {
+            if (-not (Get-Command $candidate[0] -ErrorAction SilentlyContinue)) { continue }
+            $extra = @($candidate | Select-Object -Skip 1)
+            $ok = & $candidate[0] @extra -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)" 2>$null
+            if ($LASTEXITCODE -eq 0) { return , $candidate }
+        }
+        Stop-Update "no Python 3.10 or later found" "Install Python 3.10 or later from python.org, or name one with -Python"
+    }
+
     if ($Python) {
         $script:PythonExe = $Python
-    } elseif (Get-Command python -ErrorAction SilentlyContinue) {
-        $script:PythonExe = 'python'
-    } elseif (Get-Command py -ErrorAction SilentlyContinue) {
-        $script:PythonExe = 'py'
-        $script:PythonArgs = @('-3')
+        $where = "the Python -Python names"
+    } elseif ($System) {
+        $base = Find-BasePython
+        $script:PythonExe = $base[0]
+        $script:PythonArgs = @($base | Select-Object -Skip 1)
+        $where = "the Python on the PATH (-System)"
     } else {
-        Stop-Update "no Python found" "Install Python 3.10 or later, or name one with -Python"
+        $healthy = $false
+        if ((Test-Path $venvPython) -and -not $RecreateVenv) {
+            & $venvPython -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)" 2>$null
+            $healthy = ($LASTEXITCODE -eq 0)
+            if (-not $healthy) { Write-Note ".venv is broken or too old (was its Python removed or upgraded?), so it is made again" }
+        }
+        if (-not $healthy) {
+            if (Test-Path $venv) { Remove-Item -Recurse -Force $venv }
+            $base = Find-BasePython
+            $baseArgs = @($base | Select-Object -Skip 1)
+            Write-Host "    making .venv with $($base -join ' ')"
+            Invoke-Checked "making the virtual environment" "Check that this Python can make one (python -m venv)" $base[0] ($baseArgs + @('-m', 'venv', $venv))
+            $venvPython = Join-Path $venv 'Scripts\python.exe'
+            if (-not (Test-Path $venvPython)) { $venvPython = Join-Path $venv 'bin/python' }
+        }
+        $script:PythonExe = $venvPython
+        $where = "py-doc's own virtual environment, .venv"
     }
     $version = & $script:PythonExe @script:PythonArgs -c "import sys; print('%d.%d.%d' % sys.version_info[:3]); print(sys.executable)"
-    if ($LASTEXITCODE -ne 0 -or -not $version) { Stop-Update "$script:PythonExe does not run" "Name a working Python with -Python" }
+    if ($LASTEXITCODE -ne 0 -or -not $version) { Stop-Update "$script:PythonExe does not run" "Run again with -RecreateVenv, or name a working Python with -Python" }
     $parts = $version[0].Split('.')
     if ([int]$parts[0] -lt 3 -or ([int]$parts[0] -eq 3 -and [int]$parts[1] -lt 10)) {
         Stop-Update "Python $($version[0]) is too old" "py-doc needs Python 3.10 or later"
     }
-    Write-Ok "Python $($version[0]) at $($version[1])"
+    Write-Ok "Python $($version[0]) in $where"
 
     # 3. Packages --------------------------------------------------------------------------------
     Write-Step "Packages"
     $target = if ($Dev -or $Test) { '.[dev]' } else { '.' }
+    Invoke-Checked "pip install" "Read pip's message above; a proxy may need PIP_INDEX_URL or a certificate" $script:PythonExe ($script:PythonArgs + @('-m', 'pip', 'install', '--disable-pip-version-check', '--quiet', '--upgrade', 'pip'))
     Invoke-Checked "pip install" "Read pip's message above; a proxy may need PIP_INDEX_URL or a certificate" $script:PythonExe ($script:PythonArgs + @('-m', 'pip', 'install', '--disable-pip-version-check', '--quiet', '--editable', $target))
-    Invoke-Checked "pip check" "A package above conflicts with py-doc's needs; reinstall it or use a virtual environment (-Python)" $script:PythonExe ($script:PythonArgs + @('-m', 'pip', 'check', '--disable-pip-version-check'))
+    $shared = if ($Python -or $System) { " This Python is shared with other programs: the default, .venv, keeps py-doc's packages apart." } else { "" }
+    Invoke-Checked "pip check" "A package above conflicts with another.$shared Run again with -RecreateVenv to start clean" $script:PythonExe ($script:PythonArgs + @('-m', 'pip', 'check', '--disable-pip-version-check'))
     Write-Ok "py-doc and its dependencies installed ($target)"
 
     # 4. Command ---------------------------------------------------------------------------------
     Write-Step "Command"
     $pyDocVersion = Invoke-PyDoc @('--version')
-    if ($LASTEXITCODE -ne 0) { Stop-Update "py-doc does not start" "Its error is above. Run again with -Dev, or reinstall with pip" }
+    if ($LASTEXITCODE -ne 0) { Stop-Update "py-doc does not start" "Its error is above. Run again with -RecreateVenv" }
     Write-Ok "$pyDocVersion"
+    $find = "import os, sysconfig; dirs = [sysconfig.get_path('scripts'), sysconfig.get_path('scripts', os.name + '_user')]; " +
+            "print(next((d for d in dirs if os.path.isfile(os.path.join(d, 'py-doc.exe')) or os.path.isfile(os.path.join(d, 'py-doc'))), dirs[0]))"
+    $scripts = (& $script:PythonExe @script:PythonArgs -c $find | Select-Object -First 1).Trim()
+    if ($AddToPath) {
+        $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+        $entries = @($userPath -split ';' | Where-Object { $_ -and ($_.TrimEnd('\') -ne $scripts.TrimEnd('\')) })
+        [Environment]::SetEnvironmentVariable('Path', (@($scripts) + $entries) -join ';', 'User')
+        $env:Path = "$scripts;$env:Path"
+        Write-Ok "$scripts is first on your user PATH: a new terminal runs this py-doc"
+    }
     $command = Get-Command py-doc -ErrorAction SilentlyContinue
-    if (-not $command) {
-        $find = "import os, sysconfig; dirs = [sysconfig.get_path('scripts'), sysconfig.get_path('scripts', os.name + '_user')]; " +
-                "print(next((d for d in dirs if os.path.isfile(os.path.join(d, 'py-doc.exe')) or os.path.isfile(os.path.join(d, 'py-doc'))), dirs[0]))"
-        $scripts = & $script:PythonExe @script:PythonArgs -c $find
-        Write-Note "py-doc is not on the PATH. Add $scripts to the PATH, or run python -m py_doc"
+    $mine = $command -and ((Split-Path -Parent $command.Source).TrimEnd('\') -eq $scripts.TrimEnd('\'))
+    if ($mine) {
+        Write-Ok "py-doc on the PATH is this install ($($command.Source))"
     } else {
-        $onPath = & $command.Source --version 2>$null
-        if ($onPath -ne $pyDocVersion) {
-            Write-Note "the py-doc on the PATH ($($command.Source)) is another install: $onPath"
+        if ($command) {
+            Write-Note "the py-doc on the PATH is another install: $($command.Source)"
+            if ($command.Source -match 'WindowsApps|Python3\d+\\Scripts|LocalCache') {
+                Write-Note "remove it with: python -m pip uninstall py-doc   (in the Python it came from)"
+            }
         } else {
-            Write-Ok "py-doc on the PATH is this install ($($command.Source))"
+            Write-Note "py-doc is not on the PATH"
         }
+        Write-Note "run .\scripts\update.ps1 -AddToPath to put $scripts first, or use $scripts\py-doc.exe"
     }
 
     # 5. Docker ----------------------------------------------------------------------------------
