@@ -18,7 +18,7 @@ This extension provides two complementary ways to preview your documents:
 | **Formats Supported** | Technical Documents, Slide Decks, Posters | Technical Documents (`docx`), Slide Decks (`slides`), Posters (`poster`) |
 | **Diagrams** | Live client SVG preview for Mermaid, PlantUML syntax cards | Full 100% compilation of all 12 diagram engines (Mermaid, PlantUML, Graphviz, Ditaa, Wavedrom, Vega, Pikchr, Bytefield, etc.) |
 | **Where it Displays** | Native VS Code Markdown preview pane | Side-by-side inside VS Code via `Simple Browser` or external browser |
-| **File Lock Tolerance** | Never touches output files | Tolerates open Word/PowerPoint locks; always serves HTML twin reliably |
+| **File Lock Tolerance** | Never touches output files | Skips a `.docx`/`.pptx` open in Word or PowerPoint, with a warning, and still updates the HTML twin |
 
 ---
 
@@ -26,16 +26,23 @@ This extension provides two complementary ways to preview your documents:
 
 When you run `py-doc` with `--watch` (or click `👁️` in VS Code):
 1. **Technical Documents (`py-doc docx file.md --watch`)**:
-   - Rebuilds `file.docx` on save (gracefully warning if Word has it open).
-   - Compiles an **HTML twin** (`file.html`) with Pandoc, MathML, admonitions, and all diagrams.
-   - Serves the twin at `http://127.0.0.1:8765` with auto-reload polling.
+   - Rebuilds `file.docx` on save. If Word has it open, it is left as it is, with a warning, and the preview still updates.
+   - Builds an **HTML twin** with Pandoc, MathML, admonitions, all diagrams, and page breaks shown as dashed lines.
+   - The twin is written to `.py-doc/preview/` below the document's folder, so no file of yours is overwritten.
 2. **Slide Decks (`py-doc slides deck.md --watch`)**:
-   - Rebuilds `deck.pptx` on save.
-   - Compiles an HTML presentation twin with styled slides, columns, and formatted speaker notes (`::: notes` / `<!-- notes: ... -->`).
-   - Serves the twin with auto-reload polling.
+   - Rebuilds `deck.pptx` on save (PowerPoint locks are handled the same way).
+   - Builds an HTML twin of the deck's content as one continuous page: columns side by side, and speaker notes (`::: notes` / `<!-- notes: ... -->`) in labelled boxes. It does not split the content into slides; use the instant preview for slide layout.
 3. **Posters (`py-doc poster poster.md --watch`)**:
    - Rebuilds the self-contained poster HTML file on save with true vector graphics and barcodes.
-   - Serves the poster with auto-reload polling.
+
+Every format is served at `http://127.0.0.1:8765` (the `pydoc.watch.port` setting) and reloads on each save.
+
+The `👁️` button chooses the command from the file itself, the same way the instant preview chooses its mode:
+- **Poster**: the front matter has a poster setting (`paper`, `byline`, `orientation`, `theme`, `columns`, `width`, `colours`, `palette`, `logo`, `embed_fonts`).
+- **Slides**: the front matter has `split_level` or a `format` of `slides`/`pptx`, or the body has `:::: columns`, `::: notes`, `::: incremental` or `<!-- notes: -->` outside code blocks.
+- **Word document**: anything else.
+
+Use **py-doc: Open Live Word Document / Presentation / Poster Preview** from the Command Palette to choose the format yourself. Opening a new preview stops the one already running, and **py-doc: Stop Live Preview Server** stops it.
 
 ---
 
@@ -58,7 +65,7 @@ When you run `py-doc` with `--watch` (or click `👁️` in VS Code):
 
 ### 2. Slide Decks (PowerPoint `.pptx`)
 
-When authoring a slide deck (e.g. `slides.md`, `format: pptx`, or using slide directives), the preview switches to **Slide Deck Mode**:
+When authoring a slide deck (`format: pptx`, `split_level`, or columns, speaker notes and incremental lists in the body), the preview switches to **Slide Deck Mode**. With `split_level: 1`, each `#` heading starts a content slide, as it does in PowerPoint:
 
 | Slide Feature | `py-doc` Syntax | Preview Rendering |
 |:---|:---|:---|
@@ -73,7 +80,7 @@ When authoring a slide deck (e.g. `slides.md`, `format: pptx`, or using slide di
 
 ### 3. Posters (HTML & PDF Posters)
 
-When authoring a poster (e.g. `paper: a1`, `byline: ...`, or headings with `{.stats}`), the preview switches to **Poster Mode**:
+When authoring a poster (a poster setting such as `paper: a1` or `byline: ...` in the front matter), the preview switches to **Poster Mode**:
 
 | Poster Feature | `py-doc` Syntax | Preview Rendering |
 |:---|:---|:---|
@@ -129,4 +136,4 @@ In projects initialized with `py-doc init`, or at the root of `py-doc`:
 npm test
 ```
 
-Runs all 9 test suites validating documents, slides, posters, image dimensions, diagram features, and format auto-detection.
+Runs all 10 test suites validating documents, slides, posters, image dimensions, diagram features, format auto-detection, and regressions.

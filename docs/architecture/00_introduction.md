@@ -13,7 +13,7 @@ keywords: [py-doc, architecture, C4]
 
 This document describes how py-doc meets its [requirements](../requirements/00_introduction.md). It covers what py-doc is made of, how a document travels from Markdown to each output, where the tools run, and why it is built this way. It is for maintainers and contributors.
 
-py-doc writes the C4 chapters from the Structurizr model in `docs/architecture/workspace.dsl`, the way any py-doc project documents its architecture. They cover the context, containers, components, relationships, deployment, the dynamic view of a build, and the element catalogue. Change the model, not those chapters. `py-doc c4 up docs/architecture/workspace.dsl` opens it in Structurizr to arrange its views.
+py-doc writes the C4 chapters from the Structurizr model in `docs/architecture/workspace.dsl`, the way any py-doc project documents its architecture. They cover the context, containers, components, relationships, deployment, the dynamic views of a build and of a live preview, and the element catalogue. Change the model, not those chapters. `py-doc c4 up docs/architecture/workspace.dsl` opens it in Structurizr to arrange its views.
 
 ## Goals
 

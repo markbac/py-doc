@@ -114,10 +114,22 @@ jobs:
       - run: python -m build
       - run: python -m twine check dist/*
 
+  vscode:
+    name: VS Code extension
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: editors/vscode
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: npm ci --ignore-scripts  # the runner's own Node; markdown-it is the only (dev) dependency
+      - run: npm test
+
   gate:
     name: CI gate
     if: always()
-    needs: [lint, test, build]
+    needs: [lint, test, build, vscode]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

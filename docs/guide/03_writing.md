@@ -25,7 +25,9 @@ py-doc itself never drops a word or a sentence. Anything pandoc cannot represent
 
 ## VS Code preview
 
-A companion VS Code extension in [`editors/vscode/`](../../editors/vscode) provides live preview for py-doc Markdown as you write. It formats numbered captions, Word callout boxes, presentation slide cards, speaker notes, and poster structures (stat strips, card grids, flow sequences) directly in VS Code's built-in Markdown preview (`Ctrl+Shift+V` or `Ctrl+K V`).
+A companion VS Code extension in [`editors/vscode/`](../../editors/vscode) provides live preview for py-doc Markdown as you write. It works in VS Code's built-in Markdown preview (`Ctrl+Shift+V` or `Ctrl+K V`). There it formats numbered captions, Word callout boxes, slide cards, speaker notes, and poster stat strips, card grids and flows. This preview is instant and needs no tools, but it only approximates the output: diagrams other than Mermaid show as their source.
+
+For the real output, use the eye button in the editor title bar. It runs `py-doc docx`, `py-doc slides` or `py-doc poster` with `--watch` on the open file, and shows the page it serves beside the editor. It rebuilds on every save, with every diagram drawn. The extension chooses the command from the file. A poster setting such as `paper` or `byline` in the front matter means a poster. `split_level` or speaker notes mean a deck, and anything else is a Word document. See [live preview](02_projects.md#live-preview) and the extension's [README](../../editors/vscode/README.md).
 
 ## Front matter
 

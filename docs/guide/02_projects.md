@@ -146,6 +146,7 @@ py-doc docx Technical_Specification.md -t Template.docx
 py-doc docx docs/ -o dist/docx/              # a whole folder, structure kept
 py-doc slides talk.md -o talk.pptx
 py-doc slides talk.md -t Corporate.pptx --split-level 1
+py-doc docx Technical_Specification.md --watch   # build on every save, with a live HTML preview
 ```
 
 | Option | Commands | Description |
@@ -155,6 +156,9 @@ py-doc slides talk.md -t Corporate.pptx --split-level 1
 | `-t`, `--template` | both | A reference `.docx` or `.dotx` (Word), or `.pptx` or `.potx` (PowerPoint). `-r`, `--reference` is the old slides name |
 | `--allow-missing-template` | both | Warn and use a blank document if the template file is missing (default: fail) |
 | `--split-level N` | slides | Start a new slide at each heading up to level N (default 2) |
+| `--watch` | both | Build again on every save, and serve an HTML preview of each file that reloads itself (Ctrl+C stops) |
+| `--port N` | both | With `--watch`, the local port to serve the preview on (default: a free one) |
+| `--no-open` | both | With `--watch`, do not open the browser |
 | `-q`, `-v` | both | Only warnings and errors, or debug detail |
 | `--version` | both | Print the version |
 
@@ -164,6 +168,16 @@ A file that uses `[[IF:]]` needs its conditions defined, and only `py-doc build`
 - One bad file does not stop the rest. Each failure is printed on stderr, a summary follows, and the exit status is `1` if anything failed.
 - Two sources that would write the same output (`a.md` and `a.markdown`) are refused before anything is converted.
 - The input is checked before any folder is created, so a typo leaves nothing behind.
+
+### Live preview
+
+`--watch` builds the files, then builds them again whenever a source below their folder changes: the Markdown, an included file, a picture, a diagram source or the template. Next to each `.docx` or `.pptx` it writes an HTML twin of the same Markdown, to `.py-doc/preview/` below the input's folder, and serves the twins on this computer only. The page in the browser reloads after each build, and a build that fails shows its error over the last good page.
+
+- A document open in Word or PowerPoint cannot be written, so it is left as it is, with a warning, and its preview is still updated.
+- The twin shows page breaks as dashed lines, speaker notes in boxes and columns side by side. It is one page: a deck is not split into slides.
+- The twin is a preview, not an output. Build HTML with `py-doc build` and `outputs: html`.
+
+The [VS Code extension](03_writing.md#vs-code-preview) starts `--watch` for the open file and shows the preview beside it.
 
 The old commands `py-doc2docx`, `py-doc2slides` and `py-doclint` still work and print a one-line note naming their replacement. `-q` hides the note.
 

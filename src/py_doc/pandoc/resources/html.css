@@ -12,13 +12,4 @@ div.tip { background: #e8f5e9; border-color: #2e7d32; }
 div.important { background: #f1ecf9; border-color: #6a3fb5; }
 div.warning { background: #fff4e0; border-color: #e08a00; }
 div.caution { background: #fce8e8; border-color: #c62828; }
-figure { margin: 1.5em 0; text-align: center; }
-figcaption { font-size: 0.9em; color: #4b5563; margin-top: 0.5em; font-style: italic; }
-caption { font-size: 0.9em; font-weight: 600; color: #003c64; padding-bottom: 0.5em; text-align: left; }
-div.notes { background: #f1f5f9; border-left: 4px solid #64748b; border-radius: 4px; padding: 0.5em 1em; margin: 1.2em 0; font-size: 0.9em; color: #334155; }
-div.notes > p:first-child::before { content: "📝 Speaker Note: "; font-weight: 600; color: #1e293b; }
-div.columns { display: flex; gap: 1.5em; margin: 1em 0; }
-div.column { flex: 1; min-width: 0; }
-hr.pagebreak, hr.pydoc-pagebreak { border: none; border-top: 2px dashed #cbd5e1; margin: 2em 0; position: relative; }
-hr.pagebreak::after, hr.pydoc-pagebreak::after { content: "Page Break"; position: absolute; right: 0; top: -0.8em; background: #fff; padding: 0 0.5em; font-size: 0.75em; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
 @media print { h1, h2, h3 { break-after: avoid; } pre, table, img { break-inside: avoid; } }

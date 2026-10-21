@@ -14,6 +14,7 @@ import logging
 import os
 import threading
 import time
+import urllib.parse
 import webbrowser
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -81,7 +82,7 @@ def serve(state: State, port: int) -> ThreadingHTTPServer:
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802 (the name http.server calls)
-            path = self.path.split("?", 1)[0]
+            path = urllib.parse.unquote(self.path.split("?", 1)[0])
             with state.lock:
                 pages, version, error = dict(state.pages), state.version, state.error
             if path == "/__status":
@@ -94,9 +95,9 @@ def serve(state: State, port: int) -> ThreadingHTTPServer:
                 script = RELOAD.replace("__VERSION__", str(version))
                 return self._send(200, "text/html; charset=utf-8", page.replace("</body>", script + "</body>", 1))
             if not name:
-                links = "".join(f'<li><a href="/{html.escape(n)}.html">{html.escape(n)}</a></li>' for n in pages)
-                return self._send(200, "text/html; charset=utf-8", f"<!doctype html><title>{state.title}</title><ul>{links}</ul>")
-            self._send(404, "text/plain", f"No poster {name}")
+                links = "".join(f'<li><a href="/{html.escape(urllib.parse.quote(n))}.html">{html.escape(n)}</a></li>' for n in pages)
+                return self._send(200, "text/html; charset=utf-8", f"<!doctype html><title>{html.escape(state.title)}</title><ul>{links}</ul>")
+            self._send(404, "text/plain", f"No page {name}")
 
         def _send(self, code: int, kind: str, body: str) -> None:
             data = body.encode("utf-8")

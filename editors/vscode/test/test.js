@@ -212,21 +212,66 @@ digraph G {
 
 // Test 9: Document format detection
 {
+  const fs = require('fs');
+  const path = require('path');
   const { detectDocumentFormat } = require('../extension');
+  const doc = (text) => ({ getText: () => text, fileName: 'c:/docs/anything.md' });
 
-  // Poster detection
-  assert(detectDocumentFormat('---\ntitle: Poster\ntheme: dark\nsize: a0\n---\n# Poster') === 'poster', 'theme in front-matter means poster');
-  assert(detectDocumentFormat({ getText: () => '# Just doc', fileName: 'c:/docs/sn100-poster.md' }) === 'poster', 'poster in filename means poster');
+  // Posters: any poster-only front matter key
+  assert(detectDocumentFormat('---\ntitle: Poster\ntheme: dark\n---\n# Poster') === 'poster', 'theme in front matter means poster');
+  assert(detectDocumentFormat('---\ntitle: P\norientation: landscape\npaper: a1\n---\n## A') === 'poster', 'paper/orientation mean poster');
+  const landscape = path.join(__dirname, '..', '..', '..', 'examples', 'poster', 'landscape.md');
+  if (fs.existsSync(landscape)) {
+    assert(detectDocumentFormat(doc(fs.readFileSync(landscape, 'utf8'))) === 'poster', 'examples/poster/landscape.md is a poster');
+  }
 
-  // Slides detection
+  // Slides: front matter, or blocks only a deck has
   assert(detectDocumentFormat('---\ntitle: Deck\nformat: slides\n---\n# Slide 1') === 'slides', 'format: slides means slides');
-  assert(detectDocumentFormat({ getText: () => '# Presentation', fileName: 'c:/decks/talk.md' }) === 'slides', 'talk/deck in filename means slides');
+  assert(detectDocumentFormat('---\nsplit_level: 1\n---\n# S') === 'slides', 'split_level means slides');
+  assert(detectDocumentFormat('# Talk\n\n## One\n\n::: notes\nSay this\n:::\n') === 'slides', 'speaker notes mean slides');
+  assert(detectDocumentFormat('# Doc\n\n```markdown\n::: notes\n```\n') === 'docx', 'notes inside a code fence do not count');
 
-  // Docx default
-  assert(detectDocumentFormat('---\ntitle: Tech Spec\nauthor: Jane\n---\n# Chapter 1') === 'docx', 'standard technical doc defaults to docx');
-  assert(detectDocumentFormat({ getText: () => '# Guide', fileName: 'c:/docs/guide.md' }) === 'docx', 'guide.md defaults to docx');
+  // The file name decides nothing
+  assert(detectDocumentFormat({ getText: () => '# Just doc', fileName: 'c:/docs/sn100-poster.md' }) === 'docx', 'poster in a file name is not a poster');
+  assert(detectDocumentFormat({ getText: () => '# Guide', fileName: 'c:/decks/talk.md' }) === 'docx', 'talk in a file name is not a deck');
+  assert(detectDocumentFormat('---\ntitle: Tech Spec\nauthor: Jane\n---\n# Chapter 1') === 'docx', 'a technical doc defaults to docx');
 
   console.log('✓ Document format detection for live watch server (docx, slides, poster) works correctly');
 }
 
-console.log('\nAll 9 test suites passed successfully! 🎉');
+// Test 10: Regressions: front matter mode with nested renders, list values, heading accents, split_level, escaping
+{
+  const fresh = () => new MarkdownIt({ html: true }).use(pyDocPlugin);
+  const poster = '---\ntitle: P\nbyline: me\npaper: a1\n---\n\n## A\n\n';
+
+  // A callout (rendered with md.renderInline) must not turn the poster header into a document header
+  let html = fresh().render(poster + '> [!NOTE]\n> hi\n\n[[CAPTION:Figure]] A figure\n');
+  assert(html.includes('pydoc-poster-header'), 'poster header survives callouts and captions');
+  assert(!html.includes('pydoc-frontmatter'), 'no document header in a poster');
+
+  // A list in the front matter is shown, not a crash
+  html = fresh().render('---\ntitle: T\nauthor:\n  - Jane\n  - Joe\n---\n\n# x\n');
+  assert(html.includes('Jane, Joe'), 'author list is joined');
+
+  // Heading accents: posters only, formatting kept
+  html = fresh().render(poster + '## Step 1: install `py-doc` with **pip**\n');
+  assert(html.includes('<span class="pydoc-heading-accent">'), 'poster heading gets an accent');
+  assert(html.includes('<code>py-doc</code>') && html.includes('<strong>pip</strong>'), 'accent keeps inline formatting');
+  html = fresh().render('# Doc\n\n## Step 1: install `py-doc`\n');
+  assert(!html.includes('pydoc-heading-accent'), 'documents get no heading accent');
+  assert(html.includes('<code>py-doc</code>'), 'document heading keeps inline code');
+
+  // split_level 1: each # heading is a content slide, ## does not split
+  html = fresh().render('---\nsplit_level: 1\n---\n\n# One\n\n## Sub\n\ntext\n\n# Two\n');
+  assert((html.match(/<section class="pydoc-slide /g) || []).length === 2, 'split_level 1 makes one slide per # heading');
+  assert(!html.includes('pydoc-slide-section'), 'no section slides at split_level 1');
+
+  // Colours and weights from the Markdown cannot break out of attributes
+  html = fresh().render(poster + '```cards\nA | B | blue" onclick="x\n```\n\n```segments\nx" y | L | 1 | red\n```\n');
+  assert(!html.includes('onclick="'), 'card colour is sanitised');
+  assert(!html.includes('flex: x"'), 'segment weight is sanitised');
+
+  console.log('✓ Regressions: nested renders, list front matter, heading accents, split_level and escaping');
+}
+
+console.log('\nAll 10 test suites passed successfully! 🎉');

@@ -12,7 +12,7 @@ from typing import Protocol
 
 from . import __version__
 from ._logging import configure_logging
-from .errors import ConversionError, exit_status
+from .errors import ConversionError, OutputLocked, exit_status
 from .files import find_markdown, is_markdown
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,8 @@ class Converter(Protocol):
     def validate_template(self) -> None: ...
 
     def convert_file(self, md_path: Path, output_path: Path) -> Path: ...
+
+    def convert_twin(self, md_path: Path, output_path: Path) -> Path: ...
 
 
 def safe_console() -> None:
@@ -140,16 +142,26 @@ def convert_all(converter: Converter, args: argparse.Namespace, suffix: str, lab
     return status
 
 
+PREVIEW_DIR = Path(".py-doc") / "preview"  # where --watch writes the HTML twins, below the input folder
+
+
 def watch_converter(converter: Converter, args: argparse.Namespace, suffix: str, label: str) -> int:
-    """Watch source files, rebuild the document and an HTML twin preview on every save, and reload in browser."""
+    """Build the documents and an HTML twin of each on every save, and serve the twins with a live reload.
+
+    The twins go to ``.py-doc/preview`` below the input's folder, so no file of the user's is overwritten and
+    the folder of documents stays clean. A document open in Word or PowerPoint is left as it is, with a
+    warning, and its twin is still built.
+    """
     input_path = Path(args.input).resolve()
     try:
         converter.validate_template()
         if input_path.is_file():
             if not is_markdown(input_path):
                 logger.warning(f"'{input_path.name}' does not end in .md or .markdown")
+            base = input_path.parent
             pairs = [(input_path, output_for_file(input_path, args.output, suffix).resolve())]
         elif input_path.is_dir():
+            base = input_path
             pairs = plan_directory(input_path, args.output, suffix)
         else:
             error(f"Path not found: {input_path}")
@@ -162,45 +174,30 @@ def watch_converter(converter: Converter, args: argparse.Namespace, suffix: str,
         logger.warning(f"No Markdown files found in '{input_path}'")
         return 0
 
+    sources = {src for src, _ in pairs}
+    template_path = getattr(converter, "template_path", None)
+    if template_path:
+        sources.add(Path(template_path).resolve())
+
     def build_all() -> tuple[dict[str, Path], set[Path]]:
         pages: dict[str, Path] = {}
-        sources: set[Path] = {p[0].resolve() for p in pairs}
-        template_path = getattr(converter, "template_path", None)
-        if template_path:
-            sources.add(template_path.resolve())
-
         for src, dst in pairs:
-            # 1. Attempt primary document (.docx or .pptx)
             try:
                 converter.convert_file(src, dst)
                 print(f"wrote {dst}")
-            except PermissionError:
-                logger.warning(f"{dst.name} is open in Word/PowerPoint; skipped writing {dst.suffix}")
-            except ConversionError as exc:
-                if "locked" in str(exc).lower():
-                    logger.warning(f"{dst.name} is open in Word/PowerPoint; skipped writing {dst.suffix}")
-                else:
-                    raise
-
-            # 2. Render HTML preview twin
-            twin_path = dst.with_suffix(".html")
-            if hasattr(converter, "convert_twin"):
-                converter.convert_twin(src, twin_path)
-            else:
-                twin_path = converter.convert_file(src, twin_path)
-            print(f"wrote {twin_path} (HTML preview twin)")
-            pages[src.stem] = twin_path.resolve()
-
+            except OutputLocked:
+                logger.warning(f"{dst.name} is open in {label}, so it was not written; the preview is up to date")
+            name = src.relative_to(base).with_suffix("").as_posix()  # by path, so a/readme and b/readme both show
+            pages[name] = converter.convert_twin(src, base / PREVIEW_DIR / f"{name}.html").resolve()
         return pages, sources
 
     from .poster_watch import watch
 
-    errors = (ConversionError, FileNotFoundError, OSError)
     return watch(
         build_all,
-        errors,
-        port=getattr(args, "port", 0),
-        open_browser=not getattr(args, "no_open", False),
+        (ConversionError, FileNotFoundError, OSError),
+        port=args.port,
+        open_browser=not args.no_open,
         title=f"{label} Preview",
     )
 
@@ -224,6 +221,8 @@ def run(
     configure_logging(quiet=args.quiet, verbose=args.verbose)
     if notice:
         logger.info(notice)
-    if getattr(args, "watch", False):
+    if args.watch:
         return watch_converter(make_converter(args), args, suffix, label)
+    if args.port or args.no_open:
+        logger.warning("--port and --no-open only apply with --watch, so they are ignored")
     return convert_all(make_converter(args), args, suffix, label)

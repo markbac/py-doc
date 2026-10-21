@@ -108,7 +108,7 @@ def test_slides_watch_mode(tmp_path, monkeypatch):
     from py_doc import poster_watch
 
     src = tmp_path / "deck.md"
-    src.write_text("# Deck\n\n## S1\n\n- a\n", encoding="utf-8")
+    src.write_text("# Deck\n\n## S1\n\n- a\n\n<!-- notes: Say this -->\n", encoding="utf-8")
 
     called = []
 
@@ -122,9 +122,10 @@ def test_slides_watch_mode(tmp_path, monkeypatch):
     assert code == 0
     assert len(called) == 1
     pages, sources, port, open_browser, title = called[0]
-    assert "deck" in pages
-    assert pages["deck"].is_file()
+    assert pages == {"deck": (tmp_path / ".py-doc" / "preview" / "deck.html").resolve()}
     assert (tmp_path / "deck.pptx").is_file()
     assert port == 9875
     assert open_browser is False
     assert "PowerPoint Preview" in title
+    twin = pages["deck"].read_text(encoding="utf-8")
+    assert 'class="notes"' in twin and "Say this" in twin

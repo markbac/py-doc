@@ -68,3 +68,12 @@ flowchart LR
 - **Check outputs**: every file the build wrote is there and not empty.
 
 `py-doc check`, `py-doc stats` and `py-doc diff` (`analysis/`) read the same configuration and the same document model, and build nothing. The diff splits each version into sections by its top-level headings. It matches them by heading path, then by text, so a renamed or moved section is not mistaken for one removed and another added.
+
+## Live previews
+
+`--watch` on `py-doc poster`, `py-doc docx` and `py-doc slides` runs one loop (`poster_watch.py`). It builds, then serves the pages on 127.0.0.1 from a thread of its own. Every half second it looks at the modification times of the source files: the Markdown, includes, pictures, diagram sources and templates below the folders of the sources. The pages it wrote and hidden folders are not watched. A change builds again. Each page is served with a small script that asks `/__status` whether a newer build is there and reloads when it is, so the files written are the same as without `--watch`. A build that fails keeps the last good page and shows its error over it.
+
+A poster is already a web page. A Word document or deck is not, so `docx` and `slides` (`_cli.py`) also write an *HTML twin* of each file (`convert.py`, `convert_twin`). The twin is the same Markdown through the same pipeline to pandoc's HTML. It adds `preview.css` after `html.css` to show page breaks, speaker notes and columns. The twins go to `.py-doc/preview/` below the input's folder and are served by their path. No file of the user's is overwritten, and two `readme.md` in different folders stay apart. When Word or PowerPoint has the output open, the engine raises `OutputLocked`; the watch loop warns and still writes the twin.
+
+The VS Code extension (`editors/vscode`) is outside the Python package. Its instant preview is a markdown-it plugin in the editor and runs no tool. Its live preview starts `py-doc <command> --watch` in a terminal, waits until `/__status` answers, and opens the served page in VS Code's Simple Browser. The extension and the instant preview choose the command with one function, from the front matter and the blocks only a deck has.
+

@@ -54,14 +54,18 @@ function parseSimpleYaml(yamlStr) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
 
+    const item = trimmed.match(/^-\s+(.*)$/);
+    if (item && currentKey) {
+      if (!Array.isArray(result[currentKey])) result[currentKey] = [];
+      result[currentKey].push(unquote(item[1].trim()));
+      continue;
+    }
+
     if (line.startsWith('  ') && currentKey) {
       const subColon = trimmed.indexOf(':');
       if (subColon > 0) {
         const subKey = trimmed.slice(0, subColon).trim();
-        let subVal = trimmed.slice(subColon + 1).trim();
-        if ((subVal.startsWith('"') && subVal.endsWith('"')) || (subVal.startsWith("'") && subVal.endsWith("'"))) {
-          subVal = subVal.slice(1, -1);
-        }
+        const subVal = unquote(trimmed.slice(subColon + 1).trim());
         if (typeof result[currentKey] !== 'object' || result[currentKey] === null) {
           result[currentKey] = {};
         }
@@ -73,23 +77,36 @@ function parseSimpleYaml(yamlStr) {
     const colonIdx = trimmed.indexOf(':');
     if (colonIdx > 0) {
       const key = trimmed.slice(0, colonIdx).trim();
-      let val = trimmed.slice(colonIdx + 1).trim();
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-        val = val.slice(1, -1);
-      }
-      if (val === '') {
-        currentKey = key;
-        result[key] = {};
-      } else {
-        currentKey = key;
-        result[key] = val;
-      }
+      const val = unquote(trimmed.slice(colonIdx + 1).trim());
+      currentKey = key;
+      result[key] = val === '' ? {} : val;
     }
   }
   return result;
 }
 
-function escapeHtml(str) {
+function unquote(val) {
+  if (val.length >= 2 && ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'")))) {
+    return val.slice(1, -1);
+  }
+  return val;
+}
+
+// Front matter values may be lists (author: [- Jane, - Joe]) or mappings, so anything is turned into text first
+function asText(val) {
+  if (val === null || val === undefined) return '';
+  if (Array.isArray(val)) return val.map(asText).join(', ');
+  if (typeof val === 'object') return Object.values(val).map(asText).join(', ');
+  return String(val);
+}
+
+// A colour name written in the Markdown, made safe to use as part of a class name
+function cssName(val) {
+  return asText(val).toLowerCase().replace(/[^a-z0-9_-]/g, '');
+}
+
+function escapeHtml(val) {
+  const str = asText(val);
   if (!str) return '';
   return str.replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -113,7 +130,7 @@ function renderFrontMatterBlock(meta, docMode) {
     }
     html += '  <div class="pydoc-poster-meta">\n';
     if (meta.paper) {
-      html += `    <span class="pydoc-meta-item"><span class="pydoc-meta-key">Paper:</span> ${escapeHtml(meta.paper.toUpperCase())}</span>\n`;
+      html += `    <span class="pydoc-meta-item"><span class="pydoc-meta-key">Paper:</span> ${escapeHtml(asText(meta.paper).toUpperCase())}</span>\n`;
     }
     if (meta.document_number) {
       html += `    <span class="pydoc-meta-item"><span class="pydoc-meta-key">Doc #:</span> ${escapeHtml(meta.document_number)}</span>\n`;
@@ -142,7 +159,7 @@ function renderFrontMatterBlock(meta, docMode) {
     html += `    <span class="pydoc-meta-item"><span class="pydoc-meta-key">Version:</span> ${escapeHtml(meta.version)}</span>\n`;
   }
   if (meta.status) {
-    const statusClass = meta.status.toLowerCase() === 'draft' ? 'draft' : 'released';
+    const statusClass = asText(meta.status).toLowerCase() === 'draft' ? 'draft' : 'released';
     html += `    <span class="pydoc-meta-item pydoc-status-${statusClass}"><span class="pydoc-meta-key">Status:</span> ${escapeHtml(meta.status)}</span>\n`;
   }
   if (meta.author) {
@@ -156,7 +173,54 @@ function renderFrontMatterBlock(meta, docMode) {
   return html;
 }
 
+// Front matter keys only a poster has (see py_doc/poster_settings.py)
+const POSTER_KEYS = ['paper', 'byline', 'orientation', 'theme', 'columns', 'width', 'colours', 'palette', 'embed_fonts', 'logo'];
+const SLIDE_DIVS = /^:{3,4}\s*\{?\.?(columns|column|notes|incremental)\}?\s*$/;
+
+/**
+ * Which py-doc command a Markdown file is for: 'poster', 'slides' or 'docx'.
+ * Decided from the front matter, then from blocks only a deck has (columns, speaker notes, incremental lists).
+ * The instant preview and the live watch button both use this, so they always agree.
+ */
+function detectFormat(meta, body) {
+  meta = meta || {};
+  const fmt = asText(meta.format || meta.output || meta.type || meta.layout).toLowerCase();
+  if (fmt.includes('pptx') || fmt.includes('slide') || meta.split_level) return 'slides';
+  if (fmt.includes('poster') || POSTER_KEYS.some((k) => meta[k] !== undefined && meta[k] !== '')) return 'poster';
+
+  let fence = null;
+  for (const line of (body || '').split(/\r?\n/)) {
+    const trimmed = line.trim();
+    const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      if (!fence) fence = fenceMatch[1][0];
+      else if (trimmed[0] === fence) fence = null;
+      continue;
+    }
+    if (fence) continue;
+    if (SLIDE_DIVS.test(trimmed) || /^<!--\s*notes:/i.test(trimmed)) return 'slides';
+  }
+  return 'docx';
+}
+
+function splitFrontMatter(text) {
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
+  return m ? { meta: parseSimpleYaml(m[1]), body: text.slice(m[0].length) } : { meta: {}, body: text };
+}
+
+function detectDocumentFormat(document) {
+  const text = document && typeof document.getText === 'function' ? document.getText() : String(document);
+  const { meta, body } = splitFrontMatter(text);
+  return detectFormat(meta, body);
+}
+
+const PREVIEW_MODE = { poster: 'poster', slides: 'slide', docx: 'document' };
+
 function pyDocPlugin(md) {
+  // The front matter token carries the mode of its document in .info, so a nested md.renderInline call
+  // (made while processing captions and callouts) cannot change how the outer document's header renders
+  md.renderer.rules.pydoc_front_matter = (ts, idx) => renderFrontMatterBlock(ts[idx].meta, ts[idx].info || 'document');
+
   // 1. Block rule to parse Front Matter at line 0
   md.block.ruler.before('table', 'pydoc_front_matter', (state, startLine, endLine, silent) => {
     if (startLine !== 0) return false;
@@ -267,37 +331,10 @@ function pyDocPlugin(md) {
   md.core.ruler.push('pydoc_core', (state) => {
     const counters = {};
     const tokens = state.tokens;
-
-    let docMode = 'document';
-    let docTitle = 'py-doc Document';
-    let frontMeta = null;
-
-    if (tokens.length > 0 && tokens[0].type === 'pydoc_front_matter' && tokens[0].meta) {
-      frontMeta = tokens[0].meta;
-      if (frontMeta.title) docTitle = frontMeta.title;
-
-      if (frontMeta.paper || frontMeta.byline || (frontMeta.theme && !frontMeta.split_level)) {
-        docMode = 'poster';
-      }
-
-      const fmt = (frontMeta.format || frontMeta.output || frontMeta.type || frontMeta.layout || '').toLowerCase();
-      if (fmt.includes('pptx') || fmt.includes('slide') || frontMeta.split_level) {
-        docMode = 'slide';
-      }
-    }
-
-    if (docMode === 'document') {
-      for (const t of tokens) {
-        if (t.type === 'pydoc_div_open' && (t.info === 'columns' || t.info === 'notes' || t.info === 'incremental')) {
-          docMode = 'slide';
-          break;
-        }
-      }
-    }
-
-    md.renderer.rules.pydoc_front_matter = (ts, idx) => {
-      return renderFrontMatterBlock(ts[idx].meta, docMode);
-    };
+    const frontMeta = (tokens.length > 0 && tokens[0].type === 'pydoc_front_matter' && tokens[0].meta) || null;
+    const docTitle = (frontMeta && asText(frontMeta.title)) || 'py-doc Document';
+    const docMode = PREVIEW_MODE[detectFormat(frontMeta, splitFrontMatter(state.src).body)];
+    if (frontMeta) tokens[0].info = docMode;
 
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i];
@@ -345,21 +382,30 @@ function pyDocPlugin(md) {
             token.attrs.push(['class', `pydoc-heading-${headingClass}`]);
           }
 
-          const colonIdx = text.indexOf(':');
-          if (colonIdx > 0 && !classMatch) {
-            const prefix = text.slice(0, colonIdx + 1);
-            const accent = text.slice(colonIdx + 1);
-            next.content = '';
-            next.children = [new state.Token('html_inline', '', 0)];
-            next.children[0].content = `${escapeHtml(prefix)} <span class="pydoc-heading-accent">${escapeHtml(accent)}</span>`;
-          } else {
-            next.content = text;
-            if (classMatch) {
-              for (const c of next.children) {
-                if (c.type === 'text') {
-                  c.content = c.content.replace(/\s*\{([.#][\w\s.-]+)\}\s*$/, '');
-                }
+          next.content = text;
+          if (classMatch) {
+            for (const c of next.children) {
+              if (c.type === 'text') {
+                c.content = c.content.replace(/\s*\{([.#][\w\s.-]+)\}\s*$/, '');
               }
+            }
+          } else if (docMode === 'poster') {
+            // Poster headings: what follows the first colon is the accent. The inline tokens are split, not
+            // re-rendered, so code, bold and links after the colon keep their formatting
+            const children = next.children || [];
+            const k = children.findIndex((c) => c.type === 'text' && c.content.indexOf(':') > 0);
+            if (k !== -1) {
+              const colon = children[k].content.indexOf(':');
+              const rest = children[k].content.slice(colon + 1);
+              children[k].content = children[k].content.slice(0, colon + 1);
+              const open = new state.Token('html_inline', '', 0);
+              open.content = '<span class="pydoc-heading-accent">';
+              const restToken = new state.Token('text', '', 0);
+              restToken.content = rest;
+              const close = new state.Token('html_inline', '', 0);
+              close.content = '</span>';
+              children.splice(k + 1, 0, open, restToken);
+              children.push(close);
             }
           }
 
@@ -436,7 +482,7 @@ function pyDocPlugin(md) {
               const title = parts[0];
               const desc = parts[1];
               const color = parts[2] || 'blue';
-              cardsHtml += `  <div class="pydoc-card-item pydoc-card-${color}">\n`;
+              cardsHtml += `  <div class="pydoc-card-item pydoc-card-${cssName(color)}">\n`;
               cardsHtml += `    <div class="pydoc-card-title">${escapeHtml(title)}</div>\n`;
               cardsHtml += `    <div class="pydoc-card-desc">${escapeHtml(desc)}</div>\n`;
               cardsHtml += '  </div>\n';
@@ -475,7 +521,7 @@ function pyDocPlugin(md) {
           }
           segHtml += '  <div class="pydoc-segments-bar">\n';
           for (const it of items) {
-            segHtml += `    <div class="pydoc-segment-slice pydoc-bg-${it.color}" style="flex: ${it.weight}" title="${escapeHtml(it.label)}: ${escapeHtml(it.value)}"><span class="pydoc-segment-text">${escapeHtml(it.label)}</span></div>\n`;
+            segHtml += `    <div class="pydoc-segment-slice pydoc-bg-${cssName(it.color)}" style="flex: ${Number.parseFloat(it.weight) || 1}" title="${escapeHtml(it.label)}: ${escapeHtml(it.value)}"><span class="pydoc-segment-text">${escapeHtml(it.label)}</span></div>\n`;
           }
           segHtml += '  </div>\n';
           segHtml += '</div>\n';
@@ -497,7 +543,7 @@ function pyDocPlugin(md) {
                 const nodeMatch = item.match(/^\[(.*?)(?:\|(.*?))?\]$/);
                 const nodeText = nodeMatch ? nodeMatch[1] : item;
                 const nodeColor = (nodeMatch && nodeMatch[2]) ? nodeMatch[2] : 'blue';
-                flowHtml += `    <span class="pydoc-flow-node pydoc-bg-${nodeColor}">${escapeHtml(nodeText)}</span>\n`;
+                flowHtml += `    <span class="pydoc-flow-node pydoc-bg-${cssName(nodeColor)}">${escapeHtml(nodeText)}</span>\n`;
               } else {
                 flowHtml += `    <span class="pydoc-flow-arrow">➔ ${escapeHtml(item)}</span>\n`;
               }
@@ -662,7 +708,7 @@ function pyDocPlugin(md) {
 
     // G. If in Slide Deck mode, group tokens into presentation slide cards
     if (docMode === 'slide') {
-      groupTokensIntoSlides(state, docTitle);
+      groupTokensIntoSlides(state, docTitle, Number.parseInt(asText(frontMeta && frontMeta.split_level), 10) || 2);
     }
 
     // H. If in Poster mode, append poster footer if defined
@@ -683,7 +729,8 @@ function pyDocPlugin(md) {
   });
 }
 
-function groupTokensIntoSlides(state, docTitle) {
+// A heading at splitLevel or above starts a slide, as pandoc's --slide-level does; one above it is a section slide
+function groupTokensIntoSlides(state, docTitle, splitLevel) {
   const tokens = state.tokens;
   const newTokens = [];
   let currentSlideTokens = [];
@@ -718,9 +765,9 @@ function groupTokensIntoSlides(state, docTitle) {
 
     if (token.type === 'heading_open') {
       const level = parseInt(token.tag.slice(1), 10);
-      if (level <= 2) {
+      if (level <= splitLevel) {
         flushSlide(isCurrentSection);
-        isCurrentSection = (level === 1);
+        isCurrentSection = (level < splitLevel);
       }
     }
 
@@ -742,99 +789,93 @@ try { vscode = require('vscode'); } catch (e) { vscode = null; }
 
 let watchTerminal = null;
 
-function detectDocumentFormat(document) {
-  const text = typeof document.getText === 'function' ? document.getText() : String(document);
-  const frontMatterMatch = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
-  const frontMatter = frontMatterMatch ? frontMatterMatch[1] : '';
-  const parsed = parseSimpleYaml(frontMatter);
-  const fileName = ((document && document.fileName) || (document && document.name) || '').toLowerCase();
+const WATCH_START_TIMEOUT = 120000;  // ms: a first build may have to start the tool container
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // 1. Poster detection
-  if (parsed.theme || parsed.size || parsed.columns || parsed.posters || fileName.includes('poster')) {
-    return 'poster';
-  }
-
-  // 2. Slides detection
-  if (parsed.format === 'slides' || parsed.aspect_ratio || parsed.split_level || fileName.includes('slide') || fileName.includes('talk') || fileName.includes('deck')) {
-    return 'slides';
-  }
-
-  // 3. Default to Word document
-  return 'docx';
+// Whether a py-doc watch server answers on this port
+function serverUp(port) {
+  return new Promise((resolve) => {
+    const req = require('http').get({ host: '127.0.0.1', port, path: '/__status', timeout: 500 }, (res) => {
+      res.resume();
+      resolve(res.statusCode === 200);
+    });
+    req.on('timeout', () => req.destroy());
+    req.on('error', () => resolve(false));
+  });
 }
 
-function launchWatchTerminal(subcommand, filePath, port) {
-  if (!vscode) return;
+function stopWatch() {
+  if (watchTerminal) {
+    watchTerminal.dispose();  // ends the py-doc process running in it
+    watchTerminal = null;
+    return true;
+  }
+  return false;
+}
 
-  if (!watchTerminal || watchTerminal.exitStatus !== undefined) {
-    watchTerminal = vscode.window.createTerminal({
-      name: `py-doc ${subcommand} watch`,
-      iconPath: new vscode.ThemeIcon('eye')
-    });
+async function launchWatch(subcommand, filePath) {
+  const port = vscode.workspace.getConfiguration('pydoc').get('watch.port', 8765);
+
+  // A running watch is stopped first: typing a new command into its terminal would go to the running process
+  if (stopWatch()) {
+    for (let waited = 0; waited < 5000 && await serverUp(port); waited += 250) await delay(250);
   }
 
-  watchTerminal.show(true);
-  watchTerminal.sendText(`py-doc ${subcommand} "${filePath}" --watch --port ${port} --no-open`);
+  const terminal = vscode.window.createTerminal({
+    name: `py-doc ${subcommand} watch`,
+    iconPath: new vscode.ThemeIcon('eye')
+  });
+  watchTerminal = terminal;
+  terminal.show(true);
+  terminal.sendText(`py-doc ${subcommand} "${filePath}" --watch --port ${port} --no-open`);
 
-  setTimeout(() => {
+  const started = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Window, title: `py-doc: building the ${subcommand} preview` },
+    async () => {
+      for (let waited = 0; waited < WATCH_START_TIMEOUT; waited += 500) {
+        if (watchTerminal !== terminal || terminal.exitStatus !== undefined) return false;
+        if (await serverUp(port)) return true;
+        await delay(500);
+      }
+      return false;
+    }
+  );
+  if (started) {
     vscode.commands.executeCommand('simpleBrowser.show', `http://127.0.0.1:${port}`);
-  }, 1500);
+  } else if (watchTerminal === terminal) {
+    vscode.window.showWarningMessage(`The py-doc preview server did not start on port ${port}. See the "${terminal.name}" terminal.`);
+  }
 }
 
 function activate(context) {
   if (!vscode) return;
 
-  const getActiveFile = () => {
+  const withActiveFile = (run) => async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       vscode.window.showErrorMessage('No active Markdown file to preview.');
-      return null;
+      return;
     }
-    return editor;
+    await run(editor.document);
   };
 
-  const port = 8765;
-
-  const liveWatchCmd = vscode.commands.registerCommand('pydoc.openLiveWatch', async () => {
-    const editor = getActiveFile();
-    if (!editor) return;
-    const format = detectDocumentFormat(editor.document);
-    launchWatchTerminal(format, editor.document.uri.fsPath, port);
-  });
-
-  const docxWatchCmd = vscode.commands.registerCommand('pydoc.openDocxWatch', async () => {
-    const editor = getActiveFile();
-    if (!editor) return;
-    launchWatchTerminal('docx', editor.document.uri.fsPath, port);
-  });
-
-  const slidesWatchCmd = vscode.commands.registerCommand('pydoc.openSlidesWatch', async () => {
-    const editor = getActiveFile();
-    if (!editor) return;
-    launchWatchTerminal('slides', editor.document.uri.fsPath, port);
-  });
-
-  const posterWatchCmd = vscode.commands.registerCommand('pydoc.openPosterWatch', async () => {
-    const editor = getActiveFile();
-    if (!editor) return;
-    launchWatchTerminal('poster', editor.document.uri.fsPath, port);
-  });
-
-  const stopWatchCmd = vscode.commands.registerCommand('pydoc.stopLiveWatch', async () => {
-    if (watchTerminal) {
-      watchTerminal.dispose();
-      watchTerminal = null;
-      vscode.window.showInformationMessage('py-doc live watch server stopped.');
-    }
-  });
-
-  context.subscriptions.push(liveWatchCmd, docxWatchCmd, slidesWatchCmd, posterWatchCmd, stopWatchCmd);
+  context.subscriptions.push(
+    vscode.commands.registerCommand('pydoc.openLiveWatch',
+      withActiveFile((doc) => launchWatch(detectDocumentFormat(doc), doc.uri.fsPath))),
+    vscode.commands.registerCommand('pydoc.openDocxWatch', withActiveFile((doc) => launchWatch('docx', doc.uri.fsPath))),
+    vscode.commands.registerCommand('pydoc.openSlidesWatch', withActiveFile((doc) => launchWatch('slides', doc.uri.fsPath))),
+    vscode.commands.registerCommand('pydoc.openPosterWatch', withActiveFile((doc) => launchWatch('poster', doc.uri.fsPath))),
+    vscode.commands.registerCommand('pydoc.stopLiveWatch', () => {
+      if (stopWatch()) vscode.window.showInformationMessage('py-doc live preview server stopped.');
+    }),
+    vscode.window.onDidCloseTerminal((closed) => {
+      if (closed === watchTerminal) watchTerminal = null;
+    })
+  );
 }
 
 function deactivate() {
-  if (watchTerminal) {
-    watchTerminal.dispose();
-  }
+  stopWatch();
 }
 
 function extendMarkdownIt(md) {
@@ -847,5 +888,6 @@ module.exports = {
   extendMarkdownIt,
   pyDocPlugin,
   parseSimpleYaml,
+  detectFormat,
   detectDocumentFormat
 };

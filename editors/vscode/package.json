@@ -29,28 +29,28 @@
     "commands": [
       {
         "command": "pydoc.openLiveWatch",
-        "title": "py-doc: Open Live Preview (HTML Twin Watch Server)",
+        "title": "Open Live Preview (HTML Twin Watch Server)",
         "category": "py-doc",
         "icon": "$(eye)"
       },
       {
         "command": "pydoc.openDocxWatch",
-        "title": "py-doc: Open Live Word Document Preview (docx --watch)",
+        "title": "Open Live Word Document Preview (docx --watch)",
         "category": "py-doc"
       },
       {
         "command": "pydoc.openSlidesWatch",
-        "title": "py-doc: Open Live Presentation Preview (slides --watch)",
+        "title": "Open Live Presentation Preview (slides --watch)",
         "category": "py-doc"
       },
       {
         "command": "pydoc.openPosterWatch",
-        "title": "py-doc: Open Live Poster Preview (poster --watch)",
+        "title": "Open Live Poster Preview (poster --watch)",
         "category": "py-doc"
       },
       {
         "command": "pydoc.stopLiveWatch",
-        "title": "py-doc: Stop Live Preview Server",
+        "title": "Stop Live Preview Server",
         "category": "py-doc"
       }
     ],
@@ -62,6 +62,16 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "title": "py-doc",
+      "properties": {
+        "pydoc.watch.port": {
+          "type": "number",
+          "default": 8765,
+          "description": "The local port the live preview watch server (py-doc ... --watch) serves on."
+        }
+      }
     },
     "markdown.markdownItPlugins": true,
     "markdown.previewStyles": [

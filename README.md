@@ -16,8 +16,8 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | `py-doc init` | Start a project: `py-doc.yml`, a first document, and optionally a C4 model, templates and a site |
 | `py-doc new` | Start a legacy document, or number an existing Markdown file, from `doc-numbers.yml` at the repository root |
 | `py-doc build` | Build every document described in `py-doc.yml` (generators, lint, documents, site), or one legacy `createdocs` file with `--legacy` |
-| `py-doc docx` | Convert Markdown to Word |
-| `py-doc slides` | Convert Markdown to PowerPoint |
+| `py-doc docx` | Convert Markdown to Word, or with `--watch` rebuild on every save and serve a live HTML preview |
+| `py-doc slides` | Convert Markdown to PowerPoint, with the same `--watch` live preview |
 | `py-doc lint` | Check writing style, glossary terms, acronyms, structure, links and project conventions; text, CSV, GitHub, JSON or SARIF |
 | `py-doc check` | Check a project without building it: `py-doc.yml`, sources, templates, the site and lint |
 | `py-doc generate` | Write the Markdown that `content.generators` makes: glossaries, indexes, traceability, API references |
@@ -25,7 +25,7 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | `py-doc diff` | Compare two versions of documents section by section, or against a Git revision |
 | `py-doc c4` | Check, export, draw and edit Structurizr workspaces (`c4 up` opens the live editor) |
 | `py-doc site` | Make and build a web site of the documents with MkDocs or Astro + Starlight |
-| `py-doc poster` | Build self-contained HTML posters from Markdown, and print them to PDF |
+| `py-doc poster` | Build self-contained HTML posters from Markdown, and print them to PDF; `--watch` reloads them on every save |
 | `py-doc import` | Convert a Word document or a PowerPoint deck to Markdown |
 | `py-doc template` | Check and list the styles of a Word or PowerPoint template |
 | `py-doc tools`, `doctor`, `setup` | Build and check the tool container, and install Docker Engine |
@@ -59,6 +59,8 @@ py-doc c4 up architecture/workspace.dsl     # arrange the C4 views in Structuriz
 py-doc site build                           # site/build/index.html
 ```
 
+While writing, `py-doc docx guide.md --watch` (or `slides`, or `poster`) builds on every save and keeps a live preview open in the browser, with every diagram drawn. The [VS Code extension](editors/vscode/README.md) runs it for the open file and shows the preview beside the editor, and also previews py-doc Markdown instantly as you type.
+
 ## Documentation
 
 py-doc documents itself with py-doc. The sources are in [`docs/`](docs), and the [`py-doc.yml`](py-doc.yml) at the root of this repository builds them: `py-doc build` for Word, HTML and PDF, `py-doc site build` for the web site.
@@ -79,8 +81,8 @@ src/
 │   ├── new.py            # py-doc new
 │   ├── cli.py            # py-doc docx (and the old py-doc2docx)
 │   ├── slides_cli.py     # py-doc slides (and the old py-doc2slides)
-│   ├── _cli.py           # options, output paths and batch conversion shared by both
-│   ├── convert.py        # DocxConverter and SlidesConverter, one file through pandoc
+│   ├── _cli.py           # options, output paths, batch conversion and --watch shared by both
+│   ├── convert.py        # DocxConverter and SlidesConverter, one file through pandoc, and its HTML preview twin
 │   ├── config.py         # py-doc.yml model and validation
 │   ├── build.py          # joins a document's sources and renders it
 │   ├── directives.py     # includes, conditions and variables
@@ -97,11 +99,12 @@ src/
 │   ├── analysis/         # py-doc stats, check and diff
 │   ├── migrate.py        # createdocs to py-doc.yml
 │   ├── report.py         # the JSON build report
-│   └── poster*.py        # py-doc poster: Markdown to an HTML poster, its blocks, settings, themes, fonts and --watch
+│   ├── poster*.py        # py-doc poster: Markdown to an HTML poster, its blocks, settings, themes and fonts
+│   └── poster_watch.py   # the --watch loop and preview server of poster, docx and slides
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/
 └── pydoclint/
-editors/                  # editor integrations: VS Code preview extension for documents, slides and posters
+editors/vscode/           # VS Code extension: instant in-editor preview, and the --watch live preview beside the editor
 docs/                     # py-doc's own user guide, requirements and architecture
 examples/                 # a project that uses every feature
 tests/
@@ -114,6 +117,7 @@ pip install -e ".[dev]"
 python -m pytest
 ruff check .
 py-doc lint docs --strict
+cd editors/vscode && npm ci && npm test   # the VS Code extension
 ```
 
 CI runs on Linux and Windows with Python 3.14, the newest supported. Python 3.10, the oldest supported, is not tested in CI. macOS is not supported.

@@ -14,7 +14,7 @@ from typing import Any
 import yaml
 
 from py_doc.diagrams import copy_pictures
-from py_doc.errors import ConversionError
+from py_doc.errors import ConversionError, OutputLocked
 from py_doc.files import template_source
 from py_doc.markdown import Metadata
 from py_doc.runtime import Mount, Runtime
@@ -160,6 +160,8 @@ def _command(job: PandocJob, runtime: Runtime, work: Path, reference: Path | Non
     elif fmt == "html":
         argv += ["--to=html5", "--standalone", "--embed-resources", "--mathml"]
         argv += ["--css", job.template if job.template is not None else _required(RESOURCES / "html.css", "stylesheet")]
+        if options.get("preview", False):  # the HTML twin of a document or deck, for --watch
+            argv += ["--css", _required(RESOURCES / "preview.css", "stylesheet")]
         if options.get("toc", False):
             argv.append("--toc")
     else:  # pdf
@@ -216,7 +218,7 @@ def convert(runtime: Runtime, job: PandocJob) -> Path:
             job.output.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(produced, job.output)
         except PermissionError as exc:
-            raise ConversionError(f"Cannot write {job.output}: it is locked (open in another program?)") from exc
+            raise OutputLocked(f"Cannot write {job.output}: it is locked (open in another program?)") from exc
         except OSError as exc:
             raise ConversionError(f"Cannot write '{job.output}': {exc.strerror or exc}") from exc
     logger.info(f"Wrote {job.output}")

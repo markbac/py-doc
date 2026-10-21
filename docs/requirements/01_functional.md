@@ -125,6 +125,8 @@ title: Functional requirements
 | FR-158 | `py-doc lint` and `py-doc build --lint` shall lint the posters of `py-doc.yml` with every rule but the document structure, acronym and passive voice rules. | Should | Met |
 | FR-159 | `py-doc poster --watch` shall build the posters again on every save of their sources and reload them in the browser, and show a failed build's error over the last good page. | Could | Met |
 | FR-160 | A poster's sections shall say in braces what they are and how they are laid out: `{.stats}`, `{.abstract}`, `{.summary}`, `{.references}`, `{.wide}` and `{cols=}`. No heading name shall have a meaning of its own, and every part shall be placed in the order of the file. Each kind shall have a choice of looks (`style=`), and `colour=` shall colour every one. | Should | Met |
+| FR-161 | `py-doc docx --watch` and `py-doc slides --watch` shall build again on every save, serve an HTML preview of each file that reloads itself, and keep updating the preview while the document is open in Word or PowerPoint. The preview shall never overwrite a file of the user's. | Could | Met |
+| FR-162 | The VS Code extension in `editors/vscode` shall preview py-doc Markdown in the editor without any tools, and start the live preview of the open file with the command that suits it. | Could | Met |
 
 ## Tool container
 
