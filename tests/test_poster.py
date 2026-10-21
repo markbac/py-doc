@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import types
 import urllib.error
@@ -218,6 +219,24 @@ def test_the_command_writes_the_page_next_to_the_markdown(tmp_path, drawn, monke
     assert "(1 diagrams, 0 failed)" in capsys.readouterr().out
     assert main(["poster", str(source), "-o", str(tmp_path / "out.html")]) == 0
     assert (tmp_path / "out.html").is_file()
+
+
+@pytest.mark.parametrize("spelling", ["./poster.md", "sub/../poster.md"] + ([".\\poster.md"] if os.name == "nt" else []))
+def test_a_file_is_found_however_its_path_is_written(tmp_path, drawn, monkeypatch, spelling):
+    monkeypatch.setattr("py_doc.poster_cli.connect", lambda settings: object())
+    write(tmp_path)
+    (tmp_path / "sub").mkdir()
+    monkeypatch.chdir(tmp_path)
+    assert main(["poster", spelling]) == 0
+    assert (tmp_path / "poster.html").is_file()
+
+
+def test_help_as_a_word(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    for words in (["poster", "help"], ["help", "poster"]):
+        with pytest.raises(SystemExit) as stop:
+            main(words)
+        assert stop.value.code == 0 and "usage: py-doc poster" in capsys.readouterr().out
 
 
 def test_the_command_reports_a_missing_file(tmp_path, capsys):
