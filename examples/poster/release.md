@@ -14,7 +14,7 @@ paper: a3
 width: 1100
 ---
 
-## Key figures {.stats}
+## Key figures {.stats style=tiles}
 
 | Value | Label | Change | Verdict |
 |---|---|---|---|

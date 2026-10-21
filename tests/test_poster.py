@@ -131,7 +131,7 @@ def test_the_page_has_every_part_of_the_poster(tmp_path, drawn):
     assert "<title>Smart Gas Meter</title>" in page
     assert '<div class="subtitle">How the valve decides</div>' in page
     assert '<div class="stat"><b>12</b><span>Months</span></div>' in page
-    assert '<div class="abstract"><p>The meter closes its <strong>valve</strong> on credit.</p>' in page
+    assert '<div class="abstract s-box"><p>The meter closes its <strong>valve</strong> on credit.</p>' in page
     assert "1. Valve: <span>when it closes</span>" in page
     assert '<p class="caption">Fig. 1 The valve states.</p>' in page
     assert 'class="cards" style="grid-template-columns:repeat(2,minmax(0,1fr))"' in page
@@ -285,7 +285,7 @@ SECTIONS = "".join(f"## {n}. Part\n\n{'Words. ' * size}\n\n" for n, size in enum
 
 
 def columns(page):
-    return [column.count("<section>") for column in page.split('<div class="col">')[1:]]
+    return [column.count("<section ") for column in page.split('<div class="col">')[1:]]
 
 
 def test_a_portrait_poster_is_two_columns_on_a_portrait_page(tmp_path, drawn):
@@ -575,7 +575,7 @@ def test_a_wide_section_spans_the_columns_and_splits_them_into_groups(tmp_path, 
     text = "## 1. A\n\nOne.\n\n## 2. B\n\nTwo.\n\n## 3. Wide {.wide colour=red}\n\nAll across.\n\n## 4. C\n\nThree.\n\n## 5. D\n\nFour.\n"
     page, _ = build(write(tmp_path, text), lambda: object())
     assert page.count('<div class="cols"') == 2
-    assert '<section class="wide"><h2 style="background:#a3322b">3. Wide</h2>' in page
+    assert '<section class="wide s-bar" style="--c:#a3322b"><h2>3. Wide</h2>' in page
     assert page.index("2. B") < page.index("3. Wide") < page.index("4. C")
     with pytest.raises(PosterError, match="split chooses the columns of one band of sections, and this poster has 2"):
         build(write(tmp_path, "---\nsplit: 1\n---\n" + text), lambda: object())
@@ -589,11 +589,38 @@ def test_every_part_is_where_it_is_in_the_file_and_braces_say_what_it_is(tmp_pat
         "## Bottom line {.summary}\n\nThe point.\n\n## Sources {.references}\n\n1. A paper.\n\n## 5. After {.wide}\n\nLast.\n"
     )
     page = build(write(tmp_path, text), lambda: object())[0].split("<main>", 1)[1]
-    order = ['<div class="abstract" style="background:#2a3150"><p>Why.', "1. A", '<div class="stats">', '<div class="cols"',
+    order = ['<div class="abstract s-box" style="--c:#2a3150"><p>Why.', "1. A", '<div class="stats s-strip">', '<div class="cols"',
              '<div class="banner">The point.', "<b>Sources</b>", "5. After"]  # fmt: skip
     assert [page.index(part) for part in order] == sorted(page.index(part) for part in order)
     assert page.count('<div class="col">') == 3, "the band takes cols=3 from one of its sections"
     assert "Opening" not in page and "Mid-poster figures" not in page and "Bottom line" not in page
+
+
+def test_every_kind_of_section_takes_a_style_and_a_colour(tmp_path, drawn):
+    text = (
+        "## Figures {.stats style=tiles colour=teal}\n\n| Value | Label |\n|---|---|\n| 4 s | Join |\n\n"
+        "## Why {.abstract style=quote colour=coral}\n\nBecause.\n\n"
+        "## 1. A {style=card colour=amber}\n\nOne.\n\n## 2. B {style=line}\n\nTwo.\n\n"
+        "## In short {.summary style=line colour=navy}\n\nThe point.\n\n### Then\n\nMore.\n\n"
+        "## Sources {.references style=list colour=grey}\n\n1. A paper.\n"
+    )
+    page = build(write(tmp_path, "---\npalette: {teal: '#0f5e5e', coral: '#e8684a'}\n---\n" + text), lambda: object())[0]
+    body = page.split("<main>", 1)[1]
+    assert '<div class="stats s-tiles" style="--c:#0f5e5e">' in body
+    assert '<div class="abstract s-quote" style="--c:#e8684a"><p>Because.' in body
+    assert '<section class="s-card" style="--c:#b4540a"><h2>1. A</h2>' in body and '<section class="s-line"><h2>2. B</h2>' in body
+    assert '<div class="summary s-line" style="--c:#2a3150"><div class="banner">The point.</div>' in body
+    assert '<div class="refs s-list" style="--c:#4a4f5c"><b>Sources</b>' in body
+    css = page.split("<style>", 1)[1]
+    for rule in ("section.s-card{", ".stats.s-tiles .stat{background:var(--c,var(--primary))", ".abstract.s-quote{", ".summary.s-line .block{", ".refs.s-list ol"):
+        assert rule in css, rule
+
+
+def test_a_style_a_kind_of_section_does_not_have_is_an_error_that_lists_its_own(tmp_path, drawn):
+    with pytest.raises(PosterError, match=r"style=tiles; a section takes style= bar, line, card, plain"):
+        build(write(tmp_path, "## A {style=tiles}\n\nText.\n"), lambda: object())
+    with pytest.raises(PosterError, match=r"style=card; a .abstract section takes style= box, quote, outline, plain"):
+        build(write(tmp_path, "## Why {.abstract style=card}\n\nText.\n\n## A\n\nOne.\n"), lambda: object())
 
 
 def test_the_old_names_are_ordinary_sections_now(tmp_path, drawn):
@@ -852,7 +879,7 @@ def test_a_qr_block_draws_the_code_with_its_label(tmp_path, drawn):
 
 def test_references_are_a_list_above_the_footer(tmp_path, drawn):
     page, _ = build(write(tmp_path, "## A\n\nText [1].\n\n## References {.references}\n\n1. SN-100 datasheet, SN-DS-001.\n1. MQTT 5.0, OASIS.\n"), lambda: object())
-    refs = page.split('<div class="refs">', 1)[1]
+    refs = page.split('<div class="refs s-columns">', 1)[1]
     assert refs.startswith("<b>References</b><ol>") and "<li>MQTT 5.0, OASIS.</li>" in refs
     assert refs.index("</ol>") < refs.index("<footer>")
 
@@ -1292,7 +1319,7 @@ def test_figures_and_tables_are_numbered_down_the_poster_includes_too(tmp_path, 
 
 def test_a_flow_section_may_go_on_in_the_next_column(tmp_path, drawn, caplog):
     page, _ = build(write(tmp_path, "## A {.flow}\n\nOne.\n\n## B {.wide .flow}\n\nTwo.\n\n## C\n\nThree.\n"), lambda: object())
-    assert '<section class="breakable"><h2>A</h2>' in page and '<section class="wide"><h2>B</h2>' in page
+    assert '<section class="breakable s-bar"><h2>A</h2>' in page and '<section class="wide s-bar"><h2>B</h2>' in page
     assert "is wide, so .flow and cols= are ignored" in caplog.text
     assert 'section.continued h2::after{content:" (continued)"' in page and "classList.add('continued')" in page
 

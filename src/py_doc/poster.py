@@ -54,18 +54,18 @@ h1{margin:0;font-size:68px;line-height:1.05;color:var(--header-text);font-weight
 main{padding:24px 40px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
 .stats{display:flex;background:var(--surface);border:1px solid var(--border);padding:16px 0}
 .stat{flex:1;text-align:center;padding:4px 16px}
-.stat+.stat{border-left:5px solid var(--accent)}
+.stat+.stat{border-left:5px solid var(--c,var(--accent))}
 .stat b{display:block;font-size:50px;line-height:1;color:var(--strong)}
 .stat span{display:block;font-size:18px;color:var(--muted);margin-top:8px}
 .trend{display:block;font-style:normal;font-weight:700;font-size:17px;margin-top:6px}
 .trend.good{color:var(--good)}
 .trend.bad{color:var(--bad)}
-.abstract{background:var(--secondary);color:var(--on-secondary);padding:18px 28px;font-size:19px;line-height:1.45;text-align:center}
+.abstract{background:var(--c,var(--secondary));color:var(--on-secondary);padding:18px 28px;font-size:19px;line-height:1.45;text-align:center}
 .abstract p{margin:0}
 .cols{display:flex;gap:28px;align-items:flex-start}
 section.continued h2::after{content:" (continued)";font-weight:400;opacity:.8}
 .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:22px}
-section h2{margin:0 0 10px;background:var(--primary);color:var(--on-primary);font-family:var(--font-heading);padding:10px 16px;font-size:25px;line-height:1.2}
+section h2{margin:0 0 10px;background:var(--c,var(--primary));color:var(--on-primary);font-family:var(--font-heading);padding:10px 16px;font-size:25px;line-height:1.2}
 section h2 span{color:var(--highlight);font-weight:600}
 .body{font-size:16px;line-height:1.45}
 .body>*:first-child{margin-top:0}
@@ -172,15 +172,35 @@ section h2 span{color:var(--highlight);font-weight:600}
 .lcd{min-width:0}
 .lcd .scr{background:var(--lcd);border:3px solid var(--lcd-border);border-radius:4px;padding:8px 10px;font-family:var(--font-mono);font-size:14.5px;line-height:1.4;color:var(--lcd-text);font-weight:600;white-space:pre}
 .lcd .cap{font-size:13px;line-height:1.3;color:var(--muted);margin-top:6px}
-.banner{background:var(--secondary);color:var(--on-secondary);padding:14px 28px;font-size:22px;line-height:1.35;text-align:center;font-weight:600}
+.banner{background:var(--c,var(--secondary));color:var(--on-secondary);padding:14px 28px;font-size:22px;line-height:1.35;text-align:center;font-weight:600}
 .blocks{display:flex;gap:20px}
-.block{flex:1;border-left:5px solid var(--accent);padding:2px 0 2px 14px}
+.block{flex:1;border-left:5px solid var(--c,var(--accent));padding:2px 0 2px 14px}
 .block h3{margin:0;font-size:21px;color:var(--strong);font-family:var(--font-heading)}
 .block .body{font-size:15.5px;margin-top:4px}
 .refs{font-size:13px;line-height:1.4;color:var(--muted)}
-.refs b{color:var(--strong);font-size:14px}
+.refs b{color:var(--c,var(--strong));font-size:14px}
 .refs ol,.refs ul{margin:4px 0 0;padding-left:22px;columns:2;column-gap:28px}
 .refs p{margin:4px 0 0}
+section.s-line h2,section.s-plain h2,section.s-card h2{background:none;color:var(--c,var(--strong))}
+section.s-line h2{padding:0 0 6px;border-bottom:4px solid var(--c,var(--accent))}
+section.s-plain h2,section.s-card h2{padding:0}
+section.s-line h2 span,section.s-plain h2 span,section.s-card h2 span{color:var(--accent-text)}
+section.s-card{background:var(--surface);border:1px solid var(--border);border-top:6px solid var(--c,var(--accent));padding:12px 16px}
+.stats.s-tiles{background:none;border:0;padding:0;gap:12px}
+.stats.s-tiles .stat{background:var(--c,var(--primary));padding:16px}
+.stats.s-tiles .stat+.stat{border-left:0}
+.stats.s-tiles .stat b,.stats.s-tiles .stat span{color:var(--on-primary)}
+.stats.s-plain{background:none;border:0}
+.stats.s-plain .stat b{color:var(--c,var(--strong))}
+.abstract.s-quote{background:var(--surface);color:var(--text);border-left:6px solid var(--c,var(--accent));text-align:left;font-style:italic}
+.abstract.s-outline{background:none;color:var(--text);border:3px solid var(--c,var(--accent))}
+.abstract.s-plain{background:none;color:var(--c,var(--text));padding:4px 0;font-size:21px}
+.summary{display:flex;flex-direction:column;gap:20px}
+.summary.s-line .banner,.summary.s-plain .banner{background:none;color:var(--c,var(--strong))}
+.summary.s-line .banner{border-bottom:4px solid var(--c,var(--accent));padding:0 0 10px}
+.summary.s-plain .banner{padding:0}
+.summary.s-line .block{border-left:0;border-top:4px solid var(--c,var(--accent));padding:8px 0 0}
+.refs.s-list ol,.refs.s-list ul{columns:1}
 footer{display:flex;align-items:center;gap:24px;border-top:2px solid var(--border);padding-top:14px;margin-top:auto}
 footer .fl{flex:1;font-size:26px;color:var(--strong)}
 footer .fc{flex:1;text-align:center;font-size:15px;color:var(--muted)}
@@ -355,12 +375,20 @@ def heading_html(h):
 
 
 ROLES = ("stats", "abstract", "summary", "references")  # a section that is one of these says so: ## Key figures {.stats}
+# The looks of each kind of section, the default first. colour= colours whichever it is.
+STYLES = {
+    "section": ("bar", "line", "card", "plain"),
+    "stats": ("strip", "tiles", "plain"),
+    "abstract": ("box", "quote", "outline", "plain"),
+    "summary": ("banner", "line", "plain"),
+    "references": ("columns", "list"),
+}
 
 
 def heading_attributes(heading, where):
     """A section heading and what its braces say: ``{.stats}`` and the other roles, ``{.wide}``, ``{.flow}``,
-    ``{cols=3}`` and ``{colour=red}``. Returns the heading without them, and a mapping of them."""
-    attrs = {"role": "section", "wide": False, "flow": False, "colour": None, "cols": None}
+    ``{cols=3}``, ``{colour=red}`` and ``{style=card}``. Returns the heading without them, and a mapping of them."""
+    attrs = {"role": "section", "wide": False, "flow": False, "colour": None, "cols": None, "style": None}
     m = _ATTRIBUTES.search(heading)
     if not m:
         return heading.strip(), attrs
@@ -374,12 +402,14 @@ def heading_attributes(heading, where):
             attrs[item[1:]] = True
         elif item in ("colour", "color"):
             attrs["colour"] = value
+        elif item == "style":
+            attrs["style"] = value.lower()
         elif item == "cols":
             if not value.isdigit() or int(value) < 1:
                 raise PosterError(f"{where}: heading '{text}' has cols={value}; it must be a whole number of at least 1")
             attrs["cols"] = int(value)
         else:
-            known = ", ".join([*(f".{r}" for r in ROLES), ".wide", ".flow", "cols=", "colour="])
+            known = ", ".join([*(f".{r}" for r in ROLES), ".wide", ".flow", "cols=", "colour=", "style="])
             logger.warning(f"{where}: heading '{text}' has '{item}', which a poster does not use. It takes {known}")
     if attrs["role"] != "section":
         for name in ("wide", "flow", "cols"):  # a stats strip, abstract, summary or references list is always full width
@@ -389,6 +419,12 @@ def heading_attributes(heading, where):
     elif attrs["wide"] and (attrs["flow"] or attrs["cols"]):
         logger.warning(f"{where}: heading '{text}' is wide, so .flow and cols= are ignored: a wide section has no columns")
         attrs["flow"], attrs["cols"] = False, None
+    styles = STYLES[attrs["role"]]
+    if attrs["style"] is None:
+        attrs["style"] = styles[0]
+    elif attrs["style"] not in styles:
+        kind = "a section" if attrs["role"] == "section" else f"a .{attrs['role']} section"
+        raise PosterError(f"{where}: heading '{text}' has style={attrs['style']}; {kind} takes style= {', '.join(styles)}")
     return text, attrs
 
 
@@ -520,30 +556,35 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
     orientation = _choice(meta, "orientation", ("portrait", "landscape"), md_path)
     count = number(meta, "columns", COLUMNS[orientation], md_path)
 
+    def look(attrs, *classes):
+        """The class and colour of a part: its style as s-name, and colour= as --c, which every style paints with."""
+        names = " ".join([*classes, f"s-{attrs['style']}"])
+        colour = f' style="--c:{ctx.theme.colour(attrs["colour"])}"' if attrs["colour"] else ""
+        return f' class="{names}"{colour}'
+
     def sec(h, attrs, c):
-        style = f' style="background:{ctx.theme.colour(attrs["colour"])}"' if attrs["colour"] else ""
-        wide = ' class="wide"' if attrs["wide"] else ' class="breakable"' if attrs["flow"] else ""
-        return f'<section{wide}><h2{style}>{heading_html(h)}</h2><div class="body">{render(c, ctx)}</div></section>'
+        place = ["wide"] if attrs["wide"] else ["breakable"] if attrs["flow"] else []
+        return f'<section{look(attrs, *place)}><h2>{heading_html(h)}</h2><div class="body">{render(c, ctx)}</div></section>'
 
     def role_html(h, attrs, c):
         """A stats strip, abstract, summary or references list: full width, where it is in the file."""
-        background = f' style="background:{ctx.theme.colour(attrs["colour"])}"' if attrs["colour"] else ""
         if attrs["role"] == "stats":
             figures = "".join(
                 f'<div class="stat"><b>{esc(v)}</b><span>{esc(label)}</span>{trend_html(change, verdict)}</div>'
                 for v, label, change, verdict in parse_stats(c))
-            return f'<div class="stats">{figures}</div>' if figures else ""
+            return f'<div{look(attrs, "stats")}>{figures}</div>' if figures else ""
         if attrs["role"] == "abstract":
-            return f'<div class="abstract"{background}>{render(c, ctx)}</div>'
+            return f'<div{look(attrs, "abstract")}>{render(c, ctx)}</div>'
         if attrs["role"] == "references":
-            return f'<div class="refs"><b>{esc(h)}</b>{render(c, ctx)}</div>'
+            return f'<div{look(attrs, "refs")}><b>{esc(h)}</b>{render(c, ctx)}</div>'
         chunks = re.split(r"(?m)^### +(.+)$", c)  # the summary: a banner, then a block for each ###
         banner = " ".join(chunks[0].split())
         blocks = "".join(
             f'<div class="block"><h3>{esc(head.strip())}</h3><div class="body">{render(text.strip(), ctx)}</div></div>'
             for head, text in zip(chunks[1::2], chunks[2::2]))
-        return ((f'<div class="banner"{background}>{inline(banner)}</div>' if banner else "")
-                + (f'<div class="blocks">{blocks}</div>' if blocks else ""))
+        parts = ((f'<div class="banner">{inline(banner)}</div>' if banner else "")
+                 + (f'<div class="blocks">{blocks}</div>' if blocks else ""))
+        return f'<div{look(attrs, "summary")}>{parts}</div>' if parts else ""
 
     bands, run = [], []  # in file order: full-width parts, and runs of sections that share columns
     for item in items:

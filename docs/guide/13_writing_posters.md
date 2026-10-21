@@ -105,12 +105,13 @@ columns: 3
 split: 2, 2        # two sections in the first column, two in the second, the rest in the third
 ```
 
-Four attributes in braces after a heading change one section:
+Five attributes in braces after a heading change one section:
 
 - `{.wide}` makes the section span every column. Use it for a timeline, a wide diagram or a table with many columns. The sections before it are balanced into columns above it, and the ones after it below.
 - `{.flow}` lets a long section go on in the next column, between two of its blocks, under its heading marked "(continued)". The page breaks it only when that makes the columns more even.
 - `{cols=3}` gives its band of sections three columns, so one band can have two and the next three.
-- `{colour=red}` colours its heading bar, to mark a warning or a section that stands apart.
+- `{colour=red}` colours it, to mark a warning or a section that stands apart.
+- `{style=card}` changes its look. A section can be a `bar` (the default), a `line`, a `card` or `plain`, and a stats strip, abstract, summary and references list have looks of their own. [Posters](12_posters.md#page-structure) lists them all. Pick one look for the sections and keep to it, and use another only for the one section that stands apart.
 
 ```markdown
 ## 5. Roadmap: what comes next {.wide}

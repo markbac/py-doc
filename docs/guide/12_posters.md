@@ -30,8 +30,8 @@ The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` li
 |---|---|
 | `poster.md` | Portrait A1 in the default theme: a picture, a Mermaid diagram, bar and line charts, segments, flow, lanes and `lcd` screens. Also a timeline, a JSON code block, a full-width section, and a band of three columns (`{cols=3}`) under a band of two. A QR code is in the footer. Every setting is in its front matter |
 | `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a gallery of mounting drawings, an acceptance checklist, handover steps, a QR block and an included table. The words and the layout (orientation, paper) are in the front matter, and the company's look (theme, header, footer) is in `py-doc.yml` |
-| `release.md` | Portrait A3 in the dark theme: a column chart with two series, a before and after `compare` and a Mermaid sequence with notes. Also title cards, a vertical timeline, callouts, `people`, references and a `{{version}}` variable |
-| `reliability.md` | Portrait A0 in the print theme, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, `highlight` figures, `progress` bars, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
+| `release.md` | Portrait A3 in the dark theme, with its figures as tiles: a column chart with two series, a before and after `compare` and a Mermaid sequence with notes. Also title cards, a vertical timeline, callouts, `people`, references and a `{{version}}` variable |
+| `reliability.md` | Portrait A0 in the print theme, with a quoted abstract and an underlined summary, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, `highlight` figures, `progress` bars, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
 
 ## Settings and where they go
 
@@ -111,7 +111,25 @@ The other braces change one section:
 
 - `{cols=3}` gives its band of columns three columns. Give it on any one section of the band. Without it, the band has `columns:` columns.
 - `{.flow}` lets the section go on in the next column, between two of its blocks, under its heading again with "(continued)". Use it for a section much taller than the rest. A caption stays with its picture or table.
-- `{colour=coral}` colours its heading bar, or the box of an abstract or the banner of a summary, with any block colour.
+- `{style=card}` chooses its look, from the styles of its kind in the table below.
+- `{colour=coral}` colours it, in whichever style it has, with any block colour.
+
+| Kind | Styles, the default first | What `colour=` paints |
+|---|---|---|
+| A section | `bar`: a filled heading bar. `line`: the heading in colour, with a rule under it. `card`: the whole section in a box with a coloured top edge. `plain`: the heading in colour, nothing else | The bar, the heading, the rule or the top edge |
+| `{.stats}` | `strip`: one box with a rule between figures. `tiles`: a filled tile for each figure. `plain`: the figures on the page | The rules, the tiles or the figures |
+| `{.abstract}` | `box`: a filled box, centred. `quote`: a rule down the left, left-aligned and italic. `outline`: a frame, no fill. `plain`: larger text, no box | The fill, the rule, the frame or the text |
+| `{.summary}` | `banner`: a filled banner, then blocks with a rule down the left. `line`: the banner in colour with a rule under it, then blocks with a rule over them. `plain`: the banner in colour, then the blocks | The banner, the rules, and the blocks' rules |
+| `{.references}` | `columns`: two columns. `list`: one column | The heading |
+
+```markdown
+## Key figures {.stats style=tiles colour=teal}
+## Why this matters {.abstract style=quote}
+## 4. Results {style=card colour=amber}
+## In short {.summary style=line}
+```
+
+A style a kind does not have is an error that lists the styles it does have.
 
 The sections between two full-width parts are a band of columns, balanced by height. Of every way to share them out, in order, the page takes those whose tallest column is shortest, and of those the one whose columns are most even. `split` chooses the columns by hand instead, on a poster with one band of columns.
 
