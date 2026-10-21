@@ -171,7 +171,11 @@ class BuildReport:
     # --- output -----------------------------------------------------------------------------------
 
     def data(self) -> dict[str, Any]:
-        failed = bool(self.error) or any(d["status"] == "failed" for d in self.documents) or any(s["status"] == "failed" for s in self.steps)
+        failed = (
+            bool(self.error)
+            or any(d["status"] == "failed" for d in self.documents)
+            or any(s["status"] == "failed" for s in self.steps)
+        )
         data: dict[str, Any] = {
             "schema": 1,
             "py_doc": __version__,

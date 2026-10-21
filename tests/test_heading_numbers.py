@@ -91,7 +91,9 @@ def test_the_options_are_checked(tmp_path):
     )
     config = load_config(tmp_path / "py-doc.yml")
     assert config.documents["d"].outputs["docx"].options["heading_numbers"] == "strip"
-    (tmp_path / "py-doc.yml").write_text("documents:\n  d:\n    sources: [a.md]\n    outputs:\n      docx: {heading_numbers: maybe}\n", encoding="utf-8")
+    (tmp_path / "py-doc.yml").write_text(
+        "documents:\n  d:\n    sources: [a.md]\n    outputs:\n      docx: {heading_numbers: maybe}\n", encoding="utf-8"
+    )
     with pytest.raises(ConfigError, match="heading_numbers must be one of auto, strip, keep"):
         load_config(tmp_path / "py-doc.yml")
 

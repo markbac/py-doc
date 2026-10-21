@@ -11,14 +11,20 @@ from ._logging import configure_logging
 from .errors import ConversionError
 from .template_check import LEVELS, check_template, compare, inventory, kind_of, usage
 
+
 def _error(message: str) -> None:
     print(f"Error: {message}", file=sys.stderr)
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="py-doc template", description="Check and inspect Word and PowerPoint templates")
+    parser = argparse.ArgumentParser(
+        prog="py-doc template", description="Check and inspect Word and PowerPoint templates"
+    )
     commands = parser.add_subparsers(dest="action", metavar="action", required=True)
-    for name, help_text in (("check", "Report what a template lacks for the pandoc pipeline"), ("show", "List its styles or layouts")):
+    for name, help_text in (
+        ("check", "Report what a template lacks for the pandoc pipeline"),
+        ("show", "List its styles or layouts"),
+    ):
         sub = commands.add_parser(name, help=help_text, description=help_text)
         sub.add_argument("template", type=Path, help="A .docx, .dotx, .pptx or .potx file")
         noise = sub.add_mutually_exclusive_group()
@@ -26,13 +32,27 @@ def build_parser() -> argparse.ArgumentParser:
         verbose = "Show debug detail, and the INFO findings too" if name == "check" else "Show debug detail"
         noise.add_argument("-v", "--verbose", action="store_true", help=verbose)
         if name == "check":
-            sub.add_argument("--strict", action="store_true", help="Exit with status 1 for warnings as well as failures")
-            sub.add_argument("--prefix", default="Replace-with-", help="The placeholder_prefix of the template (default: Replace-with-)")
-            sub.add_argument("--marker", default="[[INSERTCONTENT]]", help="The marker line where the body goes (default: [[INSERTCONTENT]])")
-    diff = commands.add_parser("diff", help="Compare the styles (or layouts) of two templates", description="Compare two templates")
+            sub.add_argument(
+                "--strict", action="store_true", help="Exit with status 1 for warnings as well as failures"
+            )
+            sub.add_argument(
+                "--prefix",
+                default="Replace-with-",
+                help="The placeholder_prefix of the template (default: Replace-with-)",
+            )
+            sub.add_argument(
+                "--marker",
+                default="[[INSERTCONTENT]]",
+                help="The marker line where the body goes (default: [[INSERTCONTENT]])",
+            )
+    diff = commands.add_parser(
+        "diff", help="Compare the styles (or layouts) of two templates", description="Compare two templates"
+    )
     diff.add_argument("first", type=Path, help="The template to start from")
     diff.add_argument("second", type=Path, help="The template to compare it with")
-    count = commands.add_parser("usage", help="Count the styles a Word file uses", description="Count the styles a Word file uses")
+    count = commands.add_parser(
+        "usage", help="Count the styles a Word file uses", description="Count the styles a Word file uses"
+    )
     count.add_argument("document", type=Path, help="A .docx file")
     for sub in (diff, count):
         noise = sub.add_mutually_exclusive_group()

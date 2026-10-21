@@ -13,6 +13,7 @@ Responsibilities
 * Core property update.
 * TOC update flag.
 """
+
 from __future__ import annotations
 
 import copy
@@ -39,18 +40,19 @@ def snippet(text: str, n: int = 80) -> str:
     """A single-line preview of text for messages."""
     return (text or "").replace("\n", " ").replace("\r", " ")[:n]
 
+
 # ---------------------------------------------------------------------------
 # Orientation markers
 # ---------------------------------------------------------------------------
 
 MARKERS_LANDSCAPE = {"[[LANDSCAPE]]", "__LANDSCAPE__", "__LANDSCAPE_START__"}
-MARKERS_PORTRAIT  = {"[[PORTRAIT]]",  "__PORTRAIT__",  "__LANDSCAPE_END__"}
+MARKERS_PORTRAIT = {"[[PORTRAIT]]", "__PORTRAIT__", "__LANDSCAPE_END__"}
 
 # ---------------------------------------------------------------------------
 # Style / caption marker patterns
 # ---------------------------------------------------------------------------
 
-STYLE_PATTERN   = re.compile(r"\[\[STYLE:(?P<style>[A-Za-z0-9 _-]+)\]\]")
+STYLE_PATTERN = re.compile(r"\[\[STYLE:(?P<style>[A-Za-z0-9 _-]+)\]\]")
 CAPTION_PATTERN = re.compile(r"\[\[CAPTION:(?P<label>[A-Za-z0-9 _-]+)\]\]")
 
 # ---------------------------------------------------------------------------
@@ -77,8 +79,8 @@ def find_and_remove_marker(doc: Document, marker: str = CONTENT_MARKER) -> int |
         raise ValueError(f"Marker {marker!r} found {len(hits)} times — expected exactly one")
 
     marker_para = hits[0]
-    body        = doc._element.body
-    index       = body.index(marker_para._p)
+    body = doc._element.body
+    index = body.index(marker_para._p)
     body.remove(marker_para._p)
     return index
 
@@ -87,8 +89,9 @@ def find_and_remove_marker(doc: Document, marker: str = CONTENT_MARKER) -> int |
 # Internal XML helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_or_add_body_sectPr(doc: Document):
-    body   = doc._element.body
+    body = doc._element.body
     sectPr = body.sectPr
     if sectPr is None:
         sectPr = OxmlElement("w:sectPr")
@@ -119,16 +122,16 @@ def _insert_seq_field(paragraph, label: str, number: int) -> None:
     paragraph.style = "Caption"
     paragraph.add_run(f"{label} ")
     run = paragraph.add_run()
-    fld_begin             = OxmlElement("w:fldChar")
+    fld_begin = OxmlElement("w:fldChar")
     fld_begin.set(qn("w:fldCharType"), "begin")
-    instr                 = OxmlElement("w:instrText")
-    instr.text            = f"SEQ {label} \\* ARABIC"
-    fld_sep               = OxmlElement("w:fldChar")
+    instr = OxmlElement("w:instrText")
+    instr.text = f"SEQ {label} \\* ARABIC"
+    fld_sep = OxmlElement("w:fldChar")
     fld_sep.set(qn("w:fldCharType"), "separate")
-    fld_end               = OxmlElement("w:fldChar")
+    fld_end = OxmlElement("w:fldChar")
     fld_end.set(qn("w:fldCharType"), "end")
-    shown                 = OxmlElement("w:t")
-    shown.text            = str(number)
+    shown = OxmlElement("w:t")
+    shown.text = str(number)
     run._r.extend([fld_begin, instr, fld_sep, shown, fld_end])
     paragraph.add_run(": ")
 
@@ -136,6 +139,7 @@ def _insert_seq_field(paragraph, label: str, number: int) -> None:
 # ---------------------------------------------------------------------------
 # Section break injection
 # ---------------------------------------------------------------------------
+
 
 def insert_section_break_at(paragraph, orientation: str, doc: Document) -> None:
     """
@@ -150,7 +154,7 @@ def insert_section_break_at(paragraph, orientation: str, doc: Document) -> None:
     """
     body_sectPr = _get_or_add_body_sectPr(doc)
 
-    pPr        = paragraph._p.get_or_add_pPr()
+    pPr = paragraph._p.get_or_add_pPr()
     para_sectPr = copy.deepcopy(body_sectPr)
 
     type_elem = para_sectPr.find(qn("w:type"))
@@ -184,6 +188,7 @@ def insert_section_break_at(paragraph, orientation: str, doc: Document) -> None:
 # Orientation marker pass
 # ---------------------------------------------------------------------------
 
+
 def apply_orientation_markers(doc: Document) -> None:
     """
     Find orientation marker paragraphs and replace each with a Word section
@@ -193,7 +198,7 @@ def apply_orientation_markers(doc: Document) -> None:
 
     paragraphs = list(doc.paragraphs)
     landscape_hits = [i for i, p in enumerate(paragraphs) if (p.text or "").strip() in MARKERS_LANDSCAPE]
-    portrait_hits  = [i for i, p in enumerate(paragraphs) if (p.text or "").strip() in MARKERS_PORTRAIT]
+    portrait_hits = [i for i, p in enumerate(paragraphs) if (p.text or "").strip() in MARKERS_PORTRAIT]
 
     log.debug("Landscape markers at: %s", landscape_hits)
     log.debug("Portrait markers at:  %s", portrait_hits)
@@ -214,8 +219,7 @@ def apply_orientation_markers(doc: Document) -> None:
             log.debug("Applied PORTRAIT break")
 
     remaining = [
-        i for i, p in enumerate(doc.paragraphs)
-        if (p.text or "").strip() in (MARKERS_LANDSCAPE | MARKERS_PORTRAIT)
+        i for i, p in enumerate(doc.paragraphs) if (p.text or "").strip() in (MARKERS_LANDSCAPE | MARKERS_PORTRAIT)
     ]
     if remaining:
         log.warning("Orientation markers still present after processing at: %s", remaining)
@@ -226,6 +230,7 @@ def apply_orientation_markers(doc: Document) -> None:
 # ---------------------------------------------------------------------------
 # Landscape image rescaling
 # ---------------------------------------------------------------------------
+
 
 def rescale_landscape_images(doc: Document) -> None:
     """
@@ -272,31 +277,27 @@ def rescale_landscape_images(doc: Document) -> None:
         if section.orientation != WD_ORIENT.LANDSCAPE:
             continue  # portrait section — leave this image alone
 
-        usable_width = (
-            section.page_width - section.left_margin - section.right_margin
-        )
+        usable_width = section.page_width - section.left_margin - section.right_margin
         if shape.width < usable_width:
             ratio = usable_width / float(shape.width)
             shape.height = int(shape.height * ratio)
-            shape.width  = usable_width
+            shape.width = usable_width
 
         # Centre the paragraph
-        para_obj = next(
-            (p for p in doc.paragraphs if p._p is containing_p), None
-        )
+        para_obj = next((p for p in doc.paragraphs if p._p is containing_p), None)
         if para_obj is not None:
             para_obj.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         rescaled += 1
 
     if rescaled:
-        log.info("rescale_landscape_images: %d image(s) expanded to landscape width",
-                 rescaled)
+        log.info("rescale_landscape_images: %d image(s) expanded to landscape width", rescaled)
 
 
 # ---------------------------------------------------------------------------
 # Placeholder replacement
 # ---------------------------------------------------------------------------
+
 
 def replace_placeholders(doc: Document, replacements: dict[str, str]) -> None:
     """
@@ -345,10 +346,10 @@ def replace_placeholders(doc: Document, replacements: dict[str, str]) -> None:
 
     # --- header / footer XML walk ---------------------------------------
 
-    _W_P        = qn("w:p")
-    _W_R        = qn("w:r")
-    _W_T        = qn("w:t")
-    _XML_SPACE  = "{http://www.w3.org/XML/1998/namespace}space"
+    _W_P = qn("w:p")
+    _W_R = qn("w:r")
+    _W_T = qn("w:t")
+    _XML_SPACE = "{http://www.w3.org/XML/1998/namespace}space"
 
     def _replace_hf(hf_element):
         # Break-like elements split a paragraph into independent visual
@@ -360,8 +361,15 @@ def replace_placeholders(doc: Document, replacements: dict[str, str]) -> None:
         # several runs within a segment (e.g. spell-check), which is why
         # each segment is still concatenated before replacing, rather than
         # replacing node-by-node.
-        _BREAK_TAGS = {qn("w:tab"), qn("w:br"), qn("w:cr"), qn("w:drawing"),
-                       qn("w:object"), qn("w:pict"), qn("w:noBreakHyphen")}
+        _BREAK_TAGS = {
+            qn("w:tab"),
+            qn("w:br"),
+            qn("w:cr"),
+            qn("w:drawing"),
+            qn("w:object"),
+            qn("w:pict"),
+            qn("w:noBreakHyphen"),
+        }
 
         def _replace_segment(segment):
             if not segment:
@@ -416,6 +424,7 @@ def find_placeholders(doc: Document, prefix: str) -> set[str]:
 # Explicit style / caption markers
 # ---------------------------------------------------------------------------
 
+
 def _starts_with_marker(p) -> bool:
     """The paragraph begins with a marker in plain text. One shown as inline code (`[[STYLE:Name]]`, in pandoc's
     ``Verbatim Char`` style) or mentioned within a sentence is text, and is left as it is."""
@@ -450,10 +459,10 @@ def apply_explicit_styles(doc: Document) -> None:
 
         cap_m = CAPTION_PATTERN.search(raw)
         if cap_m:
-            label   = cap_m.group("label").strip()
+            label = cap_m.group("label").strip()
             cleaned = CAPTION_PATTERN.sub("", raw).strip()
             counts[label] = counts.get(label, 0) + 1
-            p.text  = ""
+            p.text = ""
             _insert_seq_field(p, label, counts[label])
             if cleaned:
                 p.add_run(cleaned)
@@ -463,7 +472,7 @@ def apply_explicit_styles(doc: Document) -> None:
         sty_m = STYLE_PATTERN.search(raw)
         if sty_m:
             style_name = sty_m.group("style").strip()
-            p.text     = STYLE_PATTERN.sub("", raw).strip()
+            p.text = STYLE_PATTERN.sub("", raw).strip()
             try:
                 p.style = style_name
                 log.debug("Style '%s' applied", style_name)
@@ -471,8 +480,11 @@ def apply_explicit_styles(doc: Document) -> None:
                 missing[style_name] = missing.get(style_name, 0) + 1
 
     if missing:
-        log.warning("The document has no style %s, so %s left as Normal", ", ".join(f"'{n}'" for n in missing),
-                    "those paragraphs are" if sum(missing.values()) > 1 else "that paragraph is")
+        log.warning(
+            "The document has no style %s, so %s left as Normal",
+            ", ".join(f"'{n}'" for n in missing),
+            "those paragraphs are" if sum(missing.values()) > 1 else "that paragraph is",
+        )
     log.debug("apply_explicit_styles: done")
 
 
@@ -480,12 +492,13 @@ def apply_explicit_styles(doc: Document) -> None:
 # Table formatting
 # ---------------------------------------------------------------------------
 
+
 def format_all_tables(
     doc: Document,
-    style_name: str       = "Table Grid",
-    repeat_header: bool   = True,
+    style_name: str = "Table Grid",
+    repeat_header: bool = True,
     prevent_row_split: bool = True,
-    autofit: bool         = True,
+    autofit: bool = True,
 ) -> None:
     """
     Apply a consistent appearance to every table in *doc*.
@@ -516,7 +529,7 @@ def format_all_tables(
 
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         tblPr = tbl._tbl.tblPr
-        tblW  = tblPr.find(qn("w:tblW"))
+        tblW = tblPr.find(qn("w:tblW"))
         if tblW is None:
             tblW = OxmlElement("w:tblW")
             tblPr.append(tblW)
@@ -531,19 +544,19 @@ def format_all_tables(
             for row in tbl.rows:
                 for cell in row.cells:
                     tcPr = cell._tc.get_or_add_tcPr()
-                    tcW  = tcPr.find(qn("w:tcW"))
+                    tcW = tcPr.find(qn("w:tcW"))
                     if tcW is not None:
                         tcPr.remove(tcW)
 
         if repeat_header and tbl.rows:
-            hdr  = tbl.rows[0]
+            hdr = tbl.rows[0]
             trPr = hdr._tr.get_or_add_trPr()
             if trPr.find(qn("w:tblHeader")) is None:
                 trPr.append(OxmlElement("w:tblHeader"))
             for cell in hdr.cells:
                 for p in cell.paragraphs:
                     p.paragraph_format.keep_with_next = True
-                    p.paragraph_format.keep_together  = True
+                    p.paragraph_format.keep_together = True
                     # Direct run formatting, not reliance on the table
                     # style's conditional "first row" formatting alone:
                     # whatever paragraph style Pandoc assigned to this cell
@@ -568,6 +581,7 @@ def format_all_tables(
 # ---------------------------------------------------------------------------
 # Layout fixes
 # ---------------------------------------------------------------------------
+
 
 def _text_width_for_shape(shape, doc: Document) -> int:
     """
@@ -617,8 +631,8 @@ def apply_layout_fixes(doc: Document, max_image_height_cm: float = 20.0) -> None
     - Keep images with their captions.
     """
     log.debug("apply_layout_fixes: start")
-    max_h   = Cm(max_image_height_cm)
-    scaled  = 0
+    max_h = Cm(max_image_height_cm)
+    scaled = 0
     clamped = 0
 
     for shape in doc.inline_shapes:
@@ -631,26 +645,25 @@ def apply_layout_fixes(doc: Document, max_image_height_cm: float = 20.0) -> None
             # 1. Scale width to text area if needed
             text_w = _text_width_for_shape(shape, doc)
             if w > text_w:
-                ratio        = text_w / float(w)
-                shape.width  = text_w
+                ratio = text_w / float(w)
+                shape.width = text_w
                 shape.height = int(h * ratio)
-                w, h         = shape.width, shape.height
-                scaled      += 1
+                w, h = shape.width, shape.height
+                scaled += 1
 
             # 2. Clamp height
             if shape.height > max_h:
-                ratio        = max_h / float(shape.height)
-                shape.width  = int(shape.width * ratio)
+                ratio = max_h / float(shape.height)
+                shape.width = int(shape.width * ratio)
                 shape.height = int(max_h)
-                clamped     += 1
+                clamped += 1
 
         except Exception as exc:
             log.debug("Image resize skipped: %s", exc)
             continue
 
     if scaled or clamped:
-        log.info("apply_layout_fixes: %d image(s) width-scaled, %d height-clamped",
-                 scaled, clamped)
+        log.info("apply_layout_fixes: %d image(s) width-scaled, %d height-clamped", scaled, clamped)
 
     def _has_drawing(para) -> bool:
         return any(r._element.xpath(".//w:drawing") for r in para.runs)
@@ -659,10 +672,10 @@ def apply_layout_fixes(doc: Document, max_image_height_cm: float = 20.0) -> None
         name = (p.style.name or "").lower()
         if name.startswith("heading"):
             p.paragraph_format.keep_with_next = True
-            p.paragraph_format.keep_together  = True
+            p.paragraph_format.keep_together = True
         if _has_drawing(p):
             p.paragraph_format.keep_with_next = True
-            p.paragraph_format.keep_together  = True
+            p.paragraph_format.keep_together = True
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         if name == "caption" or (p.text or "").strip().lower().startswith(("figure ", "fig. ")):
             p.paragraph_format.keep_together = True
@@ -776,21 +789,22 @@ def _purge_mismatched_core_props(doc: Document, local_names: tuple[str, ...]) ->
         if qname.localname in local_names and qname.namespace != _CORE_PROPS_NS:
             log.warning(
                 "Removing malformed <%s> core property (wrong namespace: %s)",
-                qname.localname, qname.namespace,
+                qname.localname,
+                qname.namespace,
             )
             root.remove(child)
 
 
 def update_core_properties(
     doc: Document,
-    title:           str,
-    author:          str,
-    description:     str,
-    version:         str,
+    title: str,
+    author: str,
+    description: str,
+    version: str,
     document_number: str,
-    subject:         str = "",
-    keywords:        str = "",
-    category:        str = "",
+    subject: str = "",
+    keywords: str = "",
+    category: str = "",
 ) -> None:
     """Update DOCX core (document information) properties."""
     _purge_mismatched_core_props(doc, ("keywords", "category"))
@@ -802,15 +816,16 @@ def update_core_properties(
         if not value:
             return
         if len(value) > MAX_LEN:
-            log.warning("The document property '%s' is longer than Word allows (%d characters), so it was cut",
-                        attr, MAX_LEN)
-            value = value[:MAX_LEN - 1] + "…"
+            log.warning(
+                "The document property '%s' is longer than Word allows (%d characters), so it was cut", attr, MAX_LEN
+            )
+            value = value[: MAX_LEN - 1] + "…"
         setattr(props, attr, value)
 
     _set_capped("title", title)
     _set_capped("author", author)
     with _correct_cp_namespace():
-        _set_capped("subject",  subject)
+        _set_capped("subject", subject)
         _set_capped("keywords", keywords)
         _set_capped("category", category)
 
@@ -828,16 +843,17 @@ def update_core_properties(
     comments = " ".join(" | ".join(parts).split())
     if len(comments) > MAX_LEN:
         log.warning("The document comments are longer than Word allows (%d characters), so they were cut", MAX_LEN)
-        comments = comments[:MAX_LEN - 1] + "…"
+        comments = comments[: MAX_LEN - 1] + "…"
     try:
         props.comments = comments
     except ValueError:
-        props.comments = comments[:MAX_LEN - 1] + "…"
+        props.comments = comments[: MAX_LEN - 1] + "…"
 
 
 # ---------------------------------------------------------------------------
 # TOC / trailing helpers
 # ---------------------------------------------------------------------------
+
 
 def mark_for_toc_update(doc: Document) -> None:
     """
@@ -856,7 +872,9 @@ def clean_trailing_pagebreak(doc: Document) -> None:
     """Remove the trailing blank paragraph commonly left after the TOC. A paragraph with a picture or field is kept."""
     if len(doc.paragraphs) > 1:
         last_p = doc.paragraphs[-1]
-        holds = last_p._element.xpath(".//w:drawing | .//w:pict | .//w:fldChar | .//w:fldSimple | .//w:sectPr | .//w:br")
+        holds = last_p._element.xpath(
+            ".//w:drawing | .//w:pict | .//w:fldChar | .//w:fldSimple | .//w:sectPr | .//w:br"
+        )
         if not last_p.text.strip() and not holds:
             parent = last_p._element.getparent()
             if parent is not None:

@@ -84,7 +84,9 @@ def merge_weights(css: str) -> str:
         weight = props.pop("font-weight", "400").strip()
         if not re.fullmatch(r"\d{3}( \d{3})?", weight):
             return css  # a weight such as 'bold': leave the rules as they are
-        merged.setdefault(tuple(sorted((k, v.strip()) for k, v in props.items())), []).extend(int(w) for w in weight.split())
+        merged.setdefault(tuple(sorted((k, v.strip()) for k, v in props.items())), []).extend(
+            int(w) for w in weight.split()
+        )
     rules = []
     for props, weights in merged.items():
         low, high = min(weights), max(weights)
@@ -142,5 +144,7 @@ def font_css(theme, embed, where: str) -> tuple[str, bool]:
             link = False
     size = len(css.encode("utf-8"))
     if size > MAX_BYTES:
-        logger.warning(f"{where}: the embedded fonts are {size // (1024 * 1024)} MB, so the page is slow to send and open")
+        logger.warning(
+            f"{where}: the embedded fonts are {size // (1024 * 1024)} MB, so the page is slow to send and open"
+        )
     return css, link

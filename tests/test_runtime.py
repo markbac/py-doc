@@ -237,6 +237,8 @@ def test_the_runner_refuses_to_start_on_an_unsupported_platform(monkeypatch):
 
 def test_docker_missing_inside_wsl_says_how_to_install_it():
     runtime = Runtime(IMAGE, platform_name="windows")
-    result = ToolResult(1, "", "<3>WSL (823 - Relay) ERROR: CreateProcessCommon:875: execvpe(docker) failed: No such file or directory")
+    result = ToolResult(
+        1, "", "<3>WSL (823 - Relay) ERROR: CreateProcessCommon:875: execvpe(docker) failed: No such file or directory"
+    )
     with pytest.raises(EnvironmentProblem, match="not installed inside the WSL distro"):
         runtime._raise_environment(result, running=True)

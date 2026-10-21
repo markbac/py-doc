@@ -57,7 +57,7 @@ def add_styles(document) -> None:
         properties = style.element.get_or_add_pPr()
         properties.append(
             parse_xml(
-                f'<w:pBdr {nsdecls("w")}>'
+                f"<w:pBdr {nsdecls('w')}>"
                 f'<w:top w:val="single" w:sz="4" w:space="4" w:color="{fill}"/>'
                 f'<w:left w:val="single" w:sz="36" w:space="6" w:color="{edge}"/>'
                 f'<w:bottom w:val="single" w:sz="4" w:space="4" w:color="{fill}"/>'
@@ -70,7 +70,7 @@ def add_styles(document) -> None:
         grid = styles.add_style("Table Grid", WD_STYLE_TYPE.TABLE)
         grid.element.append(
             parse_xml(
-                f'<w:tblPr {nsdecls("w")}><w:tblBorders>'
+                f"<w:tblPr {nsdecls('w')}><w:tblBorders>"
                 + "".join(
                     f'<w:{side} w:val="single" w:sz="4" w:space="0" w:color="808080"/>'
                     for side in ("top", "left", "bottom", "right", "insideH", "insideV")
@@ -84,7 +84,9 @@ def default_reference(runtime: Runtime, work: Path) -> Path:
     """Write pandoc's reference.docx with callout styles into ``work`` and return its path."""
     path = work / "reference.docx"
     runtime.run(
-        ["pandoc", "-o", path, "--print-default-data-file", "reference.docx"], mounts=[Mount(work, writable=True)], workdir=work
+        ["pandoc", "-o", path, "--print-default-data-file", "reference.docx"],
+        mounts=[Mount(work, writable=True)],
+        workdir=work,
     )
     document = Document(str(path))
     add_styles(document)
@@ -92,9 +94,7 @@ def default_reference(runtime: Runtime, work: Path) -> Path:
     return path
 
 
-_CALLOUT = re.compile(
-    r"^\s*>+\s*(?:\[!(?P<github>[A-Za-z]+)\]|\*\*(?P<label>[A-Za-z]+):?\*\*)", re.MULTILINE
-)
+_CALLOUT = re.compile(r"^\s*>+\s*(?:\[!(?P<github>[A-Za-z]+)\]|\*\*(?P<label>[A-Za-z]+):?\*\*)", re.MULTILINE)
 
 
 def used_callouts(markdown: str) -> set[str]:

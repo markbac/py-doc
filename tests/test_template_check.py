@@ -76,7 +76,9 @@ def test_inline_code_style_of_the_wrong_type_fails(good_docx):
 
 
 def test_bold_body_text_fails(good_docx):
-    assert "Bold leak" in checks(check_template(edit(good_docx, lambda d: setattr(d.styles["Normal"].font, "bold", True))), "FAIL")
+    assert "Bold leak" in checks(
+        check_template(edit(good_docx, lambda d: setattr(d.styles["Normal"].font, "bold", True))), "FAIL"
+    )
 
 
 def test_a_normal_style_based_on_a_heading_fails(good_docx):
@@ -116,7 +118,11 @@ def test_powerpoint_needs_pandoc_s_layouts(tmp_path):
 @pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc is not installed")
 def test_pandoc_s_own_reference_deck_passes(tmp_path):
     pptx = tmp_path / "ref.pptx"
-    pptx.write_bytes(subprocess.run(["pandoc", "--print-default-data-file", "reference.pptx"], capture_output=True, check=True).stdout)
+    pptx.write_bytes(
+        subprocess.run(
+            ["pandoc", "--print-default-data-file", "reference.pptx"], capture_output=True, check=True
+        ).stdout
+    )
     assert not check_template(pptx).failures
 
 

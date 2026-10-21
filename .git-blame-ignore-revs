@@ -1,0 +1,6 @@
+# Commits that only reformat code, hidden from git blame:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# (GitHub applies this file on its own.)
+
+# ruff format of the whole Python code base
+3397cd98c04a00b9f646108301d03a0e00c8255d

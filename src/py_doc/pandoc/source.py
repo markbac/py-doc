@@ -108,14 +108,15 @@ def strip_heading_numbers(text: str) -> str:
         if number:
             found.append((index, level, number))
     counted = {
-        level: all(n is not None and n.isdigit() for n in numbers) and [int(n) for n in numbers] == list(range(1, len(numbers) + 1))
+        level: all(n is not None and n.isdigit() for n in numbers)
+        and [int(n) for n in numbers] == list(range(1, len(numbers) + 1))
         for level, numbers in levels.items()
     }
     for index, level, number in found:
         if number["number"].rstrip(".").isdigit() and not number["number"].endswith(".") and not counted[level]:
             continue  # a bare number that is not a count of the sections: part of the title
         heading = _HEADING.match(lines[index])
-        title = heading["rest"].strip()[number.end():]
+        title = heading["rest"].strip()[number.end() :]
         lines[index] = f"{heading['indent']}{heading['hashes']} {title}"
     return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 

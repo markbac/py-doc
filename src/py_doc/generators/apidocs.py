@@ -55,7 +55,9 @@ def clean_markdown(text: str, heading_offset: int = 0, title: str | None = None,
     title. Then the headings move by ``heading_offset``, and ``title`` replaces the first top heading. Code
     blocks are left as they are.
     """
-    text = _HTML_HEADING.sub(lambda m: f"{'#' * int(m.group(1))} {html.unescape(_TAG.sub('', m.group(2))).strip()}", text)
+    text = _HTML_HEADING.sub(
+        lambda m: f"{'#' * int(m.group(1))} {html.unescape(_TAG.sub('', m.group(2))).strip()}", text
+    )
     text = _ASIDE.sub(lambda m: _callout(m.group(1), m.group(2)), text)
     text = _ANCHOR.sub(lambda m: f"[]{{#{m.group(1)}}}", text)
     text = _LINK.sub(lambda m: f"[{html.unescape(_TAG.sub('', m.group(2))).strip()}]({m.group(1)})", text)

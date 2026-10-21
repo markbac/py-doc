@@ -153,13 +153,16 @@ def test_errors_are_conversion_errors():
 class TestBuild:
     def config(self, tmp_path, extra=""):
         (tmp_path / "py-doc.yml").write_text(
-            "documents:\n  g:\n    sources: [main.md]\n    variables: {v: from-file}\n    conditions: {a: true}\n" + extra,
+            "documents:\n  g:\n    sources: [main.md]\n    variables: {v: from-file}\n    conditions: {a: true}\n"
+            + extra,
             encoding="utf-8",
         )
         return load_config(tmp_path / "py-doc.yml").documents["g"]
 
     def merge_document(self, doc, variables=None, conditions=None):
-        return join_sources(doc.sources, {**doc.variables, **(variables or {})}, {**doc.conditions, **(conditions or {})}, doc.id)
+        return join_sources(
+            doc.sources, {**doc.variables, **(variables or {})}, {**doc.conditions, **(conditions or {})}, doc.id
+        )
 
     def text_of(self, joined):
         return " ".join(line for line in joined.markdown.splitlines() if line and not line.startswith("#"))

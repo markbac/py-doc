@@ -20,7 +20,9 @@ from py_doc.pandoc import source
 from py_doc.runtime import Runtime
 
 needs_pandoc = pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc is not installed")
-needs_xelatex = pytest.mark.skipif(not tex_packages_found("ulem.sty", "tcolorbox.sty"), reason="xelatex or one of its packages is not installed")
+needs_xelatex = pytest.mark.skipif(
+    not tex_packages_found("ulem.sty", "tcolorbox.sty"), reason="xelatex or one of its packages is not installed"
+)
 
 
 def png(path: Path) -> Path:
@@ -29,7 +31,10 @@ def png(path: Path) -> Path:
 
     rows = b"".join(b"\x00" + b"\xff\x00\x00" * 4 for _ in range(4))
     path.write_bytes(
-        b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 4, 4, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b"")
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", 4, 4, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(rows))
+        + chunk(b"IEND", b"")
     )
     return path
 
@@ -337,7 +342,7 @@ def test_marker_filter_makes_captions_and_drops_word_only_markers(tmp_path):
     md.write_text(
         "[[STYLE:Lead Paragraph]] A lead\n\n"
         "[[CAPTION:Figure]] The logo\n![Logo](logo.png)\n\n"
-        "[[CAPTION:Figure]] A diagram\n\n::: {style=\"text-align:center;\"}\n![dot diagram](d.png)\n:::\n\n"
+        '[[CAPTION:Figure]] A diagram\n\n::: {style="text-align:center;"}\n![dot diagram](d.png)\n:::\n\n'
         "[[CAPTION:Table]] Requirements\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n"
         "[[LANDSCAPE]]\n\n"
         "| C | D |\n|---|---|\n| 3 | 4 |\n\n[[CAPTION:Table]] After the table\n\n"
@@ -354,7 +359,10 @@ def test_marker_filter_makes_captions_and_drops_word_only_markers(tmp_path):
     assert "[[" not in html
     assert "A lead" in html
     for caption in ("The logo", "A diagram", "The code"):
-        assert f"<figcaption>{caption}</figcaption>" in html or f"<figcaption aria-hidden=\"true\">{caption}</figcaption>" in html
+        assert (
+            f"<figcaption>{caption}</figcaption>" in html
+            or f'<figcaption aria-hidden="true">{caption}</figcaption>' in html
+        )
     assert "<caption>Requirements</caption>" in html and "<caption>After the table</caption>" in html
     assert "Alone" in html
 

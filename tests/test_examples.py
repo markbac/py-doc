@@ -27,7 +27,9 @@ NO_TOOLS = re.compile(
 )
 
 
-needs_xelatex = pytest.mark.skipif(not tex_packages_found("ulem.sty", "tcolorbox.sty"), reason="xelatex or one of its packages is not installed")
+needs_xelatex = pytest.mark.skipif(
+    not tex_packages_found("ulem.sty", "tcolorbox.sty"), reason="xelatex or one of its packages is not installed"
+)
 # The examples keep their Graphviz diagrams (the fixture strips the other kinds), so building them runs dot
 needs_dot = pytest.mark.skipif(shutil.which("dot") is None, reason="Graphviz dot is not installed")
 
@@ -36,7 +38,9 @@ needs_dot = pytest.mark.skipif(shutil.which("dot") is None, reason="Graphviz dot
 def examples(tmp_path, monkeypatch):
     """A copy of the examples without the diagrams that need tools the host does not have."""
     target = tmp_path / "examples"
-    shutil.copytree(EXAMPLES, target, ignore=shutil.ignore_patterns("build", ".py-doc", ".structurizr"))  # not what a local build left
+    shutil.copytree(
+        EXAMPLES, target, ignore=shutil.ignore_patterns("build", ".py-doc", ".structurizr")
+    )  # not what a local build left
     for path in (target / "docs").rglob("*.md"):
         path.write_text(NO_TOOLS.sub("", path.read_text(encoding="utf-8")), encoding="utf-8")
     monkeypatch.chdir(target)
@@ -45,7 +49,15 @@ def examples(tmp_path, monkeypatch):
 
 def test_the_config_loads_and_names_every_part():
     config = load_config(EXAMPLES / "py-doc.yml")
-    assert sorted(config.documents) == ["api-reference", "architecture", "datasheet", "deck", "guide", "interfaces", "release-notes"]
+    assert sorted(config.documents) == [
+        "api-reference",
+        "architecture",
+        "datasheet",
+        "deck",
+        "guide",
+        "interfaces",
+        "release-notes",
+    ]
     assert config.documents["architecture"].sources[1].structurizr is not None
     assert config.lint.vale.rules["PyDoc.SentenceLength"].options == {"max": 35}
     assert config.lint.structure
@@ -63,7 +75,17 @@ def test_the_datasheet_template_passes_with_its_own_prefix_and_marker(capsys):
 
 
 def test_the_draft_template_differs_from_the_base_one(capsys):
-    assert main(["template", "diff", str(EXAMPLES / "templates" / "sensor.docx"), str(EXAMPLES / "templates" / "sensor_Draft.docx")]) == 0
+    assert (
+        main(
+            [
+                "template",
+                "diff",
+                str(EXAMPLES / "templates" / "sensor.docx"),
+                str(EXAMPLES / "templates" / "sensor_Draft.docx"),
+            ]
+        )
+        == 0
+    )
 
 
 def test_the_documents_lint_clean(monkeypatch, capsys):
@@ -106,7 +128,9 @@ def test_the_guide_builds_as_word_and_html(examples, pandoc_runtime):
     text = "\n".join(p.text for p in document.paragraphs)
     assert "Sensor Node Guide" in text and "version 1.0" in text and "internal use" in text
     assert "Customers see only the public build." not in text
-    assert [p.text for p in document.paragraphs if p.style.name == "Title"] == ["Sensor Node Guide"], "the title page is not repeated"
+    assert [p.text for p in document.paragraphs if p.style.name == "Title"] == ["Sensor Node Guide"], (
+        "the title page is not repeated"
+    )
     assert any(p.style.name == "Lead Paragraph" and p.text.startswith("The SN-100") for p in document.paragraphs)
     assert "DRAFT" in document.sections[0].header.paragraphs[0].text, "status: Draft chooses sensor_Draft.docx"
     assert "TOC" in document.element.xml, "toc: true adds a contents list"
@@ -141,7 +165,9 @@ def test_the_guide_builds_as_pdf_with_task_lists_and_captions(examples, pandoc_r
     pdf = examples / "build" / "guide.pdf"
     assert pdf.read_bytes().startswith(b"%PDF")
     if shutil.which("pdftotext"):
-        text = subprocess.run(["pdftotext", "-enc", "UTF-8", str(pdf), "-"], capture_output=True, encoding="utf-8", check=True).stdout
+        text = subprocess.run(
+            ["pdftotext", "-enc", "UTF-8", str(pdf), "-"], capture_output=True, encoding="utf-8", check=True
+        ).stdout
         assert "[[" not in text, "no marker is printed in the PDF"
         assert "Data flow through the node" in text and "Figure 1" in text
 
@@ -158,7 +184,12 @@ def test_the_datasheet_builds_with_its_own_placeholders_and_a_version_in_the_nam
 
 def test_the_release_notes_take_their_version_from_git(examples, pandoc_runtime):
     def git(*args):
-        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args], cwd=examples, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-c", "user.name=t", "-c", "user.email=t@example.com", *args],
+            cwd=examples,
+            check=True,
+            capture_output=True,
+        )
 
     git("init", "-q")
     git("add", "-A")
@@ -241,26 +272,37 @@ def test_the_word_sample_imports_and_builds_again(examples, pandoc_runtime, tmp_
     out = tmp_path / "imported"
     assert main(["import", "word/design_review.docx", "-o", str(out)]) == 0
     text = (out / "design_review.md").read_text(encoding="utf-8")
-    assert "title: Design review" in text and "- Confirm the sampling interval" in text and "| Sampling interval | Firmware |" in text
+    assert (
+        "title: Design review" in text
+        and "- Confirm the sampling interval" in text
+        and "| Sampling interval | Firmware |" in text
+    )
     assert "[[CAPTION:Figure]] The agreed layout" in text
     assert main(["docx", str(out / "design_review.md")]) == 0
     with zipfile.ZipFile(out / "design_review.docx") as archive:
         assert any(n.startswith("word/media/") for n in archive.namelist())
 
 
-@pytest.mark.skipif(not os.environ.get("PY_DOC_STRUCTURIZR_CLI"), reason="set PY_DOC_STRUCTURIZR_CLI to a structurizr-cli to run it")
+@pytest.mark.skipif(
+    not os.environ.get("PY_DOC_STRUCTURIZR_CLI"), reason="set PY_DOC_STRUCTURIZR_CLI to a structurizr-cli to run it"
+)
 def test_the_real_structurizr_cli_reads_the_dsl_into_the_same_model(tmp_path):
     """#96: the DSL through the real structurizr-cli gives the model the hand-made JSON describes."""
     from py_doc.c4.model import load_workspace
     from py_doc.c4.structurizr import workspace_json
 
     shutil.copytree(EXAMPLES / "architecture", tmp_path / "architecture", ignore=shutil.ignore_patterns(".structurizr"))
-    exported = workspace_json(tmp_path / "architecture" / "workspace.dsl", tmp_path / "cache", cli=os.environ["PY_DOC_STRUCTURIZR_CLI"])
+    exported = workspace_json(
+        tmp_path / "architecture" / "workspace.dsl", tmp_path / "cache", cli=os.environ["PY_DOC_STRUCTURIZR_CLI"]
+    )
     from_cli = load_workspace(exported)
     by_hand = load_workspace(EXAMPLES / "architecture" / "workspace.json")
     assert {e.name for e in from_cli.elements.values()} == {e.name for e in by_hand.elements.values()}
+
     def described(ws):
-        return {(ws.elements[r.source_id].name, ws.elements[r.destination_id].name, r.description) for r in ws.relationships}
+        return {
+            (ws.elements[r.source_id].name, ws.elements[r.destination_id].name, r.description) for r in ws.relationships
+        }
 
     # Structurizr adds implied relationships and those of deployment instances, so the CLI's model has more
     assert described(by_hand) <= described(from_cli)

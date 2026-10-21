@@ -317,6 +317,7 @@ def embed_images(text, base):
             return m.group(0)
         mime = mimetypes.guess_type(p.name)[0] or "application/octet-stream"
         return f"![{alt}](data:{mime};base64,{base64.b64encode(p.read_bytes()).decode()})"
+
     return re.sub(r"!\[([^\]]*)\]\(([^)\s]+)\)", sub, text)
 
 
@@ -345,8 +346,12 @@ def callouts(out):
         return f'<blockquote class="callout {kind}"><p class="callout-title">{kind.title()}</p><p>'
 
     out = re.sub(rf"<blockquote>\s*<p>\[!({kinds})\]\s*", marked, out, flags=re.I)
-    out = re.sub(rf"<blockquote>(\s*<p><strong>({kinds}):?</strong>)",
-                 lambda m: f'<blockquote class="callout {m.group(2).lower()}">{m.group(1)}', out, flags=re.I)
+    out = re.sub(
+        rf"<blockquote>(\s*<p><strong>({kinds}):?</strong>)",
+        lambda m: f'<blockquote class="callout {m.group(2).lower()}">{m.group(1)}',
+        out,
+        flags=re.I,
+    )
     return out.replace("<p></p>", "")
 
 
@@ -374,7 +379,12 @@ def heading_html(h):
     return esc(h)
 
 
-ROLES = ("stats", "abstract", "summary", "references")  # a section that is one of these says so: ## Key figures {.stats}
+ROLES = (
+    "stats",
+    "abstract",
+    "summary",
+    "references",
+)  # a section that is one of these says so: ## Key figures {.stats}
 # The looks of each kind of section, the default first. colour= colours whichever it is.
 STYLES = {
     "section": ("bar", "line", "card", "plain"),
@@ -406,25 +416,37 @@ def heading_attributes(heading, where):
             attrs["style"] = value.lower()
         elif item == "cols":
             if not value.isdigit() or int(value) < 1:
-                raise PosterError(f"{where}: heading '{text}' has cols={value}; it must be a whole number of at least 1")
+                raise PosterError(
+                    f"{where}: heading '{text}' has cols={value}; it must be a whole number of at least 1"
+                )
             attrs["cols"] = int(value)
         else:
             known = ", ".join([*(f".{r}" for r in ROLES), ".wide", ".flow", "cols=", "colour=", "style="])
             logger.warning(f"{where}: heading '{text}' has '{item}', which a poster does not use. It takes {known}")
     if attrs["role"] != "section":
-        for name in ("wide", "flow", "cols"):  # a stats strip, abstract, summary or references list is always full width
+        for name in (
+            "wide",
+            "flow",
+            "cols",
+        ):  # a stats strip, abstract, summary or references list is always full width
             if attrs[name]:
-                logger.warning(f"{where}: heading '{text}' is .{attrs['role']}, which is always full width, so {name} is ignored")
+                logger.warning(
+                    f"{where}: heading '{text}' is .{attrs['role']}, which is always full width, so {name} is ignored"
+                )
                 attrs[name] = False if name != "cols" else None
     elif attrs["wide"] and (attrs["flow"] or attrs["cols"]):
-        logger.warning(f"{where}: heading '{text}' is wide, so .flow and cols= are ignored: a wide section has no columns")
+        logger.warning(
+            f"{where}: heading '{text}' is wide, so .flow and cols= are ignored: a wide section has no columns"
+        )
         attrs["flow"], attrs["cols"] = False, None
     styles = STYLES[attrs["role"]]
     if attrs["style"] is None:
         attrs["style"] = styles[0]
     elif attrs["style"] not in styles:
         kind = "a section" if attrs["role"] == "section" else f"a .{attrs['role']} section"
-        raise PosterError(f"{where}: heading '{text}' has style={attrs['style']}; {kind} takes style= {', '.join(styles)}")
+        raise PosterError(
+            f"{where}: heading '{text}' has style={attrs['style']}; {kind} takes style= {', '.join(styles)}"
+        )
     return text, attrs
 
 
@@ -436,7 +458,9 @@ def parse_stats(text):
     for r in rows:
         cells = [c.strip() for c in r.strip("|").split("|")]
         if len(cells) >= 2:
-            out.append((cells[0], cells[1], cells[2] if len(cells) > 2 else "", cells[3].lower() if len(cells) > 3 else ""))
+            out.append(
+                (cells[0], cells[1], cells[2] if len(cells) > 2 else "", cells[3].lower() if len(cells) > 3 else "")
+            )
     return out
 
 
@@ -470,7 +494,9 @@ def columns_of(sections, count, split, md_path):
         except ValueError:
             raise PosterError(f"{md_path}: split must be a number, or numbers separated by commas") from None
         if len(sizes) != count - 1 or min(sizes) < 1 or sum(sizes) >= len(sections):
-            raise PosterError(f"{md_path}: split needs {count - 1} number(s) of sections, leaving at least one for the last column")
+            raise PosterError(
+                f"{md_path}: split needs {count - 1} number(s) of sections, leaving at least one for the last column"
+            )
         cuts = [sum(sizes[: i + 1]) for i in range(len(sizes))]
         return [sections[a:b] for a, b in zip([0, *cuts], [*cuts, len(sections)])]
     total, acc, columns = sum(len(c) for _, c, _ in sections), 0, [[]]
@@ -529,8 +555,13 @@ def fill(text, variables):
     return re.sub(r"\{\{\s*(\w+)\s*\}\}", lambda m: str(variables.get(m[1], m[0])), text)
 
 
-def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None, defaults: dict | None = None,
-          mermaid: dict | None = None):
+def build(
+    md_path,
+    runtime: Callable[[], Runtime],
+    settings: dict | None = None,
+    defaults: dict | None = None,
+    mermaid: dict | None = None,
+):
     """The poster page for ``md_path`` and the build state (diagrams drawn and failed).
 
     ``defaults`` (the ``poster:`` section of py-doc.yml) are under the front matter, and ``settings`` (the
@@ -549,7 +580,9 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
     title = meta.get("title") or (h1.group(1) if h1 else md_path.stem)
 
     parts = re.split(r"(?m)^## +(.+)$", body)
-    items = [(*heading_attributes(heading, md_path), content.strip()) for heading, content in zip(parts[1::2], parts[2::2])]
+    items = [
+        (*heading_attributes(heading, md_path), content.strip()) for heading, content in zip(parts[1::2], parts[2::2])
+    ]
     if not items:
         raise PosterError(f"{md_path}: no sections found (expected '## Heading' blocks)")
 
@@ -571,20 +604,23 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
         if attrs["role"] == "stats":
             figures = "".join(
                 f'<div class="stat"><b>{esc(v)}</b><span>{esc(label)}</span>{trend_html(change, verdict)}</div>'
-                for v, label, change, verdict in parse_stats(c))
-            return f'<div{look(attrs, "stats")}>{figures}</div>' if figures else ""
+                for v, label, change, verdict in parse_stats(c)
+            )
+            return f"<div{look(attrs, 'stats')}>{figures}</div>" if figures else ""
         if attrs["role"] == "abstract":
-            return f'<div{look(attrs, "abstract")}>{render(c, ctx)}</div>'
+            return f"<div{look(attrs, 'abstract')}>{render(c, ctx)}</div>"
         if attrs["role"] == "references":
-            return f'<div{look(attrs, "refs")}><b>{esc(h)}</b>{render(c, ctx)}</div>'
+            return f"<div{look(attrs, 'refs')}><b>{esc(h)}</b>{render(c, ctx)}</div>"
         chunks = re.split(r"(?m)^### +(.+)$", c)  # the summary: a banner, then a block for each ###
         banner = " ".join(chunks[0].split())
         blocks = "".join(
             f'<div class="block"><h3>{esc(head.strip())}</h3><div class="body">{render(text.strip(), ctx)}</div></div>'
-            for head, text in zip(chunks[1::2], chunks[2::2]))
-        parts = ((f'<div class="banner">{inline(banner)}</div>' if banner else "")
-                 + (f'<div class="blocks">{blocks}</div>' if blocks else ""))
-        return f'<div{look(attrs, "summary")}>{parts}</div>' if parts else ""
+            for head, text in zip(chunks[1::2], chunks[2::2])
+        )
+        parts = (f'<div class="banner">{inline(banner)}</div>' if banner else "") + (
+            f'<div class="blocks">{blocks}</div>' if blocks else ""
+        )
+        return f"<div{look(attrs, 'summary')}>{parts}</div>" if parts else ""
 
     bands, run = [], []  # in file order: full-width parts, and runs of sections that share columns
     for item in items:
@@ -599,8 +635,10 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
         bands.append(run)
     runs = [band for band in bands if isinstance(band, list)]
     if meta.get("split") and len(runs) != 1:
-        raise PosterError(f"{md_path}: split chooses the columns of one band of sections, and this poster has {len(runs)}. "
-                          "Leave it out, and the columns of each band are balanced for you")
+        raise PosterError(
+            f"{md_path}: split chooses the columns of one band of sections, and this poster has {len(runs)}. "
+            "Leave it out, and the columns of each band are balanced for you"
+        )
     middle = ""
     for band in bands:
         if isinstance(band, tuple):
@@ -608,10 +646,16 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
             continue
         asked = {attrs["cols"] for _, attrs, _ in band if attrs["cols"]}
         if len(asked) > 1:
-            raise PosterError(f"{md_path}: the band of sections from '{band[0][0]}' asks for {' and '.join(map(str, sorted(asked)))} "
-                              "columns. Give cols= once, on any of its sections")
-        columns = columns_of([(h, c, attrs) for h, attrs, c in band], asked.pop() if asked else count, meta.get("split"), md_path)
-        cols = "".join(f'<div class="col">{"".join(sec(h, attrs, c) for h, c, attrs in column)}</div>' for column in columns)
+            raise PosterError(
+                f"{md_path}: the band of sections from '{band[0][0]}' asks for {' and '.join(map(str, sorted(asked)))} "
+                "columns. Give cols= once, on any of its sections"
+            )
+        columns = columns_of(
+            [(h, c, attrs) for h, attrs, c in band], asked.pop() if asked else count, meta.get("split"), md_path
+        )
+        cols = "".join(
+            f'<div class="col">{"".join(sec(h, attrs, c) for h, c, attrs in column)}</div>' for column in columns
+        )
         balanced = "" if meta.get("split") else " data-balance"  # the page script shares them out by height
         middle += f'<div class="cols"{balanced}>{cols}</div>'
 
@@ -624,10 +668,17 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
     # The paper's own height to width, rounded down: A paper is not exactly 1.4142, and a poster any
     # taller than its page prints a second, empty page
     ratio = math.floor(paper_mm[1] / paper_mm[0] * 10000) / 10000
-    css = (CSS.replace("__VARS__", ctx.theme.css_variables()).replace("__W__", str(width))
-           .replace("__H__", str(round(width * ratio))).replace("__PAPER__", "{}mm {}mm".format(*paper_mm)))
-    script = (SCRIPT.replace("__RATIO__", f"{ratio:.4f}").replace("__MIN__", str(width))
-              .replace("__PAPER_PX__", str(paper_mm[0] / 25.4 * 96)))
+    css = (
+        CSS.replace("__VARS__", ctx.theme.css_variables())
+        .replace("__W__", str(width))
+        .replace("__H__", str(round(width * ratio)))
+        .replace("__PAPER__", "{}mm {}mm".format(*paper_mm))
+    )
+    script = (
+        SCRIPT.replace("__RATIO__", f"{ratio:.4f}")
+        .replace("__MIN__", str(width))
+        .replace("__PAPER_PX__", str(paper_mm[0] / 25.4 * 96))
+    )
     faces, link = font_css(ctx.theme, meta.get("embed_fonts") or False, str(md_path))
     fonts = ctx.theme.fonts.get("stylesheet") if link else None
     ctx.stylesheet = fonts  # still linked, so the PDF gets its fonts put inside: see with_web_fonts
@@ -680,18 +731,29 @@ def footer_html(footer, ctx):
         logos += f'<img alt="Logo" src="data:{mime};base64,{base64.b64encode(path.read_bytes()).decode()}">'
     qr = ""
     if footer.get("qr"):
-        label = f'<span>{text("qr-label")}</span>' if footer.get("qr-label") else ""
+        label = f"<span>{text('qr-label')}</span>" if footer.get("qr-label") else ""
         qr = f'<div class="fqr">{qr_svg(str(footer["qr"]), ctx.theme.colours["strong"], 96)}{label}</div>'
     info = [text("document"), f"Version {text('version')}" if text("version") else ""]
     docinfo = "".join(f"<span>{item}</span>" for item in info if item)
-    return (f'<footer><b class="fl">{text("left")}</b><span class="fc">{text("centre")}</span>'
-            f'<span class="fr">{text("right")}</span>'
-            + (f'<div class="logos">{logos}</div>' if logos else "") + qr + "</footer>"
-            + (f'<div class="docinfo">{docinfo}</div>' if docinfo else ""))
+    return (
+        f'<footer><b class="fl">{text("left")}</b><span class="fc">{text("centre")}</span>'
+        f'<span class="fr">{text("right")}</span>'
+        + (f'<div class="logos">{logos}</div>' if logos else "")
+        + qr
+        + "</footer>"
+        + (f'<div class="docinfo">{docinfo}</div>' if docinfo else "")
+    )
 
 
-def write_poster(source: Path, output: Path, runtime: Callable[[], Runtime], settings: dict | None = None,
-                 defaults: dict | None = None, pdf: bool | None = None, mermaid: dict | None = None):
+def write_poster(
+    source: Path,
+    output: Path,
+    runtime: Callable[[], Runtime],
+    settings: dict | None = None,
+    defaults: dict | None = None,
+    pdf: bool | None = None,
+    mermaid: dict | None = None,
+):
     """Build the poster ``source`` into ``output``, and print its PDF when its settings or ``pdf`` ask.
 
     ``pdf`` (``--pdf`` or ``--no-pdf``) wins over the ``pdf`` setting. Returns the build state and the files written.
@@ -740,4 +802,3 @@ def print_pdf(runtime: Runtime, page: str, pdf: Path) -> None:
             raise PosterError(f"Chromium wrote no PDF for {pdf}")
         pdf.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(output, pdf)
-

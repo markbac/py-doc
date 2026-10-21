@@ -66,7 +66,9 @@ def finish_docx(body_path: Path, template: Path | None, metadata: Metadata, opti
             value = text(read(metadata))
             replacements[prefix + name] = value
             if not value and prefix + name in present:
-                logger.warning(f"The template has {prefix + name}, but the document has no {name.lower().replace('-', ' ')}")
+                logger.warning(
+                    f"The template has {prefix + name}, but the document has no {name.lower().replace('-', ' ')}"
+                )
         post.replace_placeholders(base, replacements)
         index = post.find_and_remove_marker(base, options.get("marker", DEFAULT_MARKER))
         body = Document(str(body_path))
@@ -78,7 +80,11 @@ def finish_docx(body_path: Path, template: Path | None, metadata: Metadata, opti
             marker = options.get("marker", DEFAULT_MARKER)
             kept = [p.text.strip() for p in base.paragraphs if p.text.strip()]
             if kept or base.tables:  # template text in a deliverable must never pass unnoticed (#60)
-                shown = f"'{kept[0][:60]}'" + (f" and {len(kept) - 1} more paragraph(s)" if len(kept) > 1 else "") if kept else "a table"
+                shown = (
+                    f"'{kept[0][:60]}'" + (f" and {len(kept) - 1} more paragraph(s)" if len(kept) > 1 else "")
+                    if kept
+                    else "a table"
+                )
                 logger.warning(
                     f"The template {template.name} has text in its body ({shown}) and no {marker} line, so that text "
                     f"comes before the document. Put {marker} where the document goes, or remove the text"

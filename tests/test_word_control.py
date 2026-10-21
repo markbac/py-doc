@@ -39,7 +39,9 @@ class TestNaming:
         with pytest.raises(ConversionError, match=r"uses \{version\}, but the document has no version"):
             expand_name("{name}-{version}", "guide", None)
 
-    @pytest.mark.parametrize(("pattern", "message"), [("{nmae}", "unknown field {nmae}"), ("a{b", "stray|brace"), ("a}", "brace")])
+    @pytest.mark.parametrize(
+        ("pattern", "message"), [("{nmae}", "unknown field {nmae}"), ("a{b", "stray|brace"), ("a}", "brace")]
+    )
     def test_bad_patterns(self, pattern, message):
         with pytest.raises(ValueError, match=message):
             check_name_pattern(pattern, "x")
@@ -62,7 +64,11 @@ class TestNaming:
 @needs_git
 class TestGitVersion:
     def git(self, folder, *args):
-        subprocess.run(["git", "-C", str(folder), "-c", "user.name=t", "-c", "user.email=t@t", *args], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "-C", str(folder), "-c", "user.name=t", "-c", "user.email=t@t", *args],
+            check=True,
+            capture_output=True,
+        )
 
     def test_describes_the_repository(self, tmp_path):
         self.git(tmp_path, "init", "-q")
@@ -139,9 +145,7 @@ def make_template(path: Path, body_text: str = "Cover") -> Path:
 
 def build(tmp_path, host, front: str, outputs: str = "template: tpl.docx", extra_files=None):
     (tmp_path / "g.md").write_text(f"---\n{front}\n---\n# Body\n\nText.\n", encoding="utf-8")
-    config = write_config(
-        tmp_path, f"documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {{{outputs}}}\n"
-    )
+    config = write_config(tmp_path, f"documents:\n  g:\n    sources: [g.md]\n    outputs:\n      docx: {{{outputs}}}\n")
     return build_document(config, config.documents["g"], runtime=host)
 
 
@@ -220,10 +224,14 @@ class TestTemplate:
         subprocess.run(["git", "-C", str(tmp_path), "init", "-q"], check=True)
         (tmp_path / "x").write_text("x")
         subprocess.run(["git", "-C", str(tmp_path), "add", "x"], check=True)
-        subprocess.run(["git", "-C", str(tmp_path), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "c"], check=True)
+        subprocess.run(
+            ["git", "-C", str(tmp_path), "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "c"], check=True
+        )
         subprocess.run(["git", "-C", str(tmp_path), "tag", "v7"], check=True)
         make_template(tmp_path / "tpl.docx")
-        (out,) = build(tmp_path, host, FRONT.replace("'1.2'", "git"), "template: tpl.docx, name: '{name}-{version_safe}'")
+        (out,) = build(
+            tmp_path, host, FRONT.replace("'1.2'", "git"), "template: tpl.docx, name: '{name}-{version_safe}'"
+        )
         assert out.name == "g-v7.docx" and "v v7 on" in all_text(Document(str(out)))
 
     def test_core_properties_are_written_in_the_right_namespaces(self, tmp_path, host):

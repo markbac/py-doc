@@ -47,3 +47,10 @@ Each decision records the context, the choice and its consequences.
 - **Context**: lint findings need exact lines and source text, and must skip code, links and front matter reliably.
 - **Decision**: the linter parses with markdown-it-py into py-doc's own document model.
 - **Consequences**: precise, fast checks without the container. Two parsers can disagree on edge cases, so the anchor rules are tested against pandoc's own identifiers.
+
+## AD-08 Previews are served, not written beside the outputs
+
+- **Context**: authors want to see a document while they write it. Word and PowerPoint have no live view, and a document open in Word cannot be written. The in-editor Markdown preview cannot draw most diagrams.
+- **Decision**: `--watch` builds an HTML twin of each document with the same pipeline, and keeps it in `.py-doc/preview`. It serves the twin with a reload script, added as the page is served. The VS Code extension runs that command; its own instant preview is an approximation for typing.
+- **Consequences**: the preview shows every diagram exactly as the build draws it, and a document open in Word does not stop it. It is one HTML page: slides are boxes and page breaks are lines, but Word's page layout is not shown. A first build waits for the tool container.
+

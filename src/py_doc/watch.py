@@ -1,4 +1,4 @@
-"""``py-doc poster --watch``: rebuild the posters on every save, and reload them in the browser.
+"""``--watch`` of ``py-doc poster``, ``docx`` and ``slides``: build again on every save, and reload in the browser.
 
 The pages are served on a local address, each with a small script that asks the server every 0.7 s
 whether a newer build is there, and reloads when it is. A build that fails keeps the last good page and
@@ -14,6 +14,7 @@ import logging
 import os
 import threading
 import time
+import urllib.parse
 import webbrowser
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 INTERVAL = 0.5  # seconds between two looks at the files
 SKIPPED = {"node_modules", "__pycache__"}  # folders never watched, as are hidden ones
-# The kinds of file a poster is made from: its Markdown, includes, pictures, data, diagram sources and fonts.
+# The kinds of file a page is made from: its Markdown, includes, pictures, data, diagram sources and fonts.
 # Any other file in the folder, such as a log, is not watched, or writing it would build again without end.
 SOURCES = {".md", ".markdown", ".yml", ".yaml", ".json", ".csv", ".txt", ".py", ".svg", ".png", ".jpg", ".jpeg",
            ".gif", ".webp", ".puml", ".iuml", ".plantuml", ".dot", ".gv", ".mmd", ".dsl", ".woff2", ".woff", ".ttf", ".otf"}  # fmt: skip
@@ -39,18 +40,19 @@ function poll(){fetch('/__status').then(function(r){return r.json();}).then(func
 }).catch(function(){}).then(function(){setTimeout(poll,700);});}
 poll();})();</script>"""
 
-# What a build gives the watcher: the page of each poster, by name, and the files it was made from
+# What a build gives the watcher: the page of each poster or HTML twin, by name, and the files it was made from
 Build = Callable[[], tuple[dict[str, Path], set[Path]]]
 
 
 class State:
     """The pages being served, the build they are from, and the error of the last build, if it failed."""
 
-    def __init__(self) -> None:
+    def __init__(self, title: str = "Posters") -> None:
         self.lock = threading.Lock()
         self.pages: dict[str, Path] = {}
         self.version = 0
         self.error: str | None = None
+        self.title = title
 
 
 def watched_files(folders: set[Path], files: set[Path], outputs: set[Path]) -> dict[Path, int]:
@@ -80,7 +82,7 @@ def serve(state: State, port: int) -> ThreadingHTTPServer:
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802 (the name http.server calls)
-            path = self.path.split("?", 1)[0]
+            path = urllib.parse.unquote(self.path.split("?", 1)[0])
             with state.lock:
                 pages, version, error = dict(state.pages), state.version, state.error
             if path == "/__status":
@@ -93,9 +95,15 @@ def serve(state: State, port: int) -> ThreadingHTTPServer:
                 script = RELOAD.replace("__VERSION__", str(version))
                 return self._send(200, "text/html; charset=utf-8", page.replace("</body>", script + "</body>", 1))
             if not name:
-                links = "".join(f'<li><a href="/{html.escape(n)}.html">{html.escape(n)}</a></li>' for n in pages)
-                return self._send(200, "text/html; charset=utf-8", f"<!doctype html><title>Posters</title><ul>{links}</ul>")
-            self._send(404, "text/plain", f"No poster {name}")
+                links = "".join(
+                    f'<li><a href="/{html.escape(urllib.parse.quote(n))}.html">{html.escape(n)}</a></li>' for n in pages
+                )
+                return self._send(
+                    200,
+                    "text/html; charset=utf-8",
+                    f"<!doctype html><title>{html.escape(state.title)}</title><ul>{links}</ul>",
+                )
+            self._send(404, "text/plain", f"No page {name}")
 
         def _send(self, code: int, kind: str, body: str) -> None:
             data = body.encode("utf-8")
@@ -114,10 +122,17 @@ def serve(state: State, port: int) -> ThreadingHTTPServer:
     return server
 
 
-def watch(build: Build, errors: tuple[type[Exception], ...], port: int = 0, open_browser: bool = True,
-          stop: threading.Event | None = None, interval: float = INTERVAL) -> int:
+def watch(
+    build: Build,
+    errors: tuple[type[Exception], ...],
+    port: int = 0,
+    open_browser: bool = True,
+    stop: threading.Event | None = None,
+    interval: float = INTERVAL,
+    title: str = "py-doc preview",
+) -> int:
     """Build, serve, and build again on every change, until Ctrl+C or ``stop``. Returns the exit status."""
-    state, stop = State(), stop or threading.Event()
+    state, stop = State(title=title), stop or threading.Event()
 
     def rebuild() -> set[Path]:
         started = time.monotonic()

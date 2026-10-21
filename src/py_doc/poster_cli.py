@@ -34,12 +34,32 @@ def run_poster(argv: list[str]) -> int:
         prog="py-doc poster", description="Build self-contained HTML posters from Markdown",
         epilog=POSTER_EXAMPLES, formatter_class=argparse.RawDescriptionHelpFormatter,
     )  # fmt: skip
-    parser.add_argument("targets", nargs="*", metavar="POSTER", help="Markdown files, or names under posters: in py-doc.yml (default: every poster)")
-    parser.add_argument("-o", "--output", help="Output path, for one poster (default: the input name with .html, or the poster's output)")
+    parser.add_argument(
+        "targets",
+        nargs="*",
+        metavar="POSTER",
+        help="Markdown files, or names under posters: in py-doc.yml (default: every poster)",
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="Output path, for one poster (default: the input name with .html, or the poster's output)",
+    )
     parser.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
-    parser.add_argument("--theme", help=f"A built-in theme ({', '.join(BUILTIN)}) or a theme file. Wins over every other setting")
-    parser.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
-    parser.add_argument("--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a [[IF:]] condition")
+    parser.add_argument(
+        "--theme", help=f"A built-in theme ({', '.join(BUILTIN)}) or a theme file. Wins over every other setting"
+    )
+    parser.add_argument(
+        "--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}"
+    )
+    parser.add_argument(
+        "--condition",
+        action="append",
+        default=[],
+        metavar="NAME=VALUE",
+        type=_assignment,
+        help="Set a [[IF:]] condition",
+    )
     parser.add_argument(
         "--embed-fonts", action=argparse.BooleanOptionalAction, default=None,
         help="Download the theme's web fonts once and put them inside the page (default: the embed_fonts setting)",
@@ -48,8 +68,14 @@ def run_poster(argv: list[str]) -> int:
         "--pdf", action=argparse.BooleanOptionalAction, default=None,
         help="Also print each poster to a one-page PDF beside its page (default: the pdf setting)",
     )  # fmt: skip
-    parser.add_argument("--watch", action="store_true", help="Build again on every save, and reload the page in the browser (Ctrl+C stops)")
-    parser.add_argument("--port", type=int, default=0, help="With --watch, the local port to serve the pages on (default: a free one)")
+    parser.add_argument(
+        "--watch",
+        action="store_true",
+        help="Build again on every save, and reload the page in the browser (Ctrl+C stops)",
+    )
+    parser.add_argument(
+        "--port", type=int, default=0, help="With --watch, the local port to serve the pages on (default: a free one)"
+    )
     parser.add_argument("--no-open", action="store_true", help="With --watch, do not open the browser")
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
@@ -81,8 +107,14 @@ def run_poster(argv: list[str]) -> int:
         if args.output and len(jobs) != 1:
             raise ConfigError("--output needs exactly one poster")
         command_line = layer(
-            {"theme": args.theme, "variables": dict(args.var), "conditions": _conditions(args.condition), "embed_fonts": args.embed_fonts},
-            Path.cwd(), "the command line",
+            {
+                "theme": args.theme,
+                "variables": dict(args.var),
+                "conditions": _conditions(args.condition),
+                "embed_fonts": args.embed_fonts,
+            },
+            Path.cwd(),
+            "the command line",
         )
         defaults = project.poster if project else {}
         pages, sources = {}, {config_path.resolve()} if config_path else set()
@@ -100,7 +132,7 @@ def run_poster(argv: list[str]) -> int:
 
     errors = (ConfigError, ConversionError, SettingsError)
     if args.watch:
-        from py_doc.poster_watch import watch
+        from py_doc.watch import watch
 
         return watch(build_all, errors, port=args.port, open_browser=not args.no_open)
     try:
@@ -127,7 +159,9 @@ def _jobs(targets: list[str], files: dict[str, Path], project) -> list[PosterCon
     posters = project.posters if project else {}
     if not targets:
         if not posters:
-            raise ConfigError("no poster given, and no posters: in py-doc.yml. Name a Markdown file, or add posters to py-doc.yml")
+            raise ConfigError(
+                "no poster given, and no posters: in py-doc.yml. Name a Markdown file, or add posters to py-doc.yml"
+            )
         return list(posters.values())
     jobs = []
     for target in targets:

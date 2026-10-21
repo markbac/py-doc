@@ -51,5 +51,10 @@ def check_model(ws: Workspace, file: Path, config: LintConfig | None = None) -> 
             found.append(issue("C4004", f"{element.kind} '{element.name}' has no relationships"))
     for rel in ws.relationships:
         if rel.linked_id is None and not rel.description:
-            found.append(issue("C4003", f"the relationship from '{ws.name_of(rel.source_id)}' to '{ws.name_of(rel.destination_id)}' has no description"))
+            found.append(
+                issue(
+                    "C4003",
+                    f"the relationship from '{ws.name_of(rel.source_id)}' to '{ws.name_of(rel.destination_id)}' has no description",
+                )
+            )
     return sorted((i for i in found if i), key=lambda i: (i.rule, i.message))

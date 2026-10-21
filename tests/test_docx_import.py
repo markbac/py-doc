@@ -77,8 +77,10 @@ def sample(tmp_path) -> Path:
     run_text(p, " and ")
     run_text(p, "italic", italic=True)
     run_text(p, " with a_b* star.")
-    link = parse_xml(f'<w:hyperlink {nsdecls("w", "r")} r:id="{doc.part.relate_to("https://example.com", RT.HYPERLINK, is_external=True)}">'
-                     "<w:r><w:t>a link</w:t></w:r></w:hyperlink>")
+    link = parse_xml(
+        f'<w:hyperlink {nsdecls("w", "r")} r:id="{doc.part.relate_to("https://example.com", RT.HYPERLINK, is_external=True)}">'
+        "<w:r><w:t>a link</w:t></w:r></w:hyperlink>"
+    )
     p._p.append(link)
     doc.add_heading("Details", level=3)
     doc.add_paragraph("one", style="List Bullet")
@@ -205,8 +207,10 @@ def test_tracked_changes_keep_insertions_and_drop_deletions(tmp_path):
     doc.add_heading("T", 1)
     p = doc.add_paragraph("Keep ")
     p._p.append(parse_xml(f'<w:ins {nsdecls("w")} w:id="1" w:author="a"><w:r><w:t>added </w:t></w:r></w:ins>'))
-    p._p.append(parse_xml(f'<w:del {nsdecls("w")} w:id="2" w:author="a"><w:r><w:delText>removed </w:delText></w:r></w:del>'))
-    p._p.append(parse_xml(f'<w:r {nsdecls("w")}><w:t>end</w:t></w:r>'))
+    p._p.append(
+        parse_xml(f'<w:del {nsdecls("w")} w:id="2" w:author="a"><w:r><w:delText>removed </w:delText></w:r></w:del>')
+    )
+    p._p.append(parse_xml(f"<w:r {nsdecls('w')}><w:t>end</w:t></w:r>"))
     path = tmp_path / "track.docx"
     doc.save(path)
     assert "Keep added end" in read(import_docx(path, tmp_path / "out"))

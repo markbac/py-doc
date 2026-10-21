@@ -28,7 +28,12 @@ def test_findings_are_parsed_from_the_tool_output():
         "Summary: 2 issues\n"
     )
     found = parse_findings(output, Path("/base"))
-    assert found[0] == (Path("/base/sub/a.md"), 1, "MD022", 'Headings should be surrounded by blank lines [Expected: 1] [Context: "# T"] (blanks-around-headings)')
+    assert found[0] == (
+        Path("/base/sub/a.md"),
+        1,
+        "MD022",
+        'Headings should be surrounded by blank lines [Expected: 1] [Context: "# T"] (blanks-around-headings)',
+    )
     assert found[1][:3] == (Path("/base/a.md"), 4, "MD004")
 
 
@@ -49,9 +54,14 @@ def docs(tmp_path):
 
 @needs_tool
 def test_inline_config_and_severity(docs, runtime):
-    settings = MarkdownlintSettings(inline={"default": True, "MD004": {"style": "dash"}, "MD022": False}, severity="error")
+    settings = MarkdownlintSettings(
+        inline={"default": True, "MD004": {"style": "dash"}, "MD022": False}, severity="error"
+    )
     issues = run_markdownlint([docs / "a.md"], settings, runtime)
-    assert {(i.rule, i.line, i.severity, i.category) for i in issues} == {("MD004", 4, "error", "Markdown"), ("MD004", 5, "error", "Markdown")}
+    assert {(i.rule, i.line, i.severity, i.category) for i in issues} == {
+        ("MD004", 4, "error", "Markdown"),
+        ("MD004", 5, "error", "Markdown"),
+    }
     assert not any(i.rule == "MD022" for i in issues)
     assert issues and all(i.file == docs / "a.md" for i in issues)
 
@@ -97,7 +107,8 @@ class TestCommand:
     def setup(self, docs, tmp_path, extra):
         (tmp_path / "py-doc.yml").write_text(
             "lint:\n  rules: {DOC001: off, DOC002: off, DOC003: off}\n  markdownlint:\n    config: {default: false, MD004: {style: dash}}\n"
-            + extra + "documents:\n  d: {sources: [docs/a.md]}\n",
+            + extra
+            + "documents:\n  d: {sources: [docs/a.md]}\n",
             encoding="utf-8",
         )
 
@@ -113,12 +124,22 @@ class TestCommand:
         monkeypatch.chdir(tmp_path)
         assert main(["lint", "docs", "--strict"]) == 1
         self.setup(docs, tmp_path, "")
-        text = (tmp_path / "py-doc.yml").read_text().replace("MD004: {style: dash}}", "MD004: {style: dash}}\n    severity: error")
+        text = (
+            (tmp_path / "py-doc.yml")
+            .read_text()
+            .replace("MD004: {style: dash}}", "MD004: {style: dash}}\n    severity: error")
+        )
         (tmp_path / "py-doc.yml").write_text(text, encoding="utf-8")
         assert main(["lint", "docs"]) == 1
 
-    def test_structure_and_markdownlint_findings_share_the_exit_status(self, docs, tmp_path, runtime, monkeypatch, capsys):
-        self.setup(docs, tmp_path, "  structure:\n    - {id: s/star, type: regex-line, severity: error, pattern: '^\\* ', message: no stars}\n")
+    def test_structure_and_markdownlint_findings_share_the_exit_status(
+        self, docs, tmp_path, runtime, monkeypatch, capsys
+    ):
+        self.setup(
+            docs,
+            tmp_path,
+            "  structure:\n    - {id: s/star, type: regex-line, severity: error, pattern: '^\\* ', message: no stars}\n",
+        )
         monkeypatch.chdir(tmp_path)
         assert main(["lint", "docs"]) == 1
         out = capsys.readouterr().out

@@ -45,7 +45,11 @@ REGISTER_HEADER = (
 FORMATS = {"docx": "Word", "pptx": "PowerPoint"}
 _SEQUENCE = re.compile(r"(\d+)$")
 _CODE = re.compile(r"^[A-Za-z0-9]*$")
-LISTS = {"prefixes": "G460, G470", "types": "TN, OV, SP", "classifications": "Confidential, Internal"}  # with an example
+LISTS = {
+    "prefixes": "G460, G470",
+    "types": "TN, OV, SP",
+    "classifications": "Confidential, Internal",
+}  # with an example
 
 
 class NewError(Exception):
@@ -165,7 +169,15 @@ def build_file(meta: dict[str, str], output: str, fmt: str, source: str) -> str:
     lines += ["", "cli:"]
     if fmt == "docx":
         lines.append("  emit-docx: true")
-    lines += [f"  output: {output}", f"  # template: path/to/Template.{fmt}", "", "entries:", f"  - file: {source}", "    heading_offset: 0", ""]
+    lines += [
+        f"  output: {output}",
+        f"  # template: path/to/Template.{fmt}",
+        "",
+        "entries:",
+        f"  - file: {source}",
+        "    heading_offset: 0",
+        "",
+    ]
     return "\n".join(lines)
 
 
@@ -190,19 +202,37 @@ def build_parser() -> argparse.ArgumentParser:
         "markdown", nargs="?", type=Path, metavar="FILE.md",
         help="An existing Markdown file to number: its build file is written beside it, and the file is not changed",
     )  # fmt: skip
-    parser.add_argument("--title", help="The document title (needed; default for FILE.md: its front matter title or first heading)")
-    parser.add_argument("--type", dest="kind", help="The type code in the number, such as TN: one of the register's types when it lists them, else anything or empty")
+    parser.add_argument(
+        "--title", help="The document title (needed; default for FILE.md: its front matter title or first heading)"
+    )
+    parser.add_argument(
+        "--type",
+        dest="kind",
+        help="The type code in the number, such as TN: one of the register's types when it lists them, else anything or empty",
+    )
     parser.add_argument("--format", choices=sorted(FORMATS), help="Word (docx) or PowerPoint (pptx). Default: docx")
     parser.add_argument("--author", help="Default: git config user.name")
-    parser.add_argument("--classification", help="Such as Confidential: one of the register's classifications when it lists them, else anything")
+    parser.add_argument(
+        "--classification",
+        help="Such as Confidential: one of the register's classifications when it lists them, else anything",
+    )
     parser.add_argument("--description", help="One sentence on what the document covers")
     parser.add_argument(
         "--prefix",
         help="The number prefix, such as G460 (default: the register's prefix). One of its prefixes when it lists them. "
         "When the register is made, it becomes its default",
     )
-    parser.add_argument("--scan", action="store_true", help="Add the legacy build files not in the register yet (clashes included), and make no document")
-    parser.add_argument("--start", type=int, metavar="N", help="New numbers begin at N, skipping any taken (kept in the register), and make no document")
+    parser.add_argument(
+        "--scan",
+        action="store_true",
+        help="Add the legacy build files not in the register yet (clashes included), and make no document",
+    )
+    parser.add_argument(
+        "--start",
+        type=int,
+        metavar="N",
+        help="New numbers begin at N, skipping any taken (kept in the register), and make no document",
+    )
     parser.add_argument("-y", "--yes", action="store_true", help="Ask nothing: take the defaults for what is not given")
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
@@ -279,7 +309,12 @@ def _existing_markdown(path: Path) -> ExistingMarkdown:
         return str(meta.extra.get(key) or "").strip()
 
     return ExistingMarkdown(
-        path, meta.title or first_heading(body) or "", meta.author or "", meta.version or "", extra("classification"), extra("description")
+        path,
+        meta.title or first_heading(body) or "",
+        meta.author or "",
+        meta.version or "",
+        extra("classification"),
+        extra("description"),
     )
 
 
@@ -292,7 +327,9 @@ def _not_registered(markdown: Path, register: Register, root: Path) -> None:
                 raise NewError(f"{markdown.name} is already a source of {entry.file}, number {entry.number}")
 
 
-def make(folder: Path, args: argparse.Namespace, ask: Callable[[str], str] | None, today: datetime.date) -> tuple[list[Path], Register, bool]:
+def make(
+    folder: Path, args: argparse.Namespace, ask: Callable[[str], str] | None, today: datetime.date
+) -> tuple[list[Path], Register, bool]:
     """Write the build file and its Markdown in ``folder`` and record the number. Returns what was written.
 
     With ``args.markdown``, the build file goes beside that file and names it; the Markdown is not written.
@@ -330,7 +367,11 @@ def make(folder: Path, args: argparse.Namespace, ask: Callable[[str], str] | Non
         raise NewError(f"'{fmt}' is not docx or pptx")
     author = value("Author", args.author, (existing.author if existing else "") or _git_name()).strip()
     classification = pick(
-        "Classification", args.classification, existing.classification if existing else "", allowed.get("classifications"), "--classification"
+        "Classification",
+        args.classification,
+        existing.classification if existing else "",
+        allowed.get("classifications"),
+        "--classification",
     )
     description = value("Description", args.description, existing.description if existing else "").strip()
 
@@ -399,7 +440,9 @@ def run_new(argv: Sequence[str] | None = None) -> int:
         for entry in added:
             print(f"added     {entry.number}  {entry.file}")
         _report_clashes(register)
-        print(f"register  {os.path.relpath(register.path)}: {len(register.entries or [])} number(s), the next ends in {register.next_number('').rsplit('-', 1)[-1]}")
+        print(
+            f"register  {os.path.relpath(register.path)}: {len(register.entries or [])} number(s), the next ends in {register.next_number('').rsplit('-', 1)[-1]}"
+        )
         return 0
     try:
         written, register, created = make(Path.cwd(), args, ask, datetime.date.today())
@@ -416,5 +459,7 @@ def run_new(argv: Sequence[str] | None = None) -> int:
     for path in written:
         print(f"written   {Path(os.path.relpath(path))}")
     print(f"number    {register.entries[-1].number}, recorded in {shown}")
-    print(f"\nNext: commit {REGISTER} with the new files, then `py-doc build --legacy {Path(os.path.relpath(written[0]))}`")
+    print(
+        f"\nNext: commit {REGISTER} with the new files, then `py-doc build --legacy {Path(os.path.relpath(written[0]))}`"
+    )
     return 0

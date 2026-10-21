@@ -79,7 +79,8 @@ def built(tmp_path, monkeypatch):
         (tmp_path / "g.md").write_text(sample, encoding="utf-8")
         png(tmp_path / "pic.png")
         (tmp_path / "py-doc.yml").write_text(
-            f"documents:\n  g:\n    title: Guide\n{meta and '    ' + meta}    sources: [g.md]\n    outputs:\n      {outputs}\n", encoding="utf-8"
+            f"documents:\n  g:\n    title: Guide\n{meta and '    ' + meta}    sources: [g.md]\n    outputs:\n      {outputs}\n",
+            encoding="utf-8",
         )
         config = load_config(tmp_path / "py-doc.yml")
         (out,) = build_document(config, config.documents["g"], runtime=runtime)
@@ -129,7 +130,13 @@ def test_each_callout_kind_is_a_box_in_its_own_style(built):
     document = Document(str(out))
     styles = xml(out, "word/styles.xml")
     used = {p.style.name: p.text for p in document.paragraphs if p.style.name.startswith("Div.")}
-    for kind, fill in (("note", "E7F1F8"), ("tip", "E8F5E9"), ("important", "F1ECF9"), ("warning", "FFF4E0"), ("caution", "FCE8E8")):
+    for kind, fill in (
+        ("note", "E7F1F8"),
+        ("tip", "E8F5E9"),
+        ("important", "F1ECF9"),
+        ("warning", "FFF4E0"),
+        ("caution", "FCE8E8"),
+    ):
         assert f"Div.{kind}" in used or any(s.startswith(f"Div.{kind}") for s in used), kind
         assert fill in styles, f"{kind} box has no background"
     assert re.search(r'<w:left [^>]*w:val="single"', styles)
@@ -158,7 +165,9 @@ def test_landscape_section_between_the_markers(built):
     orientations = re.findall(r'<w:pgSz[^>]*w:orient="(\w+)"', body)
     assert "landscape" in orientations
     sizes = [(s.page_width, s.page_height) for s in Document(str(out)).sections if s.page_width and s.page_height]
-    assert any(w > h for w, h in sizes) and sizes[-1][1] > sizes[-1][0]  # landscape in the middle, portrait again at the end
+    assert (
+        any(w > h for w, h in sizes) and sizes[-1][1] > sizes[-1][0]
+    )  # landscape in the middle, portrait again at the end
 
 
 def test_code_uses_the_highlight_theme(built):

@@ -53,7 +53,16 @@ def build_pages(
         raise ConversionError(f"The Structurizr workspace '{dsl}' does not exist")
     image = resolve_image(settings.image, cache.parent.parent)
     key = hashlib.sha256(
-        json.dumps([workspace_hash(dsl) if dsl.suffix == ".dsl" else dsl.read_text("utf-8"), spec.levels, spec.systems, spec.engine, spec.format, image]).encode()
+        json.dumps(
+            [
+                workspace_hash(dsl) if dsl.suffix == ".dsl" else dsl.read_text("utf-8"),
+                spec.levels,
+                spec.systems,
+                spec.engine,
+                spec.format,
+                image,
+            ]
+        ).encode()
     ).hexdigest()[:16]
     marker = out / ".hash"
     listed = sorted(out.glob("*.md")) if out.is_dir() else []
@@ -79,7 +88,9 @@ def build_pages(
 
     for old in out.glob("*.md"):
         old.unlink()
-    pages = generate(ws, dsl.name, levels=spec.levels or None, systems=spec.systems or None, images=images, sources=sources)
+    pages = generate(
+        ws, dsl.name, levels=spec.levels or None, systems=spec.systems or None, images=images, sources=sources
+    )
     written = []
     for name, text in pages.items():
         (out / name).write_text(text, encoding="utf-8")
@@ -102,7 +113,10 @@ def expand(
         for index, page in enumerate(pages):
             expanded.append(
                 replace(
-                    source, file=page, structurizr=None, title=source.title if index == 0 else None,
+                    source,
+                    file=page,
+                    structurizr=None,
+                    title=source.title if index == 0 else None,
                     page_break=source.page_break and index == 0,
                 )
             )

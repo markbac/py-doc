@@ -6,17 +6,43 @@ It formats custom `py-doc` Word (`.docx`) markers, callouts, numbered captions, 
 
 ---
 
-## Two Preview Modes: Instant vs. Watch Server
+## Two Preview Modes: Instant vs. HTML Twin Live Watch
 
-### 1. Instant Editor Preview (`Ctrl+K V` or `Ctrl+Shift+V`)
-* **Zero dependencies, instant typing-latency**: Formats text, callouts, numbered captions, slide cards, poster stat strips, card grids, and Mermaid diagrams directly in the editor as you type.
-* **No Docker required**: Works offline without compiling files.
+This extension provides two complementary ways to preview your documents:
 
-### 2. Live Poster Watch Server (`py-doc poster --watch`)
-* **100% Pixel-Perfect Production Render**: Click the **👁️ (Live Poster Watch)** button in the editor navigation bar (or run `py-doc poster <file> --watch --port 8765 --no-open` in the terminal).
-* **Side-by-Side in VS Code**: Automatically docks a side-by-side browser tab inside VS Code using `Simple Browser`.
-* **Auto-Reloads on Save (`Ctrl+S`)**: Rebuilds the poster in the background and reloads the tab in ~0.7 seconds.
-* **Compiles Every Diagram**: Renders PlantUML, Graphviz, Ditaa, Wavedrom, Vega, Pikchr, and Bytefield diagrams into true vector SVGs via `py-doc`'s container.
+| Capability | Option 3: Instant In-Editor Preview | Option 1: Live Watch Server (HTML Twin) |
+|:---|:---|:---|
+| **Trigger** | `Ctrl+K V` or `Ctrl+Shift+V` (or standard Preview icon) | `👁️` eye icon in editor title bar, or `py-doc ... --watch` |
+| **Speed** | Instant (<1ms), updates on every keystroke | ~1 second on save (`Ctrl+S`) |
+| **Docker / Tooling** | **Zero dependencies**, 100% offline pure JavaScript | Uses `py-doc`'s tool container via Pandoc |
+| **Formats Supported** | Technical Documents, Slide Decks, Posters | Technical Documents (`docx`), Slide Decks (`slides`), Posters (`poster`) |
+| **Diagrams** | Live client SVG preview for Mermaid, PlantUML syntax cards | Full 100% compilation of all 12 diagram engines (Mermaid, PlantUML, Graphviz, Ditaa, Wavedrom, Vega, Pikchr, Bytefield, etc.) |
+| **Where it Displays** | Native VS Code Markdown preview pane | Side-by-side inside VS Code via `Simple Browser`, on a free local port |
+| **File Lock Tolerance** | Never touches output files | Skips a `.docx`/`.pptx` open in Word or PowerPoint, with a warning, and still updates the HTML twin |
+
+---
+
+### How Option 1 (Live Watch Server) Works Across All Formats
+
+When you run `py-doc` with `--watch` (or click `👁️` in VS Code):
+1. **Technical Documents (`py-doc docx file.md --watch`)**:
+   - Rebuilds `file.docx` on save. If Word has it open, it is left as it is, with a warning, and the preview still updates.
+   - Builds an **HTML twin** with Pandoc, MathML, admonitions, all diagrams, and page breaks shown as dashed lines.
+   - The twin is written to `.py-doc/preview/` below the document's folder, so no file of yours is overwritten.
+2. **Slide Decks (`py-doc slides deck.md --watch`)**:
+   - Rebuilds `deck.pptx` on save (PowerPoint locks are handled the same way).
+   - Builds an HTML twin of the deck: each slide a numbered 16:9 box, split where PowerPoint splits it (headings up to `--split-level`, and page breaks), with columns side by side and speaker notes (`::: notes` / `<!-- notes: ... -->`) in labelled boxes.
+3. **Posters (`py-doc poster poster.md --watch`)**:
+   - Rebuilds the self-contained poster HTML file on save with true vector graphics and barcodes.
+
+py-doc serves the preview on a free local port and the page reloads on each save. Its output is in the **py-doc live preview** output channel.
+
+The `👁️` button chooses the command from the file itself, the same way the instant preview chooses its mode:
+- **Poster**: the front matter has a poster setting (`paper`, `byline`, `orientation`, `theme`, `columns`, `width`, `colours`, `palette`, `logo`, `embed_fonts`).
+- **Slides**: the front matter has `split_level` or a `format` of `slides`/`pptx`, or the body has `:::: columns`, `::: notes`, `::: incremental` or `<!-- notes: -->` outside code blocks.
+- **Word document**: anything else.
+
+Use **py-doc: Open Live Word Document / Presentation / Poster Preview** from the Command Palette to choose the format yourself. Opening a new preview stops the one already running, and **py-doc: Stop Live Preview Server** stops it.
 
 ---
 
@@ -39,7 +65,7 @@ It formats custom `py-doc` Word (`.docx`) markers, callouts, numbered captions, 
 
 ### 2. Slide Decks (PowerPoint `.pptx`)
 
-When authoring a slide deck (e.g. `slides.md`, `format: pptx`, or using slide directives), the preview switches to **Slide Deck Mode**:
+When authoring a slide deck (`format: pptx`, `split_level`, or columns, speaker notes and incremental lists in the body), the preview switches to **Slide Deck Mode**. With `split_level: 1`, each `#` heading starts a content slide, as it does in PowerPoint:
 
 | Slide Feature | `py-doc` Syntax | Preview Rendering |
 |:---|:---|:---|
@@ -54,7 +80,7 @@ When authoring a slide deck (e.g. `slides.md`, `format: pptx`, or using slide di
 
 ### 3. Posters (HTML & PDF Posters)
 
-When authoring a poster (e.g. `paper: a1`, `byline: ...`, or headings with `{.stats}`), the preview switches to **Poster Mode**:
+When authoring a poster (a poster setting such as `paper: a1` or `byline: ...` in the front matter), the preview switches to **Poster Mode**:
 
 | Poster Feature | `py-doc` Syntax | Preview Rendering |
 |:---|:---|:---|
@@ -70,6 +96,30 @@ When authoring a poster (e.g. `paper: a1`, `byline: ...`, or headings with `{.st
 
 ---
 
+## Install
+
+The extension is not on the Marketplace yet. Build it and install the file:
+
+```bash
+cd editors/vscode
+npm ci
+npx @vscode/vsce package          # writes vscode-py-doc-preview-<version>.vsix
+code --install-extension vscode-py-doc-preview-*.vsix
+```
+
+The live preview needs py-doc itself (`pip install -e .` at the root of this repository, and Docker).
+
+---
+
+## Settings
+
+| Setting | Default | What it does |
+|:---|:---|:---|
+| `pydoc.executable` | `py-doc` | The py-doc program the live preview runs. Set it to the `py-doc` of a virtual environment (`.venv/Scripts/py-doc.exe` on Windows, `.venv/bin/py-doc` elsewhere) when it is not on the `PATH`. |
+| `pydoc.watch.port` | `0` | The local port of the live preview. `0` lets py-doc pick a free one, so each window can have its own preview. |
+
+---
+
 ## Adding to the `py-doc` Repository
 
 To include this extension as a standard writing tool in the [`markbac/py-doc`](https://github.com/markbac/py-doc) repository:
@@ -79,16 +129,20 @@ Located in `editors/vscode`:
 ```text
 py-doc/
 ├── src/py_doc/
-├── docs/
-├── examples/
+├── tests/fixtures/preview/cases.json   <-- shared by the Python and the extension tests
 └── editors/
-    └── vscode/             <-- VS Code extension
+    └── vscode/                         <-- VS Code extension
         ├── package.json
-        ├── extension.js
-        ├── styles/
-        │   └── py-doc-preview.css
+        ├── extension.js                # activation and commands
+        ├── src/
+        │   ├── plugin.js               # the instant preview (markdown-it plugin)
+        │   ├── detect.js               # which command a file is for
+        │   ├── frontmatter.js          # front matter (js-yaml)
+        │   ├── text.js                 # escaping
+        │   └── watch.js                # the live preview process
+        ├── styles/py-doc-preview.css
+        ├── images/icon.png
         ├── test/
-        │   └── test.js
         └── README.md
 ```
 
@@ -107,7 +161,11 @@ In projects initialized with `py-doc init`, or at the root of `py-doc`:
 ## Running Automated Tests
 
 ```bash
-npm test
+npm ci
+npm run lint   # ESLint
+npm test       # node --test
 ```
 
-Runs all 8 test suites validating documents, slides, posters, image dimensions, and diagram features.
+- `test/test.js`: the instant preview of documents, slides and posters, format detection, and regressions.
+- `test/cases.test.js`: the shared cases of `tests/fixtures/preview/cases.json`. The Python tests (`tests/test_preview_cases.py`) run the same cases through the HTML twin that `--watch` builds, so the two previews cannot drift apart.
+- `test/watch.test.js`: the live preview, against a fake `py-doc`.

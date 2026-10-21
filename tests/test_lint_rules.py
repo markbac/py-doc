@@ -45,7 +45,9 @@ class TestLimits:
         assert rules(text, config=config) == [(1, "DOC009"), (3, "DOC008")]
 
     def test_the_limits_come_from_py_doc_yml(self, tmp_path):
-        (tmp_path / "py-doc.yml").write_text("lint:\n  limits: {sentence_words: 12, heading_length: 30}\n", encoding="utf-8")
+        (tmp_path / "py-doc.yml").write_text(
+            "lint:\n  limits: {sentence_words: 12, heading_length: 30}\n", encoding="utf-8"
+        )
         lint = load_config(tmp_path / "py-doc.yml").lint
         assert (lint.sentence_words, lint.heading_length) == (12, 30)
 
@@ -88,10 +90,15 @@ class TestAcronymOptions:
 
     def test_the_options_come_from_py_doc_yml(self, tmp_path):
         (tmp_path / "py-doc.yml").write_text(
-            "lint:\n  acronyms: {require_definition: false, scope: document, suggestion: Spell it out}\n", encoding="utf-8"
+            "lint:\n  acronyms: {require_definition: false, scope: document, suggestion: Spell it out}\n",
+            encoding="utf-8",
         )
         lint = load_config(tmp_path / "py-doc.yml").lint
-        assert (lint.acronym_require_definition, lint.acronym_scope, lint.acronym_suggestion) == (False, "document", "Spell it out")
+        assert (lint.acronym_require_definition, lint.acronym_scope, lint.acronym_suggestion) == (
+            False,
+            "document",
+            "Spell it out",
+        )
 
 
 class TestQualityChecks:

@@ -18,9 +18,15 @@ def build_parser() -> argparse.ArgumentParser:
         prog="py-doc import", description="Convert a Word document (.docx) or a PowerPoint deck (.pptx) to Markdown"
     )
     parser.add_argument("input", type=Path, help="The .docx or .pptx file")
-    parser.add_argument("-o", "--output", type=Path, help="Folder for the .md file and its media folder (default: next to the input)")
+    parser.add_argument(
+        "-o", "--output", type=Path, help="Folder for the .md file and its media folder (default: next to the input)"
+    )
     parser.add_argument("--force", action="store_true", help="Replace an existing .md file")
-    parser.add_argument("--no-defloat-images", action="store_true", help="Word: leave floating pictures out instead of placing them inline")
+    parser.add_argument(
+        "--no-defloat-images",
+        action="store_true",
+        help="Word: leave floating pictures out instead of placing them inline",
+    )
     parser.add_argument("--print-output-paths", action="store_true", help="Print where the Markdown and the media went")
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")

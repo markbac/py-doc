@@ -82,10 +82,20 @@ class LintConfig:
     disabled_rules: frozenset[str] = frozenset()
     severities: dict[str, str] = field(
         default_factory=lambda: {
-            RULE_GLOSSARY: "warning", RULE_REDUNDANT: "warning", RULE_ACRONYM: "info", RULE_DIRECTIVE: "error",
-            RULE_HEADING_JUMP: "warning", RULE_BROKEN_LINK: "warning", RULE_IMAGE_ALT: "warning",
-            RULE_SENTENCE_LENGTH: "info", RULE_HEADING_LENGTH: "info", RULE_DUPLICATE_HEADING: "info",
-            RULE_UNCLOSED_FENCE: "error", RULE_REQUIRED_SECTION: "warning", RULE_TERMINOLOGY: "info", **C4_RULES,
+            RULE_GLOSSARY: "warning",
+            RULE_REDUNDANT: "warning",
+            RULE_ACRONYM: "info",
+            RULE_DIRECTIVE: "error",
+            RULE_HEADING_JUMP: "warning",
+            RULE_BROKEN_LINK: "warning",
+            RULE_IMAGE_ALT: "warning",
+            RULE_SENTENCE_LENGTH: "info",
+            RULE_HEADING_LENGTH: "info",
+            RULE_DUPLICATE_HEADING: "info",
+            RULE_UNCLOSED_FENCE: "error",
+            RULE_REQUIRED_SECTION: "warning",
+            RULE_TERMINOLOGY: "info",
+            **C4_RULES,
         }  # fmt: skip
     )
     structure: list = field(default_factory=list)  # StructureRule entries, see lint.structure
@@ -94,4 +104,6 @@ class LintConfig:
     root: Path = field(default_factory=Path.cwd)  # the project folder: where the managed Vale folder lives
     documents: dict[str, list[Path]] = field(default_factory=dict)  # document id -> its source files, in order
     generated: frozenset[Path] = frozenset()  # files content generators write: not missing before they run
-    posters: frozenset[Path] = frozenset()  # poster sources: their prose is linted, but not by the document structure rules
+    posters: frozenset[Path] = (
+        frozenset()
+    )  # poster sources: their prose is linted, but not by the document structure rules

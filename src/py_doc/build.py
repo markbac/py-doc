@@ -21,6 +21,7 @@ from .template_check import log_problems
 
 logger = logging.getLogger(__name__)
 
+
 def _combine_metadata(doc: DocumentConfig, first: Metadata, heading: str | None, root: Path | None = None) -> Metadata:
     """Properties from the configuration, then the first source's front matter, then its first heading.
 
@@ -82,7 +83,18 @@ def build_document(
 
 
 def render_output(
-    fmt, joined, metadata, output, name, source_dirs, template, settings, runtime, keep_going=False, report=None, mermaid=None
+    fmt,
+    joined,
+    metadata,
+    output,
+    name,
+    source_dirs,
+    template,
+    settings,
+    runtime,
+    keep_going=False,
+    report=None,
+    mermaid=None,
 ) -> Path:
     """Draw the diagrams of ``joined`` and have pandoc write ``output``. ``name`` is used in messages."""
     if runtime is None:
@@ -112,7 +124,9 @@ def render_output(
     if _numbers_headings_itself(fmt, template, settings):
         stripped = strip_heading_numbers(markdown)
         if stripped != markdown:
-            logger.info(f"{name}.{fmt} numbers its headings itself, so the numbers written in the headings are left out")
+            logger.info(
+                f"{name}.{fmt} numbers its headings itself, so the numbers written in the headings are left out"
+            )
         markdown = stripped
     job = PandocJob(fmt, markdown, metadata, output, source_dirs, template, settings, drawn.pictures)
     return convert(runtime(), job)

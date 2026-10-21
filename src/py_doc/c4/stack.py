@@ -162,7 +162,10 @@ class Stack:
             elapsed = time.monotonic() - started
             if self.status() != "running":
                 self._fail("Structurizr Local stopped while starting.")
-            if self.runtime.run(["node", "-e", PROBE, url], network=self.network, check=False, timeout=60).returncode == 0:
+            if (
+                self.runtime.run(["node", "-e", PROBE, url], network=self.network, check=False, timeout=60).returncode
+                == 0
+            ):
                 logger.info("Structurizr Local is ready after %d seconds", elapsed)
                 return
             if elapsed >= READY_SECONDS:
@@ -203,7 +206,11 @@ def _end_wsl_process(pid: int) -> None:
     """Stop process ``pid`` if it is still a ``wsl.exe``: a recorded number may since belong to another program."""
     try:
         listing = subprocess.run(
-            ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"], capture_output=True, text=True, timeout=30, check=False
+            ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
         ).stdout
     except (OSError, subprocess.SubprocessError):
         return

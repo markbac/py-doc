@@ -103,7 +103,13 @@ def _draw(runtime: Runtime, renderer: Renderer, job_text: str, kind: str, landsc
 
 
 def draw_cached(
-    runtime: Runtime, renderer: Renderer, text: str, kind: str, landscape: bool, source_dir: Path, info: dict | None = None
+    runtime: Runtime,
+    renderer: Renderer,
+    text: str,
+    kind: str,
+    landscape: bool,
+    source_dir: Path,
+    info: dict | None = None,
 ) -> Path:
     """The picture for a diagram: from the cache when the same one was drawn before. ``info`` gets ``cached``."""
     key = _key(runtime, renderer, Job(Path(), Path(), kind, landscape), text)
@@ -219,7 +225,9 @@ def render_parts(
                     events.append(event)
             except (ToolFailed, DiagramError) as exc:
                 message = f"{file}:{block.line}: {block.fence} diagram failed: {_reason(exc)}"
-                event.update(status="failed", cached=False, seconds=round(time.monotonic() - started, 3), error=_reason(exc))
+                event.update(
+                    status="failed", cached=False, seconds=round(time.monotonic() - started, 3), error=_reason(exc)
+                )
                 if events is not None:
                     events.append(event)
                 if not keep_going:
@@ -233,7 +241,7 @@ def render_parts(
             width = block.options.get("width")
             if width:
                 if not _WIDTH.match(width):
-                    raise DiagramError(f"{file}:{block.line}: width=\"{width}\" is not a size such as 100%, 12cm or 4in")
+                    raise DiagramError(f'{file}:{block.line}: width="{width}" is not a size such as 100%, 12cm or 4in')
                 picture_line += f"{{width={width}}}"
             if fmt == "docx" and _captioned(lines, block):
                 picture_line += "\\ "  # a no-break space: not alone in its paragraph, so pandoc adds no caption

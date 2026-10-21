@@ -9,7 +9,17 @@ import re
 
 import yaml
 
-from .model import Component, Container, DeploymentNode, Element, InfrastructureNode, Person, SoftwareSystem, View, Workspace
+from .model import (
+    Component,
+    Container,
+    DeploymentNode,
+    Element,
+    InfrastructureNode,
+    Person,
+    SoftwareSystem,
+    View,
+    Workspace,
+)
 
 LEVELS = ("context", "containers", "components", "relationships", "deployment", "dynamic", "catalogue", "documentation")
 PAGE_NAMES = {
@@ -48,7 +58,9 @@ def _table(headers: list[str], rows: list[list[str]]) -> list[str]:
 
 
 def _tags(element: Element) -> str:
-    return ", ".join(t for t in element.tags if t not in ("Element", "Person", "Software System", "Container", "Component"))
+    return ", ".join(
+        t for t in element.tags if t not in ("Element", "Person", "Software System", "Container", "Component")
+    )
 
 
 def _by_name(items: list[Element]) -> list[Element]:
@@ -57,7 +69,12 @@ def _by_name(items: list[Element]) -> list[Element]:
 
 class _Writer:
     def __init__(
-        self, ws: Workspace, source: str, images: dict[str, str], templates: dict[str, str], systems: list[str] | None,
+        self,
+        ws: Workspace,
+        source: str,
+        images: dict[str, str],
+        templates: dict[str, str],
+        systems: list[str] | None,
         sources: dict[str, tuple[str, str]],
     ):
         self.ws, self.source, self.images, self.templates = ws, source, images, {**TEMPLATES, **templates}
@@ -98,7 +115,14 @@ class _Writer:
             out += [f"[[CAPTION:Figure]] {view.heading}", f"![{view.heading}]({image})", ""]
         elif view.key in self.sources:
             language, text = self.sources[view.key]
-            out += [f"Diagram source ({language}) of the view '{view.heading}':", "", f"```{language}", text.rstrip(), "```", ""]
+            out += [
+                f"Diagram source ({language}) of the view '{view.heading}':",
+                "",
+                f"```{language}",
+                text.rstrip(),
+                "```",
+                "",
+            ]
         return out
 
     # -- the pages ------------------------------------------------------------------------------
@@ -162,14 +186,21 @@ class _Writer:
                         lines += walk(child, depth + 1)
                 return lines
 
-            for node in _by_name([n for n in self.ws.of_kind(DeploymentNode) if n.parent_id is None and n.environment == environment]):
+            for node in _by_name(
+                [n for n in self.ws.of_kind(DeploymentNode) if n.parent_id is None and n.environment == environment]
+            ):
                 body += walk(node, 0)
             body += [""]
             body += [line.replace("## View:", "### View:") for line in self.dep_views(environment)]
         return self.page("deployment", body)
 
     def dep_views(self, environment: str) -> list[str]:
-        return [line for v in self.ws.views if v.kind == "deployment" and v.environment == environment for line in self.figure(v)]
+        return [
+            line
+            for v in self.ws.views
+            if v.kind == "deployment" and v.environment == environment
+            for line in self.figure(v)
+        ]
 
     def dynamic(self) -> str:
         body = ["# Dynamic behaviour", "", self.say("dynamic"), ""]
@@ -192,10 +223,20 @@ class _Writer:
     def catalogue(self) -> str:
         ws = self.ws
         body = ["# Element catalogue", "", self.say("catalogue"), ""]
-        rows = [[e.name, e.kind, e.technology, e.description] for e in _by_name([e for e in ws.elements.values() if not e.kind.endswith("Instance")])]
+        rows = [
+            [e.name, e.kind, e.technology, e.description]
+            for e in _by_name([e for e in ws.elements.values() if not e.kind.endswith("Instance")])
+        ]
         body += _table(["Name", "Type", "Technology", "Description"], rows)
         body += ["## Glossary", ""]
-        terms = sorted({(e.name, e.description) for e in ws.elements.values() if e.description and not e.kind.endswith("Instance")}, key=lambda t: t[0].lower())
+        terms = sorted(
+            {
+                (e.name, e.description)
+                for e in ws.elements.values()
+                if e.description and not e.kind.endswith("Instance")
+            },
+            key=lambda t: t[0].lower(),
+        )
         body += _table(["Term", "Meaning"], [[n, d] for n, d in terms])
         return self.page("catalogue", body)
 

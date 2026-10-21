@@ -14,7 +14,8 @@ from .convert import SlidesConverter
 EXAMPLES = """examples:
   py-doc slides talk.md                       talk.pptx next to it (or -o FILE)
   py-doc slides talk.md -t Template.pptx      with a PowerPoint template
-  py-doc slides talk.md --split-level 1       a new slide only at each # heading"""
+  py-doc slides talk.md --split-level 1       a new slide only at each # heading
+  py-doc slides talk.md --watch               live HTML twin preview in the browser on every save"""
 
 
 def build_parser(prog: str = "py-doc slides") -> argparse.ArgumentParser:

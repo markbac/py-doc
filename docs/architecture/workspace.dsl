@@ -12,7 +12,7 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
 
         pydoc = softwareSystem "py-doc" "Turns Markdown into Word, PowerPoint, PDF, HTML and web sites, checks the writing, and documents C4 models." {
             cli = container "py-doc command" "The py-doc command and Python package. Reads py-doc.yml, prepares the Markdown and starts every tool in the tool image." "Python 3.10+" {
-                commands = component "Commands" "Parses the command line and hands each command to its module: build, docx, slides, lint, check, generate, stats, diff, c4, site, import, init, new, template, tools, doctor, setup, migrate. Runs the build pipeline around the documents." "argparse"
+                commands = component "Commands" "Parses the command line and hands each command to its module: build, docx, slides, poster, lint, check, generate, stats, diff, c4, site, import, init, new, template, tools, doctor, setup, migrate. Runs the build pipeline around the documents." "argparse"
                 configuration = component "Configuration" "Loads py-doc.yml and checks every key, so a mistake is an error that names its place." "PyYAML"
                 pipeline = component "Build pipeline" "Joins a document's sources, expands includes, conditions and variables, and picks the template and the output name." "Python"
                 diagrams = component "Diagram renderer" "Turns diagram fences into pictures with the right tool, and keeps them in a cache." "Python"
@@ -26,15 +26,23 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
                 generators = component "Content generators" "Write Markdown from other sources before the build: glossaries, indexes, traceability, API references, diagram files, commands." "Python, entry points"
                 analysis = component "Analysis" "Counts what documents hold, checks a project without building it, and compares versions by section." "Python, Git"
                 report = component "Build report" "Records the tools, sources, outputs, diagrams and warnings of a build as JSON." "JSON schema"
+                watch = component "Live preview" "With --watch, builds documents, decks and posters again on every save, writes an HTML twin of each document and deck, and serves the pages on 127.0.0.1 with a script that reloads them." "Python, http.server"
             }
             toolImage = container "Tool image" "Every program that is not Python: pandoc, XeLaTeX, PlantUML, Mermaid, Graphviz, the diagram tools, Chromium, structurizr-cli, Vale, markdownlint, MkDocs and Node." "Docker image on Debian 12"
+            vscode = container "VS Code extension" "Previews py-doc Markdown in the editor as it is typed, and starts the live preview of the open file and shows it beside the editor." "JavaScript, markdown-it, js-yaml"
             local = container "Structurizr Local" "Shows a workspace in a browser to view it and arrange its views, and draws the pictures for documents." "Docker image structurizr/structurizr"
-            cache = container "Caches" "Diagram pictures (user cache folder), Structurizr exports and generated chapters (.py-doc in the project)." "Files" "Store"
+            cache = container "Caches" "Diagram pictures (user cache folder), Structurizr exports, generated chapters and live preview pages (.py-doc in the project)." "Files" "Store"
         }
 
         author -> pydoc.cli.commands "Runs py-doc commands" "Terminal"
         author -> pydoc.local "Views the model and arranges its views" "Browser, HTTP"
         reader -> office "Opens the documents in"
+        author -> pydoc.vscode "Writes and previews documents in" "VS Code"
+        pydoc.vscode -> pydoc.cli.commands "Starts py-doc docx, slides or poster --watch for the open file" "Child process"
+        pydoc.vscode -> pydoc.cli.watch "Shows the served preview from" "HTTP on 127.0.0.1"
+        pydoc.cli.commands -> pydoc.cli.watch "Runs --watch with"
+        pydoc.cli.watch -> pydoc.cli.pipeline "Builds each document and its HTML twin with"
+        pydoc.cli.watch -> pydoc.cache "Keeps the HTML twins in" "Files"
         ci -> pydoc.cli.commands "Runs builds and lint checks" "Shell"
         pydoc.cli.commands -> pydoc.cli.configuration "Loads the project from"
         pydoc.cli.commands -> pydoc.cli.pipeline "Builds documents with"
@@ -73,6 +81,9 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
                 deploymentNode "Python" "The py-doc package, installed with pip." "Python 3.10+" {
                     containerInstance pydoc.cli
                 }
+                deploymentNode "Visual Studio Code" "The author's editor, with the py-doc extension installed from editors/vscode." "VS Code 1.75+" {
+                    containerInstance pydoc.vscode
+                }
                 deploymentNode "Cache folders" "The user cache folder and the project's .py-doc folder." "File system" {
                     containerInstance pydoc.cache
                 }
@@ -108,6 +119,15 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
             pydoc.cli.pipeline -> pydoc.cli.pandocEngine "Writes the Word file"
             pydoc.cli.pandocEngine -> pydoc.cli.runner "Runs pandoc"
             pydoc.cli.pipeline -> pydoc.cli.report "Records the outputs"
+            autoLayout lr
+        }
+        dynamic pydoc.cli "LivePreview" "How the VS Code extension shows a live preview of a Word document." {
+            author -> pydoc.vscode "Clicks the eye button"
+            pydoc.vscode -> pydoc.cli.commands "py-doc docx guide.md --watch"
+            pydoc.cli.commands -> pydoc.cli.watch "Watches guide.md"
+            pydoc.cli.watch -> pydoc.cli.pipeline "Builds guide.docx and its HTML twin"
+            pydoc.cli.watch -> pydoc.cache "Writes the twin to .py-doc/preview"
+            pydoc.vscode -> pydoc.cli.watch "Shows the twin, which reloads on every save"
             autoLayout lr
         }
         deployment pydoc live "Deployment" "Where py-doc runs on an author's computer." {

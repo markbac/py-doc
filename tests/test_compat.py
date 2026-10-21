@@ -85,7 +85,12 @@ class TestLegacyLinterInterface:
         md.write_text("Fine.\n\nWe use dtls here.\n", encoding="utf-8")
         [issue] = DocLinter().lint_file(md)
         assert isinstance(issue, LintIssue)
-        assert (issue.file, issue.line_no, issue.category, issue.severity) == (Path(md).resolve(), 3, "Glossary", "warning")
+        assert (issue.file, issue.line_no, issue.category, issue.severity) == (
+            Path(md).resolve(),
+            3,
+            "Glossary",
+            "warning",
+        )
         assert repr(issue).startswith("[WARNING] a.md:3 [Glossary] ")
 
     def test_missing_file_gives_no_issues_like_before(self, tmp_path):
@@ -148,5 +153,7 @@ class TestRenameNotice:
         empty = tmp_path / "empty"  # nothing to convert, so no container is needed
         empty.mkdir()
         for module in ("pydoc2docx", "pydoc2slides"):
-            result = subprocess.run([sys.executable, "-m", module, str(empty)], capture_output=True, text=True, check=False)
+            result = subprocess.run(
+                [sys.executable, "-m", module, str(empty)], capture_output=True, text=True, check=False
+            )
             assert result.returncode == 0 and "is now part of py-doc" in result.stderr, module

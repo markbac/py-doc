@@ -93,7 +93,9 @@ def test_a_deck_becomes_markdown_with_front_matter_headings_and_lists(deck, tmp_
     result = import_pptx(deck, tmp_path / "out")
     text = result.markdown.read_text(encoding="utf-8")
     assert result.markdown.name == "sensor_review.md"
-    assert text.startswith("---\ntitle: Sensor review\nsubtitle: What we found\nauthor: A. Writer\nversion: '2.0'\n---\n")
+    assert text.startswith(
+        "---\ntitle: Sensor review\nsubtitle: What we found\nauthor: A. Writer\nversion: '2.0'\n---\n"
+    )
     assert "# Findings\n" in text and "## Readings\n" in text
     assert "- Temperature\n  - Within 0.5 C\n- Humidity" in text
     assert "::: notes\nSay why the drift matters.\n:::" in text

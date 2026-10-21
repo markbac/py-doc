@@ -54,8 +54,8 @@ def mermaid_init(theme):
     }  # fmt: skip
     return "---\nconfig: " + json.dumps({"theme": "base", "themeVariables": variables}) + "\n---\n"
 
-TOK = re.compile(r"\[([^\]|]+)(?:\|([^\]]+))?\]|-(?:([^>\[\]]*?)-)?>")
 
+TOK = re.compile(r"\[([^\]|]+)(?:\|([^\]]+))?\]|-(?:([^>\[\]]*?)-)?>")
 
 
 class Ctx:
@@ -99,6 +99,7 @@ def parse_opts(info):
 # Diagram fences -> the tool container -> embedded image
 # ---------------------------------------------------------------------------
 
+
 def render_diagram(lang, code, ctx):
     ctx.n += 1
     if lang == "mermaid" and "%%{init" not in code and not code.lstrip().startswith("---"):
@@ -122,13 +123,16 @@ def diagram_html(lang, code, opts, ctx):
         errs = [line.strip() for line in lines if "error" in line.lower()]
         msg = (errs or lines or [type(exc).__name__])[0 if errs else -1].strip()[:160]
         logger.warning(f"{lang} diagram not rendered: {msg}")
-        return (f'<pre><code>{esc(code)}</code></pre>'
-                f'<p class="caption">{esc(lang)} diagram could not be rendered: {esc(msg)}</p>')
+        return (
+            f"<pre><code>{esc(code)}</code></pre>"
+            f'<p class="caption">{esc(lang)} diagram could not be rendered: {esc(msg)}</p>'
+        )
 
 
 # ---------------------------------------------------------------------------
 # Poster blocks: cards, lcd, and the figure kinds (segments, flow, lanes)
 # ---------------------------------------------------------------------------
+
 
 def cards_html(code, opts, ctx):
     rows = [[c.strip() for c in line.split("|")] for line in code.splitlines() if line.strip()]
@@ -158,8 +162,11 @@ def lcd_html(code, opts, ctx):
             continue
         shown = "".join(f"<div>{esc(x)}</div>" for x in s if not x.startswith("--"))
         cap = " ".join(x[2:].strip() for x in s if x.startswith("--"))
-        out += (f'<div class="lcd"><div class="scr">{shown}</div>'
-                + (f'<div class="cap">{esc(cap)}</div>' if cap else "") + "</div>")
+        out += (
+            f'<div class="lcd"><div class="scr">{shown}</div>'
+            + (f'<div class="cap">{esc(cap)}</div>' if cap else "")
+            + "</div>"
+        )
     count = sum(1 for s in screens if s)
     cols = _whole(opts, "cols", min(count, 3) or 1, ctx)
     return f'<div class="lcds" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
@@ -186,8 +193,11 @@ def segments_part(code, ctx):
         label = r[1] if len(r) > 1 else ""
         det = r[2] if len(r) > 2 else ""
         detailed = detailed or bool(det)
-        cells += (f'<div style="flex:{r[0]};background:{ctx.theme.colour(r[3] if len(r) > 3 else None)}">{inline(label)}'
-                  + (f"<small>{inline(det)}</small>" if det else "") + "</div>")
+        cells += (
+            f'<div style="flex:{r[0]};background:{ctx.theme.colour(r[3] if len(r) > 3 else None)}">{inline(label)}'
+            + (f"<small>{inline(det)}</small>" if det else "")
+            + "</div>"
+        )
     h = meta.get("height") or ("64" if detailed else "36")
     return meta.get("title"), f'<div class="bar" style="min-height:{h}px">{cells}</div>', "\n".join(notes).strip()
 
@@ -223,8 +233,11 @@ def lanes_part(code, ctx):
         label, *cells = [c.strip() for c in line.split("|")]
         cells = [c.replace("-", "‑") for c in cells]  # non-breaking hyphen keeps "wake-up" whole
         inner = "".join(
-            f'<div class="cell fill">{inline(c[1:].strip())}</div>' if c.startswith("*")
-            else f'<div class="cell dash">{inline(c)}</div>' for c in cells)
+            f'<div class="cell fill">{inline(c[1:].strip())}</div>'
+            if c.startswith("*")
+            else f'<div class="cell dash">{inline(c)}</div>'
+            for c in cells
+        )
         lanes += f'<div class="lane"><b>{esc(label)}</b><div class="cells">{inner}</div></div>'
     return meta.get("title"), f'<div class="lanes">{lanes}</div>', "\n".join(notes).strip()
 
@@ -249,8 +262,11 @@ def timeline_html(code, opts, ctx):
         date, label = cells[0], cells[1] if len(cells) > 1 else ""
         detail = cells[2] if len(cells) > 2 else ""
         colour = ctx.theme.colour(cells[3] if len(cells) > 3 else None, "accent")
-        items += (f'<div class="tl-item"><i style="background:{colour}"></i><b>{inline(date)}</b><span>{inline(label)}</span>'
-                  + (f"<small>{inline(detail)}</small>" if detail else "") + "</div>")
+        items += (
+            f'<div class="tl-item"><i style="background:{colour}"></i><b>{inline(date)}</b><span>{inline(label)}</span>'
+            + (f"<small>{inline(detail)}</small>" if detail else "")
+            + "</div>"
+        )
     return f'<div class="timeline{" vertical" if "vertical" in opts else ""}">{items}</div>'
 
 
@@ -311,7 +327,11 @@ def chart_html(code, opts, ctx):
     colours = [ctx.theme.colour(names[i % len(names)].strip()) for i in range(count)]
     unit = opts.get("unit", "")
     dashed = {name.strip().lower() for name in opts.get("dashed", "").split(",") if name.strip()}
-    dashed = {j for j in range(count) if (series[j].lower() if j < len(series) else str(j + 1)) in dashed or str(j + 1) in dashed}
+    dashed = {
+        j
+        for j in range(count)
+        if (series[j].lower() if j < len(series) else str(j + 1)) in dashed or str(j + 1) in dashed
+    }
     values = [v for _, vs in rows for v in vs]
     low = _float(opts, "min", ctx) if "min" in opts else -_nice(-min(values)) if min(values) < 0 else 0.0
     high = _float(opts, "max", ctx) if "max" in opts else _nice(max(values)) or 1.0
@@ -339,12 +359,18 @@ def chart_html(code, opts, ctx):
             for j, v in enumerate(vs):
                 x1 = left + (v - low) / span * plot_w
                 yy = y + band * 0.15 + j * thick
-                out.append(f'<rect x="{min(x0, x1):.1f}" y="{yy:.1f}" width="{abs(x1 - x0):.1f}" height="{thick:.1f}" fill="{colours[j]}"/>')
+                out.append(
+                    f'<rect x="{min(x0, x1):.1f}" y="{yy:.1f}" width="{abs(x1 - x0):.1f}" height="{thick:.1f}" fill="{colours[j]}"/>'
+                )
                 if shown == "all" or shown == "last" and i == len(rows) - 1:
-                    out.append(f'<text x="{max(x0, x1) + 4:.1f}" y="{yy + thick / 2 + 4:.1f}" {text}>{_number(v)}{esc(unit)}</text>')
+                    out.append(
+                        f'<text x="{max(x0, x1) + 4:.1f}" y="{yy + thick / 2 + 4:.1f}" {text}>{_number(v)}{esc(unit)}</text>'
+                    )
         out.append(f'<line x1="{x0:.1f}" y1="{top}" x2="{x0:.1f}" y2="{height - bottom}" stroke="currentColor"/>')
         if axis:
-            out.append(f'<text x="{left + plot_w / 2:.1f}" y="{height - 2}" text-anchor="middle" {text}>{esc(axis)}</text>')
+            out.append(
+                f'<text x="{left + plot_w / 2:.1f}" y="{height - 2}" text-anchor="middle" {text}>{esc(axis)}</text>'
+            )
     else:
         left, top, right, bottom = 52 + (22 if axis else 0), 12 + legend, 12, 30
         plot_w, plot_h = width - left - right, height - top - bottom
@@ -354,31 +380,47 @@ def chart_html(code, opts, ctx):
 
         for n in range(round(span / step) + 1):
             v = low + step * n
-            out.append(f'<line x1="{left}" y1="{y_of(v):.1f}" x2="{width - right}" y2="{y_of(v):.1f}" stroke="currentColor" stroke-opacity=".25"/>')
-            out.append(f'<text x="{left - 6}" y="{y_of(v) + 4:.1f}" text-anchor="end" {text}>{_number(round(v, 9))}</text>')
+            out.append(
+                f'<line x1="{left}" y1="{y_of(v):.1f}" x2="{width - right}" y2="{y_of(v):.1f}" stroke="currentColor" stroke-opacity=".25"/>'
+            )
+            out.append(
+                f'<text x="{left - 6}" y="{y_of(v) + 4:.1f}" text-anchor="end" {text}>{_number(round(v, 9))}</text>'
+            )
         if axis:
             middle = top + plot_h / 2
-            out.append(f'<text x="14" y="{middle:.1f}" transform="rotate(-90 14 {middle:.1f})" text-anchor="middle" {text}>{esc(axis)}</text>')
+            out.append(
+                f'<text x="14" y="{middle:.1f}" transform="rotate(-90 14 {middle:.1f})" text-anchor="middle" {text}>{esc(axis)}</text>'
+            )
         band = plot_w / len(rows)
         for i, (label, _) in enumerate(rows):
-            out.append(f'<text x="{left + band * (i + 0.5):.1f}" y="{height - 10}" text-anchor="middle" {text}>{esc(label)}</text>')
+            out.append(
+                f'<text x="{left + band * (i + 0.5):.1f}" y="{height - 10}" text-anchor="middle" {text}>{esc(label)}</text>'
+            )
         if kind == "column":
             for i, (_, vs) in enumerate(rows):
                 thick = band * 0.7 / len(vs)
                 for j, v in enumerate(vs):
                     x = left + band * i + band * 0.15 + j * thick
                     y1, y0 = y_of(v), y_of(0)
-                    out.append(f'<rect x="{x:.1f}" y="{min(y0, y1):.1f}" width="{thick:.1f}" height="{abs(y0 - y1):.1f}" fill="{colours[j]}"/>')
+                    out.append(
+                        f'<rect x="{x:.1f}" y="{min(y0, y1):.1f}" width="{thick:.1f}" height="{abs(y0 - y1):.1f}" fill="{colours[j]}"/>'
+                    )
                     if shown == "all" or shown == "last" and i == len(rows) - 1:
-                        out.append(f'<text x="{x + thick / 2:.1f}" y="{min(y0, y1) - 4:.1f}" text-anchor="middle" {text}>{_number(v)}{esc(unit)}</text>')
+                        out.append(
+                            f'<text x="{x + thick / 2:.1f}" y="{min(y0, y1) - 4:.1f}" text-anchor="middle" {text}>{_number(v)}{esc(unit)}</text>'
+                        )
         else:
             placed: dict[float, list[float]] = {}  # the value labels at each point across, so two do not overlap
             for j in range(count):
-                points = [(left + band * (i + 0.5), y_of(vs[j]), vs[j]) for i, (_, vs) in enumerate(rows) if j < len(vs)]
+                points = [
+                    (left + band * (i + 0.5), y_of(vs[j]), vs[j]) for i, (_, vs) in enumerate(rows) if j < len(vs)
+                ]
                 path = " ".join(f"{x:.1f},{y:.1f}" for x, y, _ in points)
                 if area:
                     base = y_of(max(low, 0)) if low < 0 < high else y_of(low)
-                    out.append(f'<polygon points="{points[0][0]:.1f},{base:.1f} {path} {points[-1][0]:.1f},{base:.1f}" fill="{colours[j]}" fill-opacity=".15"/>')
+                    out.append(
+                        f'<polygon points="{points[0][0]:.1f},{base:.1f} {path} {points[-1][0]:.1f},{base:.1f}" fill="{colours[j]}" fill-opacity=".15"/>'
+                    )
                 dash = ' stroke-dasharray="10 6"' if j in dashed else ""
                 out.append(f'<polyline points="{path}" fill="none" stroke="{colours[j]}" stroke-width="3"{dash}/>')
                 if markers:
@@ -387,15 +429,22 @@ def chart_html(code, opts, ctx):
                     if shown == "all" or shown == "last" and n == len(points) - 1:
                         at = y - 9 if all(abs(y - 9 - other) >= 16 for other in placed.get(x, [])) else y + 21
                         placed.setdefault(x, []).append(at)
-                        out.append(f'<text x="{x:.1f}" y="{at:.1f}" text-anchor="middle" {text}>{_number(v)}{esc(unit)}</text>')
+                        out.append(
+                            f'<text x="{x:.1f}" y="{at:.1f}" text-anchor="middle" {text}>{_number(v)}{esc(unit)}</text>'
+                        )
         zero = y_of(min(max(0, low), high))  # the zero line, or the bottom of the axis when zero is not on it
         out.append(f'<line x1="{left}" y1="{zero:.1f}" x2="{width - right}" y2="{zero:.1f}" stroke="currentColor"/>')
     for j, name in enumerate(series[:count] if legend else []):
         x = 12 + j * 150
-        out.append(f'<rect x="{x}" y="4" width="14" height="14" fill="{colours[j]}"/><text x="{x + 20}" y="16" {text}>{esc(name)}</text>')
+        out.append(
+            f'<rect x="{x}" y="4" width="14" height="14" fill="{colours[j]}"/><text x="{x + 20}" y="16" {text}>{esc(name)}</text>'
+        )
     title = f'<div class="fig-title">{esc(opts["title"])}</div>' if opts.get("title") else ""
-    svg = (f'<svg class="chart" viewBox="0 0 {width} {height}" role="img" aria-label="{esc(opts.get("title", "chart"))}">'
-           + "".join(out) + "</svg>")
+    svg = (
+        f'<svg class="chart" viewBox="0 0 {width} {height}" role="img" aria-label="{esc(opts.get("title", "chart"))}">'
+        + "".join(out)
+        + "</svg>"
+    )
     return f'<div class="fig">{title}{svg}</div>'
 
 
@@ -404,7 +453,9 @@ def qr_svg(text, colour, size=140, error="m"):
     try:
         code = segno.make(text.strip(), error=error, micro=False)
     except segno.DataOverflowError:
-        raise PosterError(f"'{text.strip()[:60]}...' is too long for a QR code; use shorter text, or a lower ecc=") from None
+        raise PosterError(
+            f"'{text.strip()[:60]}...' is too long for a QR code; use shorter text, or a lower ecc="
+        ) from None
     # SVG needs no whole pixels, so every code is the size asked for, however many modules it has
     scale = round(size / code.symbol_size(scale=1, border=2)[0], 4)
     return code.svg_inline(scale=scale, border=2, dark=colour, light=None)
@@ -455,7 +506,9 @@ def barcode_html(code, opts, ctx):
     if flags["check"] and kind != "code39":
         raise PosterError(f"{ctx.where}: check=yes is for code39; {kind} always has its check digit")
     width, height = _whole(opts, "width", 240, ctx), _whole(opts, "height", 70, ctx)
-    svg = poster_barcode.barcode_svg(kind, data, ctx.theme.colours["strong"], width, height, flags["text"], flags["check"])
+    svg = poster_barcode.barcode_svg(
+        kind, data, ctx.theme.colours["strong"], width, height, flags["text"], flags["check"]
+    )
     label = f'<div class="cap">{inline(opts["label"])}</div>' if opts.get("label") else ""
     return f'<div class="barcode">{svg}{label}</div>'
 
@@ -530,10 +583,16 @@ def progress_html(code, opts, ctx):
         default = "good" if met else "bad" if lower else "accent"
         colour = ctx.theme.colour(row[3] if len(row) > 3 else None, default)
         share = min(value / target, 1.0)
-        text = f"{value / target * 100:.0f} %" if shown == "percent" else f"{esc(row[1])}{esc(unit)} of {esc(row[2])}{esc(unit)}"
+        text = (
+            f"{value / target * 100:.0f} %"
+            if shown == "percent"
+            else f"{esc(row[1])}{esc(unit)} of {esc(row[2])}{esc(unit)}"
+        )
         mark = " &#10003;" if met else ""
-        out += (f'<div class="prog"><div class="pl"><span>{inline(row[0])}</span><b>{text}{mark}</b></div>'
-                f'<div class="pt"><i style="width:{share * 100:.1f}%;background:{colour}"></i></div></div>')
+        out += (
+            f'<div class="prog"><div class="pl"><span>{inline(row[0])}</span><b>{text}{mark}</b></div>'
+            f'<div class="pt"><i style="width:{share * 100:.1f}%;background:{colour}"></i></div></div>'
+        )
     return f'<div class="progress">{out}</div>'
 
 
@@ -559,15 +618,24 @@ def compare_html(code, opts, ctx):
     """A ``| Before | After`` header, then ``Label | before | after`` lines. The last column is the one to see."""
     rows = _rows(code)
     if len(rows) < 2 or rows[0][0] or len(rows[0]) < 3:
-        raise PosterError(f"{ctx.where}: a compare block starts with a header such as '| Before | After', then 'Label | before | after' lines")
+        raise PosterError(
+            f"{ctx.where}: a compare block starts with a header such as '| Before | After', then 'Label | before | after' lines"
+        )
     heads, width = rows[0][1:], len(rows[0])
     grid = f"grid-template-columns:minmax(0,1.2fr) repeat({len(heads)},minmax(0,1fr))"
-    out = '<div class="cmp-h"></div>' + "".join(f'<div class="cmp-h{" last" if n == len(heads) - 1 else ""}">{inline(h)}</div>' for n, h in enumerate(heads))
+    out = '<div class="cmp-h"></div>' + "".join(
+        f'<div class="cmp-h{" last" if n == len(heads) - 1 else ""}">{inline(h)}</div>' for n, h in enumerate(heads)
+    )
     for row in rows[1:]:
         if len(row) != width:
-            raise PosterError(f"{ctx.where}: the compare line '{' | '.join(row)}' needs {width} cells, as its header has")
+            raise PosterError(
+                f"{ctx.where}: the compare line '{' | '.join(row)}' needs {width} cells, as its header has"
+            )
         out += f'<div class="cmp-l">{inline(row[0])}</div>'
-        out += "".join(f'<div class="cmp-v{" last" if n == len(heads) - 1 else ""}">{inline(v)}</div>' for n, v in enumerate(row[1:]))
+        out += "".join(
+            f'<div class="cmp-v{" last" if n == len(heads) - 1 else ""}">{inline(v)}</div>'
+            for n, v in enumerate(row[1:])
+        )
     return f'<div class="compare" style="{grid}">{out}</div>'
 
 

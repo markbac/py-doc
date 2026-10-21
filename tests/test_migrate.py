@@ -155,7 +155,10 @@ def test_pdf_only_document_gets_a_pdf_output_and_no_word_file(tmp_path):
 
 def test_html_keeps_its_stylesheet(tmp_path):
     write(tmp_path / "a.md", "# A\n")
-    write(tmp_path / "a.yaml", "cli: {emit-docx: true, emit-html: true, output: out/a.docx, css: s.css}\nentries: [{file: a.md}]\n")
+    write(
+        tmp_path / "a.yaml",
+        "cli: {emit-docx: true, emit-html: true, output: out/a.docx, css: s.css}\nentries: [{file: a.md}]\n",
+    )
     outputs = migrate([tmp_path], tmp_path).config["documents"]["a"]["outputs"]
     assert outputs == {
         "docx": {"path": "out/a.docx", "name": "{name}-{version_safe}"},
@@ -249,7 +252,9 @@ class TestCommand:
     def test_repeated_findings_are_grouped(self, repo, monkeypatch, capsys):
         for index in range(4):
             write(repo / "docs" / f"x{index}" / "x.md", "# X\n")
-            write(repo / "docs" / f"x{index}" / "x.yaml", "cli: {emit-md: true, output: x.md}\nentries: [{file: x.md}]\n")
+            write(
+                repo / "docs" / f"x{index}" / "x.yaml", "cli: {emit-md: true, output: x.md}\nentries: [{file: x.md}]\n"
+            )
         monkeypatch.chdir(repo)
         _, out, _ = self.run(monkeypatch, capsys, "docs", "--check")
         assert "4 files: processed Markdown output is not supported yet" in out

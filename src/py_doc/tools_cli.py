@@ -159,7 +159,9 @@ def run_setup(argv: Sequence[str] | None = None, *, run=None, ask=input) -> int:
     )
     parser.add_argument("-y", "--yes", action="store_true", help="Do not ask first")
     parser.add_argument("--dry-run", action="store_true", help="Show the script that would run, and run nothing")
-    parser.add_argument("--distro", help="The WSL distribution to set up (default: runtime.wsl_distro, else the default one)")
+    parser.add_argument(
+        "--distro", help="The WSL distribution to set up (default: runtime.wsl_distro, else the default one)"
+    )
     _common(parser)
     args = parser.parse_args(argv)
     configure_logging(quiet=args.quiet, verbose=args.verbose)
@@ -222,6 +224,8 @@ def _setup(runtime: Runtime, args: argparse.Namespace, run, ask) -> int:
             + ". Close every WSL window, run `wsl --shutdown`, and run `py-doc doctor`"
         )
     else:
-        print("Docker is installed. Log out and in again so the docker group applies (or run `newgrp docker`), then run `py-doc doctor`.")
+        print(
+            "Docker is installed. Log out and in again so the docker group applies (or run `newgrp docker`), then run `py-doc doctor`."
+        )
         return 0
     return 2

@@ -63,7 +63,12 @@ def run_stats(argv: list[str]) -> int:
         prog="py-doc stats", description="Count the words, headings, code blocks, tables, pictures and links of documents or files",
         epilog=STATS_EXAMPLES, formatter_class=argparse.RawDescriptionHelpFormatter,
     )  # fmt: skip
-    parser.add_argument("targets", nargs="*", metavar="TARGET", help="Documents of py-doc.yml, or Markdown files and folders (default: every document)")
+    parser.add_argument(
+        "targets",
+        nargs="*",
+        metavar="TARGET",
+        help="Documents of py-doc.yml, or Markdown files and folders (default: every document)",
+    )
     parser.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
     parser.add_argument("--lint", action="store_true", help="Also count the lint issues of each")
     parser.add_argument("--format", choices=("text", "json"), default="text", help="text, a table (default), or json")
@@ -89,12 +94,18 @@ def run_stats(argv: list[str]) -> int:
             print(f"Error: {target} is not a document of py-doc.yml, a file or a folder", file=sys.stderr)
             return 2
     if not groups:
-        print("Error: nothing to count. Name files or folders, or run it beside a py-doc.yml with documents", file=sys.stderr)
+        print(
+            "Error: nothing to count. Name files or folders, or run it beside a py-doc.yml with documents",
+            file=sys.stderr,
+        )
         return 2
 
     issues: dict[Path, int] = {}
     if args.lint:
-        linter = DocLinter(config=project.lint if project else None, runtime=lambda: connect(project.runtime if project else RuntimeSettings()))
+        linter = DocLinter(
+            config=project.lint if project else None,
+            runtime=lambda: connect(project.runtime if project else RuntimeSettings()),
+        )
         try:
             report = linter.lint_paths(sorted({f for files in groups.values() for f in files if f.is_file()}))
         except (LintTargetError, ConversionError) as exc:
@@ -150,13 +161,19 @@ def check_project(project: ProjectConfig) -> list[str]:
             if template is not None and not template.exists() and not settings.options.get("allow_missing_template"):
                 problems.append(f"documents.{name}: the {fmt} template {_shown(template)} is not there")
     for fmt, settings in project.outputs.items():
-        if settings.template is not None and not settings.template.exists() and not settings.options.get("allow_missing_template"):
+        if (
+            settings.template is not None
+            and not settings.template.exists()
+            and not settings.options.get("allow_missing_template")
+        ):
             problems.append(f"outputs.{fmt}: the template {_shown(settings.template)} is not there")
     if project.site is not None:
         from py_doc.site import engine_for
 
         if not engine_for(project.site.engine, project.site.dir).exists():
-            problems.append(f"site: there is no {project.site.engine} site in {_shown(project.site.dir)}. Run `py-doc site init`")
+            problems.append(
+                f"site: there is no {project.site.engine} site in {_shown(project.site.dir)}. Run `py-doc site init`"
+            )
     return problems
 
 
@@ -168,8 +185,15 @@ def run_check(argv: list[str]) -> int:
     parser.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
     parser.add_argument("--strict", action="store_true", help="Fail on lint warnings too")
     parser.add_argument("--no-lint", action="store_true", help="Check only the project, not the writing")
-    parser.add_argument("--engine", choices=("auto", "builtin", "vale"), default="auto", help="Lint engine, as for py-doc lint")
-    parser.add_argument("--format", choices=("text", "json", "sarif", "github", "csv"), default="text", help="How lint issues are written")
+    parser.add_argument(
+        "--engine", choices=("auto", "builtin", "vale"), default="auto", help="Lint engine, as for py-doc lint"
+    )
+    parser.add_argument(
+        "--format",
+        choices=("text", "json", "sarif", "github", "csv"),
+        default="text",
+        help="How lint issues are written",
+    )
     parser.add_argument("--output", metavar="FILE", help="Write the lint issues to this file")
     _noise(parser)
     args = parser.parse_args(argv)
@@ -188,7 +212,9 @@ def run_check(argv: list[str]) -> int:
     status = 1 if problems else 0
     if not args.no_lint:
         generated = {spec.output.resolve() for spec in project.generators}  # written by tools, not people
-        files = sorted({f.resolve() for name in project.own_documents for f in _sources(project, name) if f.exists()} - generated)
+        files = sorted(
+            {f.resolve() for name in project.own_documents for f in _sources(project, name) if f.exists()} - generated
+        )
         if files:
             linter = DocLinter(config=project.lint, runtime=lambda: connect(project.runtime), engine=args.engine)
             try:
@@ -210,7 +236,10 @@ def run_check(argv: list[str]) -> int:
             lint_summary = "no sources to lint"
     else:
         lint_summary = "lint skipped"
-    print(f"\n[SUMMARY] {len(project.documents)} document(s), {len(problems)} project problem(s), {lint_summary}", file=sys.stderr)
+    print(
+        f"\n[SUMMARY] {len(project.documents)} document(s), {len(problems)} project problem(s), {lint_summary}",
+        file=sys.stderr,
+    )
     return status
 
 
@@ -235,10 +264,17 @@ def run_diff(argv: list[str]) -> int:
         prog="py-doc diff", description="Compare two versions of Markdown documents by section: added, removed, renamed, moved and changed",
         epilog=DIFF_EXAMPLES, formatter_class=argparse.RawDescriptionHelpFormatter,
     )  # fmt: skip
-    parser.add_argument("paths", nargs="*", metavar="PATH", help="OLD NEW files, or with --rev the files and folders to compare (default: the sources of py-doc.yml)")
+    parser.add_argument(
+        "paths",
+        nargs="*",
+        metavar="PATH",
+        help="OLD NEW files, or with --rev the files and folders to compare (default: the sources of py-doc.yml)",
+    )
     parser.add_argument("--rev", metavar="REVISION", help="Compare the working files with this Git revision")
     parser.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
-    parser.add_argument("--format", choices=("text", "json"), default="text", help="text, a list per file (default), or json")
+    parser.add_argument(
+        "--format", choices=("text", "json"), default="text", help="text, a list per file (default), or json"
+    )
     parser.add_argument("--exit-code", action="store_true", help="Exit with status 1 when anything changed")
     _noise(parser)
     args = parser.parse_args(argv)
@@ -264,7 +300,10 @@ def run_diff(argv: list[str]) -> int:
             print(name)
             for change in changes:
                 print(f"  {change.describe()}")
-        print(f"\n[SUMMARY] {len(pairs)} file(s) compared, {len(results)} changed, {sum(len(c) for _, c in results)} section change(s)", file=sys.stderr)
+        print(
+            f"\n[SUMMARY] {len(pairs)} file(s) compared, {len(results)} changed, {sum(len(c) for _, c in results)} section change(s)",
+            file=sys.stderr,
+        )
     return 1 if args.exit_code and results else 0
 
 
@@ -288,7 +327,17 @@ def _diff_pairs(args: argparse.Namespace) -> list[tuple[str, str, str]]:
         files = [f.resolve() for name in project.own_documents for f in _sources(project, name)]
         # Files the revision had that are gone now: the ones under the same folders, listed by git
         folders = sorted({f.parent for f in files})
-        listed = _git(["ls-tree", "-r", "--name-only", args.rev, "--", *[str(d.relative_to(top).as_posix()) for d in folders if d.is_relative_to(top)]], top)
+        listed = _git(
+            [
+                "ls-tree",
+                "-r",
+                "--name-only",
+                args.rev,
+                "--",
+                *[str(d.relative_to(top).as_posix()) for d in folders if d.is_relative_to(top)],
+            ],
+            top,
+        )
         files += [top / line for line in listed.splitlines() if line.lower().endswith((".md", ".markdown"))]
     pairs = []
     for file in dict.fromkeys(files):

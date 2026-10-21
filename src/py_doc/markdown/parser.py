@@ -218,7 +218,9 @@ class _Builder:
                 alt_nodes, _ = self._inline_run(token.children or [], 0, None, [line])
                 title = token.attrs.get("title")
                 nodes.append(
-                    n.Image(line, str(token.attrs.get("src", "")), str(title) if title else None, n.plain_text(alt_nodes))
+                    n.Image(
+                        line, str(token.attrs.get("src", "")), str(title) if title else None, n.plain_text(alt_nodes)
+                    )
                 )
             else:
                 raise ParseError(f"Unsupported inline Markdown '{kind}' at line {line}")

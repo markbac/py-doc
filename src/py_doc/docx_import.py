@@ -29,7 +29,16 @@ from .runtime import Mount, Runtime, connect
 logger = logging.getLogger(__name__)
 
 MAX_LIST_NESTING = 6
-MONOSPACE = {"consolas", "courier new", "courier", "lucida console", "menlo", "monaco", "source code pro", "cascadia code"}
+MONOSPACE = {
+    "consolas",
+    "courier new",
+    "courier",
+    "lucida console",
+    "menlo",
+    "monaco",
+    "source code pro",
+    "cascadia code",
+}
 CALLOUTS = {"note", "tip", "important", "warning", "caution"}
 QUOTE_STYLES = {"quote", "block text", "intense quote"}
 BITMAP_TYPES = {"image/jpeg", "image/jpg", "image/gif", "image/bmp", "image/tiff", "image/webp", "image/x-ms-bmp"}
@@ -165,7 +174,9 @@ class _Importer:
             elif child.tag == W_SDT:
                 gallery = child.find(f"{qn('w:sdtPr')}/{qn('w:docPartObj')}/{qn('w:docPartGallery')}")
                 content = child.find(qn("w:sdtContent"))
-                if content is not None and not (gallery is not None and "table of contents" in gallery.get(W_VAL, "").lower()):
+                if content is not None and not (
+                    gallery is not None and "table of contents" in gallery.get(W_VAL, "").lower()
+                ):
                     self._blocks(content)
             elif child.tag == W_INS:
                 self._blocks(child)
@@ -188,7 +199,9 @@ class _Importer:
         text = self._plain(tokens).strip()
         if self._is_toc(p, lower):
             return
-        only_images = tokens and all(isinstance(t, _Image) or (isinstance(t, _Piece) and not t.text.strip()) for t in tokens)
+        only_images = tokens and all(
+            isinstance(t, _Image) or (isinstance(t, _Piece) and not t.text.strip()) for t in tokens
+        )
         if lower in ("title", "subtitle", "author", "date") and text:
             setattr(self, lower, text)
             return
@@ -247,7 +260,7 @@ class _Importer:
         self._close_list()
         match = re.match(r"(?i)^(figure|table)\s+\d+\s*[:.\-–—]?\s*", text)
         label = match.group(1).capitalize() if match else ""
-        text = text[match.end():] if match else text
+        text = text[match.end() :] if match else text
         previous = self.blocks[-1].kind if self.blocks else ""
         if not label:
             label = "Table" if (following is not None and following.tag == W_TBL) or previous == "table" else "Figure"
@@ -305,12 +318,18 @@ class _Importer:
         abstract = self._numbering.xpath(f"w:num[@w:numId='{num_id}']/w:abstractNumId/@w:val")
         if not abstract:
             return "decimal"
-        fmt = self._numbering.xpath(f"w:abstractNum[@w:abstractNumId='{abstract[0]}']/w:lvl[@w:ilvl='{depth}']/w:numFmt/@w:val")
+        fmt = self._numbering.xpath(
+            f"w:abstractNum[@w:abstractNumId='{abstract[0]}']/w:lvl[@w:ilvl='{depth}']/w:numFmt/@w:val"
+        )
         return fmt[0] if fmt else "decimal"
 
     def _list_item(self, depth: int, marker: str, text: str) -> None:
         depth = min(depth, len(self._list_stack), MAX_LIST_NESTING)  # no deeper than one below the item above
-        same_list = bool(self.blocks) and self.blocks[-1].kind == "list" and not (depth == 0 and self._list_stack[:1] not in ([], [marker]))
+        same_list = (
+            bool(self.blocks)
+            and self.blocks[-1].kind == "list"
+            and not (depth == 0 and self._list_stack[:1] not in ([], [marker]))
+        )
         del self._list_stack[depth:]
         indent = "".join(" " * (len(m) + 1) for m in self._list_stack)
         self._list_stack.append(marker)
@@ -345,6 +364,7 @@ class _Importer:
             return
         columns = max(len(r) for r in rows)
         rows = [r + [""] * (columns - len(r)) for r in rows]
+
         def line(cells: list[str]) -> str:
             return "|" + "|".join(f" {c} " if c else " " for c in cells) + "|"
 
@@ -453,7 +473,9 @@ class _Importer:
         return "".join(out)
 
     def _raw(self, tokens) -> str:
-        return "".join("\n" if isinstance(t, _Break) else t.text if isinstance(t, _Piece) else "" for t in tokens).rstrip()
+        return "".join(
+            "\n" if isinstance(t, _Break) else t.text if isinstance(t, _Piece) else "" for t in tokens
+        ).rstrip()
 
     def _monospace(self, tokens) -> bool:
         pieces = [t for t in tokens if isinstance(t, _Piece) and t.text.strip()]
@@ -486,7 +508,7 @@ class _Importer:
         core = text.strip()
         if not core:
             return text
-        lead, trail = text[: len(text) - len(text.lstrip())], text[len(text.rstrip()):]
+        lead, trail = text[: len(text) - len(text.lstrip())], text[len(text.rstrip()) :]
         if piece.code:
             ticks = "``" if "`" in core else "`"
             pad = " " if "`" in core else ""

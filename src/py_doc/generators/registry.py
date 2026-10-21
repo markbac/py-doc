@@ -88,7 +88,9 @@ def for_documents(project: ProjectConfig, documents: list[str]) -> list[str]:
     return [spec.name for spec in project.generators if spec.output.resolve() in sources]
 
 
-def run_generators(project: ProjectConfig, names: list[str] | None = None, runtime: Callable | None = None) -> list[Path]:
+def run_generators(
+    project: ProjectConfig, names: list[str] | None = None, runtime: Callable | None = None
+) -> list[Path]:
     """Run the generators of ``project`` (or the ones named), in order. Returns the files that changed.
 
     ``runtime`` returns the tool container, for the generators that run a tool. Without it, one is connected
@@ -106,23 +108,31 @@ def _run_all(project: ProjectConfig, names: list[str] | None) -> list[Path]:
     if names:
         unknown = [name for name in names if name not in {spec.name for spec in specs}]
         if unknown:
-            raise GeneratorError(f"Unknown generator(s): {', '.join(unknown)}. Defined: {', '.join(s.name for s in specs) or 'none'}")
+            raise GeneratorError(
+                f"Unknown generator(s): {', '.join(unknown)}. Defined: {', '.join(s.name for s in specs) or 'none'}"
+            )
         specs = [spec for spec in specs if spec.name in names]
     registry = available()
     changed: list[Path] = []
     for spec in specs:
         generate = load_callable(spec.options["callable"]) if spec.type == "python" else registry.get(spec.type)
         if generate is None:
-            raise GeneratorError(f"content.generators: '{spec.name}' has the unknown type '{spec.type}'. Types: {', '.join(sorted(registry))}")
+            raise GeneratorError(
+                f"content.generators: '{spec.name}' has the unknown type '{spec.type}'. Types: {', '.join(sorted(registry))}"
+            )
         logger.info(f"Generating {spec.name} ({spec.type})")
         try:
             text = generate(spec, project)
         except GeneratorError:
             raise
         except Exception as exc:  # a generator of someone else's must not hide where it failed
-            raise GeneratorError(f"The generator {spec.name} ({spec.type}) failed: {type(exc).__name__}: {exc}") from exc
+            raise GeneratorError(
+                f"The generator {spec.name} ({spec.type}) failed: {type(exc).__name__}: {exc}"
+            ) from exc
         if not isinstance(text, str):
-            raise GeneratorError(f"The generator {spec.name} ({spec.type}) returned {type(text).__name__}, not Markdown text")
+            raise GeneratorError(
+                f"The generator {spec.name} ({spec.type}) returned {type(text).__name__}, not Markdown text"
+            )
         text = text.rstrip() + "\n"
         old = spec.output.read_text(encoding="utf-8") if spec.output.is_file() else None
         if old != text:

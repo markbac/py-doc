@@ -107,7 +107,9 @@ def test_diagrams_are_listed_with_cache_hits(tmp_path, run):
     run(text, "--report", "one.json", "--timestamps")
     run(text, "--report", "two.json", "--timestamps")
     first, second = (load(tmp_path / n)["diagrams"][0] for n in ("one.json", "two.json"))
-    assert (first["type"], first["file"], first["line"], first["status"]) == ("graphviz", "a.md", 3, "ok") or first["type"] == "dot"
+    assert (first["type"], first["file"], first["line"], first["status"]) == ("graphviz", "a.md", 3, "ok") or first[
+        "type"
+    ] == "dot"
     assert (first["cached"], second["cached"]) == (False, True)
     assert "seconds" in first
     assert "dot" in load(tmp_path / "two.json")["tools"]

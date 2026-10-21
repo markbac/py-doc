@@ -297,3 +297,71 @@ class TestOptions:
         )
         assert result.returncode == 0
         assert "py-doc2docx" in result.stdout
+
+    def test_docx_watch_mode(self, tmp_path, monkeypatch):
+        from py_doc.cli import run_docx
+        from py_doc import watch as watcher
+
+        src = tmp_path / "spec.md"
+        src.write_text("# Spec\n\nText\n\n::: {.pagebreak}\n:::\n\nMore\n", encoding="utf-8")
+        (tmp_path / "spec.html").write_text("mine", encoding="utf-8")
+
+        called = []
+
+        def fake_watch(build, errors, port=0, open_browser=True, stop=None, interval=0.5, title=""):
+            pages, sources = build()
+            called.append((pages, sources, port, open_browser, title))
+            return 0
+
+        monkeypatch.setattr(watcher, "watch", fake_watch)
+        code = run_docx([str(src), "--watch", "--port", "9876", "--no-open"])
+        assert code == 0
+        assert len(called) == 1
+        pages, sources, port, open_browser, title = called[0]
+        assert pages == {"spec": (tmp_path / ".py-doc" / "preview" / "spec.html").resolve()}
+        assert (tmp_path / "spec.docx").is_file()
+        assert (tmp_path / "spec.html").read_text(encoding="utf-8") == "mine"  # a file of the user's is left alone
+        assert port == 9876
+        assert open_browser is False
+        assert "Word Preview" in title
+        twin = pages["spec"].read_text(encoding="utf-8")
+        assert 'class="pagebreak"' in twin and "Page break" in twin  # preview.css is in the twin
+
+    def test_docx_watch_keeps_files_of_the_same_name_apart(self, tmp_path, monkeypatch):
+        from py_doc import watch as watcher
+        from py_doc.cli import run_docx
+
+        for folder in ("a", "b"):
+            (tmp_path / folder).mkdir()
+            (tmp_path / folder / "readme.md").write_text(f"# {folder}\n", encoding="utf-8")
+        called = []
+        monkeypatch.setattr(watcher, "watch", lambda build, errors, **kw: called.append(build()[0]) or 0)
+        assert run_docx([str(tmp_path), "--watch", "--no-open"]) == 0
+        assert sorted(called[0]) == ["a/readme", "b/readme"]
+
+    def test_docx_watch_builds_the_twin_of_a_document_open_in_word(self, tmp_path, monkeypatch, capsys):
+        from py_doc import convert
+        from py_doc import watch as watcher
+        from py_doc.cli import run_docx
+        from py_doc.errors import OutputLocked
+
+        src = tmp_path / "spec.md"
+        src.write_text("# Spec\n", encoding="utf-8")
+
+        def locked(self, md_path, output_path):
+            raise OutputLocked(f"Cannot write {output_path}: it is locked")
+
+        monkeypatch.setattr(convert.DocxConverter, "convert_file", locked)
+        called = []
+        monkeypatch.setattr(watcher, "watch", lambda build, errors, **kw: called.append(build()[0]) or 0)
+        assert run_docx([str(src), "--watch", "--no-open"]) == 0
+        assert called[0]["spec"].is_file()
+        assert "is open in Word" in capsys.readouterr().err
+
+    def test_port_without_watch_is_reported(self, tmp_path, capsys):
+        from py_doc.cli import run_docx
+
+        src = tmp_path / "spec.md"
+        src.write_text("# Spec\n", encoding="utf-8")
+        assert run_docx([str(src), "--port", "9000"]) == 0
+        assert "only apply with --watch" in capsys.readouterr().err

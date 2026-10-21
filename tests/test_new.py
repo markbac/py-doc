@@ -21,10 +21,12 @@ def repo(tmp_path, monkeypatch):
     old = tmp_path / "docs" / "notes"
     old.mkdir(parents=True)
     (old / "G460-TN-012-pipelines.yaml").write_text(
-        'meta:\n  title: "Pipelines"\n  document_number: "G460-TN-012"\ncli:\n  emit-docx: true\nentries:\n  - file: a.md\n', encoding="utf-8"
+        'meta:\n  title: "Pipelines"\n  document_number: "G460-TN-012"\ncli:\n  emit-docx: true\nentries:\n  - file: a.md\n',
+        encoding="utf-8",
     )
     (old / "G460-OV-001-overview.yaml").write_text(
-        'meta:\n  title: "Overview"\n  document_number: "G460-OV-001"\ncli:\n  output: o.pptx\nentries:\n  - file: b.md\n', encoding="utf-8"
+        'meta:\n  title: "Overview"\n  document_number: "G460-OV-001"\ncli:\n  output: o.pptx\nentries:\n  - file: b.md\n',
+        encoding="utf-8",
     )
     monkeypatch.chdir(old)
     monkeypatch.setattr(new, "_git_name", lambda: "Ann Author")
@@ -52,7 +54,11 @@ def test_the_first_run_makes_the_register_from_the_existing_build_files(repo):
     assert data["documents"] == [
         {"number": "G460-OV-001", "title": "Overview", "file": "docs/notes/G460-OV-001-overview.yaml"},
         {"number": "G460-TN-012", "title": "Pipelines", "file": "docs/notes/G460-TN-012-pipelines.yaml"},
-        {"number": "G460-TN-013", "title": "Build and Release", "file": "docs/notes/G460-TN-013-Build-and-Release.yaml"},
+        {
+            "number": "G460-TN-013",
+            "title": "Build and Release",
+            "file": "docs/notes/G460-TN-013-Build-and-Release.yaml",
+        },
     ]
     assert [p.name for p in written] == ["G460-TN-013-Build-and-Release.yaml", "G460-TN-013-Build-and-Release.md"]
 
@@ -101,7 +107,11 @@ def test_the_register_is_found_from_a_subfolder_and_numbers_never_repeat(repo, m
 
 @pytest.mark.parametrize(
     ("args", "message"),
-    [(["--type", "TN"], "A title is needed"), (["--title", "x", "--type", "T-N"], "letters and digits"), (["--title", "x", "--format", "pdf"], "invalid choice")],
+    [
+        (["--type", "TN"], "A title is needed"),
+        (["--title", "x", "--type", "T-N"], "letters and digits"),
+        (["--title", "x", "--format", "pdf"], "invalid choice"),
+    ],
 )
 def test_mistakes_are_refused_and_nothing_is_written(repo, args, message, capsys):
     with pytest.raises((new.NewError, SystemExit)):
@@ -119,7 +129,11 @@ def test_an_existing_file_is_not_replaced(repo):
 def test_the_command_reports_what_it_did(repo, capsys):
     assert main(["new", "-y", "--title", "Cmd", "--type", "TN", "--prefix", "G460"]) == 0
     out = capsys.readouterr().out
-    assert "with 2 existing number(s)" in out and "number    G460-TN-013" in out and "py-doc build --legacy G460-TN-013-Cmd.yaml" in out
+    assert (
+        "with 2 existing number(s)" in out
+        and "number    G460-TN-013" in out
+        and "py-doc build --legacy G460-TN-013-Cmd.yaml" in out
+    )
     assert main(["new", "-y"]) == 1
     assert "A title is needed" in capsys.readouterr().err
 
@@ -128,7 +142,9 @@ def test_scan_adds_new_build_files_and_keeps_clashing_numbers(repo, capsys):
     make(["--title", "First", "--type", "TN", "--prefix", "G460"])
     other = repo / "docs" / "other"
     other.mkdir()
-    (other / "copy.yaml").write_text('meta:\n  title: "Copy"\n  document_number: "G460-TN-012"\nentries:\n  - file: c.md\n', encoding="utf-8")
+    (other / "copy.yaml").write_text(
+        'meta:\n  title: "Copy"\n  document_number: "G460-TN-012"\nentries:\n  - file: c.md\n', encoding="utf-8"
+    )
     assert main(["new", "--scan"]) == 0
     out = capsys.readouterr().out
     assert "added     G460-TN-012  docs/other/copy.yaml" in out
@@ -158,7 +174,9 @@ def test_a_bad_start_is_refused(repo, capsys):
         make(["--title", "x"])
 
 
-LISTED = "prefix: G460\nprefixes: [G460, G470]\ntypes: [TN, OV]\nclassifications: [Confidential, Internal]\ndocuments: []\n"
+LISTED = (
+    "prefix: G460\nprefixes: [G460, G470]\ntypes: [TN, OV]\nclassifications: [Confidential, Internal]\ndocuments: []\n"
+)
 
 
 def test_listed_values_are_the_only_ones_allowed_and_keep_the_registers_spelling(repo):
@@ -250,7 +268,11 @@ def test_an_existing_file_takes_its_front_matter_title_and_options_still_win(rep
     ("name", "text", "message"),
     [
         ("numbered.md", "---\ndocument_number: X-001\n---\n# A\n", "already has the document number X-001"),
-        ("a.md", "# Already used\n", "a.md is already a source of docs/notes/G460-TN-012-pipelines.yaml, number G460-TN-012"),
+        (
+            "a.md",
+            "# Already used\n",
+            "a.md is already a source of docs/notes/G460-TN-012-pipelines.yaml, number G460-TN-012",
+        ),
         ("notes.txt", "text\n", "is not a Markdown file"),
     ],
 )

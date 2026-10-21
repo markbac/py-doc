@@ -99,7 +99,9 @@ class StructurizrCli:
         if self.cli:
             command = [self.cli, *[str(a) for a in args]]
             try:
-                done = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", timeout=TIMEOUT, check=False)
+                done = subprocess.run(
+                    command, capture_output=True, text=True, encoding="utf-8", timeout=TIMEOUT, check=False
+                )
             except FileNotFoundError as exc:
                 raise EnvironmentProblem(
                     f"c4.cli '{self.cli}' was not found. It needs Java 17 or newer and structurizr-cli from "
@@ -119,7 +121,9 @@ class StructurizrCli:
         match = re.search(r"\d{4}\.\d+\.\d+", out + err)
         found = match.group(0) if match else "unknown"
         if found not in TESTED_VERSIONS:
-            logger.warning("structurizr-cli %s was not tested with py-doc. Tested: %s", found, ", ".join(TESTED_VERSIONS))
+            logger.warning(
+                "structurizr-cli %s was not tested with py-doc. Tested: %s", found, ", ".join(TESTED_VERSIONS)
+            )
         return found
 
     def export(self, dsl: Path, fmt: str, output: Path) -> list[Path]:
@@ -151,7 +155,9 @@ def workspace_json(
         return cached
     StructurizrCli(runtime, cli).version()
     with tempfile.TemporaryDirectory(prefix="py-doc-c4-") as tmp:
-        (made,) = [p for p in StructurizrCli(runtime, cli).export(workspace, "json", Path(tmp)) if p.suffix == ".json"][:1] or [None]
+        (made,) = [p for p in StructurizrCli(runtime, cli).export(workspace, "json", Path(tmp)) if p.suffix == ".json"][
+            :1
+        ] or [None]
         if made is None:
             raise ConversionError(f"structurizr-cli wrote no JSON for '{workspace}'")
         cache.mkdir(parents=True, exist_ok=True)

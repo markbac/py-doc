@@ -280,15 +280,21 @@ def _balanced(file: Path, lines: list[str], rule: StructureRule) -> list[LintIss
     issues: list[LintIssue] = []
     for number, line in live_lines(lines):
         spans = _spans(line)
-        events = [(m.start(), "open", m.group(0)) for m in rule.open_pattern.finditer(line) if not _inside(m.start(), spans)]
-        events += [(m.start(), "close", m.group(0)) for m in rule.close_pattern.finditer(line) if not _inside(m.start(), spans)]
+        events = [
+            (m.start(), "open", m.group(0)) for m in rule.open_pattern.finditer(line) if not _inside(m.start(), spans)
+        ]
+        events += [
+            (m.start(), "close", m.group(0)) for m in rule.close_pattern.finditer(line) if not _inside(m.start(), spans)
+        ]
         for _, kind, marker in sorted(events):
             if kind == "open":
                 stack.append((number, marker))
             elif stack:
                 stack.pop()
             else:
-                issues.append(_issue(rule, file, number, (rule.unmatched_close_message or rule.message).format(marker=marker)))
+                issues.append(
+                    _issue(rule, file, number, (rule.unmatched_close_message or rule.message).format(marker=marker))
+                )
     for number, marker in stack:
         issues.append(_issue(rule, file, number, (rule.unmatched_open_message or rule.message).format(marker=marker)))
     return issues
@@ -323,7 +329,9 @@ def _captions(file: Path, lines: list[str], rules: list[StructureRule]) -> list[
         if code := _CODE.match(line):
             marker, language = code.group(1), code.group(2).lower()
             end = i + 1
-            while end < count and not (lines[end].lstrip().startswith(marker[0] * len(marker)) and not lines[end].strip(marker[0])):
+            while end < count and not (
+                lines[end].lstrip().startswith(marker[0] * len(marker)) and not lines[end].strip(marker[0])
+            ):
                 end += 1
             wanted = fenced is not None and (not fenced.languages or language in fenced.languages)
             if wanted and not captioned(end + 1, fenced, i):

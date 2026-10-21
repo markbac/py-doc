@@ -34,9 +34,9 @@ Command = list
 # which is also in the tool image, draws it instead and says so.
 _SVG_TO_PNG = (
     'inkscape "$1" --export-type=png --export-filename="$2" --export-dpi=' + str(DPI) + " --export-background=white"
-    ' --export-background-opacity=1 --export-area-drawing;'
+    " --export-background-opacity=1 --export-area-drawing;"
     ' test -s "$2" || { echo "inkscape wrote no picture, so librsvg draws it" >&2;'
-    ' rsvg-convert --dpi-x=' + str(DPI) + " --dpi-y=" + str(DPI) + ' --background-color=white -o "$2" "$1"; }'
+    " rsvg-convert --dpi-x=" + str(DPI) + " --dpi-y=" + str(DPI) + ' --background-color=white -o "$2" "$1"; }'
 )
 
 
@@ -58,7 +58,9 @@ class Renderer:
     def commands(self, job: Job) -> list[Command]:
         """The commands for ``job``. An SVG-only tool is followed by Inkscape when the document needs PNG."""
         native = job.kind if job.kind in self.kinds else self.kinds[0]
-        commands = self.steps(Job(job.source, job.output.with_suffix(f".{native}"), native, job.landscape, job.source_dir))
+        commands = self.steps(
+            Job(job.source, job.output.with_suffix(f".{native}"), native, job.landscape, job.source_dir)
+        )
         if native == "svg" and job.kind == "png":
             commands.append(_svg_to_png(job))
         return commands
@@ -96,7 +98,12 @@ def _vega(tool: str) -> Callable[[Job], list[Command]]:
 RENDERERS: tuple[Renderer, ...] = (
     Renderer("mermaid", ("mermaid",), ".mmd", ("png", "svg"), _mermaid),
     Renderer(
-        "plantuml", ("plantuml", "puml"), ".puml", ("png", "svg"), _plantuml, needs_source_dir=True,
+        "plantuml",
+        ("plantuml", "puml"),
+        ".puml",
+        ("png", "svg"),
+        _plantuml,
+        needs_source_dir=True,
         environment=lambda folder: {"JAVA_TOOL_OPTIONS": f"-Dplantuml.include.path={folder}"},
         cacheable=lambda text: "!include" not in text,  # an included file can change without the diagram changing
     ),  # fmt: skip
@@ -106,14 +113,32 @@ RENDERERS: tuple[Renderer, ...] = (
         Renderer(tool, (tool,), ".diag", ("png",), _blockdiag(tool))
         for tool in ("blockdiag", "seqdiag", "actdiag", "nwdiag", "packetdiag")
     ),
-    Renderer("wavedrom", ("wavedrom",), ".json", ("svg",), lambda j: [["wavedrom-cli", "--input", j.source, "--svg", j.output]]),
     Renderer(
-        "bytefield-svg", ("bytefield-svg",), ".edn", ("svg",),
+        "wavedrom",
+        ("wavedrom",),
+        ".json",
+        ("svg",),
+        lambda j: [["wavedrom-cli", "--input", j.source, "--svg", j.output]],
+    ),
+    Renderer(
+        "bytefield-svg",
+        ("bytefield-svg",),
+        ".edn",
+        ("svg",),
         lambda j: [["bytefield-svg", "--source", j.source, "--output", j.output]],
     ),  # fmt: skip
-    Renderer("pikchr", ("pikchr",), ".pikchr", ("svg",), lambda j: [["python3", TOOLS / "pikchr_render.py", j.source, j.output]]),
     Renderer(
-        "railroad", ("railroad",), ".railroad", ("svg",),
+        "pikchr",
+        ("pikchr",),
+        ".pikchr",
+        ("svg",),
+        lambda j: [["python3", TOOLS / "pikchr_render.py", j.source, j.output]],
+    ),
+    Renderer(
+        "railroad",
+        ("railroad",),
+        ".railroad",
+        ("svg",),
         lambda j: [["python3", TOOLS / "railroad_render.py", j.source, j.output]],
     ),  # fmt: skip
     Renderer("wireviz", ("wireviz",), ".yml", ("svg",), lambda j: [["wireviz", "-f", "s", j.source]]),

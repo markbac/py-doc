@@ -17,7 +17,8 @@ __all__ = ["ConversionError", "build_parser", "main", "run_docx"]
 EXAMPLES = """examples:
   py-doc docx guide.md                        guide.docx next to it (or -o FILE)
   py-doc docx guide.md -t Template.docx       with a Word template
-  py-doc docx docs -o build                   every Markdown file in docs, into build/"""
+  py-doc docx docs -o build                   every Markdown file in docs, into build/
+  py-doc docx guide.md --watch                live HTML twin preview in the browser on every save"""
 
 
 def build_parser(prog: str = "py-doc docx") -> argparse.ArgumentParser:

@@ -53,7 +53,9 @@ def status_template(base: Path | None, status: str | None) -> Path | None:
         if candidate.is_file():
             logger.info(f"Using the template for status '{status}': {candidate}")
             return candidate
-    logger.info(f"No template for status '{status}' (looked for {', '.join(c.name for c in candidates)}), so {base} is used")
+    logger.info(
+        f"No template for status '{status}' (looked for {', '.join(c.name for c in candidates)}), so {base} is used"
+    )
     return base
 
 
@@ -68,7 +70,9 @@ def check_name_pattern(pattern: str, where: str) -> None:
     """Raise ValueError for a pattern with an unknown field or a stray brace."""
     unknown = [field for field in _FIELD.findall(pattern) if field not in FIELDS]
     if unknown:
-        raise ValueError(f"{where} uses unknown field {{{unknown[0]}}}. Fields: {', '.join('{' + f + '}' for f in FIELDS)}")
+        raise ValueError(
+            f"{where} uses unknown field {{{unknown[0]}}}. Fields: {', '.join('{' + f + '}' for f in FIELDS)}"
+        )
     if "{" in _FIELD.sub("", pattern) or "}" in _FIELD.sub("", pattern):
         raise ValueError(f"{where} has a brace that is not part of a field")
 

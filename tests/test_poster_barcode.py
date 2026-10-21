@@ -48,7 +48,14 @@ class TestData:
             checked(kind, data)
 
     def test_types_and_their_other_names(self):
-        assert [kind_of(k) for k in (None, "EAN-13", "upc", "itf", "39", "128")] == ["code128", "ean13", "upca", "itf14", "code39", "code128"]
+        assert [kind_of(k) for k in (None, "EAN-13", "upc", "itf", "39", "128")] == [
+            "code128",
+            "ean13",
+            "upca",
+            "itf14",
+            "code39",
+            "code128",
+        ]
         with pytest.raises(BarcodeError, match="type must be one of code128, code39"):
             kind_of("pdf417")
 
@@ -59,7 +66,10 @@ class TestData:
         assert human_text("ean13", "5012345678900") == "5 012345 678900"
         assert human_text("upca", "036000291452") == "0 36000 29145 2"
         assert human_text("itf14", "15400141288763") == "1 54 00141 28876 3"
-        assert human_text("code39", "SN-100", check=True).startswith("*SN-100") and human_text("code39", "SN-100") == "*SN-100*"
+        assert (
+            human_text("code39", "SN-100", check=True).startswith("*SN-100")
+            and human_text("code39", "SN-100") == "*SN-100*"
+        )
 
 
 class TestDrawing:
@@ -70,7 +80,11 @@ class TestDrawing:
         heights = {float(h) for h in __import__("re").findall(r'<rect [^>]*height="([\d.]+)"', svg)}
         assert len(heights) == 2 and min(heights) == 80  # bars and the longer guards
         assert 'fill="#123456"' in svg and 'width="300"' in svg
-        assert [t for t in __import__("re").findall(r">(\d+)</text>", svg)] == ["5", "012345", "678900"]  # placed as on products
+        assert [t for t in __import__("re").findall(r">(\d+)</text>", svg)] == [
+            "5",
+            "012345",
+            "678900",
+        ]  # placed as on products
 
     def test_itf14_has_bearer_bars_and_text_can_be_left_out(self):
         svg = barcode_svg("itf14", "15400141288763", "#000", text=False)
@@ -116,7 +130,14 @@ READERS = {"code128": "Code128", "code39": "Code39", "ean13": "EAN13", "ean8": "
 
 @pytest.mark.parametrize(
     "kind, data",
-    [("code128", "SN-100 A7/b"), ("code39", "SN-100"), ("ean13", "501234567890"), ("ean8", "9638507"), ("upca", "03600029145"), ("itf14", "1540014128876")],
+    [
+        ("code128", "SN-100 A7/b"),
+        ("code39", "SN-100"),
+        ("ean13", "501234567890"),
+        ("ean8", "9638507"),
+        ("upca", "03600029145"),
+        ("itf14", "1540014128876"),
+    ],
 )
 def test_a_reader_gets_back_what_was_encoded(kind, data):
     from PIL import Image

@@ -12,6 +12,10 @@ class EnvironmentProblem(ConversionError):
     """
 
 
+class OutputLocked(ConversionError):
+    """The output file cannot be written because another program, such as Word, has it open."""
+
+
 def exit_status(error: BaseException) -> int:
     """The exit status for a failure: 2 for an environment problem, 1 for anything else."""
     return 2 if isinstance(error, EnvironmentProblem) else 1

@@ -105,26 +105,53 @@ def build_parser() -> argparse.ArgumentParser:
     build.add_argument("documents", nargs="*", metavar="DOCUMENT", help="Documents and posters to build (default: all)")
     source = build.add_mutually_exclusive_group()
     source.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
-    source.add_argument("--legacy", metavar="FILE", help="Build from a legacy createdocs build file instead of py-doc.yml")
+    source.add_argument(
+        "--legacy", metavar="FILE", help="Build from a legacy createdocs build file instead of py-doc.yml"
+    )
     build.add_argument(
         "-f", "--format", action="append", choices=[*sorted(FORMATS), "poster"],
         help="Build only this format; poster builds only the posters",
     )  # fmt: skip
-    build.add_argument("--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}")
     build.add_argument(
-        "--condition", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a [[IF:]] condition"
+        "--var", action="append", default=[], metavar="NAME=VALUE", type=_assignment, help="Set a {{variable}}"
     )
-    build.add_argument("--report", metavar="FILE", help="Write a JSON report of the build (default: reports.path in py-doc.yml)")
+    build.add_argument(
+        "--condition",
+        action="append",
+        default=[],
+        metavar="NAME=VALUE",
+        type=_assignment,
+        help="Set a [[IF:]] condition",
+    )
+    build.add_argument(
+        "--report", metavar="FILE", help="Write a JSON report of the build (default: reports.path in py-doc.yml)"
+    )
     build.add_argument("--timestamps", action="store_true", help="Put the time and the render times in the report")
     build.add_argument("--keep-going", action="store_true", help="Report every broken diagram, not just the first")
     lint = build.add_mutually_exclusive_group()
-    lint.add_argument("--lint", dest="lint", action="store_const", const="on", help="Lint the sources first: an error stops the build")
-    lint.add_argument("--strict", dest="lint", action="store_const", const="strict", help="Lint the sources first: a warning stops the build too")
-    lint.add_argument("--no-lint", dest="lint", action="store_const", const="off", help="Do not lint, whatever build.lint says")
-    build.add_argument("--lint-report", metavar="FILE", help="Also write the lint issues to FILE (.sarif, .json or .csv)")
+    lint.add_argument(
+        "--lint", dest="lint", action="store_const", const="on", help="Lint the sources first: an error stops the build"
+    )
+    lint.add_argument(
+        "--strict",
+        dest="lint",
+        action="store_const",
+        const="strict",
+        help="Lint the sources first: a warning stops the build too",
+    )
+    lint.add_argument(
+        "--no-lint", dest="lint", action="store_const", const="off", help="Do not lint, whatever build.lint says"
+    )
+    build.add_argument(
+        "--lint-report", metavar="FILE", help="Also write the lint issues to FILE (.sarif, .json or .csv)"
+    )
     site = build.add_mutually_exclusive_group()
-    site.add_argument("--site", dest="site", action="store_true", default=None, help="Build the site after the documents")
-    site.add_argument("--no-site", dest="site", action="store_false", help="Do not build the site, whatever build.site says")
+    site.add_argument(
+        "--site", dest="site", action="store_true", default=None, help="Build the site after the documents"
+    )
+    site.add_argument(
+        "--no-site", dest="site", action="store_false", help="Do not build the site, whatever build.site says"
+    )
     build.add_argument("--no-generate", action="store_true", help="Do not run content.generators first")
     noise = build.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
@@ -140,7 +167,11 @@ def build_parser() -> argparse.ArgumentParser:
     move.add_argument("paths", nargs="*", default=["."], metavar="PATH", help="Build files or folders to search")
     move.add_argument("-o", "--output", default="py-doc.yml", help="Configuration file to write (default: py-doc.yml)")
     move.add_argument(
-        "--from", dest="source", choices=LEGACY_FORMATS, default=LEGACY_FORMATS[0], help="Legacy format (default: createdocs, the only one)"
+        "--from",
+        dest="source",
+        choices=LEGACY_FORMATS,
+        default=LEGACY_FORMATS[0],
+        help="Legacy format (default: createdocs, the only one)",
     )
     move.add_argument("--check", action="store_true", help="Only report what would be migrated")
     move.add_argument("--backup", action="store_true", help="Keep copies (.bak) of the legacy files and any old output")
@@ -207,7 +238,9 @@ def _build(args: argparse.Namespace) -> int:
     configure_logging(quiet=args.quiet, verbose=args.verbose)
     path = Path(args.legacy or args.config) if args.legacy or args.config else find_config(Path.cwd())
     if path is None:
-        _error("No py-doc.yml found here or in a parent folder. Use --config, --legacy, or `py-doc migrate` to create one")
+        _error(
+            "No py-doc.yml found here or in a parent folder. Use --config, --legacy, or `py-doc migrate` to create one"
+        )
         return 1
     try:
         config = _load_legacy(path) if args.legacy else load_config(path)
@@ -251,7 +284,9 @@ def _build(args: argparse.Namespace) -> int:
     return status
 
 
-def _pipeline(args: argparse.Namespace, config, names: list[str], runtime, report: BuildReport | None, posters=()) -> int:
+def _pipeline(
+    args: argparse.Namespace, config, names: list[str], runtime, report: BuildReport | None, posters=()
+) -> int:
     """Generate, lint, build the documents and bundles, the posters and the site, then check the outputs.
 
     A failed stage stops the ones after it, except that every document is tried. Returns the exit status.
@@ -291,10 +326,19 @@ def _pipeline(args: argparse.Namespace, config, names: list[str], runtime, repor
     written: list[Path] = []
     for name in names:
         try:
-            written += build_document(
-                config, config.documents[name], args.format, dict(args.var), _conditions(args.condition), runtime,
-                args.keep_going, report,
-            ) or []
+            written += (
+                build_document(
+                    config,
+                    config.documents[name],
+                    args.format,
+                    dict(args.var),
+                    _conditions(args.condition),
+                    runtime,
+                    args.keep_going,
+                    report,
+                )
+                or []
+            )
         except (FileNotFoundError, ConversionError) as exc:
             _error(f"{name}: {exc}")
             failed += 1
@@ -351,7 +395,9 @@ def _pipeline(args: argparse.Namespace, config, names: list[str], runtime, repor
     return 1 if missing else 0
 
 
-def _build_posters(args: argparse.Namespace, config, names: list[str], runtime, report: BuildReport | None) -> tuple[int, list[Path]]:
+def _build_posters(
+    args: argparse.Namespace, config, names: list[str], runtime, report: BuildReport | None
+) -> tuple[int, list[Path]]:
     """Build each poster, and its PDF when it asks for one. One failure does not stop the others.
 
     Returns the exit status (0 when every poster was built) and the files written.
@@ -359,12 +405,21 @@ def _build_posters(args: argparse.Namespace, config, names: list[str], runtime, 
     from .poster import write_poster
     from .poster_settings import layer, merge
 
-    overrides = layer({"variables": dict(args.var), "conditions": _conditions(args.condition)}, Path.cwd(), "the command line")
+    overrides = layer(
+        {"variables": dict(args.var), "conditions": _conditions(args.condition)}, Path.cwd(), "the command line"
+    )
     status, written = 0, []
     for name in names:
         poster = config.posters[name]
         try:
-            ctx, files = write_poster(poster.source, poster.output, runtime, merge(poster.settings, overrides), config.poster, mermaid=config.mermaid)
+            ctx, files = write_poster(
+                poster.source,
+                poster.output,
+                runtime,
+                merge(poster.settings, overrides),
+                config.poster,
+                mermaid=config.mermaid,
+            )
         except (FileNotFoundError, ConversionError) as exc:
             _error(f"{name}: {exc}")
             status = max(status, exit_status(exc) if isinstance(exc, ConversionError) else 1)
@@ -372,7 +427,10 @@ def _build_posters(args: argparse.Namespace, config, names: list[str], runtime, 
                 report.failed(name, exc)
             continue
         for file in files:
-            logger.info(f"Wrote {_shown(file)}" + (f" ({ctx.n} diagram(s), {ctx.failed} not drawn)" if file.suffix == ".html" and ctx.n else ""))
+            logger.info(
+                f"Wrote {_shown(file)}"
+                + (f" ({ctx.n} diagram(s), {ctx.failed} not drawn)" if file.suffix == ".html" and ctx.n else "")
+            )
             if report:
                 report.output(name, "pdf" if file.suffix == ".pdf" else "html", file)
         written += files
@@ -410,7 +468,9 @@ def _lint_sources(config, names: list[str], mode: str, output: Path | None, runt
         logger.info(f"Wrote the lint issues to {output}")
     for result in lint.errors:
         _error(f"{_shown(result.file)}: {result.error}")
-    logger.info(f"Lint: {len(lint.issues)} issue(s) in {lint.files_scanned} file(s), {lint.count('warning')} warning or error")
+    logger.info(
+        f"Lint: {len(lint.issues)} issue(s) in {lint.files_scanned} file(s), {lint.count('warning')} warning or error"
+    )
     return lint_status(lint, mode == "strict")
 
 

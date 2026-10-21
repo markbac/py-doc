@@ -95,16 +95,23 @@ def test_a_flow_section_goes_on_in_the_next_columns_with_its_blocks_in_order(bro
     assert blocks == [f"P{n}. The node"[:12] for n in range(1, 13)] + ["Table 1: Pin", "Pin Use 1 Po"]
     heights = [col["height"] for col in columns]
     assert max(heights) < 0.5 * sum(heights), "the long section is shared out"
-    assert page.evaluate("() => getComputedStyle(document.querySelector('section.continued h2'), '::after').content") == '" (continued)"'
+    assert (
+        page.evaluate("() => getComputedStyle(document.querySelector('section.continued h2'), '::after').content")
+        == '" (continued)"'
+    )
 
 
 def test_a_caption_is_never_parted_from_its_table(browser, tmp_path):
-    body = section("Long", 7, "{.flow}").replace("P4.", "[[CAPTION:Table]] Pins\n\n| Pin |\n|---|\n| 1 |\n\nP4.") + section("B", 1)
+    body = section("Long", 7, "{.flow}").replace(
+        "P4.", "[[CAPTION:Table]] Pins\n\n| Pin |\n|---|\n| 1 |\n\nP4."
+    ) + section("B", 1)
     page = open_poster(browser, tmp_path, body)
     for col in layout(page):
         for name, _, blocks in col["sections"]:
             if "Table 1: Pin" in blocks:
-                assert blocks[blocks.index("Table 1: Pin") + 1] == "Pin 1", "the table follows its caption in one column"
+                assert blocks[blocks.index("Table 1: Pin") + 1] == "Pin 1", (
+                    "the table follows its caption in one column"
+                )
 
 
 def test_balancing_again_gives_the_same_layout(browser, tmp_path):
@@ -120,4 +127,6 @@ def test_the_poster_fits_its_paper_and_scales_to_the_window(browser, tmp_path):
         "() => { const p = document.querySelector('.poster'); return [+p.dataset.w, p.scrollHeight, +p.style.height.slice(0, -2) / +p.dataset.w]; }"
     )
     assert height <= width * ratio + 1 and abs(ratio - 1.4141) < 0.001, "one A3 page, no taller"
-    assert page.evaluate("() => +getComputedStyle(document.querySelector('.poster')).zoom") == pytest.approx(1400 / width, rel=0.01)
+    assert page.evaluate("() => +getComputedStyle(document.querySelector('.poster')).zoom") == pytest.approx(
+        1400 / width, rel=0.01
+    )

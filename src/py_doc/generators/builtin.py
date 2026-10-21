@@ -38,7 +38,15 @@ OPTIONS: dict[str, tuple[str, ...]] = {
     "command": ("*run", "timeout"),
     "python": ("*callable",),
 }
-DIAGRAM_LANGUAGES = {".mmd": "mermaid", ".mermaid": "mermaid", ".puml": "plantuml", ".plantuml": "plantuml", ".dot": "dot", ".gv": "dot", ".d2": "d2"}
+DIAGRAM_LANGUAGES = {
+    ".mmd": "mermaid",
+    ".mermaid": "mermaid",
+    ".puml": "plantuml",
+    ".plantuml": "plantuml",
+    ".dot": "dot",
+    ".gv": "dot",
+    ".d2": "d2",
+}
 
 
 # --- helpers -------------------------------------------------------------------------------------
@@ -126,7 +134,10 @@ def glossary(spec: GeneratorSpec, project: ProjectConfig) -> str:
             raise GeneratorError(f"{spec.options['source']} must map each term to its definition")
         rows = [[term, definition] for term, definition in sorted(data.items(), key=lambda item: str(item[0]).lower())]
         return _heading(spec, "Glossary") + _table(["Term", "Definition"], rows)
-    rows = [[term, ", ".join(variants)] for term, variants in sorted(project.lint.glossary.items(), key=lambda item: item[0].lower())]
+    rows = [
+        [term, ", ".join(variants)]
+        for term, variants in sorted(project.lint.glossary.items(), key=lambda item: item[0].lower())
+    ]
     return _heading(spec, "Glossary") + _table(["Term", "Not written as"], rows)
 
 
@@ -145,7 +156,9 @@ def documents(spec: GeneratorSpec, project: ProjectConfig) -> str:
         doc = project.documents[name]
         first = next((s.file for s in doc.sources if s.include and s.structurizr is None), None)
         tree = _parsed(first) if first is not None and first.is_file() else None
-        meta = _combine_metadata(doc, read_metadata(tree) if tree else Metadata(), _first_heading(tree) if tree else None, project.root)
+        meta = _combine_metadata(
+            doc, read_metadata(tree) if tree else Metadata(), _first_heading(tree) if tree else None, project.root
+        )
         target = first if link == "source" else project.output_path(doc, link, meta.version)
         title = f"[{_cell(meta.title)}]({_link(spec, target)})" if target is not None else _cell(meta.title)
         rows.append([title, meta.document_id or "", meta.version or "", meta.status or ""])
@@ -183,7 +196,11 @@ def adr_index(spec: GeneratorSpec, project: ProjectConfig) -> str:
     if not folder.is_dir():
         raise GeneratorError(f"{folder} is not a folder")
     rows = []
-    for file in sorted(p for p in folder.iterdir() if p.suffix.lower() in (".md", ".markdown") and p.stem.lower() not in ("readme", "index")):
+    for file in sorted(
+        p
+        for p in folder.iterdir()
+        if p.suffix.lower() in (".md", ".markdown") and p.stem.lower() not in ("readme", "index")
+    ):
         text = file.read_text(encoding="utf-8-sig")
         tree = parse(text)
         meta = read_metadata(tree)
@@ -193,7 +210,9 @@ def adr_index(spec: GeneratorSpec, project: ProjectConfig) -> str:
             status = found.group(1) if found else _under_heading(tree, "status")
         number = re.match(r"^(\d+)", file.stem)
         title = meta.title or _first_heading(tree) or file.stem
-        rows.append([number.group(1) if number else "", f"[{_cell(title)}]({_link(spec, file)})", status or "", meta.date or ""])
+        rows.append(
+            [number.group(1) if number else "", f"[{_cell(title)}]({_link(spec, file)})", status or "", meta.date or ""]
+        )
     return _heading(spec, "Architecture decisions") + _table(["Number", "Decision", "Status", "Date"], rows)
 
 
@@ -300,12 +319,15 @@ def openapi_summary(spec: GeneratorSpec, project: ProjectConfig) -> str:
         for method in _METHODS:
             operation = (item or {}).get(method)
             if isinstance(operation, dict):
-                rows.append([f"`{method.upper()}`", f"`{path}`", operation.get("summary") or operation.get("operationId") or ""])
+                rows.append(
+                    [f"`{method.upper()}`", f"`{path}`", operation.get("summary") or operation.get("operationId") or ""]
+                )
     out += "## Operations\n\n" + (_table(["Method", "Path", "Summary"], rows) if rows else "None.")
-    schemas = ((api.get("components") or {}).get("schemas") or api.get("definitions") or {})
+    schemas = (api.get("components") or {}).get("schemas") or api.get("definitions") or {}
     if schemas:
         out += "\n\n## Schemas\n\n" + "\n".join(
-            f"- `{name}`" + (f": {_cell((body or {}).get('description'))}" if (body or {}).get("description") else "") for name, body in schemas.items()
+            f"- `{name}`" + (f": {_cell((body or {}).get('description'))}" if (body or {}).get("description") else "")
+            for name, body in schemas.items()
         )
     return out
 
@@ -323,10 +345,19 @@ def asyncapi_summary(spec: GeneratorSpec, project: ProjectConfig) -> str:
     for name, channel in (api.get("channels") or {}).items():
         channel = channel or {}
         address = channel.get("address") or name
-        operations = [(kind, channel[kind]) for kind in ("publish", "subscribe") if isinstance(channel.get(kind), dict)]  # version 2
+        operations = [
+            (kind, channel[kind]) for kind in ("publish", "subscribe") if isinstance(channel.get(kind), dict)
+        ]  # version 2
         for kind, operation in operations:
-            message = (operation.get("message") or {})
-            rows.append([f"`{address}`", kind, message.get("name") or message.get("title") or _ref(message), operation.get("summary") or channel.get("description") or ""])
+            message = operation.get("message") or {}
+            rows.append(
+                [
+                    f"`{address}`",
+                    kind,
+                    message.get("name") or message.get("title") or _ref(message),
+                    operation.get("summary") or channel.get("description") or "",
+                ]
+            )
         if not operations:
             messages = ", ".join(str(m) for m in (channel.get("messages") or {}))
             rows.append([f"`{address}`", "", messages, channel.get("description") or channel.get("summary") or ""])
@@ -353,7 +384,9 @@ def python_api(spec: GeneratorSpec, project: ProjectConfig) -> str:
     out = _heading(spec, f"{source.stem} reference")
     for file in files:
         module = ".".join(file.relative_to(base).with_suffix("").parts).removesuffix(".__init__")
-        if not private and any(part.startswith("_") and part != "__init__" for part in file.relative_to(base).with_suffix("").parts):
+        if not private and any(
+            part.startswith("_") and part != "__init__" for part in file.relative_to(base).with_suffix("").parts
+        ):
             continue
         try:
             tree = ast.parse(file.read_text(encoding="utf-8-sig"), str(file))
@@ -361,7 +394,9 @@ def python_api(spec: GeneratorSpec, project: ProjectConfig) -> str:
             raise GeneratorError(f"{file} is not valid Python: {exc}") from exc
         body = []
         for node in tree.body:
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and (private or not node.name.startswith("_")):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and (
+                private or not node.name.startswith("_")
+            ):
                 body.append(_describe(node, 3, private))
         doc = _summary(ast.get_docstring(tree))
         if body or doc:
@@ -380,7 +415,8 @@ def _describe(node: ast.AST, level: int, private: bool) -> str:
         methods = [
             _describe(child, level + 1, private)
             for child in node.body
-            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) and (private or not child.name.startswith("_") or child.name == "__init__")
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and (private or not child.name.startswith("_") or child.name == "__init__")
         ]
         return "\n\n".join([text, *methods])
     prefix = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
@@ -413,13 +449,22 @@ def command(spec: GeneratorSpec, project: ProjectConfig) -> str:
     if not argv:
         raise GeneratorError(f"The generator {spec.name}: run must be a list, such as [python, tools/make_table.py]")
     try:
-        result = subprocess.run(argv, cwd=project.root, capture_output=True, encoding="utf-8", errors="replace", timeout=int(spec.options.get("timeout", 300)))
+        result = subprocess.run(
+            argv,
+            cwd=project.root,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=int(spec.options.get("timeout", 300)),
+        )
     except FileNotFoundError as exc:
         raise GeneratorError(f"The generator {spec.name}: {argv[0]} is not found") from exc
     except subprocess.TimeoutExpired as exc:
         raise GeneratorError(f"The generator {spec.name}: {argv[0]} took longer than {exc.timeout} s") from exc
     if result.returncode != 0:
-        raise GeneratorError(f"The generator {spec.name}: {argv[0]} exited with status {result.returncode}: {result.stderr.strip()}")
+        raise GeneratorError(
+            f"The generator {spec.name}: {argv[0]} exited with status {result.returncode}: {result.stderr.strip()}"
+        )
     return result.stdout
 
 

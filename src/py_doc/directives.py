@@ -42,7 +42,14 @@ _VARIABLE = re.compile(r"\{\{\s*(?P<name>[A-Za-z_][A-Za-z0-9_]*)\s*\}\}")
 _FENCE = re.compile(r"^ {0,3}(?P<fence>`{3,}|~{3,})")
 _INLINE_CODE = re.compile(r"(?P<ticks>`+)(?P<body>.+?)(?P=ticks)")
 
-_LANGUAGES = {".yml": "yaml", ".md": "markdown", ".sh": "bash", ".py": "python", ".js": "javascript", ".ts": "typescript"}
+_LANGUAGES = {
+    ".yml": "yaml",
+    ".md": "markdown",
+    ".sh": "bash",
+    ".py": "python",
+    ".js": "javascript",
+    ".ts": "typescript",
+}
 
 
 @dataclass(frozen=True)

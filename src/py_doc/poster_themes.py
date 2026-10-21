@@ -157,7 +157,9 @@ def _checked(value, where: str) -> str:
 def _apply(theme: Theme, data: dict, where: str, folder: Path | None) -> None:
     unknown = set(data) - {"extends", "colours", "palette", "fonts", "logo", "name", "description"}
     if unknown:
-        raise ThemeError(f"{where}: unknown key '{sorted(unknown)[0]}'. Allowed: colours, extends, fonts, logo, palette")
+        raise ThemeError(
+            f"{where}: unknown key '{sorted(unknown)[0]}'. Allowed: colours, extends, fonts, logo, palette"
+        )
     for name, value in (data.get("colours") or {}).items():
         if name not in COLOUR_ROLES:
             raise ThemeError(f"{where}: unknown colour '{name}'. Colours: {', '.join(COLOUR_ROLES)}")
@@ -192,7 +194,11 @@ def _font_files(value, folder: Path | None, where: str) -> list[FontFile]:
         unknown = set(item) - {"family", "file", "weight", "style"}
         if unknown:
             raise ThemeError(f"{place}: unknown key '{sorted(unknown)[0]}'. Allowed: family, file, weight, style")
-        family, weight, style = str(item["family"]).strip(), str(item.get("weight", 400)).strip(), str(item.get("style", "normal")).strip()
+        family, weight, style = (
+            str(item["family"]).strip(),
+            str(item.get("weight", 400)).strip(),
+            str(item.get("style", "normal")).strip(),
+        )
         if re.search(r"['\"\\;{}<>]", family):
             raise ThemeError(f"{place}: the family '{family}' has a character a font name cannot have")
         if not re.fullmatch(r"[1-9]00( [1-9]00)?", weight):

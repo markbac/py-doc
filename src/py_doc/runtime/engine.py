@@ -36,7 +36,7 @@ _DAEMON_DOWN = (
     "failed to connect to the docker api",
     "is the docker daemon running",
 )
-_NO_DOCKER = ("execvpe(docker) failed", "docker: command not found", 'executable file not found in $path')
+_NO_DOCKER = ("execvpe(docker) failed", "docker: command not found", "executable file not found in $path")
 _IMAGE_MISSING = ("unable to find image", "no such image", "pull access denied")
 _MISSING_BIND = "bind source path does not exist"
 
@@ -209,7 +209,11 @@ class Runtime:
         """Turn the engine's own failures into environment problems, with what to do about them."""
         low = result.stderr.lower()
         if any(marker in low for marker in _NO_DOCKER):
-            where = "inside the WSL distro (`wsl -d <distro>`, then follow https://docs.docker.com/engine/install/ubuntu/)" if self.windows else "(https://docs.docker.com/engine/install/)"
+            where = (
+                "inside the WSL distro (`wsl -d <distro>`, then follow https://docs.docker.com/engine/install/ubuntu/)"
+                if self.windows
+                else "(https://docs.docker.com/engine/install/)"
+            )
             raise EnvironmentProblem(
                 f"Docker Engine is not installed {where}. "
                 "Set runtime.wsl_distro in py-doc.yml if Docker is in a distro other than the default"
@@ -241,8 +245,15 @@ class Runtime:
             if code != 0 or not converted:
                 converted = _drive_path(text)  # some distros cannot start wslpath ("Exec format error")
                 if converted is None:
-                    raise EnvironmentProblem(f"WSL cannot see '{text}': {err.decode('utf-8', errors='replace').strip()}")
-                logger.debug("wslpath failed (%s), so '%s' is taken as %s", err.decode("utf-8", errors="replace").strip(), text, converted)
+                    raise EnvironmentProblem(
+                        f"WSL cannot see '{text}': {err.decode('utf-8', errors='replace').strip()}"
+                    )
+                logger.debug(
+                    "wslpath failed (%s), so '%s' is taken as %s",
+                    err.decode("utf-8", errors="replace").strip(),
+                    text,
+                    converted,
+                )
         else:
             converted = Path(text).resolve().as_posix()
         self._paths[text] = converted
@@ -367,12 +378,18 @@ class Runtime:
         """
         if not self.windows:
             return None
-        flags = 0x00000008 | 0x00000200 if detached else 0x08000000  # DETACHED_PROCESS | NEW_PROCESS_GROUP, else NO_WINDOW
+        flags = (
+            0x00000008 | 0x00000200 if detached else 0x08000000
+        )  # DETACHED_PROCESS | NEW_PROCESS_GROUP, else NO_WINDOW
         command = [*self._prefix(), "sleep", "infinity"]
         logger.debug("Keeping WSL running: %s", " ".join(command))
         try:
             return subprocess.Popen(
-                command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags
+                command,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=flags,
             )
         except FileNotFoundError as exc:
             raise EnvironmentProblem("wsl.exe was not found. Install WSL 2 (`wsl --install`)") from exc
