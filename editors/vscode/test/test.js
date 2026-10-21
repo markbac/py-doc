@@ -184,4 +184,30 @@ title: One minute of time
   console.log('✓ Poster features (stats, abstract, colon accent, cards, segments, flow, footer) rendered correctly');
 }
 
-console.log('\nAll 7 test suites passed successfully! 🎉');
+// Test 8: Image Dimensions and Diagram types
+{
+  const input = `
+![The board](images/board.svg){width=60%}
+
+\`\`\`plantuml title="System Architecture"
+@startuml
+Alice -> Bob : Authentication Request
+@enduml
+\`\`\`
+
+\`\`\`dot title="Dependency Graph"
+digraph G {
+  main -> parse;
+}
+\`\`\`
+`;
+  const html = md.render(input);
+  assert(html.includes('style="width: 60%; max-width: 100%;"'), 'Image width attribute should be converted to style');
+  assert(!html.includes('{width=60%}'), 'Literal {width=...} text should be removed');
+  assert(html.includes('data-diagram="plantuml"'), 'PlantUML diagram should be wrapped in diagram box');
+  assert(html.includes('System Architecture'), 'PlantUML title should be displayed');
+  assert(html.includes('data-diagram="dot"'), 'Graphviz dot diagram should be wrapped in diagram box');
+  console.log('✓ Image width attributes and diagram fence blocks rendered correctly');
+}
+
+console.log('\nAll 8 test suites passed successfully! 🎉');

@@ -8,6 +8,8 @@
  *     - Page breaks: [[PAGEBREAK]] and ::: {.pagebreak}
  *     - Section breaks: [[LANDSCAPE]] and [[PORTRAIT]]
  *     - Paragraph Word styles: [[STYLE:StyleName]] text
+ *     - Image width attributes: ![](images/board.png){width=60%}
+ *     - Diagram types: plantuml, dot/graphviz, ditaa, wavedrom, vega, bytefield, etc.
  *     - Directives: [[INCLUDE:...]], [[INCLUDE-CODE:...]], [[IF:...]], [[ENDIF]]
  *  2. PowerPoint Slide Decks (.pptx):
  *     - Section Header slides (# Section Title)
@@ -36,6 +38,13 @@ const KINDS = {
   CAUTION: { title: 'Caution', icon: '🛑', class: 'caution' },
 };
 
+const DIAGRAM_TYPES = new Set([
+  'mermaid', 'plantuml', 'puml', 'dot', 'graphviz', 'ditaa',
+  'blockdiag', 'seqdiag', 'actdiag', 'nwdiag', 'packetdiag',
+  'wavedrom', 'bytefield-svg', 'pikchr', 'railroad', 'wireviz',
+  'vega', 'vega-lite'
+]);
+
 function parseSimpleYaml(yamlStr) {
   const result = {};
   const lines = yamlStr.split('\n');
@@ -45,7 +54,6 @@ function parseSimpleYaml(yamlStr) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
 
-    // Check for nested keys (e.g. footer.left, footer.qr)
     if (line.startsWith('  ') && currentKey) {
       const subColon = trimmed.indexOf(':');
       if (subColon > 0) {
@@ -260,7 +268,6 @@ function pyDocPlugin(md) {
     const counters = {};
     const tokens = state.tokens;
 
-    // Detect document mode: 'document' (default), 'slide', or 'poster'
     let docMode = 'document';
     let docTitle = 'py-doc Document';
     let frontMeta = null;
@@ -269,32 +276,25 @@ function pyDocPlugin(md) {
       frontMeta = tokens[0].meta;
       if (frontMeta.title) docTitle = frontMeta.title;
 
-      // Check poster cues
       if (frontMeta.paper || frontMeta.byline || (frontMeta.theme && !frontMeta.split_level)) {
         docMode = 'poster';
       }
 
-      // Check slide cues
       const fmt = (frontMeta.format || frontMeta.output || frontMeta.type || frontMeta.layout || '').toLowerCase();
       if (fmt.includes('pptx') || fmt.includes('slide') || frontMeta.split_level) {
         docMode = 'slide';
       }
     }
 
-    // Check content-based cues if not detected from front matter
     if (docMode === 'document') {
       for (const t of tokens) {
         if (t.type === 'pydoc_div_open' && (t.info === 'columns' || t.info === 'notes' || t.info === 'incremental')) {
           docMode = 'slide';
           break;
         }
-        if (t.type === 'heading_open') {
-          // Check for poster heading classes
-        }
       }
     }
 
-    // Set custom renderer for front matter with docMode
     md.renderer.rules.pydoc_front_matter = (ts, idx) => {
       return renderFrontMatterBlock(ts[idx].meta, docMode);
     };
@@ -302,7 +302,25 @@ function pyDocPlugin(md) {
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i];
 
-      // A. Process HTML comments for speaker notes: <!-- notes: ... -->
+      // A. Process Image width attributes: ![](img.png){width=60%}
+      if (token.type === 'inline' && token.children) {
+        for (let c = 0; c < token.children.length; c++) {
+          if (token.children[c].type === 'image') {
+            const nextChild = token.children[c + 1];
+            if (nextChild && nextChild.type === 'text') {
+              const m = nextChild.content.match(/^\{width=([^}]+)\}/);
+              if (m) {
+                const widthVal = m[1].replace(/["']/g, '').trim();
+                token.children[c].attrs = token.children[c].attrs || [];
+                token.children[c].attrs.push(['style', `width: ${widthVal}; max-width: 100%;`]);
+                nextChild.content = nextChild.content.replace(/^\{width=([^}]+)\}\s*/, '');
+              }
+            }
+          }
+        }
+      }
+
+      // B. Process HTML comments for speaker notes: <!-- notes: ... -->
       if (token.type === 'html_block') {
         const commentNoteMatch = token.content.match(/<!--\s*notes:\s*([\s\S]*?)\s*-->/i);
         if (commentNoteMatch) {
@@ -312,7 +330,7 @@ function pyDocPlugin(md) {
         }
       }
 
-      // B. Process Headings: {.stats}, {.abstract}, {.summary}, {.references}, and accent colons
+      // C. Process Headings: {.stats}, {.abstract}, {.summary}, {.references}, and accent colons
       if (token.type === 'heading_open') {
         const next = tokens[i + 1];
         if (next && next.type === 'inline' && next.content) {
@@ -345,7 +363,6 @@ function pyDocPlugin(md) {
             }
           }
 
-          // If heading is {.stats}, transform the table into stat cards
           if (headingClass === 'stats') {
             let tableOpenIdx = -1;
             let tableCloseIdx = -1;
@@ -404,12 +421,13 @@ function pyDocPlugin(md) {
         }
       }
 
-      // C. Fenced Poster Blocks: ```cards```, ```segments```, ```flow```
+      // D. Fenced Blocks: ```cards```, ```segments```, ```flow```, and diagram types
       if (token.type === 'fence') {
-        const info = token.info.trim();
+        const rawInfo = token.info.trim();
+        const mainTag = rawInfo.split(/\s+/)[0].toLowerCase();
 
         // Cards: ```cards cols=3 style=top```
-        if (info.startsWith('cards')) {
+        if (mainTag === 'cards') {
           const lines = token.content.split('\n').filter(l => l.trim());
           let cardsHtml = '<div class="pydoc-cards-grid">\n';
           for (const line of lines) {
@@ -431,7 +449,7 @@ function pyDocPlugin(md) {
         }
 
         // Segments: ```segments```
-        if (info.startsWith('segments')) {
+        if (mainTag === 'segments') {
           const lines = token.content.split('\n').filter(l => l.trim());
           let segTitle = '';
           const items = [];
@@ -467,7 +485,7 @@ function pyDocPlugin(md) {
         }
 
         // Flow: ```flow```
-        if (info.startsWith('flow')) {
+        if (mainTag === 'flow') {
           const lines = token.content.split('\n').filter(l => l.trim());
           let flowHtml = '<div class="pydoc-flow-diagram">\n';
           for (const line of lines) {
@@ -491,9 +509,23 @@ function pyDocPlugin(md) {
           token.content = flowHtml;
           continue;
         }
+
+        // Other py-doc diagram types (plantuml, dot, ditaa, wavedrom, vega, bytefield, etc.)
+        if (DIAGRAM_TYPES.has(mainTag) && mainTag !== 'mermaid') {
+          const titleMatch = rawInfo.match(/(?:title|caption)=["']?([^"']+)["']?/i);
+          const diagTitle = titleMatch ? titleMatch[1] : '';
+          const escapedContent = md.utils.escapeHtml(token.content);
+
+          token.type = 'html_block';
+          token.content = `<div class="pydoc-diagram-box" data-diagram="${mainTag}">\n` +
+            `  <div class="pydoc-diagram-header"><span class="pydoc-diagram-badge">${mainTag.toUpperCase()}</span>${diagTitle ? ` <span class="pydoc-diagram-title">${escapeHtml(diagTitle)}</span>` : ''}</div>\n` +
+            `  <pre class="pydoc-diagram-code"><code>${escapedContent}</code></pre>\n` +
+            `</div>\n`;
+          continue;
+        }
       }
 
-      // D. Process Paragraphs containing py-doc markers
+      // E. Process Paragraphs containing py-doc markers
       if (token.type === 'paragraph_open') {
         const next = tokens[i + 1];
         if (next && next.type === 'inline' && next.content) {
@@ -575,7 +607,7 @@ function pyDocPlugin(md) {
         }
       }
 
-      // E. Process Blockquotes for Callouts / Admonitions
+      // F. Process Blockquotes for Callouts / Admonitions
       if (token.type === 'blockquote_open') {
         let firstInlineIdx = -1;
         for (let j = i + 1; j < tokens.length; j++) {
@@ -628,12 +660,12 @@ function pyDocPlugin(md) {
       }
     }
 
-    // F. If in Slide Deck mode, group tokens into presentation slide cards
+    // G. If in Slide Deck mode, group tokens into presentation slide cards
     if (docMode === 'slide') {
       groupTokensIntoSlides(state, docTitle);
     }
 
-    // G. If in Poster mode, append poster footer if defined
+    // H. If in Poster mode, append poster footer if defined
     if (docMode === 'poster' && frontMeta && frontMeta.footer) {
       const footer = frontMeta.footer;
       let footerHtml = '<footer class="pydoc-poster-footer">\n';

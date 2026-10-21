@@ -4,6 +4,7 @@
      1. Technical Documents (Word .docx)
      2. Slide Decks (PowerPoint .pptx)
      3. Posters (HTML & PDF Posters)
+     4. Diagram blocks and image sizing
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -86,6 +87,49 @@
 }
 
 /* --------------------------------------------------------------------------
+   Diagram Box (PlantUML, Graphviz, Ditaa, Wavedrom, Vega, Bytefield, etc.)
+   -------------------------------------------------------------------------- */
+.pydoc-diagram-box {
+  margin: 1.2rem 0;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.05));
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.25));
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.pydoc-diagram-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(128, 128, 128, 0.08);
+  border-bottom: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+  font-size: 0.8rem;
+}
+
+.pydoc-diagram-badge {
+  font-weight: 700;
+  color: var(--vscode-textLink-foreground, #0969da);
+  padding: 0.1rem 0.4rem;
+  background: var(--vscode-badge-background, rgba(128, 128, 128, 0.15));
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+}
+
+.pydoc-diagram-title {
+  font-weight: 600;
+  color: var(--vscode-editor-foreground);
+}
+
+.pydoc-diagram-code {
+  margin: 0 !important;
+  padding: 0.8rem 1rem !important;
+  background: transparent !important;
+  font-size: 0.85em;
+  overflow-x: auto;
+}
+
+/* --------------------------------------------------------------------------
    Posters (py-doc poster) Styling
    -------------------------------------------------------------------------- */
 .pydoc-poster-header {
@@ -127,13 +171,11 @@
   font-size: 0.85rem;
 }
 
-/* Poster Heading with Colon Accent: "1. Hardware: what is on the board" */
 .pydoc-heading-accent {
   color: var(--vscode-textLink-foreground, #0969da);
   font-weight: 400;
 }
 
-/* Poster Stat Strip */
 .pydoc-poster-stats {
   display: flex;
   flex-wrap: wrap;
@@ -189,7 +231,6 @@
   color: #cf222e;
 }
 
-/* Poster Abstract / Introduction Box */
 .pydoc-heading-abstract {
   color: #0969da !important;
 }
@@ -203,7 +244,6 @@
   line-height: 1.6;
 }
 
-/* Poster Summary Box */
 .pydoc-heading-summary {
   color: #1a7f37 !important;
 }
@@ -217,7 +257,6 @@
   font-weight: 600;
 }
 
-/* Poster Cards Grid (```cards```) */
 .pydoc-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -252,7 +291,6 @@
 .pydoc-card-amber { border-top-color: #d97706; }
 .pydoc-card-red { border-top-color: #dc2626; }
 
-/* Poster Segments (```segments```) */
 .pydoc-segments-box {
   margin: 1.2rem 0;
   padding: 0.8rem;
@@ -289,7 +327,6 @@
   text-overflow: ellipsis;
 }
 
-/* Poster Flow Diagram (```flow```) */
 .pydoc-flow-diagram {
   display: flex;
   flex-direction: column;
@@ -322,14 +359,12 @@
   color: var(--vscode-descriptionForeground, #666);
 }
 
-/* Poster Palette Helpers */
 .pydoc-bg-blue { background-color: #0969da !important; color: #fff !important; }
 .pydoc-bg-navy { background-color: #1e3a8a !important; color: #fff !important; }
 .pydoc-bg-green { background-color: #16a34a !important; color: #fff !important; }
 .pydoc-bg-amber { background-color: #d97706 !important; color: #fff !important; }
 .pydoc-bg-red { background-color: #dc2626 !important; color: #fff !important; }
 
-/* Poster Footer */
 .pydoc-poster-footer {
   display: flex;
   justify-content: space-between;
