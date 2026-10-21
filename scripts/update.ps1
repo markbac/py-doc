@@ -7,7 +7,8 @@
     Run it after every pull, or whenever py-doc misbehaves after a change. Each step says what it does,
     and the script stops at the first step that fails, with what to do about it.
 
-      1. Code         git pull --ff-only (skipped with -NoPull, or when this is not a Git checkout)
+      1. Code         git pull --ff-only (skipped with -NoPull, or when this is not a Git checkout). When
+                      the pull changes this script, the new version runs instead, with the same options
       2. Python       the project's own virtual environment, .venv in this folder, made from a Python 3.10
                       or later when it is missing or broken (-System or -Python: another Python instead)
       3. Packages     pip install -e . into it (with the test tools when -Dev), then pip check, which
@@ -82,6 +83,8 @@ Set-StrictMode -Version Latest
 # line a program writes to stderr into an error in Windows PowerShell 5.1, so it is not used.
 $ErrorActionPreference = 'Continue'
 $Root = Split-Path -Parent $PSScriptRoot
+# PowerShell reads a script once, when it starts: a pull that changes this file needs the new copy started.
+$script:SelfHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $PSCommandPath).Hash
 $script:Step = 0
 $script:Started = Get-Date
 
@@ -129,6 +132,14 @@ try {
         if ($branch -ne 'main') { Write-Note "on branch $branch, not main" }
         Invoke-Checked "git pull" "Pull or merge by hand (the pull only fast-forwards), or run with -NoPull" git @('pull', '--ff-only')
         Write-Ok "$branch at $((& git log -1 --format='%h %s').Trim())"
+        if ((Get-FileHash -Algorithm SHA256 -LiteralPath $PSCommandPath).Hash -ne $script:SelfHash) {
+            Write-Note "the pull changed this script, so the new version runs now, with the same options"
+            $again = @{}
+            foreach ($key in $PSBoundParameters.Keys) { $again[$key] = $PSBoundParameters[$key] }
+            $again['NoPull'] = $true
+            & $PSCommandPath @again
+            exit $LASTEXITCODE
+        }
     }
 
     # 2. Python ----------------------------------------------------------------------------------
