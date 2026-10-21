@@ -60,8 +60,12 @@ def run_poster(argv: list[str]) -> int:
     if args.watch and args.pdf:
         print("Error: --watch builds the pages only; leave out --pdf", file=sys.stderr)
         return 1
-    files = [Path(t) for t in args.targets if t.lower().endswith(".md") or Path(t).is_file()]
-    start = files[0].resolve().parent if files else Path.cwd()
+    if args.targets == ["help"] and not Path("help").is_file():
+        parser.print_help()
+        return 0
+    # Each target that is a file, by the text it was given as: .\a.md and ./a.md are both a.md once made a Path
+    files = {t: Path(t) for t in args.targets if t.lower().endswith((".md", ".markdown")) or Path(t).is_file()}
+    start = next(iter(files.values())).resolve().parent if files else Path.cwd()
     config_path = Path(args.config) if args.config else find_config(start)
     connected: list = []
 
@@ -118,7 +122,7 @@ def _paths(value) -> list[Path]:
     return []
 
 
-def _jobs(targets: list[str], files: list[Path], project) -> list[PosterConfig]:
+def _jobs(targets: list[str], files: dict[str, Path], project) -> list[PosterConfig]:
     """The posters to build: files as given, names from py-doc.yml, or every poster of py-doc.yml."""
     posters = project.posters if project else {}
     if not targets:
@@ -127,7 +131,7 @@ def _jobs(targets: list[str], files: list[Path], project) -> list[PosterConfig]:
         return list(posters.values())
     jobs = []
     for target in targets:
-        file = next((f for f in files if str(f) == target), None)
+        file = files.get(target)
         if file is not None:
             if not file.is_file():
                 raise ConfigError(f"{file} not found")

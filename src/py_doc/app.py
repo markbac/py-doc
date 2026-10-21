@@ -153,13 +153,26 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the command and return the exit status."""
-    args_in = list(sys.argv[1:] if argv is None else argv)
+    args_in = _help_words(list(sys.argv[1:] if argv is None else argv))
     if args_in and args_in[0] in _DELEGATES:
         return _DELEGATES[args_in[0]][1](args_in[1:])
     args = build_parser().parse_args(args_in)
     if args.command == "build":
         return _build(args)
     return _migrate(args)
+
+
+def _help_words(args: list[str]) -> list[str]:
+    """``py-doc help``, ``py-doc help COMMAND`` and ``py-doc COMMAND help`` as the ``--help`` they mean.
+
+    ``py-doc COMMAND help`` is only read so when ``help`` is the one word after the command and is not a
+    file here, so a document or poster called help can still be named.
+    """
+    if args[:1] == ["help"]:
+        return [*args[1:2], "--help"]
+    if len(args) == 2 and args[1] == "help" and not Path("help").exists():
+        return [args[0], "--help"]
+    return args
 
 
 # --- build ---------------------------------------------------------------------------------------

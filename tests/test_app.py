@@ -195,4 +195,13 @@ class TestPipeline:
         assert main(["build", "alpha"]) == 1  # strict: the wordy phrase is a warning
         assert main(["build", "alpha", "--no-lint"]) == 1  # then the site: there is no site section
         assert "has no site section" in capsys.readouterr().err
-        assert main(["build", "alpha", "--no-lint", "--no-site"]) == 0
+        assert main(["build", "alpha", "--no-lint", "--no-site"]) == 0
+
+
+@pytest.mark.parametrize("words, usage", [(["help"], "usage: py-doc "), (["help", "build"], "usage: py-doc build"), (["lint", "help"], "usage: py-doc lint")])
+def test_help_as_a_word(words, usage, tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(SystemExit) as stop:
+        main(words)
+    assert stop.value.code == 0 and usage in capsys.readouterr().out
+

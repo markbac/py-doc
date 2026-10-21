@@ -4,6 +4,10 @@ title: Reference
 
 # Reference
 
+## Help
+
+`py-doc --help` lists the commands, and `py-doc COMMAND --help` describes one, with examples. `py-doc help`, `py-doc help COMMAND` and `py-doc COMMAND help` do the same.
+
 ## Legacy build files
 
 Legacy `createdocs` build files, `py-doc build --legacy`, `py-doc new`, the document number register and `py-doc migrate` are described in [Legacy build files](10_legacy.md).
