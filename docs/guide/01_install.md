@@ -47,6 +47,28 @@ runtime:
 > [!NOTE]
 > WSL stops a distribution soon after its last `wsl.exe` process ends, and Docker and its containers with it. py-doc keeps one running for as long as a long-lived container needs it, such as Structurizr Local during `py-doc c4 up`.
 
+## Keeping up to date
+
+After a pull, a change of dependencies or the tool image takes effect only after a reinstall and a rebuild. On Windows, `scripts/update.ps1` does every step and checks each one, stopping at the first that fails with what to do about it:
+
+```powershell
+.\scripts\update.ps1              # pull, reinstall, rebuild the image if it changed, py-doc doctor
+.\scripts\update.ps1 -Dev -Test   # also the test tools, the test suite and the documentation lint
+```
+
+| Step | What it does |
+|---|---|
+| Code | `git pull --ff-only`, which never merges over your own commits. `-NoPull` skips it |
+| Python | Finds Python 3.10 or later: `-Python` names one, else `python`, else `py -3` |
+| Packages | `pip install -e .` (with `-Dev`, `.[dev]`) and `pip check`, so a new dependency is installed |
+| Command | `py-doc` starts, and the `py-doc` on the `PATH` is this install |
+| Docker | The container engine answers. `py-doc setup` installs it when it does not |
+| Tool image | Built when its definition changed, every layer again with `-Rebuild`, and older images removed unless `-KeepOldImages`. `-CaFile` passes a proxy's certificate to the build |
+| Doctor | `py-doc doctor` |
+| Tests | With `-Test`, the test suite and `py-doc lint docs --strict` |
+
+If Windows refuses to run the script, run it once with `powershell -ExecutionPolicy Bypass -File scripts\update.ps1`, or allow local scripts with `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`. On Linux the same steps are `git pull`, `pip install -e .`, `py-doc tools build` and `py-doc doctor`.
+
 ## Exit statuses
 
 Environment problems (no engine, no image, an unsupported platform) exit with status `2`. A tool that runs and fails exits with `1`, and its whole output is shown.

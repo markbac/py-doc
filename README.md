@@ -44,6 +44,8 @@ py-doc tools build          # build the tool image (several GB, 5 to 30 minutes 
 py-doc doctor               # check that everything works
 ```
 
+After every pull, run `.\scripts\update.ps1` on Windows. It reinstalls py-doc with any new dependencies, rebuilds the tool image when it changed, and checks that everything works.
+
 Linux and Windows are supported. See [Installation](docs/guide/01_install.md) for the tool container, proxies and offline machines.
 
 ## Quick start
