@@ -6,13 +6,22 @@ title: Installation
 
 ## Python package
 
-py-doc needs Python 3.10 or later.
+py-doc needs Python 3.10 or later. Install it in a virtual environment of its own, so its packages and those of other programs cannot conflict. On Windows, `scripts/update.ps1` makes one in `.venv` (see [Keeping up to date](#keeping-up-to-date)):
+
+```powershell
+git clone https://github.com/markbac/py-doc.git
+cd py-doc
+.\scripts\update.ps1 -AddToPath   # .venv, py-doc in it, the tool image, and py-doc first on your PATH
+```
+
+By hand, on any platform:
 
 ```bash
 git clone https://github.com/markbac/py-doc.git
 cd py-doc
-pip install -e .            # ctxlogkit is installed from GitHub with it
-pip install -e ".[dev]"     # with pytest, ruff, build and twine
+python -m venv .venv
+.venv/bin/pip install -e .            # Windows: .venv\Scripts\pip; ctxlogkit is installed from GitHub with it
+.venv/bin/pip install -e ".[dev]"     # with pytest, ruff, build and twine
 ```
 
 ## Supported platforms
@@ -59,9 +68,9 @@ After a pull, a change of dependencies or the tool image takes effect only after
 | Step | What it does |
 |---|---|
 | Code | `git pull --ff-only`, which never merges over your own commits. `-NoPull` skips it |
-| Python | Finds Python 3.10 or later: `-Python` names one, else `python`, else `py -3` |
-| Packages | `pip install -e .` (with `-Dev`, `.[dev]`) and `pip check`, so a new dependency is installed |
-| Command | `py-doc` starts, and the `py-doc` on the `PATH` is this install |
+| Python | py-doc's own virtual environment, `.venv` in the repository, made from Python 3.10 or later when it is missing or broken. `-RecreateVenv` makes it again; `-System` uses the Python on the `PATH` and `-Python` another one instead |
+| Packages | `pip install -e .` (with `-Dev`, `.[dev]`) and `pip check`, so a new dependency is installed. In `.venv`, `pip check` sees only py-doc's packages |
+| Command | `py-doc` starts, and the `py-doc` on the `PATH` is this one. `-AddToPath` puts `.venv\Scripts` first on your user `PATH`. An older install found first is named, with the command that removes it |
 | Docker | The container engine answers. `py-doc setup` installs it when it does not |
 | Tool image | Built when its definition changed, every layer again with `-Rebuild`, and older images removed unless `-KeepOldImages`. `-CaFile` passes a proxy's certificate to the build |
 | Doctor | `py-doc doctor` |
