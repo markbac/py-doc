@@ -171,7 +171,7 @@ A file that uses `[[IF:]]` needs its conditions defined, and only `py-doc build`
 
 ### Live preview
 
-`--watch` builds the files, then builds them again whenever a source below their folder changes: the Markdown, an included file, a picture, a diagram source or the template. Next to each `.docx` or `.pptx` it writes an HTML twin of the same Markdown, to `.py-doc/preview/` below the input's folder, and serves the twins on this computer only. The page in the browser reloads after each build, and a build that fails shows its error over the last good page.
+`--watch` builds the files, then builds them again whenever a source below their folder changes. A source is the Markdown, an included file, a picture, a diagram source or the template. For each `.docx` or `.pptx` it also writes an HTML twin of the same Markdown, to `.py-doc/preview/` below the input's folder. It serves the twins on this computer only. The page in the browser reloads after each build, and a build that fails shows its error over the last good page.
 
 - A document open in Word or PowerPoint cannot be written, so it is left as it is, with a warning, and its preview is still updated.
 - The twin shows page breaks as dashed lines, speaker notes in boxes and columns side by side. The twin of a deck shows each slide as a numbered 16:9 box, split as PowerPoint splits it.
