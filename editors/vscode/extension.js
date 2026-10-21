@@ -737,8 +737,47 @@ function groupTokensIntoSlides(state, docTitle) {
   state.tokens = newTokens;
 }
 
-function activate(context) {}
-function deactivate() {}
+let vscode;
+try { vscode = require('vscode'); } catch (e) { vscode = null; }
+
+let watchTerminal = null;
+
+function activate(context) {
+  if (!vscode) return;
+
+  const disposable = vscode.commands.registerCommand('pydoc.openPosterWatch', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showErrorMessage('No active Markdown file to watch.');
+      return;
+    }
+
+    const filePath = editor.document.uri.fsPath;
+    const port = 8765;
+
+    if (!watchTerminal || watchTerminal.exitStatus !== undefined) {
+      watchTerminal = vscode.window.createTerminal({
+        name: 'py-doc poster watch',
+        iconPath: new vscode.ThemeIcon('eye')
+      });
+    }
+
+    watchTerminal.show(true);
+    watchTerminal.sendText(`py-doc poster "${filePath}" --watch --port ${port} --no-open`);
+
+    setTimeout(() => {
+      vscode.commands.executeCommand('simpleBrowser.show', `http://127.0.0.1:${port}`);
+    }, 1500);
+  });
+
+  context.subscriptions.push(disposable);
+}
+
+function deactivate() {
+  if (watchTerminal) {
+    watchTerminal.dispose();
+  }
+}
 
 function extendMarkdownIt(md) {
   return md.use(pyDocPlugin);

@@ -1,0 +1,716 @@
+/* ==========================================================================
+   py-doc Markdown Preview Stylesheet for VS Code
+   Supports:
+     1. Technical Documents (Word .docx)
+     2. Slide Decks (PowerPoint .pptx)
+     3. Posters (HTML & PDF Posters)
+     4. Diagram blocks and image sizing
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Front Matter / Document Cover Header / Title Slide
+   -------------------------------------------------------------------------- */
+.pydoc-frontmatter {
+  margin-bottom: 2.5rem;
+  padding: 1.5rem 1.8rem;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.08));
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+  border-left: 6px solid var(--vscode-textLink-foreground, #0969da);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.pydoc-frontmatter.pydoc-slide-title {
+  margin: 2rem auto 3rem auto;
+  padding: 3rem 2.5rem;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.25));
+  border-left: 8px solid var(--vscode-textLink-foreground, #0969da);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.pydoc-doc-title {
+  margin: 0 0 0.5rem 0 !important;
+  padding: 0 !important;
+  font-size: 2rem !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  border-bottom: none !important;
+  color: var(--vscode-editor-foreground);
+}
+
+.pydoc-doc-subtitle {
+  font-size: 1.15rem;
+  color: var(--vscode-descriptionForeground, #666);
+  font-style: italic;
+  margin-bottom: 1.2rem;
+}
+
+.pydoc-doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+}
+
+.pydoc-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  background: var(--vscode-badge-background, rgba(128, 128, 128, 0.15));
+  color: var(--vscode-badge-foreground, inherit);
+  border-radius: 4px;
+}
+
+.pydoc-meta-key {
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.pydoc-status-draft {
+  background: rgba(227, 152, 0, 0.2) !important;
+  color: #d97706 !important;
+  font-weight: 600;
+}
+
+.pydoc-status-released {
+  background: rgba(26, 127, 55, 0.2) !important;
+  color: #16a34a !important;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Diagram Box (PlantUML, Graphviz, Ditaa, Wavedrom, Vega, Bytefield, etc.)
+   -------------------------------------------------------------------------- */
+.pydoc-diagram-box {
+  margin: 1.2rem 0;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.05));
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.25));
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.pydoc-diagram-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(128, 128, 128, 0.08);
+  border-bottom: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+  font-size: 0.8rem;
+}
+
+.pydoc-diagram-badge {
+  font-weight: 700;
+  color: var(--vscode-textLink-foreground, #0969da);
+  padding: 0.1rem 0.4rem;
+  background: var(--vscode-badge-background, rgba(128, 128, 128, 0.15));
+  border-radius: 3px;
+  letter-spacing: 0.03em;
+}
+
+.pydoc-diagram-title {
+  font-weight: 600;
+  color: var(--vscode-editor-foreground);
+}
+
+.pydoc-diagram-code {
+  margin: 0 !important;
+  padding: 0.8rem 1rem !important;
+  background: transparent !important;
+  font-size: 0.85em;
+  overflow-x: auto;
+}
+
+/* --------------------------------------------------------------------------
+   Posters (py-doc poster) Styling
+   -------------------------------------------------------------------------- */
+.pydoc-poster-header {
+  margin: 1.5rem 0 2rem 0;
+  padding: 2.5rem 2rem 1.8rem 2rem;
+  background: linear-gradient(135deg, rgba(9, 105, 218, 0.08) 0%, rgba(128, 128, 128, 0.03) 100%);
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.25));
+  border-top: 6px solid var(--vscode-textLink-foreground, #0969da);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.pydoc-poster-title {
+  font-size: 2.5rem !important;
+  font-weight: 800 !important;
+  margin: 0 0 0.5rem 0 !important;
+  border-bottom: none !important;
+  letter-spacing: -0.02em;
+}
+
+.pydoc-poster-subtitle {
+  font-size: 1.3rem;
+  color: var(--vscode-textLink-foreground, #0969da);
+  font-weight: 500;
+  margin-bottom: 0.8rem;
+}
+
+.pydoc-poster-byline {
+  font-size: 0.95rem;
+  color: var(--vscode-descriptionForeground, #666);
+  font-style: italic;
+  margin-bottom: 1.2rem;
+}
+
+.pydoc-poster-meta {
+  display: flex;
+  justify-content: center;
+  gap: 0.8rem;
+  font-size: 0.85rem;
+}
+
+.pydoc-heading-accent {
+  color: var(--vscode-textLink-foreground, #0969da);
+  font-weight: 400;
+}
+
+.pydoc-poster-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin: 1.5rem 0 2rem 0;
+  padding: 1.2rem;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.06));
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+  border-radius: 8px;
+  justify-content: space-around;
+}
+
+.pydoc-stat-card {
+  flex: 1 1 180px;
+  text-align: center;
+  padding: 0.8rem;
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.15));
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.pydoc-stat-value {
+  font-size: 2.2rem;
+  font-weight: 800;
+  color: var(--vscode-textLink-foreground, #0969da);
+  line-height: 1.1;
+  margin-bottom: 0.4rem;
+}
+
+.pydoc-stat-label {
+  font-size: 0.85rem;
+  color: var(--vscode-descriptionForeground, #666);
+  line-height: 1.3;
+}
+
+.pydoc-stat-change {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+.pydoc-stat-change.good {
+  background: rgba(26, 127, 55, 0.15);
+  color: #16a34a;
+}
+
+.pydoc-stat-change.bad {
+  background: rgba(207, 34, 46, 0.15);
+  color: #cf222e;
+}
+
+.pydoc-heading-abstract {
+  color: #0969da !important;
+}
+
+.pydoc-heading-abstract + p {
+  padding: 1.2rem 1.5rem;
+  background: rgba(9, 105, 218, 0.07);
+  border-left: 5px solid #0969da;
+  border-radius: 0 6px 6px 0;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.pydoc-heading-summary {
+  color: #1a7f37 !important;
+}
+
+.pydoc-heading-summary + p {
+  padding: 1.2rem 1.5rem;
+  background: rgba(26, 127, 55, 0.08);
+  border-left: 5px solid #1a7f37;
+  border-radius: 0 6px 6px 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.pydoc-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.2rem 0;
+}
+
+.pydoc-card-item {
+  padding: 1rem 1.2rem;
+  border-radius: 6px;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.05));
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+  border-top-width: 4px;
+  border-top-style: solid;
+}
+
+.pydoc-card-title {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.4rem;
+}
+
+.pydoc-card-desc {
+  font-size: 0.88rem;
+  color: var(--vscode-descriptionForeground, #666);
+  line-height: 1.4;
+}
+
+.pydoc-card-blue { border-top-color: #0969da; }
+.pydoc-card-navy { border-top-color: #1e3a8a; }
+.pydoc-card-green { border-top-color: #16a34a; }
+.pydoc-card-amber { border-top-color: #d97706; }
+.pydoc-card-red { border-top-color: #dc2626; }
+
+.pydoc-segments-box {
+  margin: 1.2rem 0;
+  padding: 0.8rem;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.05));
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+  border-radius: 6px;
+}
+
+.pydoc-segments-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+  color: var(--vscode-descriptionForeground, #666);
+}
+
+.pydoc-segments-bar {
+  display: flex;
+  height: 34px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.pydoc-segment-slice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.5rem;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pydoc-flow-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 1.2rem 0;
+  padding: 1rem;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.05));
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2));
+  border-radius: 6px;
+}
+
+.pydoc-flow-step {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.pydoc-flow-node {
+  padding: 0.35rem 0.8rem;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.pydoc-flow-arrow {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--vscode-descriptionForeground, #666);
+}
+
+.pydoc-bg-blue { background-color: #0969da !important; color: #fff !important; }
+.pydoc-bg-navy { background-color: #1e3a8a !important; color: #fff !important; }
+.pydoc-bg-green { background-color: #16a34a !important; color: #fff !important; }
+.pydoc-bg-amber { background-color: #d97706 !important; color: #fff !important; }
+.pydoc-bg-red { background-color: #dc2626 !important; color: #fff !important; }
+
+.pydoc-poster-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 3rem;
+  padding: 1.2rem 0.5rem 0.5rem 0.5rem;
+  border-top: 2px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.25));
+  font-size: 0.85rem;
+  color: var(--vscode-descriptionForeground, #666);
+}
+
+.pydoc-poster-qr-badge {
+  padding: 0.25rem 0.6rem;
+  background: var(--vscode-badge-background, rgba(128, 128, 128, 0.15));
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   Slide Deck Presentation Frames (16:9 Aspect Cards)
+   -------------------------------------------------------------------------- */
+.pydoc-slide {
+  position: relative;
+  margin: 2rem auto;
+  padding: 0;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.05));
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.25));
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pydoc-slide:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.pydoc-slide-canvas {
+  flex: 1;
+  padding: 1.8rem 2.2rem;
+}
+
+.pydoc-slide-section {
+  border-left: 8px solid var(--vscode-textLink-foreground, #0969da);
+  background: linear-gradient(135deg, rgba(9, 105, 218, 0.07) 0%, rgba(128, 128, 128, 0.04) 100%);
+}
+
+.pydoc-slide-section .pydoc-slide-canvas {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.pydoc-slide-section h1 {
+  font-size: 2.2rem !important;
+  border-bottom: none !important;
+  margin-top: 0 !important;
+  color: var(--vscode-textLink-foreground, #0969da);
+}
+
+.pydoc-slide-content h2 {
+  font-size: 1.5rem !important;
+  margin-top: 0 !important;
+  margin-bottom: 1.2rem !important;
+  border-bottom: 2px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.2)) !important;
+  padding-bottom: 0.4rem !important;
+}
+
+.pydoc-slide-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.75rem;
+  color: var(--vscode-descriptionForeground, #777);
+  border-top: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.15));
+  background: rgba(128, 128, 128, 0.03);
+  user-select: none;
+}
+
+.pydoc-slide-num {
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  background: var(--vscode-badge-background, rgba(128, 128, 128, 0.15));
+  border-radius: 999px;
+}
+
+/* --------------------------------------------------------------------------
+   Two-Column Layout (:::: columns / ::: column)
+   -------------------------------------------------------------------------- */
+.pydoc-columns {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  margin: 1rem 0;
+  align-items: stretch;
+}
+
+.pydoc-column {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+}
+
+@media (max-width: 600px) {
+  .pydoc-columns {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Speaker Notes (::: notes & <!-- notes: ... -->)
+   -------------------------------------------------------------------------- */
+.pydoc-notes {
+  margin: 1.2rem 0;
+  padding: 0.8rem 1.1rem;
+  background: rgba(234, 179, 8, 0.08);
+  border-left: 4px solid #eab308;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9em;
+}
+
+.pydoc-speaker-notes-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #ca8a04;
+  margin-bottom: 0.4rem;
+}
+
+/* --------------------------------------------------------------------------
+   Incremental Reveal Block (::: incremental)
+   -------------------------------------------------------------------------- */
+.pydoc-incremental {
+  margin: 1rem 0;
+  border-left: 3px dashed var(--vscode-textLink-activeForeground, #0284c7);
+  padding-left: 0.8rem;
+}
+
+.pydoc-incremental-header {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--vscode-textLink-foreground, #0284c7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+}
+
+/* --------------------------------------------------------------------------
+   Numbered Captions ([[CAPTION:Figure]], [[CAPTION:Table]])
+   -------------------------------------------------------------------------- */
+.pydoc-caption {
+  margin: 0.6rem 0 1.2rem 0;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  color: var(--vscode-descriptionForeground, #555);
+  text-align: center;
+  font-style: italic;
+}
+
+.pydoc-caption-num {
+  font-weight: 700;
+  font-style: normal;
+  color: var(--vscode-textLink-foreground, #0969da);
+  margin-right: 0.25rem;
+}
+
+.pydoc-caption-text {
+  font-style: italic;
+}
+
+/* --------------------------------------------------------------------------
+   Admonitions / Word Callouts (> [!NOTE] and > **Note:**)
+   -------------------------------------------------------------------------- */
+.pydoc-callout {
+  margin: 1.25rem 0 !important;
+  padding: 0.85rem 1.15rem !important;
+  border-radius: 6px !important;
+  border-left-width: 5px !important;
+  border-left-style: solid !important;
+  border-top: 1px solid rgba(128, 128, 128, 0.15);
+  border-right: 1px solid rgba(128, 128, 128, 0.15);
+  border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+}
+
+.pydoc-callout p {
+  margin: 0.4rem 0 !important;
+  line-height: 1.5;
+}
+
+.pydoc-callout p:first-of-type {
+  margin-top: 0.2rem !important;
+}
+
+.pydoc-callout p:last-of-type {
+  margin-bottom: 0 !important;
+}
+
+.pydoc-callout-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 0.4rem;
+  letter-spacing: 0.02em;
+}
+
+.pydoc-callout-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* Note: Blue */
+.pydoc-callout-note {
+  border-left-color: #0969da !important;
+  background-color: rgba(9, 105, 218, 0.08) !important;
+}
+.pydoc-callout-note .pydoc-callout-header {
+  color: #0969da;
+}
+
+/* Tip: Green */
+.pydoc-callout-tip {
+  border-left-color: #1a7f37 !important;
+  background-color: rgba(26, 127, 55, 0.08) !important;
+}
+.pydoc-callout-tip .pydoc-callout-header {
+  color: #1a7f37;
+}
+
+/* Important: Purple */
+.pydoc-callout-important {
+  border-left-color: #8250df !important;
+  background-color: rgba(130, 80, 223, 0.08) !important;
+}
+.pydoc-callout-important .pydoc-callout-header {
+  color: #8250df;
+}
+
+/* Warning: Amber / Orange */
+.pydoc-callout-warning {
+  border-left-color: #d97706 !important;
+  background-color: rgba(217, 119, 6, 0.09) !important;
+}
+.pydoc-callout-warning .pydoc-callout-header {
+  color: #d97706;
+}
+
+/* Caution: Red */
+.pydoc-callout-caution {
+  border-left-color: #cf222e !important;
+  background-color: rgba(207, 34, 46, 0.08) !important;
+}
+.pydoc-callout-caution .pydoc-callout-header {
+  color: #cf222e;
+}
+
+/* --------------------------------------------------------------------------
+   Page Breaks & Orientation Section Breaks
+   -------------------------------------------------------------------------- */
+.pydoc-pagebreak,
+.pydoc-orientation {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 2rem 0;
+  color: var(--vscode-descriptionForeground, #777);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  user-select: none;
+}
+
+.pydoc-pagebreak-line {
+  flex: 1;
+  border-bottom: 1px dashed var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.35));
+}
+
+.pydoc-badge {
+  padding: 0.25rem 0.8rem;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.15));
+  border: 1px solid var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.3));
+  border-radius: 999px;
+  margin: 0 0.8rem;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   Word Paragraph Style Pill ([[STYLE:Name]])
+   -------------------------------------------------------------------------- */
+.pydoc-styled-block {
+  position: relative;
+  margin: 1rem 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--vscode-badge-background, rgba(128, 128, 128, 0.3));
+  background: var(--vscode-textBlockQuote-background, rgba(128, 128, 128, 0.04));
+  border-radius: 0 4px 4px 0;
+}
+
+.pydoc-style-pill {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: var(--vscode-badge-background, rgba(128, 128, 128, 0.2));
+  color: var(--vscode-badge-foreground, inherit);
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  margin-right: 0.6rem;
+  vertical-align: middle;
+}
+
+/* --------------------------------------------------------------------------
+   Directives ([[INCLUDE:...]], [[IF:...]], etc.)
+   -------------------------------------------------------------------------- */
+.pydoc-directive {
+  margin: 1rem 0;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.82rem;
+  background: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.08));
+  border: 1px dashed var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.3));
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pydoc-directive-badge {
+  font-weight: 700;
+  color: var(--vscode-textLink-foreground, #0969da);
+  font-size: 0.75rem;
+}
+
+.pydoc-directive-arg {
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.85em;
+  padding: 0.1rem 0.3rem;
+  background: var(--vscode-textCodeBlock-background, rgba(128, 128, 128, 0.15));
+  border-radius: 3px;
+}

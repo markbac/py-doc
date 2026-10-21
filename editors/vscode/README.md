@@ -1,8 +1,22 @@
 # py-doc Markdown Preview for VS Code
 
-A lightweight, zero-runtime-dependency Visual Studio Code extension that extends the built-in Markdown preview to render technical documentation, slide decks, and posters authored for [markbac/py-doc](https://github.com/markbac/py-doc).
+A lightweight Visual Studio Code extension that extends the built-in Markdown preview to render technical documentation, slide decks, and posters authored for [markbac/py-doc](https://github.com/markbac/py-doc).
 
 It formats custom `py-doc` Word (`.docx`) markers, callouts, numbered captions, PowerPoint (`.pptx`) slide layouts, and HTML/PDF poster structures so that your live editor preview matches the structure of the generated documents.
+
+---
+
+## Two Preview Modes: Instant vs. Watch Server
+
+### 1. Instant Editor Preview (`Ctrl+K V` or `Ctrl+Shift+V`)
+* **Zero dependencies, instant typing-latency**: Formats text, callouts, numbered captions, slide cards, poster stat strips, card grids, and Mermaid diagrams directly in the editor as you type.
+* **No Docker required**: Works offline without compiling files.
+
+### 2. Live Poster Watch Server (`py-doc poster --watch`)
+* **100% Pixel-Perfect Production Render**: Click the **👁️ (Live Poster Watch)** button in the editor navigation bar (or run `py-doc poster <file> --watch --port 8765 --no-open` in the terminal).
+* **Side-by-Side in VS Code**: Automatically docks a side-by-side browser tab inside VS Code using `Simple Browser`.
+* **Auto-Reloads on Save (`Ctrl+S`)**: Rebuilds the poster in the background and reloads the tab in ~0.7 seconds.
+* **Compiles Every Diagram**: Renders PlantUML, Graphviz, Ditaa, Wavedrom, Vega, Pikchr, and Bytefield diagrams into true vector SVGs via `py-doc`'s container.
 
 ---
 
@@ -18,6 +32,7 @@ It formats custom `py-doc` Word (`.docx`) markers, callouts, numbered captions, 
 | **Page Breaks** | `[[PAGEBREAK]]` or `::: {.pagebreak}` | Rendered as a visual `─── PAGE BREAK ───` divider. |
 | **Orientation Breaks** | `[[LANDSCAPE]]` or `[[PORTRAIT]]` | Rendered as a `─── SECTION BREAK (LANDSCAPE) ───` divider. |
 | **Word Paragraph Styles** | `[[STYLE:StyleName]] Text` | Strips the marker and adds a subtle `[Style: StyleName]` tag to preview styled Word paragraphs. |
+| **Image Width Scaling** | `![](images/board.png){width=60%}` | Intercepts Pandoc width attributes and scales the image properly in the preview. |
 | **Directives** | `[[INCLUDE: file.md]]`<br>`[[IF: condition]]` | Rendered as clean visual badges so directives are clearly identifiable. |
 
 ---
@@ -95,4 +110,4 @@ In projects initialized with `py-doc init`, or at the root of `py-doc`:
 npm test
 ```
 
-Runs all 7 test suites validating documents, slides, and poster features.
+Runs all 8 test suites validating documents, slides, posters, image dimensions, and diagram features.
