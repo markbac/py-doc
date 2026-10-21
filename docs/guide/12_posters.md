@@ -188,7 +188,7 @@ A block colour is one of three things. It can be a name from the theme's palette
 | `figure` | Several of `segments`, `flow` and `lanes` in one box, split by `+++` lines, each starting `@segments`, `@flow` or `@lanes` | |
 | `timeline` | `date \| label \| detail \| colour`, the last two optional | `vertical` for a column instead of a row |
 | `chart` | See [Diagrams and charts](#diagrams-and-charts) | |
-| `qr` | The address or text to encode | `size=140` (pixels), `label="..."` |
+| `qr` | The address or text to encode, or with `type=` the `key: value` lines of a contact, event or other kind. See [QR codes](#qr-codes) | `type=` (default `url`), `file=`, `size=140` (pixels), `label="..."`, `ecc=` `L`, `M` (default), `Q` or `H` |
 | `steps` | `Heading \| text \| colour`, the text and colour optional | `cols=1`, `start=1`: the number of the first step |
 | `gallery` | `picture \| caption`, the picture relative to the Markdown and the caption optional | `cols=3` (or fewer pictures), `height=` in pixels: crop every picture to one height |
 | `progress` | `label \| value \| target \| colour`, the colour optional (default: `good` when met, else `accent`, or `bad` over a ceiling) | `unit=" nodes"`, `show=` `values` (default) or `percent`, `better=` `higher` (default) or `lower`, for a ceiling such as a return rate |
@@ -211,6 +211,45 @@ https://example.com/manual
 ````
 
 A mistake in a block, such as a chart value that is not a number, stops the build with the file.
+
+### QR codes
+
+A `qr` block encodes its text as written: an address, or any text. With `type=`, its lines are the parts of something a phone knows how to use, written as `key: value`. py-doc writes the standard form that phones read, with its escaping, so a poster never needs the vCard or iCalendar syntax.
+
+| `type=` | A phone offers to | Lines (repeat `tel`, `mobile`, `email` and `url` for more than one) |
+|---|---|---|
+| `url` (default), `text` | Open the address, or show the text | The address or text |
+| `vcard` (or `contact`) | Save the contact (vCard 3.0) | `name` (or `first` and `last`), `org`, `title`, `tel`, `mobile`, `email`, `url`, `address` (street, town, postcode, country), `note` |
+| `event` (or `calendar`) | Add the event to a calendar (iCalendar) | `title`, `start` and `end` (`YYYY-MM-DD` for a whole day, `YYYY-MM-DD HH:MM` local time, or with `Z` for UTC; default end: an hour or a day later), `location`, `description`, `url` |
+| `wifi` | Join the network | `ssid`, `password`, `security` (`WPA`, the default with a password, `WEP` or `none`), `hidden` |
+| `email` | Write an e-mail | `to`, `subject`, `body` |
+| `phone` | Call the number | `number` |
+| `sms` | Send a text | `number`, `body` |
+| `geo` | Show the place on a map | `lat`, `lon` |
+
+````markdown
+```qr type=vcard label="Commissioning support"
+name: Jane Smith
+org: Example Instruments
+tel: +44 1234 567890
+email: support@example.com
+```
+
+```qr type=event label="Add the training day"
+title: SN-100 commissioning training
+start: 2026-11-03 09:00
+end: 2026-11-03 16:30
+location: Leeds test lab
+```
+
+```qr file=contacts/jane.vcf label="Jane's card"
+```
+````
+
+- `file=` encodes a file, relative to the Markdown: a `.vcf` or `.ics` file is a contact or an event, anything else is text. Text already in a standard form, such as the lines of a vCard starting `BEGIN:VCARD`, is also encoded as it is.
+- The more a code holds, the denser it is. A contact or an event needs a larger `size=` than an address to stay easy to scan from a distance. `ecc=` trades size for robustness: `L` makes the smallest code, `H` survives the most damage.
+- A mistake, such as a key the type does not have or a date that is not a date, stops the build with the file and what is wrong.
+- The footer's `qr` encodes an address or text only.
 
 ## Proportions and printing
 

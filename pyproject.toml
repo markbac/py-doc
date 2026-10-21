@@ -47,6 +47,7 @@ dev = [
     "railroad-diagrams>=3.0.1",  # run by the railroad tool test
     "pypikchr>=0.2.0",  # run by the pikchr tool test
     "jsonschema>=4.26.0",  # checks the build report against its schema
+    "zxing-cpp>=2.3",  # reads back the QR codes of posters, to check what they encode
     "playwright>=1.63.0",  # runs the poster page script in Chrome; no browser download
 ]
 
