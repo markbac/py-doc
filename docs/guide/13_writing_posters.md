@@ -42,18 +42,18 @@ Open `sn100.html` in a browser. Keep it open as you write: build again and reloa
 
 ## The parts of the page
 
-A poster is built from its `##` headings. Four headings are special, and every other one is a section:
+A poster is built from its `##` headings, in the order you write them. A heading is an ordinary section unless the braces at its end say otherwise, and the heading text is always yours:
 
 | You write | It becomes | Advice |
 |---|---|---|
 | Front matter `title`, `subtitle`, `byline` | The header | A title of up to six words. The subtitle says why it matters |
-| `## Stats` | The strip of figures under the header | Three or four figures that make the case at a glance |
-| `## Abstract` | The introduction box | Two or three sentences: the problem and what the poster shows |
+| `## Key figures {.stats}` | A strip of figures | Three or four figures that make the case at a glance |
+| `## Introduction {.abstract}` | The introduction box | Two or three sentences: the problem and what the poster shows |
 | `## 1. Heading: accent` | A section, in columns | Number the sections in reading order |
-| `## Summary` | The banner and the closing blocks | The one message, then one block for each thing to remember |
-| `## References` | A small list above the footer | Only what a reader would look up |
+| `## In short {.summary}` | The banner and the closing blocks | The one message, then one block for each thing to remember |
+| `## References {.references}` | A small list | Only what a reader would look up |
 
-The parts always appear in the order of this table, whatever order you write them in. Sections keep your order, top to bottom, then left to right.
+Write them in the order of this table, as most posters go. Every part is placed where it is in the file, so you can move one, such as a second strip of figures halfway down.
 
 ## The header
 
@@ -70,10 +70,10 @@ A left-aligned header suits a long title. A centred one suits a short title and 
 
 ## The stats strip
 
-`## Stats` is a table of a value and a label. The header row is ignored, so it can say anything:
+`{.stats}` makes a table of a value and a label into the strip. The header row is ignored, so it can say anything:
 
 ```markdown
-## Stats
+## Key figures {.stats}
 
 | Value | Label | Change | Verdict |
 |---|---|---|---|
@@ -88,7 +88,7 @@ Keep each value short, such as `5 years` or `0.2 °C`, so it reads from across a
 
 ## The introduction
 
-`## Abstract` is the blue box under the stats. Write two or three sentences that a reader can take in before deciding to read on. It is ordinary Markdown, so **bold** and links work.
+`{.abstract}` makes a section the blue box: `## Introduction {.abstract}`. Write two or three sentences that a reader can take in before deciding to read on. It is ordinary Markdown, so **bold** and links work.
 
 ## Sections
 
@@ -98,17 +98,18 @@ Every other `##` heading is a section. The text before the first colon is the he
 ## 2. Power: where the charge goes
 ```
 
-The sections are shared out between the columns, in order: two columns for a portrait poster and three for a landscape one. The page measures each section, charts and diagrams included, and balances the columns by height. Change that with `columns:` and `split:` in the front matter:
+The sections are shared out between the columns, in order: two columns for a portrait poster and three for a landscape one. The page measures each section, charts and diagrams included, and balances the columns by height. Change the number for the whole poster with `columns:` in the front matter, or for one band with `{cols=3}` on any of its sections. `split:` chooses the columns by hand, on a poster with one band:
 
 ```yaml
 columns: 3
 split: 2, 2        # two sections in the first column, two in the second, the rest in the third
 ```
 
-Three attributes in braces after a heading change one section:
+Four attributes in braces after a heading change one section:
 
 - `{.wide}` makes the section span every column. Use it for a timeline, a wide diagram or a table with many columns. The sections before it are balanced into columns above it, and the ones after it below.
 - `{.flow}` lets a long section go on in the next column, between two of its blocks, under its heading marked "(continued)". The page breaks it only when that makes the columns more even.
+- `{cols=3}` gives its band of sections three columns, so one band can have two and the next three.
 - `{colour=red}` colours its heading bar, to mark a warning or a section that stands apart.
 
 ```markdown
@@ -319,10 +320,10 @@ A local picture, `![Board](board.svg)`, is embedded in the page. A table is show
 
 ## The summary and references
 
-`## Summary` closes the poster. Its first paragraph is the banner, so make it the one message from your plan. Each `###` under it is a block, for the two or three things a reader should take away:
+`{.summary}` closes the poster: `## In short {.summary}`. Its first paragraph is the banner, so make it the one message from your plan. Each `###` under it is a block, for the two or three things a reader should take away:
 
 ```markdown
-## Summary
+## In short {.summary}
 
 One coin cell, five years, one message only when something changes.
 
@@ -335,7 +336,7 @@ A reading a minute costs little, because measuring is cheap.
 The radio is the cost, so the node sends only what is new.
 ```
 
-`## References` is a list in small type above the footer. Number it, and cite its entries in the text as `[1]`.
+`{.references}` makes a list in small type, under its own heading, such as `## References {.references}`. Number it, and cite its entries in the text as `[1]`.
 
 ## The footer
 
@@ -454,14 +455,14 @@ footer:
   qr-label: Full notes
 ---
 
-## Stats
+## Key figures {.stats}
 
 | Value | Label | Change | Verdict |
 |---|---|---|---|
 | 5.7 years | Battery life | +14 % | |
 | 4 s | Typical join | -7 s | good |
 
-## Abstract
+## Introduction {.abstract}
 
 Firmware 2.1 sends less, joins faster and can always go back to the last version that worked.
 
@@ -484,7 +485,7 @@ Roll back | A failed self-test returns to the old copy | amber
 
 > **Warning:** do not update a node whose battery is below 2.4 V.
 
-## Summary
+## In short {.summary}
 
 Install 2.1 everywhere: it costs one message and saves months of battery.
 

@@ -354,26 +354,42 @@ def heading_html(h):
     return esc(h)
 
 
+ROLES = ("stats", "abstract", "summary", "references")  # a section that is one of these says so: ## Key figures {.stats}
+
+
 def heading_attributes(heading, where):
-    """A section heading and its ``{.wide .flow colour=red}``: whether it spans every column, whether it may
-    go on in the next column, and its colour."""
+    """A section heading and what its braces say: ``{.stats}`` and the other roles, ``{.wide}``, ``{.flow}``,
+    ``{cols=3}`` and ``{colour=red}``. Returns the heading without them, and a mapping of them."""
+    attrs = {"role": "section", "wide": False, "flow": False, "colour": None, "cols": None}
     m = _ATTRIBUTES.search(heading)
     if not m:
-        return heading.strip(), False, None, False
-    wide, colour, flow = False, None, False
-    for item in parse_opts(m["attrs"]):
-        if item == ".wide":
-            wide = True
-        elif item == ".flow":
-            flow = True
-        elif item == "colour" or item == "color":
-            colour = parse_opts(m["attrs"])[item]
+        return heading.strip(), attrs
+    text, options = heading[: m.start()].strip(), parse_opts(m["attrs"])
+    for item, value in options.items():
+        if item.startswith(".") and item[1:] in ROLES:
+            if attrs["role"] != "section":
+                raise PosterError(f"{where}: heading '{text}' has two roles, .{attrs['role']} and {item}: give it one")
+            attrs["role"] = item[1:]
+        elif item in (".wide", ".flow"):
+            attrs[item[1:]] = True
+        elif item in ("colour", "color"):
+            attrs["colour"] = value
+        elif item == "cols":
+            if not value.isdigit() or int(value) < 1:
+                raise PosterError(f"{where}: heading '{text}' has cols={value}; it must be a whole number of at least 1")
+            attrs["cols"] = int(value)
         else:
-            logger.warning(f"{where}: heading '{heading.strip()}' has '{item}', which a poster does not use")
-    if wide and flow:
-        logger.warning(f"{where}: heading '{heading.strip()}' is wide, so .flow is ignored: a wide section is never split")
-        flow = False
-    return heading[: m.start()].strip(), wide, colour, flow
+            known = ", ".join([*(f".{r}" for r in ROLES), ".wide", ".flow", "cols=", "colour="])
+            logger.warning(f"{where}: heading '{text}' has '{item}', which a poster does not use. It takes {known}")
+    if attrs["role"] != "section":
+        for name in ("wide", "flow", "cols"):  # a stats strip, abstract, summary or references list is always full width
+            if attrs[name]:
+                logger.warning(f"{where}: heading '{text}' is .{attrs['role']}, which is always full width, so {name} is ignored")
+                attrs[name] = False if name != "cols" else None
+    elif attrs["wide"] and (attrs["flow"] or attrs["cols"]):
+        logger.warning(f"{where}: heading '{text}' is wide, so .flow and cols= are ignored: a wide section has no columns")
+        attrs["flow"], attrs["cols"] = False, None
+    return text, attrs
 
 
 def parse_stats(text):
@@ -497,68 +513,66 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
     title = meta.get("title") or (h1.group(1) if h1 else md_path.stem)
 
     parts = re.split(r"(?m)^## +(.+)$", body)
-    stats, abstract, summary, references, sections = [], "", None, "", []
-    for heading, content in zip(parts[1::2], parts[2::2]):
-        heading, wide, colour, flow = heading_attributes(heading, md_path)
-        key = heading.lower()
-        if key == "stats":
-            stats = parse_stats(content)
-        elif key == "abstract":
-            abstract = render(content.strip(), ctx)
-        elif key == "summary":
-            summary = content
-        elif key == "references":
-            references = render(content.strip(), ctx)
-        else:
-            sections.append((heading, content.strip(), {"wide": wide, "colour": colour, "flow": flow}))
-    if not sections:
+    items = [(*heading_attributes(heading, md_path), content.strip()) for heading, content in zip(parts[1::2], parts[2::2])]
+    if not items:
         raise PosterError(f"{md_path}: no sections found (expected '## Heading' blocks)")
 
     orientation = _choice(meta, "orientation", ("portrait", "landscape"), md_path)
     count = number(meta, "columns", COLUMNS[orientation], md_path)
-    if meta.get("split") and any(extra["wide"] for _, _, extra in sections):
-        raise PosterError(f"{md_path}: split cannot be used with wide sections; the columns are balanced between them")
 
-    def sec(h, c, extra):
-        style = f' style="background:{ctx.theme.colour(extra["colour"])}"' if extra["colour"] else ""
-        wide = ' class="wide"' if extra["wide"] else ' class="breakable"' if extra["flow"] else ""
+    def sec(h, attrs, c):
+        style = f' style="background:{ctx.theme.colour(attrs["colour"])}"' if attrs["colour"] else ""
+        wide = ' class="wide"' if attrs["wide"] else ' class="breakable"' if attrs["flow"] else ""
         return f'<section{wide}><h2{style}>{heading_html(h)}</h2><div class="body">{render(c, ctx)}</div></section>'
 
-    groups, run = [], []  # the column groups, and a wide section between two of them
-    for section in sections:
-        if section[2]["wide"]:
-            if run:
-                groups.append(run)
-            groups.append(section)
-            run = []
-        else:
-            run.append(section)
-    if run:
-        groups.append(run)
-    middle = ""
-    for group in groups:
-        if isinstance(group, tuple):
-            middle += sec(*group)
-        else:
-            columns = columns_of(group, count, meta.get("split"), md_path)
-            cols = "".join(f'<div class="col">{"".join(sec(*s) for s in column)}</div>' for column in columns)
-            balanced = "" if meta.get("split") else " data-balance"  # the page script shares them out by height
-            middle += f'<div class="cols"{balanced}>{cols}</div>'
-
-    stats_html = "".join(
-        f'<div class="stat"><b>{esc(v)}</b><span>{esc(label)}</span>{trend_html(change, verdict)}</div>'
-        for v, label, change, verdict in stats
-    )
-
-    summary_html = ""
-    if summary:
-        chunks = re.split(r"(?m)^### +(.+)$", summary)
+    def role_html(h, attrs, c):
+        """A stats strip, abstract, summary or references list: full width, where it is in the file."""
+        background = f' style="background:{ctx.theme.colour(attrs["colour"])}"' if attrs["colour"] else ""
+        if attrs["role"] == "stats":
+            figures = "".join(
+                f'<div class="stat"><b>{esc(v)}</b><span>{esc(label)}</span>{trend_html(change, verdict)}</div>'
+                for v, label, change, verdict in parse_stats(c))
+            return f'<div class="stats">{figures}</div>' if figures else ""
+        if attrs["role"] == "abstract":
+            return f'<div class="abstract"{background}>{render(c, ctx)}</div>'
+        if attrs["role"] == "references":
+            return f'<div class="refs"><b>{esc(h)}</b>{render(c, ctx)}</div>'
+        chunks = re.split(r"(?m)^### +(.+)$", c)  # the summary: a banner, then a block for each ###
         banner = " ".join(chunks[0].split())
         blocks = "".join(
-            f'<div class="block"><h3>{esc(h.strip())}</h3><div class="body">{render(c.strip(), ctx)}</div></div>'
-            for h, c in zip(chunks[1::2], chunks[2::2]))
-        summary_html = (f'<div class="banner">{inline(banner)}</div>' if banner else "") + \
-                       (f'<div class="blocks">{blocks}</div>' if blocks else "")
+            f'<div class="block"><h3>{esc(head.strip())}</h3><div class="body">{render(text.strip(), ctx)}</div></div>'
+            for head, text in zip(chunks[1::2], chunks[2::2]))
+        return ((f'<div class="banner"{background}>{inline(banner)}</div>' if banner else "")
+                + (f'<div class="blocks">{blocks}</div>' if blocks else ""))
+
+    bands, run = [], []  # in file order: full-width parts, and runs of sections that share columns
+    for item in items:
+        if item[1]["role"] == "section" and not item[1]["wide"]:
+            run.append(item)
+            continue
+        if run:
+            bands.append(run)
+            run = []
+        bands.append(item)
+    if run:
+        bands.append(run)
+    runs = [band for band in bands if isinstance(band, list)]
+    if meta.get("split") and len(runs) != 1:
+        raise PosterError(f"{md_path}: split chooses the columns of one band of sections, and this poster has {len(runs)}. "
+                          "Leave it out, and the columns of each band are balanced for you")
+    middle = ""
+    for band in bands:
+        if isinstance(band, tuple):
+            middle += role_html(*band) if band[1]["role"] != "section" else sec(*band)
+            continue
+        asked = {attrs["cols"] for _, attrs, _ in band if attrs["cols"]}
+        if len(asked) > 1:
+            raise PosterError(f"{md_path}: the band of sections from '{band[0][0]}' asks for {' and '.join(map(str, sorted(asked)))} "
+                              "columns. Give cols= once, on any of its sections")
+        columns = columns_of([(h, c, attrs) for h, attrs, c in band], asked.pop() if asked else count, meta.get("split"), md_path)
+        cols = "".join(f'<div class="col">{"".join(sec(h, attrs, c) for h, c, attrs in column)}</div>' for column in columns)
+        balanced = "" if meta.get("split") else " data-balance"  # the page script shares them out by height
+        middle += f'<div class="cols"{balanced}>{cols}</div>'
 
     # minimum layout width, the script widens it until the content fits
     width = number(meta, "width", 1400 if orientation == "portrait" else 1800, md_path, least=400)
@@ -589,11 +603,7 @@ def build(md_path, runtime: Callable[[], Runtime], settings: dict | None = None,
 <div class="poster {orientation}">
 {header_html(meta, title, ctx, md_path)}
 <main>
-{f'<div class="stats">{stats_html}</div>' if stats_html else ""}
-{f'<div class="abstract">{abstract}</div>' if abstract else ""}
 {middle}
-{summary_html}
-{f'<div class="refs"><b>References</b>{references}</div>' if references else ""}
 {footer_html(meta.get("footer") or {}, ctx)}
 </main>
 </div>

@@ -13,7 +13,7 @@ footer:
   qr-label: Datasheet
 ---
 
-## Stats
+## Key figures {.stats}
 
 | Value | Label | Change | Verdict |
 |---|---|---|---|
@@ -22,7 +22,7 @@ footer:
 | 0.2 °C | Temperature accuracy | | |
 | 1 KB | Firmware update block | | |
 
-## Abstract
+## Introduction {.abstract}
 
 The SN-100 measures temperature and humidity and publishes each reading over MQTT. It sleeps between readings, so one coin cell lasts five years. This poster shows how it wakes, measures, sends and goes back to sleep.
 
@@ -144,7 +144,28 @@ Jul 2026 | Display option | For installers | green
 Oct 2026 | Ten-year cell | Twice the life | amber
 ```
 
-## Summary
+## 8. SN-100-T: temperature only {cols=3}
+
+Order code `SN100-T-868`. For rooms where only the temperature matters, such as server rooms.
+
+- Temperature, ±0.2 °C
+- Cell life 6.5 years
+
+## 9. SN-100-TH: temperature and humidity
+
+Order code `SN100-TH-868`. The standard node, and the one this poster describes.
+
+- Humidity, ±1.8 % RH
+- Cell life 5 years
+
+## 10. SN-100-THD: with a display
+
+Order code `SN100-THD-868`. For installers and for rooms a person checks by eye.
+
+- The display of section 5
+- Cell life 4.5 years
+
+## In short {.summary}
 
 One coin cell, five years, one message only when something changes.
 

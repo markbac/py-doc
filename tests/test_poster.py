@@ -38,14 +38,14 @@ POSTER = textwrap.dedent(
     paper: a2
     ---
 
-    ## Stats
+    ## Key figures {.stats}
 
     | Value | Label |
     |---|---|
     | 12 | Months |
     | 3 | Windows |
 
-    ## Abstract
+    ## Introduction {.abstract}
 
     The meter closes its **valve** on credit.
 
@@ -88,7 +88,7 @@ POSTER = textwrap.dedent(
     A note under the lanes.
     ```
 
-    ## Summary
+    ## In short {.summary}
 
     The valve is safe.
 
@@ -577,8 +577,47 @@ def test_a_wide_section_spans_the_columns_and_splits_them_into_groups(tmp_path, 
     assert page.count('<div class="cols"') == 2
     assert '<section class="wide"><h2 style="background:#a3322b">3. Wide</h2>' in page
     assert page.index("2. B") < page.index("3. Wide") < page.index("4. C")
-    with pytest.raises(PosterError, match="split cannot be used with wide sections"):
+    with pytest.raises(PosterError, match="split chooses the columns of one band of sections, and this poster has 2"):
         build(write(tmp_path, "---\nsplit: 1\n---\n" + text), lambda: object())
+
+
+def test_every_part_is_where_it_is_in_the_file_and_braces_say_what_it_is(tmp_path, drawn):
+    text = (
+        "## Opening {.abstract colour=navy}\n\nWhy.\n\n## 1. A {.wide}\n\nAll across.\n\n"
+        "## Mid-poster figures {.stats}\n\n| Value | Label |\n|---|---|\n| 4 s | Join |\n\n"
+        "## 2. B {cols=3}\n\nOne.\n\n## 3. C\n\nTwo.\n\n## 4. D\n\nThree.\n\n"
+        "## Bottom line {.summary}\n\nThe point.\n\n## Sources {.references}\n\n1. A paper.\n\n## 5. After {.wide}\n\nLast.\n"
+    )
+    page = build(write(tmp_path, text), lambda: object())[0].split("<main>", 1)[1]
+    order = ['<div class="abstract" style="background:#2a3150"><p>Why.', "1. A", '<div class="stats">', '<div class="cols"',
+             '<div class="banner">The point.', "<b>Sources</b>", "5. After"]  # fmt: skip
+    assert [page.index(part) for part in order] == sorted(page.index(part) for part in order)
+    assert page.count('<div class="col">') == 3, "the band takes cols=3 from one of its sections"
+    assert "Opening" not in page and "Mid-poster figures" not in page and "Bottom line" not in page
+
+
+def test_the_old_names_are_ordinary_sections_now(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "## Stats\n\nNot a strip.\n\n## Summary\n\nNot a banner.\n"), lambda: object())
+    assert "<h2>Stats</h2>" in page and "<h2>Summary</h2>" in page and 'class="stats"' not in page.split("<main>")[1]
+
+
+@pytest.mark.parametrize(
+    "heading, message",
+    [
+        ("## A {.stats .summary}", "has two roles, .stats and .summary"),
+        ("## A {cols=0}", "has cols=0; it must be a whole number of at least 1"),
+    ],
+)
+def test_a_heading_attribute_mistake_is_an_error(tmp_path, drawn, heading, message):
+    with pytest.raises(PosterError, match=message):
+        build(write(tmp_path, f"{heading}\n\nText.\n"), lambda: object())
+
+
+def test_a_band_asks_for_one_number_of_columns_and_roles_take_no_layout(tmp_path, drawn, caplog):
+    with pytest.raises(PosterError, match="asks for 2 and 3 columns. Give cols= once"):
+        build(write(tmp_path, "## A {cols=2}\n\nOne.\n\n## B {cols=3}\n\nTwo.\n"), lambda: object())
+    build(write(tmp_path, "## Intro {.abstract .wide cols=2}\n\nWhy.\n\n## A\n\nOne.\n"), lambda: object())
+    assert "is .abstract, which is always full width, so wide is ignored" in caplog.text
 
 
 def test_an_unknown_heading_attribute_is_a_warning(tmp_path, drawn, caplog):
@@ -617,7 +656,7 @@ def test_the_old_footer_keys_still_work(tmp_path, drawn):
 
 
 def test_stats_show_a_trend_whose_colour_follows_its_direction_or_verdict(tmp_path, drawn):
-    text = "## Stats\n\n| Value | Label | Change | Verdict |\n|---|---|---|---|\n| 5 y | Life | +14 % | |\n| 4 s | Join | -7 s | good |\n| 3 | Faults | +1 | bad |\n| 2 | Same | 0 | |\n\n## A\n\nText.\n"
+    text = "## Figures {.stats}\n\n| Value | Label | Change | Verdict |\n|---|---|---|---|\n| 5 y | Life | +14 % | |\n| 4 s | Join | -7 s | good |\n| 3 | Faults | +1 | bad |\n| 2 | Same | 0 | |\n\n## A\n\nText.\n"
     page, _ = build(write(tmp_path, text), lambda: object())
     assert '<em class="trend good">▲ +14 %</em>' in page
     assert '<em class="trend good">▼ -7 s</em>' in page
@@ -812,7 +851,7 @@ def test_a_qr_block_draws_the_code_with_its_label(tmp_path, drawn):
 
 
 def test_references_are_a_list_above_the_footer(tmp_path, drawn):
-    page, _ = build(write(tmp_path, "## A\n\nText [1].\n\n## References\n\n1. SN-100 datasheet, SN-DS-001.\n1. MQTT 5.0, OASIS.\n"), lambda: object())
+    page, _ = build(write(tmp_path, "## A\n\nText [1].\n\n## References {.references}\n\n1. SN-100 datasheet, SN-DS-001.\n1. MQTT 5.0, OASIS.\n"), lambda: object())
     refs = page.split('<div class="refs">', 1)[1]
     assert refs.startswith("<b>References</b><ol>") and "<li>MQTT 5.0, OASIS.</li>" in refs
     assert refs.index("</ol>") < refs.index("<footer>")
@@ -1254,7 +1293,7 @@ def test_figures_and_tables_are_numbered_down_the_poster_includes_too(tmp_path, 
 def test_a_flow_section_may_go_on_in_the_next_column(tmp_path, drawn, caplog):
     page, _ = build(write(tmp_path, "## A {.flow}\n\nOne.\n\n## B {.wide .flow}\n\nTwo.\n\n## C\n\nThree.\n"), lambda: object())
     assert '<section class="breakable"><h2>A</h2>' in page and '<section class="wide"><h2>B</h2>' in page
-    assert "is wide, so .flow is ignored" in caplog.text
+    assert "is wide, so .flow and cols= are ignored" in caplog.text
     assert 'section.continued h2::after{content:" (continued)"' in page and "classList.add('continued')" in page
 
 
