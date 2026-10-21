@@ -33,6 +33,7 @@ dependencies = [
     "docxcompose>=2.2.0",
     "PyYAML>=6.0.3",
     "segno>=1.5",  # QR codes on posters; pure Python, no dependencies
+    "python-barcode>=0.16.1",  # the bar patterns of poster barcodes (Code 128, EAN, UPC, ITF-14); pure Python, MIT
     # Pinned to a commit because py-logkit has no tagged release yet. Move to the first tag when there is one.
     "ctxlogkit @ git+https://github.com/markbac/py-logkit@96453b403015ed762bcc5b3ffd5adbea3ef4fb0c",
 ]
