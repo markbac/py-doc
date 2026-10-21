@@ -12,7 +12,8 @@
                       or later when it is missing or broken (-System or -Python: another Python instead)
       3. Packages     pip install -e . into it (with the test tools when -Dev), then pip check, which
                       sees only py-doc's own packages because the environment is py-doc's alone
-      4. Command      py-doc runs, and the py-doc on the PATH is this one (-AddToPath puts it there)
+      4. Command      py-doc runs, and the py-doc on the PATH is this one: its folder is put first on your
+                      user PATH when it is not already (-NoPath leaves the PATH alone)
       5. Docker       the container engine answers (py-doc setup installs it when it does not)
       6. Tool image   built when its definition changed (every layer again with -Rebuild),
                       and the images of earlier versions removed unless -KeepOldImages
@@ -44,8 +45,12 @@
 .PARAMETER RecreateVenv
     Delete .venv and make it again, such as after a Python upgrade.
 
+.PARAMETER NoPath
+    Leave your user PATH alone. By default the folder of this py-doc is put first on it, when it is not
+    already, so py-doc in a new terminal is this one.
+
 .PARAMETER AddToPath
-    Put .venv\Scripts at the front of your user PATH, so py-doc in a new terminal is this one.
+    No longer needed: the PATH is updated by default. Kept so older instructions still work.
 
 .PARAMETER CaFile
     An extra certificate for image builds behind a TLS-inspecting proxy (passed to py-doc tools build).
@@ -54,8 +59,6 @@
     .\scripts\update.ps1
 .EXAMPLE
     .\scripts\update.ps1 -Dev -Test
-.EXAMPLE
-    .\scripts\update.ps1 -AddToPath
 .EXAMPLE
     .\scripts\update.ps1 -NoPull -Rebuild -RecreateVenv
 #>
@@ -69,6 +72,7 @@ param(
     [string]$Python,
     [switch]$System,
     [switch]$RecreateVenv,
+    [switch]$NoPath,
     [switch]$AddToPath,
     [string]$CaFile
 )
@@ -197,12 +201,16 @@ try {
     $find = "import os, sysconfig; dirs = [sysconfig.get_path('scripts'), sysconfig.get_path('scripts', os.name + '_user')]; " +
             "print(next((d for d in dirs if os.path.isfile(os.path.join(d, 'py-doc.exe')) or os.path.isfile(os.path.join(d, 'py-doc'))), dirs[0]))"
     $scripts = (& $script:PythonExe @script:PythonArgs -c $find | Select-Object -First 1).Trim()
-    if ($AddToPath) {
-        $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-        $entries = @($userPath -split ';' | Where-Object { $_ -and ($_.TrimEnd('\') -ne $scripts.TrimEnd('\')) })
-        [Environment]::SetEnvironmentVariable('Path', (@($scripts) + $entries) -join ';', 'User')
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $userEntries = @("$userPath" -split ';' | Where-Object { $_ })
+    $isFirst = $userEntries.Count -gt 0 -and $userEntries[0].TrimEnd('\') -eq $scripts.TrimEnd('\')
+    if ($NoPath) {
+        Write-Note "PATH left alone (-NoPath)"
+    } elseif (-not $isFirst) {
+        $others = @($userEntries | Where-Object { $_.TrimEnd('\') -ne $scripts.TrimEnd('\') })
+        [Environment]::SetEnvironmentVariable('Path', (@($scripts) + $others) -join ';', 'User')
         $env:Path = "$scripts;$env:Path"
-        Write-Ok "$scripts is first on your user PATH: a new terminal runs this py-doc"
+        Write-Ok "$scripts is now first on your user PATH. Open a new terminal to use it there"
     }
     $command = Get-Command py-doc -ErrorAction SilentlyContinue
     $mine = $command -and ((Split-Path -Parent $command.Source).TrimEnd('\') -eq $scripts.TrimEnd('\'))
@@ -217,7 +225,7 @@ try {
         } else {
             Write-Note "py-doc is not on the PATH"
         }
-        Write-Note "run .\scripts\update.ps1 -AddToPath to put $scripts first, or use $scripts\py-doc.exe"
+        Write-Note "run without -NoPath to put $scripts first, or use $scripts\py-doc.exe"
     }
 
     # 5. Docker ----------------------------------------------------------------------------------
