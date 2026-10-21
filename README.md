@@ -100,7 +100,7 @@ src/
 │   ├── migrate.py        # createdocs to py-doc.yml
 │   ├── report.py         # the JSON build report
 │   ├── poster*.py        # py-doc poster: Markdown to an HTML poster, its blocks, settings, themes and fonts
-│   └── poster_watch.py   # the --watch loop and preview server of poster, docx and slides
+│   └── watch.py          # the --watch loop and preview server of poster, docx and slides
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/
 └── pydoclint/
@@ -117,7 +117,7 @@ pip install -e ".[dev]"
 python -m pytest
 ruff check .
 py-doc lint docs --strict
-cd editors/vscode && npm ci && npm test   # the VS Code extension
+cd editors/vscode && npm ci && npm run lint && npm test   # the VS Code extension
 ```
 
 CI runs on Linux and Windows with Python 3.14, the newest supported. Python 3.10, the oldest supported, is not tested in CI. macOS is not supported.

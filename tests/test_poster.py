@@ -1396,7 +1396,7 @@ def test_watch_serves_the_page_and_builds_again_on_a_save(tmp_path, monkeypatch,
     import time
     import urllib.request
 
-    from py_doc import poster_watch
+    from py_doc import watch as watcher
 
     source = write(tmp_path, "## A\n\nFirst.\n")
     (tmp_path / "page.html").write_text("<html><body>First</body></html>", encoding="utf-8")
@@ -1410,10 +1410,10 @@ def test_watch_serves_the_page_and_builds_again_on_a_save(tmp_path, monkeypatch,
         return {"wall": tmp_path / "page.html"}, {source}
 
     servers = []
-    serve = poster_watch.serve
-    monkeypatch.setattr(poster_watch, "serve", lambda state, port: servers.append(serve(state, port)) or servers[-1])
+    serve = watcher.serve
+    monkeypatch.setattr(watcher, "serve", lambda state, port: servers.append(serve(state, port)) or servers[-1])
     stop = threading.Event()
-    thread = threading.Thread(target=poster_watch.watch, args=(build, (ConfigError,)),
+    thread = threading.Thread(target=watcher.watch, args=(build, (ConfigError,)),
                               kwargs={"open_browser": False, "stop": stop, "interval": 0.05})  # fmt: skip
     thread.start()
     try:
@@ -1457,7 +1457,7 @@ def test_watch_serves_the_page_and_builds_again_on_a_save(tmp_path, monkeypatch,
 
 
 def test_watch_stops_at_once_when_the_first_build_fails(capsys):
-    from py_doc.poster_watch import watch
+    from py_doc.watch import watch
 
     def build():
         raise ConfigError("no posters")
@@ -1477,7 +1477,7 @@ def test_watch_takes_no_pdf_and_output_needs_one_poster(tmp_path, monkeypatch, c
 
 
 def test_watch_watches_the_folder_of_the_markdown_and_the_files_its_settings_name(tmp_path):
-    from py_doc.poster_watch import watched_files
+    from py_doc.watch import watched_files
 
     (tmp_path / "shared").mkdir()
     (tmp_path / ".git").mkdir()

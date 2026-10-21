@@ -29,7 +29,7 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
                 watch = component "Live preview" "With --watch, builds documents, decks and posters again on every save, writes an HTML twin of each document and deck, and serves the pages on 127.0.0.1 with a script that reloads them." "Python, http.server"
             }
             toolImage = container "Tool image" "Every program that is not Python: pandoc, XeLaTeX, PlantUML, Mermaid, Graphviz, the diagram tools, Chromium, structurizr-cli, Vale, markdownlint, MkDocs and Node." "Docker image on Debian 12"
-            vscode = container "VS Code extension" "Previews py-doc Markdown in the editor as it is typed, and starts the live preview of the open file and shows it beside the editor." "JavaScript, markdown-it"
+            vscode = container "VS Code extension" "Previews py-doc Markdown in the editor as it is typed, and starts the live preview of the open file and shows it beside the editor." "JavaScript, markdown-it, js-yaml"
             local = container "Structurizr Local" "Shows a workspace in a browser to view it and arrange its views, and draws the pictures for documents." "Docker image structurizr/structurizr"
             cache = container "Caches" "Diagram pictures (user cache folder), Structurizr exports, generated chapters and live preview pages (.py-doc in the project)." "Files" "Store"
         }
@@ -38,7 +38,7 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
         author -> pydoc.local "Views the model and arranges its views" "Browser, HTTP"
         reader -> office "Opens the documents in"
         author -> pydoc.vscode "Writes and previews documents in" "VS Code"
-        pydoc.vscode -> pydoc.cli.commands "Starts py-doc docx, slides or poster --watch for the open file" "Terminal"
+        pydoc.vscode -> pydoc.cli.commands "Starts py-doc docx, slides or poster --watch for the open file" "Child process"
         pydoc.vscode -> pydoc.cli.watch "Shows the served preview from" "HTTP on 127.0.0.1"
         pydoc.cli.commands -> pydoc.cli.watch "Runs --watch with"
         pydoc.cli.watch -> pydoc.cli.pipeline "Builds each document and its HTML twin with"

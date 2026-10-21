@@ -52,5 +52,5 @@ Each decision records the context, the choice and its consequences.
 
 - **Context**: authors want to see a document while they write it, but Word and PowerPoint have no live view, a document open in Word cannot be written, and the in-editor Markdown preview cannot draw most diagrams.
 - **Decision**: `--watch` builds an HTML twin of each document with the same pipeline, keeps it in `.py-doc/preview`, and serves it with a reload script added as it is served. The VS Code extension runs that command; its own instant preview is an approximation for typing.
-- **Consequences**: the preview shows every diagram exactly as the build draws it, and a document open in Word does not stop it. It is one HTML page, so slide boundaries and Word page layout are not shown, and a first build waits for the tool container.
+- **Consequences**: the preview shows every diagram exactly as the build draws it, and a document open in Word does not stop it. It is one HTML page: slides are boxes and page breaks are lines, but Word's page layout is not shown, and a first build waits for the tool container.
 

@@ -1,0 +1,30 @@
+{
+  "about": "Shared cases for the two previews of py-doc Markdown: the VS Code instant preview (editors/vscode/test/test.js) and the HTML twin that --watch builds with pandoc (tests/test_preview_cases.py). Both must find what each case expects, so the instant preview cannot drift from the build. 'command' is also what the VS Code extension must detect for the case.",
+  "cases": [
+    {
+      "name": "callouts in both spellings",
+      "command": "docx",
+      "markdown": "# Installing\n\n> [!WARNING]\n> Disconnect the battery first.\n\n> **Tip:** Keep the screws.\n\n> [!NOTE]\n> Firmware 2 or later.\n",
+      "expect": { "callouts": ["warning", "tip", "note"], "text": ["Disconnect the battery first.", "Keep the screws.", "Firmware 2 or later."] }
+    },
+    {
+      "name": "page breaks in a document",
+      "command": "docx",
+      "markdown": "---\ntitle: Breaks\nauthor:\n  - Jane\n  - Joe\n---\n\n# One\n\nFirst page.\n\n[[PAGEBREAK]]\n\nSecond page.\n\n::: {.pagebreak}\n:::\n\nThird page.\n",
+      "expect": { "pagebreaks": 2, "text": ["First page.", "Second page.", "Third page."] }
+    },
+    {
+      "name": "a deck at the default split level",
+      "command": "slides",
+      "markdown": "# Deck\n\n## First\n\n- one\n\n<!-- notes: Say hello -->\n\n## Second\n\n:::: columns\n::: column\nLeft side\n:::\n::: column\nRight side\n:::\n::::\n\n::: notes\nPause here\n:::\n",
+      "expect": { "slides": 3, "parts": 1, "notes": 2, "columns": 1, "text": ["Say hello", "Pause here", "Left side", "Right side"] }
+    },
+    {
+      "name": "a deck split at level 1",
+      "command": "slides",
+      "split_level": 1,
+      "markdown": "# One\n\n## Detail\n\ntext\n\n# Two\n\n::: notes\nLast words\n:::\n",
+      "expect": { "slides": 2, "parts": 0, "notes": 1, "text": ["Detail", "Last words"] }
+    }
+  ]
+}

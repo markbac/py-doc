@@ -123,7 +123,8 @@ jobs:
         working-directory: editors/vscode
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: npm ci --ignore-scripts  # the runner's own Node; markdown-it is the only (dev) dependency
+      - run: npm ci --ignore-scripts  # the runner's own Node
+      - run: npm run lint
       - run: npm test
 
   gate:

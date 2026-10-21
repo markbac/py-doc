@@ -64,7 +64,8 @@ class _Converter:
 
     def convert_twin(self, md_path: Path, output_path: Path) -> Path:
         """Write an HTML preview twin of the document or deck: the same Markdown, as a web page, for ``--watch``."""
-        return self._render(md_path, output_path, "html", None, {**self.options, "preview": True})
+        preview = "slides" if self.fmt == "pptx" else "document"
+        return self._render(md_path, output_path, "html", None, {**self.options, "preview": preview})
 
     def _render(self, md_path: Path, output_path: Path, fmt: str, template: Path | None, options: dict) -> Path:
         md_path = Path(md_path).resolve()

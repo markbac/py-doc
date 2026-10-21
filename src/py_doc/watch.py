@@ -1,4 +1,4 @@
-"""``py-doc poster --watch``: rebuild the posters on every save, and reload them in the browser.
+"""``--watch`` of ``py-doc poster``, ``docx`` and ``slides``: build again on every save, and reload in the browser.
 
 The pages are served on a local address, each with a small script that asks the server every 0.7 s
 whether a newer build is there, and reloads when it is. A build that fails keeps the last good page and
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 INTERVAL = 0.5  # seconds between two looks at the files
 SKIPPED = {"node_modules", "__pycache__"}  # folders never watched, as are hidden ones
-# The kinds of file a poster is made from: its Markdown, includes, pictures, data, diagram sources and fonts.
+# The kinds of file a page is made from: its Markdown, includes, pictures, data, diagram sources and fonts.
 # Any other file in the folder, such as a log, is not watched, or writing it would build again without end.
 SOURCES = {".md", ".markdown", ".yml", ".yaml", ".json", ".csv", ".txt", ".py", ".svg", ".png", ".jpg", ".jpeg",
            ".gif", ".webp", ".puml", ".iuml", ".plantuml", ".dot", ".gv", ".mmd", ".dsl", ".woff2", ".woff", ".ttf", ".otf"}  # fmt: skip
@@ -40,7 +40,7 @@ function poll(){fetch('/__status').then(function(r){return r.json();}).then(func
 }).catch(function(){}).then(function(){setTimeout(poll,700);});}
 poll();})();</script>"""
 
-# What a build gives the watcher: the page of each poster, by name, and the files it was made from
+# What a build gives the watcher: the page of each poster or HTML twin, by name, and the files it was made from
 Build = Callable[[], tuple[dict[str, Path], set[Path]]]
 
 

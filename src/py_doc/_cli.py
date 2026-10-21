@@ -191,7 +191,7 @@ def watch_converter(converter: Converter, args: argparse.Namespace, suffix: str,
             pages[name] = converter.convert_twin(src, base / PREVIEW_DIR / f"{name}.html").resolve()
         return pages, sources
 
-    from .poster_watch import watch
+    from .watch import watch
 
     return watch(
         build_all,

@@ -160,8 +160,11 @@ def _command(job: PandocJob, runtime: Runtime, work: Path, reference: Path | Non
     elif fmt == "html":
         argv += ["--to=html5", "--standalone", "--embed-resources", "--mathml"]
         argv += ["--css", job.template if job.template is not None else _required(RESOURCES / "html.css", "stylesheet")]
-        if options.get("preview", False):  # the HTML twin of a document or deck, for --watch
+        if options.get("preview"):  # the HTML twin of a document or deck, for --watch
             argv += ["--css", _required(RESOURCES / "preview.css", "stylesheet")]
+        if options.get("preview") == "slides":  # after pagebreak.lua, which the twin's slide breaks come from
+            argv += ["--lua-filter", _required(RESOURCES / "slides-preview.lua", "Lua filter")]
+            argv.append(f"--metadata=preview-slide-level:{options.get('split_level', 2)}")
         if options.get("toc", False):
             argv.append("--toc")
     else:  # pdf

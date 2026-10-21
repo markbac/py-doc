@@ -105,7 +105,7 @@ def test_module_entry_point_prints_help():
 
 def test_slides_watch_mode(tmp_path, monkeypatch):
     from py_doc.slides_cli import run_slides
-    from py_doc import poster_watch
+    from py_doc import watch as watcher
 
     src = tmp_path / "deck.md"
     src.write_text("# Deck\n\n## S1\n\n- a\n\n<!-- notes: Say this -->\n", encoding="utf-8")
@@ -117,7 +117,7 @@ def test_slides_watch_mode(tmp_path, monkeypatch):
         called.append((pages, sources, port, open_browser, title))
         return 0
 
-    monkeypatch.setattr(poster_watch, "watch", fake_watch)
+    monkeypatch.setattr(watcher, "watch", fake_watch)
     code = run_slides([str(src), "--watch", "--port", "9875", "--no-open"])
     assert code == 0
     assert len(called) == 1
@@ -129,3 +129,19 @@ def test_slides_watch_mode(tmp_path, monkeypatch):
     assert "PowerPoint Preview" in title
     twin = pages["deck"].read_text(encoding="utf-8")
     assert 'class="notes"' in twin and "Say this" in twin
+    assert twin.count('class="slide part"') == 1  # # Deck, above the slide level
+    assert twin.count('class="slide content"') == 1  # ## S1, with its notes on the same slide
+
+
+def test_slides_watch_twin_follows_the_split_level(tmp_path, monkeypatch):
+    from py_doc import watch as watcher
+    from py_doc.slides_cli import run_slides
+
+    src = tmp_path / "deck.md"
+    src.write_text("# One\n\n## Sub\n\ntext\n\n# Two\n\n::: {.pagebreak}\n:::\n\nAfter the break\n", encoding="utf-8")
+    called = []
+    monkeypatch.setattr(watcher, "watch", lambda build, errors, **kw: called.append(build()[0]) or 0)
+    assert run_slides([str(src), "--watch", "--no-open", "--split-level", "1"]) == 0
+    twin = called[0]["deck"].read_text(encoding="utf-8")
+    assert 'class="slide part"' not in twin
+    assert twin.count('class="slide content"') == 3  # # One (with ## Sub), # Two, and the page break

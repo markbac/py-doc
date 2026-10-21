@@ -4,13 +4,24 @@
   "description": "Preview py-doc Markdown in VS Code: numbered captions, Word-style callouts, slide decks, and posters.",
   "version": "1.0.0",
   "publisher": "py-doc",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markbac/py-doc.git",
+    "directory": "editors/vscode"
+  },
+  "bugs": {
+    "url": "https://github.com/markbac/py-doc/issues"
+  },
+  "homepage": "https://github.com/markbac/py-doc/tree/main/editors/vscode#readme",
   "engines": {
     "vscode": "^1.75.0"
   },
   "main": "./extension.js",
   "categories": [
     "Other",
-    "Formatters"
+    "Visualization"
   ],
   "keywords": [
     "py-doc",
@@ -68,8 +79,16 @@
       "properties": {
         "pydoc.watch.port": {
           "type": "number",
-          "default": 8765,
-          "description": "The local port the live preview watch server (py-doc ... --watch) serves on."
+          "default": 0,
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "The local port the live preview serves on. 0 lets py-doc pick a free one, so several windows can each have a preview."
+        },
+        "pydoc.executable": {
+          "type": "string",
+          "default": "py-doc",
+          "scope": "machine-overridable",
+          "description": "The py-doc program the live preview runs, such as the py-doc of a virtual environment (.venv/Scripts/py-doc.exe or .venv/bin/py-doc)."
         }
       }
     },
@@ -79,9 +98,16 @@
     ]
   },
   "scripts": {
-    "test": "node test/test.js"
+    "test": "node --test test/test.js test/cases.test.js test/watch.test.js",
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
     "markdown-it": "^14.1.0"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
   }
 }

@@ -100,7 +100,7 @@ def run_poster(argv: list[str]) -> int:
 
     errors = (ConfigError, ConversionError, SettingsError)
     if args.watch:
-        from py_doc.poster_watch import watch
+        from py_doc.watch import watch
 
         return watch(build_all, errors, port=args.port, open_browser=not args.no_open)
     try:
