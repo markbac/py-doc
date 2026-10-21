@@ -14,12 +14,14 @@ import math
 import mimetypes
 import re
 import shlex
+from pathlib import Path
 
 import segno
 from markdown_it import MarkdownIt
 
 from py_doc.diagrams import BY_FENCE, DiagramError
 from py_doc.diagrams.render import draw_cached, with_mermaid_config
+from py_doc import poster_qr
 from py_doc.errors import ConversionError, ToolFailed
 from py_doc.poster_themes import Theme
 
@@ -397,23 +399,41 @@ def chart_html(code, opts, ctx):
     return f'<div class="fig">{title}{svg}</div>'
 
 
-def qr_svg(text, colour, size=140):
-    """A QR code for ``text`` as inline SVG, about ``size`` pixels wide."""
+def qr_svg(text, colour, size=140, error="m"):
+    """A QR code for ``text`` as inline SVG, about ``size`` pixels wide, at error correction level ``error``."""
     try:
-        code = segno.make(text.strip(), error="m")
+        code = segno.make(text.strip(), error=error, micro=False)
     except segno.DataOverflowError:
-        raise PosterError(f"'{text.strip()[:60]}...' is too long for a QR code; use a shorter address") from None
-    scale = max(1, round(size / code.symbol_size(scale=1, border=2)[0]))
+        raise PosterError(f"'{text.strip()[:60]}...' is too long for a QR code; use shorter text, or a lower ecc=") from None
+    # SVG needs no whole pixels, so every code is the size asked for, however many modules it has
+    scale = round(size / code.symbol_size(scale=1, border=2)[0], 4)
     return code.svg_inline(scale=scale, border=2, dark=colour, light=None)
 
 
 def qr_html(code, opts, ctx):
-    target = next((line.strip() for line in code.splitlines() if line.strip()), "")
-    if not target:
-        raise PosterError(f"{ctx.where}: a qr block needs the text or address to encode")
-    size = int(opts["size"]) if opts.get("size", "").isdigit() else 140
+    """A QR code of the block's text, or with ``type=`` of a contact card, calendar entry, Wi-Fi network,
+    e-mail, phone number, text message or place written as ``key: value`` lines (see ``poster_qr``).
+    ``file=`` encodes a file instead, such as a .vcf or .ics, its type from its extension."""
+    text = code
+    kind_given = opts.get("type")
+    if opts.get("file"):
+        path = Path(opts["file"])
+        path = path if path.is_absolute() else Path(ctx.base) / path
+        if not path.is_file():
+            raise PosterError(f"{ctx.where}: the qr file {opts['file']} is not there")
+        text = path.read_text(encoding="utf-8-sig")
+        kind_given = kind_given or poster_qr.EXTENSIONS.get(path.suffix.lower(), "text")
+    ecc = opts.get("ecc", "m").lower()
+    if ecc not in ("l", "m", "q", "h"):
+        raise PosterError(f"{ctx.where}: ecc must be L, M, Q or H, not '{opts['ecc']}'")
+    try:
+        kind = poster_qr.kind_of(kind_given)
+        target = poster_qr.payload(kind, text)
+    except poster_qr.QrError as exc:
+        raise PosterError(f"{ctx.where}: {exc}") from None
+    size = _whole(opts, "size", 140, ctx)
     label = f'<div class="cap">{inline(opts["label"])}</div>' if opts.get("label") else ""
-    return f'<div class="qr">{qr_svg(target, ctx.theme.colours["strong"], size)}{label}</div>'
+    return f'<div class="qr">{qr_svg(target, ctx.theme.colours["strong"], size, ecc)}{label}</div>'
 
 
 def _whole(opts, name, default, ctx, low=1):
