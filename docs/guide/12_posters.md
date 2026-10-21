@@ -29,7 +29,7 @@ The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` li
 | Example | What it shows |
 |---|---|
 | `poster.md` | Portrait A1 in the default theme: a picture, a Mermaid diagram, bar and line charts, segments, flow, lanes and `lcd` screens. Also a timeline, a JSON code block and a full-width section. A QR code is in the footer. Every setting is in its front matter |
-| `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a gallery of mounting drawings, an acceptance checklist, handover steps, a QR block and an included table. The words are in the Markdown and the look (orientation, theme, header, footer) is in `py-doc.yml` |
+| `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a gallery of mounting drawings, an acceptance checklist, handover steps, a QR block and an included table. The words and the layout (orientation, paper) are in the front matter, and the company's look (theme, header, footer) is in `py-doc.yml` |
 | `release.md` | Portrait A3 in the dark theme: a column chart with two series, a before and after `compare` and a Mermaid sequence with notes. Also title cards, a vertical timeline, callouts, `people`, references and a `{{version}}` variable |
 | `reliability.md` | Portrait A0 in the print theme, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, `highlight` figures, `progress` bars, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
 
@@ -41,6 +41,8 @@ Every setting can be written in four places. Each one wins over the ones before 
 1. The front matter of the Markdown file.
 1. The poster's entry under `posters:` in `py-doc.yml`.
 1. The command line: `--theme`, `--var` and `--condition`.
+
+Put a setting with what it belongs to. The layout goes with the words, so `orientation`, `columns`, `split`, `paper` and `width` belong in the front matter: the file then builds the same poster on its own, with `py-doc poster file.md`. The company's look is shared, so its `theme`, `colours`, `logo`, `header` and `footer` belong under `poster:` in `py-doc.yml`. The poster's entry is for what one poster does differently, and the command line is for one build.
 
 Mappings such as `colours` and `footer` are merged key by key, so a poster can change one colour and keep the rest. A path is relative to the file that names it. That is `py-doc.yml` for the first and third places, the Markdown file for the front matter, and the working folder for the command line.
 
@@ -91,6 +93,29 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 `footer-left` and `footer-right` in the front matter still work, as `footer.left` and `footer.right`.
 
 ## Page structure
+
+A poster is laid out from the top down, always in this order:
+
+1. **Header**: `title`, `subtitle`, `byline` and `logo` from the settings. Without a title, the first `#` heading is the title.
+1. **Stats** and **abstract**: `## Stats` and `## Abstract`, full width, wherever they are in the file.
+1. **The bands**, in the order of the sections. A section whose heading ends in `{.wide}` is a full-width band of its own. The sections between two wide ones are a band of columns, balanced by height.
+1. **Summary** and **references**: `## Summary` and `## References`, full width, wherever they are in the file.
+1. **Footer**: from the `footer` setting, full width at the bottom.
+
+So a poster that goes full width, two columns, full width, two columns, full width is written as:
+
+```markdown
+## 1. Overview {.wide}
+## 2. Left of the first band
+## 3. Right of the first band
+## 4. Results {.wide}
+## 5. Left of the second band
+## 6. Right of the second band
+## 7. Next steps {.wide}
+## Summary
+```
+
+`columns:` sets how many columns every band of columns has.
 
 | Heading | Becomes |
 |---|---|
@@ -275,7 +300,7 @@ SN-100-0042
 ```
 ````
 
-- The check digit of an EAN, UPC or ITF-14 code is worked out when it is left out, and checked when it is given, so a mistyped digit stops the build instead of printing a barcode of another product. Spaces and hyphens in the digits are ignored.
+- The check digit of an EAN, UPC or ITF-14 code is worked out when it is left out, and checked when it is given. So a mistyped digit stops the build instead of printing a barcode of another product. Spaces and hyphens in the digits are ignored.
 - EAN and UPC are drawn as on products: longer guard bars, and the digits in their groups between them. The space the scanner needs on each side (the quiet zone) is part of the drawing, so nothing should be put closer than its white box.
 - `width=` is the whole drawing, quiet zones included. Print a retail code no smaller than its standard size: about 140 pixels wide for EAN-13 and UPC-A, 100 for EAN-8 and 400 for ITF-14.
 
