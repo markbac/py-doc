@@ -272,17 +272,36 @@ function balance(){
 }
 function natural(w){p.style.zoom='1';p.style.width=w+'px';p.style.height='auto';p.style.minHeight='0';balance();return p.scrollHeight;}
 function scale(){p.style.zoom=document.documentElement.clientWidth/(+p.dataset.w);}
+// When no width fits, as when pictures grow with their columns, the width whose content is least tall for it,
+// so the poster prints as large as it can.
+function leastTall(lo,hi){
+  var best=hi,most=Infinity;
+  for(var i=0;i<=8;i++){var w=Math.round(lo+(hi-lo)*i/8),q=natural(w)/w;if(q<most){most=q;best=w;}}
+  return best;
+}
 function fit(){
   var lo=MIN,hi=4000;
   if(natural(lo)<=lo*R){hi=lo;}
+  else if(natural(hi)>hi*R){hi=leastTall(lo,hi);}
   else{while(hi-lo>6){var m=(lo+hi)>>1;if(natural(m)<=m*R){hi=m;}else{lo=m;}}}
-  natural(hi);  // balanced at the width it keeps, not the last one it tried
-  p.style.width=hi+'px';p.style.height=(hi*R)+'px';p.style.minHeight='';
-  p.dataset.w=hi;scale();
+  var h=Math.max(natural(hi),hi*R);  // balanced at the width it keeps, not the last one it tried
+  p.style.width=hi+'px';p.style.height=h+'px';p.style.minHeight='';
+  p.dataset.w=hi;p.dataset.h=h;
+  if(h>hi*R+1){
+    p.dataset.squeezed='';
+    console.warn('py-doc poster: the content is taller than the paper at any width, so it prints smaller, '+
+      'with margins at the sides. Use more columns, smaller pictures or fewer words.');
+  }else{delete p.dataset.squeezed;}
+  scale();
+}
+// Printed, the whole poster fits on the page: a poster taller than its paper is made smaller and centred.
+function toPaper(){
+  var w=+p.dataset.w,z=Math.min(PAPER/w,PAPER*R/(+p.dataset.h));
+  p.style.zoom=z;p.style.marginLeft=(PAPER-w*z)/2/z+'px';
 }
 window.addEventListener('resize',scale);
-window.addEventListener('beforeprint',function(){p.style.zoom=PAPER/(+p.dataset.w);});
-window.addEventListener('afterprint',scale);
+window.addEventListener('beforeprint',toPaper);
+window.addEventListener('afterprint',function(){p.style.marginLeft='';scale();});
 window.addEventListener('load',fit);
 if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit);}
 fit();
