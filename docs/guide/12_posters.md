@@ -319,7 +319,7 @@ SN-100-0042
 
 ## Proportions and printing
 
-A portrait poster has the proportions of its paper, such as 594 by 841 mm for A1. A landscape poster has those of the paper turned, so it prints on exactly one page. A script in the page finds the narrowest layout, no narrower than `width`, at which all the content fits, then scales the poster to the browser window. Adding or removing content needs no change of size. When a poster has little content there is space above the footer: lower `width` to make everything larger.
+A portrait poster has the proportions of its paper, such as 594 by 841 mm for A1. A landscape poster has those of the paper turned, so it prints on exactly one page. A script in the page finds the narrowest layout, no narrower than `width`, at which all the content fits, then scales the poster to the browser window. Adding or removing content needs no change of size. Pictures as wide as their column grow with the page, so a poster with several large ones may fit at no width. It is then taller than its paper, and prints smaller and centred, with margins at the sides. The page says so in the browser's console. When a poster has little content there is space above the footer: lower `width` to make everything larger.
 
 To print from a browser, use the print dialogue of Chrome with no margins and background graphics on. The page size and its orientation come from `paper` and `orientation`, and the poster fills exactly one page. Text, charts, QR codes, shapes and diagrams stay vector, apart from PNG diagrams and pictures.
 

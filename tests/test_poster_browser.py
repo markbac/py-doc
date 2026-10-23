@@ -130,3 +130,26 @@ def test_the_poster_fits_its_paper_and_scales_to_the_window(browser, tmp_path):
     assert page.evaluate("() => +getComputedStyle(document.querySelector('.poster')).zoom") == pytest.approx(
         1400 / width, rel=0.01
     )
+
+
+def test_a_poster_taller_than_its_paper_at_any_width_prints_whole_on_one_page(browser, tmp_path):
+    # A picture as wide as its column grows with the page, so no width makes it fit the paper.
+    (tmp_path / "tall.svg").write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="4000" height="12000"><rect width="4000" height="12000" fill="#ccc"/></svg>',
+        encoding="utf-8",
+    )
+    page = open_poster(browser, tmp_path, "## A\n\n![Tall](tall.svg)\n\n" + section("B", 1))
+    width, height, overflow, squeezed = page.evaluate(
+        "() => { const p = document.querySelector('.poster'); "
+        "return [+p.dataset.w, +p.style.height.slice(0, -2), p.scrollHeight - p.clientHeight, 'squeezed' in p.dataset]; }"
+    )
+    assert squeezed and height > width * 1.4141, "taller than the paper"
+    assert overflow <= 1, "the poster holds all of its content"
+    page.emulate_media(media="print")
+    page.evaluate("() => window.dispatchEvent(new Event('beforeprint'))")
+    zoom, margin = page.evaluate(
+        "() => { const p = document.querySelector('.poster'); return [+getComputedStyle(p).zoom, parseFloat(p.style.marginLeft)]; }"
+    )
+    paper = 297 / 25.4 * 96  # A3 portrait, in CSS pixels
+    assert height * zoom <= paper * 1.4141 + 1, "it prints on one page"
+    assert margin * zoom == pytest.approx((paper - width * zoom) / 2, abs=1), "centred on the page"

@@ -370,6 +370,7 @@ The page always has the shape of its paper. A script in it finds the narrowest l
 | One column much longer than the others | One section is taller than the rest. Mark it `{.flow}`, make it `{.wide}`, split it in two, or choose the columns with `split:` |
 | A diagram with tiny text | Simplify it, or put it in a `{.wide}` section |
 | A wide table squeezed into a column | Make its section `{.wide}`, or cut columns |
+| Margins at the sides of the printed page | The content is taller than the paper at every width, usually because of large pictures. Add `columns:`, use fewer or smaller pictures, or cut words |
 
 `orientation: landscape` turns the page and uses three columns. `paper:` sets the paper size for printing, from `a0` to `a4`, and does not change the layout.
 
