@@ -222,6 +222,8 @@ posters:
   reliability:
     source: poster/reliability.md  # the print theme, three columns on A0, and a version from Git
     conditions: {internal: true}   # over the front matter's false: with the costs and customer names
+  space:
+    source: poster/space.md        # orbits, telescopes, spacetime, energy levels, Feynman diagrams, elements
   plots:
     source: poster/plots.md        # every plot preset: Pareto, control chart, distributions, curves, hierarchies
   shapes:

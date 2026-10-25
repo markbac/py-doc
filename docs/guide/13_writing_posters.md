@@ -153,6 +153,12 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | Structure, sequence or architecture | A diagram fence | A Mermaid sequence diagram |
 | A warning or a tip | A callout | Do not update below 2.4 V |
 | A lookup | A table | Error codes and their fixes |
+| Orbits and transfers | `orbits` | Earth to Mars |
+| How a telescope or interferometer folds light | `optics`, `interferometer` | A Cassegrain, LIGO |
+| Light cones, gravity wells, a black hole | `spacetime` | Cause and effect, the depth of a neutron star |
+| Atomic transitions | `energy-levels` | The Balmer lines of hydrogen |
+| Particle interactions | `feynman`, `standard-model` | Beta decay, the particles |
+| Elements and isotopes | `elements`, `nuclide-chart` | What stars make, the light nuclides |
 | Proportions that narrow or widen | `pyramid`, `cone`, `funnel` | The test pyramid, a filtering funnel |
 | Layers in order | `stack` | A protocol stack |
 | Layers that wrap a core | `target`, `cutaway` | Clean architecture, the inside of the Sun |
