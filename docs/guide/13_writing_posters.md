@@ -138,6 +138,8 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | Dates and milestones | `timeline` | Pilot, release, retirement |
 | Numbers to compare | `chart` | Messages a day before and after |
 | A screen the reader will see | `lcd` | The display after joining |
+| A formula the section is about | `equation` | The Schwarzschild radius, with its symbols |
+| Commands and what they print | `terminal` | `git status` and its output |
 | Structure, sequence or architecture | A diagram fence | A Mermaid sequence diagram |
 | A warning or a tip | A callout | Do not update below 2.4 V |
 | A lookup | A table | Error codes and their fixes |
@@ -285,6 +287,26 @@ Year 5 | 2.62
 ````
 
 [Posters](12_posters.md#diagrams-and-charts) lists every option.
+
+### Equations and terminals
+
+````markdown
+```equation
+title: Schwarzschild radius
+R_s = \frac{2GM}{c^2}
+R_s | Event horizon radius | m
+M   | Mass of the body | kg
+```
+
+```terminal title="git"
+$ git status -sb
+## main
+ M src/main.c
+-- One file changed, not staged
+```
+````
+
+An `equation` card shows one formula large, with a legend of its symbols. Write any formula in a sentence as `$...$` instead: see [Maths](12_posters.md#maths). A `terminal` is a window of commands and their output. Keep `lcd` for the screen of a device, where it looks like one.
 
 ### Diagrams
 

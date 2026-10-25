@@ -172,6 +172,29 @@ section h2 span{color:var(--highlight);font-weight:600}
 .lcd{min-width:0}
 .lcd .scr{background:var(--lcd);border:3px solid var(--lcd-border);border-radius:4px;padding:8px 10px;font-family:var(--font-mono);font-size:14.5px;line-height:1.4;color:var(--lcd-text);font-weight:600;white-space:pre}
 .lcd .cap{font-size:13px;line-height:1.3;color:var(--muted);margin-top:6px}
+math{font-size:1.06em}
+.math.display{display:block;margin:6px 0 10px;text-align:center}
+.math-error{color:var(--bad)}
+.eqs{display:grid;gap:12px;margin:0 0 10px}
+.eq{min-width:0;background:var(--surface);border:1px solid var(--border);border-top:4px solid var(--accent);padding:10px 14px}
+.eq .ch{font-size:15px;font-weight:700;color:var(--strong)}
+.eq .f{font-size:22px;margin:8px 0 10px;text-align:center}
+.body .eq table{font-size:13px;margin:0;background:none}
+.body .eq td{padding:3px 8px;border:0;border-top:1px solid var(--border);vertical-align:top}
+.body .eq td:first-child{width:1%;white-space:nowrap;text-align:center}
+.eq .notes{font-size:13px;line-height:1.35;color:var(--muted);margin-top:6px}
+.terms{display:grid;gap:10px;margin:0 0 10px}
+.term{min-width:0}
+.term .win{background:var(--terminal);color:var(--terminal-text);border:1px solid var(--terminal-border);border-radius:6px;overflow:hidden;font-family:var(--font-mono);font-size:14px;line-height:1.45}
+.term .bar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--terminal-border)}
+.term .bar i{width:10px;height:10px;border-radius:50%;background:#ff5f57}
+.term .bar i+i{background:#febc2e}
+.term .bar i+i+i{background:#28c840}
+.term .bar span{margin-left:8px;font-size:12.5px;opacity:.8}
+.term .scr{padding:8px 12px;white-space:pre;overflow:hidden}
+.term .p{color:var(--terminal-prompt);font-weight:700;margin-right:.6em}
+.term .cmt{opacity:.6}
+.term .cap{font-size:13px;line-height:1.3;color:var(--muted);margin-top:6px}
 .banner{background:var(--c,var(--secondary));color:var(--on-secondary);padding:14px 28px;font-size:22px;line-height:1.35;text-align:center;font-weight:600}
 .blocks{display:flex;gap:20px}
 .block{flex:1;border-left:5px solid var(--c,var(--accent));padding:2px 0 2px 14px}

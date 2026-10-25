@@ -24,7 +24,7 @@ from markdown_it import MarkdownIt
 
 from py_doc.diagrams import BY_FENCE, DiagramError
 from py_doc.diagrams.render import draw_cached, with_mermaid_config
-from py_doc import poster_barcode, poster_qr
+from py_doc import poster_barcode, poster_math, poster_qr
 from py_doc.poster_svg import Linear, extent, number
 from py_doc.errors import ConversionError, ToolFailed
 from py_doc.poster_themes import Theme
@@ -36,6 +36,7 @@ _validate_link = MD.validateLink
 # markdown-it allows only GIF, PNG, JPEG and WebP data addresses. An SVG picture is embedded as one too, and
 # shown in an <img>, where it cannot run scripts.
 MD.validateLink = lambda url: url.strip().lower().startswith("data:image/svg+xml;") or _validate_link(url)
+poster_math.enable(MD)  # $...$ and $$...$$, as MathML
 CHART_KINDS = ("column", "bar", "line")
 SERIES_COLOURS = ("secondary", "accent", "primary", "good", "bad", "muted")
 
@@ -759,6 +760,95 @@ def highlight_html(code, opts, ctx):
         out += f'<div class="hl" style="border-color:{colour}"><b style="color:{colour}">{inline(value)}</b><span>{inline(label)}</span>{note}</div>'
     cols = _whole(opts, "cols", len(rows), ctx)
     return f'<div class="highlights" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
+
+
+@block(
+    "equation",
+    "Cards split by --- lines: title:, the LaTeX formula, then symbol | meaning | unit lines and notes; cols=",
+    "title: Schwarzschild radius\nR_s = \\frac{2GM}{c^2}\nR_s | Event horizon radius | m\nM | Mass of the body | kg",
+)
+def equation_html(code, opts, ctx):
+    """Featured formulas, each in a card: a ``title:``, the formula (LaTeX, on one line or more), then
+    ``symbol | meaning | unit`` lines as its legend, and any lines after the legend as notes."""
+    cards = [card for card in re.split(r"(?m)^\s*---\s*$", code) if card.strip()]
+    if not cards:
+        raise PosterError(f"{ctx.where}: an equation block needs a formula")
+    out = ""
+    for card in cards:
+        title, formula, legend, notes = "", [], [], []
+        for line in (line.strip() for line in card.splitlines() if line.strip()):
+            if not formula and line.lower().startswith("title:"):
+                title = line[6:].strip()
+            elif formula and not notes and "|" in line:  # the legend comes after the formula
+                legend.append([cell.strip() for cell in line.split("|")])
+            elif legend:
+                notes.append(line)
+            else:
+                formula.append(line)
+        if not formula:
+            raise PosterError(f"{ctx.where}: the equation card '{title or card.strip()[:40]}' has no formula")
+        rows = "".join(
+            f"<tr><td>{poster_math.mathml(row[0])}</td>"
+            + "".join(f"<td>{inline(cell)}</td>" for cell in (row[1:] + ["", ""])[:2])
+            + "</tr>"
+            for row in legend
+        )
+        out += (
+            '<div class="eq">'
+            + (f'<div class="ch">{inline(title)}</div>' if title else "")
+            + f'<div class="f">{poster_math.mathml(" ".join(formula), True)}</div>'
+            + (f"<table>{rows}</table>" if rows else "")
+            + (f'<div class="notes">{inline(" ".join(notes))}</div>' if notes else "")
+            + "</div>"
+        )
+    cols = _whole(opts, "cols", min(len(cards), 3), ctx)
+    return f'<div class="eqs" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
+
+
+# A shell prompt, then a space: $, >, PS>, PS C:\path>, or user@host:path$ (or #)
+PROMPT = re.compile(r"^(\$|>|PS>|PS [^>]*>|[\w.-]+@[\w.-]+:[^$#\s]*[$#])(?= )")
+
+
+@block(
+    "terminal",
+    "Screens split by blank lines; prompt lines ($ , > , PS> ) stand out, # lines are dimmed, -- is the caption; title=, cols=",
+    "$ git status -sb\n## main\n M src/main.c\n-- One file modified",
+)
+def terminal_html(code, opts, ctx):
+    """A terminal window for each screen of lines (split by blank lines, as ``lcd``), in ``cols=`` columns.
+    The command after a prompt is bold, ``#`` comment lines are dimmed, a line starting ``--`` is the caption,
+    and ``title=`` goes in the window's title bar."""
+    screens = [[]]
+    for line in code.splitlines():
+        if line.strip():
+            screens[-1].append(line)
+        elif screens[-1]:
+            screens.append([])
+    screens = [screen for screen in screens if screen]
+    if not screens:
+        raise PosterError(f"{ctx.where}: a terminal block needs at least one line")
+    title = f"<span>{esc(opts['title'])}</span>" if opts.get("title") else ""
+    bar = f'<div class="bar"><i></i><i></i><i></i>{title}</div>'
+    out = ""
+    for screen in screens:
+        shown = ""
+        for line in (line for line in screen if not line.startswith("--")):
+            prompt = PROMPT.match(line)
+            if prompt:
+                command = esc(line[prompt.end() :].lstrip())
+                shown += f'<div class="cmd"><span class="p">{esc(prompt[1])}</span><b>{command}</b></div>'
+            elif line.lstrip().startswith("#"):
+                shown += f'<div class="cmt">{esc(line)}</div>'
+            else:
+                shown += f"<div>{esc(line)}</div>"
+        cap = " ".join(line[2:].strip() for line in screen if line.startswith("--"))
+        out += (
+            f'<div class="term"><div class="win">{bar}<div class="scr">{shown}</div></div>'
+            + (f'<div class="cap">{inline(cap)}</div>' if cap else "")
+            + "</div>"
+        )
+    cols = _whole(opts, "cols", min(len(screens), 2), ctx)
+    return f'<div class="terms" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
 
 
 def _figure_kind(part):

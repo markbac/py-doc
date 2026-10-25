@@ -171,12 +171,19 @@ Section bodies are ordinary Markdown, with py-doc's own additions as in the [Wri
 | `[[INCLUDE: file.md]]`, `[[INCLUDE-CODE: file.py]]` | The file, or the file as a code block |
 | `[[IF: name]]`, `[[NOT: name]]`, `[[ENDIF]]` | Kept or left out by the `conditions` |
 | `{{name}}` | The value of a variable |
+| `$E = mc^2$`, `$$...$$` | Maths in LaTeX, shown as MathML: inline, or displayed on a line of its own. See [Maths](#maths) |
 | `[[CAPTION:Figure]] text`, `[[CAPTION:Table]] text` | A numbered caption, "Figure 1:" or "Table 1:" as in Word, counted down the poster and through its includes. A paragraph that starts `Fig.` is a caption as written, with no number |
 | `> [!NOTE]`, `> **Warning:** text` | A callout box, in the colour of its kind: note, tip, important, warning or caution |
 | `> text` | A plain callout, in the `callout` colour |
 | A fenced code block | Code. A language name that is a diagram or a block below is drawn instead |
 | `![alt](file.svg)` | The picture, embedded |
 | `[[LANDSCAPE]]`, `[[PORTRAIT]]`, `[[PAGEBREAK]]`, `[[STYLE:Name]]` | Left out (the text after a `[[STYLE:]]` is kept). A poster is one page |
+
+### Maths
+
+Maths is written in LaTeX between dollar signs, as in a document: `$E = mc^2$` in a sentence, and `$$...$$` on lines of its own for a displayed formula. It works in paragraphs, tables, callouts, captions and the text of blocks such as `cards` and `steps`. py-doc turns it into MathML when it builds the page, so the poster needs no script and no maths font, and a PDF keeps the formulas sharp.
+
+A dollar sign followed by a space or a digit is not maths, so prices such as $5 stay as they are. A formula py-doc cannot read is shown as its LaTeX, in the `bad` colour, with a warning, and the poster is still written. For a formula that is the point of a section, use an [`equation`](#poster-blocks) card.
 
 ## Diagrams and charts
 
@@ -220,6 +227,8 @@ A block colour is one of three things. It can be a name from the theme's palette
 |---|---|---|
 | `cards` | `Heading \| Text \| colour`, the colour only for the `top` style | `cols=2`, `style=` `title` (default), `label`, `top` or `plain` |
 | `lcd` | Screens separated by blank lines. A line starting `--` is the caption | `cols=` (default: up to 3). Six screens with `cols=2` are 2 columns and 3 rows |
+| `equation` | Cards separated by `---` lines. Each has an optional `title:`, the formula in LaTeX (one line or more), then `symbol \| meaning \| unit` lines as its legend, then notes | `cols=` (default: up to 3) |
+| `terminal` | Screens separated by blank lines. A line after a prompt (`$ `, `> `, `PS> `, `PS C:\path> `, `user@host:~$ `) is a command, a line starting `#` is dimmed, and a line starting `--` is the caption | `title=` (in the window's title bar), `cols=` (default: up to 2) |
 | `segments` | `weight \| label \| detail \| colour`, and an optional `title:` and `height:` | |
 | `flow` | `[Filled\|colour]` or `[Outlined]` boxes, joined by `->` or `-label->` arrows | |
 | `lanes` | `Label \| *filled cell \| dashed cell` | |
@@ -448,4 +457,5 @@ The subset names are the ones Google Fonts gives, such as `latin`, `latin-ext`, 
 | `note`, `tip`, `important`, `warning`, `caution` | The callouts of each kind |
 | `good`, `bad` | Trends that are good or bad news |
 | `lcd`, `lcd-text`, `lcd-border` | The display screen |
+| `terminal`, `terminal-text`, `terminal-prompt`, `terminal-border` | The terminal window: dark in `default` and `dark`, light in `print` |
 | `diagram-fill` | Mermaid boxes |
