@@ -19,7 +19,7 @@ title: Traceability
 | FR-080 to FR-086, QR-081 | `c4/` | `test_c4.py` |
 | FR-100 to FR-106 | `lint/`, `markdown/` | `test_lint.py`, `test_lint_cli.py`, `test_structure.py`, `test_vale.py`, `test_markdownlint.py`, `test_markdown_ast.py` |
 | FR-120 to FR-127, QR-082 | `site/`, `pandoc/resources/site.lua` | `test_site.py` |
-| FR-130 to FR-139, FR-150 to FR-160 | `poster.py`, `poster_blocks.py`, `poster_fonts.py`, `poster_settings.py`, `poster_themes.py`, `poster_cli.py`, `watch.py`, `config.py`, `app.py`, `lint/linter.py`, `diagrams/tools/poster_pdf.js` | `test_poster.py`, `test_poster_browser.py` |
+| FR-130 to FR-139, FR-150 to FR-160 | `poster.py`, `poster_blocks.py`, `poster_svg.py`, `poster_fonts.py`, `poster_settings.py`, `poster_themes.py`, `poster_cli.py`, `watch.py`, `config.py`, `app.py`, `lint/linter.py`, `diagrams/tools/poster_pdf.js` | `test_poster.py`, `test_poster_svg.py`, `test_poster_browser.py` |
 | FR-161 | `_cli.py`, `convert.py`, `watch.py`, `pandoc/engine.py`, `pandoc/resources/preview.css`, `pandoc/resources/slides-preview.lua` | `test_cli.py`, `test_slides_cli.py`, `test_convert.py`, `test_preview_cases.py` |
 | FR-162 | `editors/vscode/extension.js`, `editors/vscode/src/` | `editors/vscode/test/`, `test_preview_cases.py` |
 | FR-028 | `diagrams/render.py`, `config.py` | `test_diagrams.py` |
