@@ -59,7 +59,7 @@ py-doc c4 up architecture/workspace.dsl     # arrange the C4 views in Structuriz
 py-doc site build                           # site/build/index.html
 ```
 
-While writing, `py-doc docx guide.md --watch` (or `slides`, or `poster`) builds on every save and keeps a live preview open in the browser, with every diagram drawn. The [VS Code extension](editors/vscode/README.md) runs it for the open file and shows the preview beside the editor, and also previews py-doc Markdown instantly as you type.
+While writing, `py-doc docx guide.md --watch` (or `slides`, or `poster`) builds on every save and keeps a live preview open in the browser, with every diagram drawn. The [VS Code extension](editors/vscode/README.md) runs it for the open file and shows the preview beside the editor.
 
 ## Documentation
 
@@ -104,7 +104,7 @@ src/
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/
 └── pydoclint/
-editors/vscode/           # VS Code extension: instant in-editor preview, and the --watch live preview beside the editor
+editors/vscode/           # VS Code extension: the --watch live preview beside the editor
 docs/                     # py-doc's own user guide, requirements and architecture
 examples/                 # a project that uses every feature
 tests/

@@ -1,8 +1,8 @@
 {
   "name": "vscode-py-doc-preview",
-  "displayName": "py-doc Markdown Preview",
-  "description": "Preview py-doc Markdown in VS Code: numbered captions, Word-style callouts, slide decks, and posters.",
-  "version": "1.0.0",
+  "displayName": "py-doc Live Preview",
+  "description": "Live preview of py-doc documents, slide decks and posters in VS Code: py-doc's own output, rebuilt on every save.",
+  "version": "2.0.0",
   "publisher": "py-doc",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -28,10 +28,9 @@
     "markdown",
     "preview",
     "docx",
-    "pandoc",
-    "captions",
-    "callouts",
-    "posters"
+    "slides",
+    "posters",
+    "live preview"
   ],
   "activationEvents": [
     "onLanguage:markdown"
@@ -40,7 +39,7 @@
     "commands": [
       {
         "command": "pydoc.openLiveWatch",
-        "title": "Open Live Preview (HTML Twin Watch Server)",
+        "title": "Open Live Preview",
         "category": "py-doc",
         "icon": "$(eye)"
       },
@@ -89,23 +88,23 @@
           "default": "py-doc",
           "scope": "machine-overridable",
           "description": "The py-doc program the live preview runs, such as the py-doc of a virtual environment (.venv/Scripts/py-doc.exe or .venv/bin/py-doc)."
+        },
+        "pydoc.watch.followActiveEditor": {
+          "type": "boolean",
+          "default": true,
+          "description": "Move a running live preview to another Markdown file when it becomes the active editor."
         }
       }
-    },
-    "markdown.markdownItPlugins": true,
-    "markdown.previewStyles": [
-      "./styles/py-doc-preview.css"
-    ]
+    }
   },
   "scripts": {
-    "test": "node --test test/test.js test/cases.test.js test/watch.test.js",
+    "test": "node --test test/detect.test.js test/cases.test.js test/watch.test.js",
     "lint": "eslint ."
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
     "eslint": "^9.39.1",
-    "globals": "^16.5.0",
-    "markdown-it": "^14.1.0"
+    "globals": "^16.5.0"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"

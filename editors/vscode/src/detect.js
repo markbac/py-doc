@@ -10,7 +10,7 @@ const SLIDE_DIVS = /^:{3,4}\s*\{?\.?(columns|column|notes|incremental)\}?\s*$/;
 /**
  * Which py-doc command a Markdown file is for: 'poster', 'slides' or 'docx'.
  * Decided from the front matter, then from blocks only a deck has (columns, speaker notes, incremental lists).
- * The instant preview and the live watch button both use this, so they always agree.
+ * The live preview runs this command when the file does not name one.
  */
 function detectFormat(meta, body) {
   meta = meta || {};
