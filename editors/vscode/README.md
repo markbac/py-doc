@@ -2,7 +2,7 @@
 
 Previews documents, slide decks and posters written for [markbac/py-doc](https://github.com/markbac/py-doc) beside the editor, as py-doc builds them.
 
-The preview runs `py-doc docx`, `py-doc slides` or `py-doc poster` with `--watch` on the open file and shows the page py-doc serves. Because it is py-doc's own output, every block, diagram, theme and caption looks as it will in the build, and a new py-doc feature is in the preview as soon as py-doc has it.
+The preview runs `py-doc docx`, `py-doc slides` or `py-doc poster` with `--watch` on the open file and shows the page py-doc serves. It is py-doc's own output, so every block, diagram, theme and caption looks as it will in the build. A new py-doc feature is in the preview as soon as py-doc has it.
 
 ---
 
