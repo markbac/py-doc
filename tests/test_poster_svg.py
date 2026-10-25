@@ -134,7 +134,8 @@ def test_a_single_node_tree():
 
 def test_every_native_block_is_registered_and_in_the_posters_chapter():
     chapter = (ROOT / "docs" / "guide" / "12_posters.md").read_text(encoding="utf-8")
-    documented = set(re.findall(r"^\| `([a-z0-9-]+)` \|", chapter, re.M))
+    first_cells = re.findall(r"^\| (`[^|]+`) \|", chapter, re.M)  # a row may name two blocks: `pyramid`, `cone`
+    documented = {name for cell in first_cells for name in re.findall(r"`([a-z0-9-]+)`", cell)}
     expected = {"cards", "lcd", "segments", "flow", "lanes", "figure", "timeline", "chart", "qr", "barcode"}
     expected |= {"steps", "gallery", "progress", "checklist", "compare", "people", "highlight"}
     assert expected <= set(BLOCKS)

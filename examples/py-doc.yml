@@ -222,6 +222,8 @@ posters:
   reliability:
     source: poster/reliability.md  # the print theme, three columns on A0, and a version from Git
     conditions: {internal: true}   # over the front matter's false: with the costs and customer names
+  shapes:
+    source: poster/shapes.md       # every shape block: pyramids, rings, cutaways, memory maps and more
   embedded:
     source: poster/embedded.md     # the protocol and embedded blocks: pins, bus captures, bytes and code
   scales:

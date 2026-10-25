@@ -152,6 +152,18 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | Structure, sequence or architecture | A diagram fence | A Mermaid sequence diagram |
 | A warning or a tip | A callout | Do not update below 2.4 V |
 | A lookup | A table | Error codes and their fixes |
+| Proportions that narrow or widen | `pyramid`, `cone`, `funnel` | The test pyramid, a filtering funnel |
+| Layers in order | `stack` | A protocol stack |
+| Layers that wrap a core | `target`, `cutaway` | Clean architecture, the inside of the Sun |
+| Bands of altitude or depth | `cutaway type=column` | The layers of the atmosphere |
+| Objects to scale | `sizes` | Telescope mirrors, planets |
+| What fills a container | `vessels` | Coffee drinks, battery layers |
+| Where things are in memory | `memory` | Flash and RAM of a controller |
+| A sequence and its groups | `tape` | Codons, bytes in frames |
+| A circular buffer | `ring` | A DMA buffer with its pointers |
+| Steps that come round again | `cycle` | The water cycle |
+| Two sides weighed | `balance` | Generation against demand |
+| The small part seen and the large part not | `iceberg` | What a product hides |
 | What each byte of a message means | `hex-dissect` | A CoAP header |
 | What each part of a string or command means | `syntax-anatomy` | An LwM2M address, an AT command |
 | Wrong code beside right code | `code-compare` | An unbounded copy and its fix |
