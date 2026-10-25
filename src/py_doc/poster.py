@@ -186,11 +186,11 @@ math{font-size:1.06em}
 .terms{display:grid;gap:10px;margin:0 0 10px}
 .term{min-width:0}
 .term .win{background:var(--terminal);color:var(--terminal-text);border:1px solid var(--terminal-border);border-radius:6px;overflow:hidden;font-family:var(--font-mono);font-size:14px;line-height:1.45}
-.term .bar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--terminal-border)}
-.term .bar i{width:10px;height:10px;border-radius:50%;background:#ff5f57}
-.term .bar i+i{background:#febc2e}
-.term .bar i+i+i{background:#28c840}
-.term .bar span{margin-left:8px;font-size:12.5px;opacity:.8}
+.term .tbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--terminal-border)}
+.term .tbar i{width:10px;height:10px;border-radius:50%;background:#ff5f57}
+.term .tbar i+i{background:#febc2e}
+.term .tbar i+i+i{background:#28c840}
+.term .tbar span{margin-left:8px;font-size:12.5px;opacity:.8;color:inherit}
 .term .scr{padding:8px 12px;white-space:pre;overflow:hidden}
 .term .p{color:var(--terminal-prompt);font-weight:700;margin-right:.6em}
 .term .cmt{opacity:.6}

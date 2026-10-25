@@ -54,6 +54,7 @@ class Renderer:
     needs_source_dir: bool = False
     environment: Callable[[str], dict[str, str]] | None = None  # from the container path of the source folder
     cacheable: Callable[[str], bool] = field(default=lambda text: True)
+    env: dict[str, str] = field(default_factory=dict)  # environment variables the tool needs
 
     def commands(self, job: Job) -> list[Command]:
         """The commands for ``job``. An SVG-only tool is followed by Inkscape when the document needs PNG."""

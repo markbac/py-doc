@@ -105,7 +105,7 @@ def test_a_terminal_shows_prompts_comments_output_and_its_caption():
     assert '<div class="cmd"><span class="p">$</span><b>git status -sb</b></div>' in out
     assert '<div class="cmt">## main</div>' in out  # a line starting with # is dimmed
     assert "<div> M src/main.c</div>" in out
-    assert '<div class="bar"><i></i><i></i><i></i><span>git</span></div>' in out
+    assert '<div class="tbar"><i></i><i></i><i></i><span>git</span></div>' in out
     assert '<div class="cap">One file modified</div>' in out
 
 

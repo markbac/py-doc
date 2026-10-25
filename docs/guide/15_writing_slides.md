@@ -113,6 +113,8 @@ flowchart LR
 ```
 ````
 
+The blocks of a poster work on a slide too, such as a `chart`, `cards`, `steps` or an `equation`. Each becomes a picture on its slide: see [Poster blocks in documents](03_writing.md#poster-blocks-in-documents).
+
 Draw diagrams in the Markdown, so they change with the design and match the documents. Keep a diagram on a slide simpler than one in a document: five to eight boxes, with labels the back row can read. A picture is `![What it shows](images/board.png)`, with alt text that says what it shows.
 
 ## Build a list one point at a time

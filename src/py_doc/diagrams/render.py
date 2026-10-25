@@ -85,11 +85,11 @@ def _draw(runtime: Runtime, renderer: Renderer, job_text: str, kind: str, landsc
         source.write_text(job_text, encoding="utf-8", newline="\n")
         job = Job(source, work / f"diagram.{kind}", kind, landscape, source_dir if renderer.needs_source_dir else None)
         mounts = [Mount(work, writable=True), Mount(TOOLS)]
-        env = {}
+        env = dict(renderer.env)
         if renderer.needs_source_dir:
             mounts.append(Mount(source_dir))
             if renderer.environment:
-                env = renderer.environment(runtime.container_path(source_dir))
+                env.update(renderer.environment(runtime.container_path(source_dir)))
         for command in renderer.commands(job):
             runtime.run(command, mounts=mounts, workdir=work, env=env, timeout=TIMEOUT)
         picture = work / f"diagram.{kind}"
@@ -171,7 +171,7 @@ def _alt_text(block: Block, renderer: Renderer) -> str:
     text = block.options.get("caption") or block.options.get("title")
     if not text:
         found = _TITLE.search(block.body)
-        text = found["title"] if found else f"{renderer.name} diagram"
+        text = found["title"] if found else f"{block.fence if block.fence not in BY_FENCE else renderer.name} diagram"
     return re.sub(r"[\[\]\\]", "", text).strip()
 
 
@@ -188,13 +188,19 @@ def render_parts(
     keep_going: bool = False,
     events: list[dict] | None = None,
     mermaid: dict | None = None,
+    theme=None,
 ) -> Rendered:
     """Replace the diagram fences of each ``(file, text)`` part by pictures, and join the parts.
 
     HTML gets SVG where the tool can write it, everything else PNG. A failure stops the build with the
     file and line of the diagram, or with every failure when ``keep_going`` is set. ``mermaid`` is the
-    Mermaid configuration of every Mermaid diagram (``diagrams.mermaid`` of py-doc.yml).
+    Mermaid configuration of every Mermaid diagram (``diagrams.mermaid`` of py-doc.yml). Poster blocks
+    (``cards``, ``chart``...) are drawn as pictures too, in ``theme`` (``diagrams.theme``; ``print`` when None).
     """
+    from . import blocks as poster_blocks
+
+    natives = poster_blocks.names()
+    block_theme = None
     pictures: dict[str, Path] = {}
     failures: list[str] = []
     landscape = False
@@ -207,17 +213,29 @@ def render_parts(
         offsets = [0]
         for line in lines:
             offsets.append(offsets[-1] + len(line) + 1)
-        for block in find_blocks(text):
+        for block in find_blocks(text, natives):
             replaced += lines[cursor : block.start]
             cursor = block.end + 1
             for position, name in orientation:
                 if position < offsets[block.start]:
                     landscape = name == "LANDSCAPE"
-            renderer = BY_FENCE[block.fence]
-            body = with_mermaid_config(block.body, mermaid) if renderer.name == "mermaid" else block.body
+            started = time.monotonic()
+            if block.fence in BY_FENCE:
+                renderer = BY_FENCE[block.fence]
+                body = with_mermaid_config(block.body, mermaid) if renderer.name == "mermaid" else block.body
+            else:  # a poster block, drawn here first, then made a picture in the container
+                if block_theme is None:
+                    block_theme = theme if theme is not None else poster_blocks.theme_for(None, file.parent)
+                try:
+                    renderer, body = poster_blocks.prepare(
+                        block.fence, block.info, block.body, file.parent, block_theme, landscape
+                    )
+                except poster_blocks.BlockError as exc:
+                    raise DiagramError(f"{file}:{block.line}: {exc}") from None
             kind = "svg" if fmt == "html" and "svg" in renderer.kinds else "png"
             event: dict = {"type": renderer.name, "file": str(file), "line": block.line, "kind": kind}
-            started = time.monotonic()
+            if block.fence not in BY_FENCE:
+                event["type"] = block.fence
             try:
                 picture = draw_cached(runtime(), renderer, body, kind, landscape, file.parent, event)
                 event.update(status="ok", seconds=round(time.monotonic() - started, 3))

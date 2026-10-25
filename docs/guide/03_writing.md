@@ -27,6 +27,34 @@ py-doc itself never drops a word or a sentence. Anything pandoc cannot represent
 
 A companion VS Code extension in [`editors/vscode/`](../../editors/vscode) previews py-doc Markdown as you write. Click the eye button in the editor title bar. It runs `py-doc docx`, `py-doc slides` or `py-doc poster` with `--watch` on the open file, and shows the page it serves beside the editor. It rebuilds on every save, with every diagram drawn, so the preview is py-doc's own output. A save that does not build shows the error as a warning, and the preview moves to another Markdown file when you switch to it. VS Code's built-in Markdown preview shows plain Markdown only. The extension chooses the command from the file. A poster setting such as `paper` or `byline` in the front matter means a poster. `split_level` or speaker notes mean a deck, and anything else is a Word document. See [live preview](02_projects.md#live-preview) and the extension's [README](../../editors/vscode/README.md).
 
+## Poster blocks in documents
+
+The blocks of a poster work in a Word document, a PDF, a deck and a site page, written the same way:
+
+````markdown
+[[CAPTION:Figure]] Messages a day
+```chart type=column unit=" msg"
+series: 2.0, 2.1
+Office | 1440 | 610
+Warehouse | 1440 | 980
+```
+
+```cards cols=3 style=top
+Sensor | Temperature and humidity on I2C | blue
+Controller | Sleeps at 2 µA | navy
+Radio | Sends one message, then sleeps | green
+```
+````
+
+Each block becomes a picture, as a diagram does, with its caption, `width=` and alt text. A block that is all SVG, such as a `chart`, a `qr` or a `barcode`, stays SVG in HTML and a site, and is PNG in Word, PowerPoint and PDF. A block made of boxes and text, such as `cards`, `steps` or `equation`, is laid out at the width of the page's text and becomes a PNG. Pictures are cached as diagrams are, and drawing them needs the tool container.
+
+The blocks are drawn in the `print` theme, so they suit a white page. `diagrams.theme` in `py-doc.yml` chooses another, a built-in name or a theme file:
+
+```yaml
+diagrams:
+  theme: brand/poster-theme.yml   # the colours and fonts of the company's posters
+```
+
 ## Front matter
 
 The YAML between `---` lines at the top of the first source of a document gives its properties: `title`, `subtitle`, `author`, `date`, `version`, `status`, `document_number`, `description`, `classification`, `subject`, `keywords`, `category`, `company` and `toc_depth`. A value in `py-doc.yml` wins over the front matter. Every document of py-doc's own repository has front matter, so its properties travel with the file.
@@ -130,4 +158,5 @@ Alice -> Bob : hello
     ```
 
     Give settings in front matter, not in a `%%{init: ...}%%` line. Mermaid ignores the whole init line when a value in it has a single quote, such as a font list.
+- **Poster blocks** (`cards`, `chart`, `steps`, `equation`, `terminal` and the rest of [the posters chapter](12_posters.md#poster-blocks)) work in documents, decks and sites too. See [Poster blocks in documents](#poster-blocks-in-documents).
 - **Pictures** in Markdown are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown. `![](images/a.png){width=50%}` makes a picture that share of the text width, in Word too, where py-doc works it out from the template's page and margins.

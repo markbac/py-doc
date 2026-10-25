@@ -74,12 +74,21 @@ def build_document(
         output = render_output(
             fmt, joined, metadata, config.output_path(doc, fmt, metadata.version), doc.id,
             sorted({s.file.parent for s in sources if s.include}), template, settings, runtime, keep_going, report,
-            config.mermaid,
+            config.mermaid, blocks_theme(config),
         )  # fmt: skip
         written.append(output)
         if report is not None:
             report.output(doc.id, fmt, output)
     return written
+
+
+def blocks_theme(config):
+    """The theme of the poster blocks a document draws: ``diagrams.theme``, else None (``print``)."""
+    if config.blocks_theme is None:
+        return None
+    from .diagrams.blocks import theme_for
+
+    return theme_for(config.blocks_theme, config.root)
 
 
 def render_output(
@@ -95,6 +104,7 @@ def render_output(
     keep_going=False,
     report=None,
     mermaid=None,
+    theme=None,
 ) -> Path:
     """Draw the diagrams of ``joined`` and have pandoc write ``output``. ``name`` is used in messages."""
     if runtime is None:
@@ -109,7 +119,7 @@ def render_output(
             report.template(name, checked)
     events: list[dict] = []
     try:
-        drawn = render_parts(joined.parts, fmt, runtime, keep_going, events, mermaid)
+        drawn = render_parts(joined.parts, fmt, runtime, keep_going, events, mermaid, theme)
     finally:
         if report is not None:
             for event in events:

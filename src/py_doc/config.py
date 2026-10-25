@@ -212,6 +212,7 @@ class ProjectConfig:
     poster: dict = field(default_factory=dict)  # poster: the settings of every poster, paths resolved
     posters: dict[str, PosterConfig] = field(default_factory=dict)
     mermaid: dict = field(default_factory=dict)  # diagrams.mermaid: the Mermaid configuration of every Mermaid diagram
+    blocks_theme: str | Path | None = None  # diagrams.theme: the theme poster blocks are drawn in, in documents
     reserved: dict[str, Any] = field(default_factory=dict)
 
     def output_path(self, document: DocumentConfig, fmt: str, version: str | None = None) -> Path:
@@ -358,8 +359,11 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
     _only(c4, ("cli", "image", "port"), "c4")
     config.c4 = C4Settings(_typed(c4, "cli", str, "c4"), _typed(c4, "image", str, "c4"), _typed(c4, "port", int, "c4"))
     diagrams = _mapping(top.get("diagrams") or {}, "diagrams")
-    _only(diagrams, ("mermaid",), "diagrams")
+    _only(diagrams, ("mermaid", "theme"), "diagrams")
     config.mermaid = _mapping(diagrams.get("mermaid") or {}, "diagrams.mermaid")
+    if diagrams.get("theme"):
+        theme = _typed(diagrams, "theme", str, "diagrams")
+        config.blocks_theme = _path(root, theme, "diagrams.theme") if theme.endswith((".yml", ".yaml")) else theme
     config.runtime = _parse_runtime(_mapping(top.get("runtime", {}), "runtime"))
     reports = _mapping(top.get("reports", {}), "reports")
     _only(reports, ("path",), "reports")

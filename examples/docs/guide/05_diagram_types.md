@@ -235,3 +235,21 @@ treeView-beta
             main.c
         README.md
 ```
+
+## Poster blocks
+
+The blocks of a poster work in a document too. Each becomes a picture.
+
+[[CAPTION:Figure]] Messages a day, drawn as a poster chart
+```chart type=column unit=" msg"
+series: 2.0, 2.1
+Office | 1440 | 610
+Warehouse | 1440 | 980
+```
+
+[[CAPTION:Figure]] The parts of the node, as poster cards
+```cards cols=3 style=top
+Sensor | Temperature and humidity on I2C | blue
+Controller | Sleeps at 2 µA | navy
+Radio | Sends one message, then sleeps | green
+```

@@ -73,9 +73,20 @@ def mermaid_init(theme):
 
 
 def series_colours(theme):
-    """The colours of a chart's series, in order: the theme's series roles, then its palette."""
+    """The colours of a chart's series, in order: the theme's series roles, then its palette. A colour too pale
+    to see on white is left out, such as the light box colour the print theme has as ``secondary``."""
     roles = [theme.colours[name] for name in SERIES_COLOURS[:-1]]  # not muted: a series should not look disabled
-    return list(dict.fromkeys(roles + list(theme.palette.values())))
+    return [colour for colour in dict.fromkeys(roles + list(theme.palette.values())) if not _pale(colour)]
+
+
+def _pale(colour):
+    """Whether a hex colour is too light to read as a mark on white (relative luminance above 0.7)."""
+    m = re.fullmatch(r"#([0-9a-fA-F]{6})(?:[0-9a-fA-F]{2})?", colour.strip())
+    if not m:
+        return False
+    channels = [int(m[1][i : i + 2], 16) / 255 for i in (0, 2, 4)]
+    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2] > 0.7
 
 
 def vega_config(theme):
@@ -493,8 +504,12 @@ def chart_html(code, opts, ctx):
     if not rows:
         raise PosterError(f"{ctx.where}: a chart needs at least one 'label | value' line")
     count = max(len(values) for _, values in rows)
-    names = opts.get("colours", "").split(",") if opts.get("colours") else SERIES_COLOURS
-    colours = [ctx.theme.colour(names[i % len(names)].strip()) for i in range(count)]
+    if opts.get("colours"):
+        names = opts["colours"].split(",")
+        colours = [ctx.theme.colour(names[i % len(names)].strip()) for i in range(count)]
+    else:
+        scale = series_colours(ctx.theme)
+        colours = [scale[i % len(scale)] for i in range(count)]
     unit = opts.get("unit", "")
     dashed = {name.strip().lower() for name in opts.get("dashed", "").split(",") if name.strip()}
     dashed = {
@@ -942,7 +957,7 @@ def terminal_html(code, opts, ctx):
     if not screens:
         raise PosterError(f"{ctx.where}: a terminal block needs at least one line")
     title = f"<span>{esc(opts['title'])}</span>" if opts.get("title") else ""
-    bar = f'<div class="bar"><i></i><i></i><i></i>{title}</div>'
+    bar = f'<div class="tbar"><i></i><i></i><i></i>{title}</div>'
     out = ""
     for screen in screens:
         shown = ""
