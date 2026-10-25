@@ -152,6 +152,15 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | Structure, sequence or architecture | A diagram fence | A Mermaid sequence diagram |
 | A warning or a tip | A callout | Do not update below 2.4 V |
 | A lookup | A table | Error codes and their fixes |
+| What each byte of a message means | `hex-dissect` | A CoAP header |
+| What each part of a string or command means | `syntax-anatomy` | An LwM2M address, an AT command |
+| Wrong code beside right code | `code-compare` | An unbounded copy and its fix |
+| The pins of a chip or connector | `pinout` | A controller, a debug header |
+| What the bench shows | `instrument` | A scope trace, a bus capture, a current reading |
+| For and against | `proscons` | Why NB-IoT for this node |
+| Terms the reader may not know | `glossary` | The acronyms of the poster |
+| Places on a picture | `annotated` | The parts of a board |
+| From the whole to a detail | `zoom-chain` | Room, bracket, node |
 | A link to more | `qr` | The full manual |
 
 The [Posters](12_posters.md) chapter lists every option of every block. The sections below show the common ones.
@@ -310,6 +319,19 @@ span: Emergency credit | A £10.00 pool | purple | 3
 ````
 
 A `threshold` keeps every word readable: a band is only as wide as its weight, so its words go under it, and the exact points go on pins above it. Give a band a weight that shows its share, not one that makes room for its words. Write "not to scale" in the title when the weights are not the true proportions.
+
+### Bytes, strings and code
+
+````markdown
+```hex-dissect
+bytes: 54 45 7a 31
+0 | Header | NON, token length 4 | navy
+1 | Code | 2.05 Content | blue
+2-3 | Message ID | 0x7a31 | green
+```
+````
+
+A `hex-dissect` and a `syntax-anatomy` replace the carets and arrows that a plain code block needs to say which part is which. Give each field a colour and keep the same colour for it across the poster. In a `code-compare`, put the wrong code first and number only the lines a reader must look at.
 
 ### Equations and terminals
 

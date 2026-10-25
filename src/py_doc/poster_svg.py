@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import html
 import math
+import re
 from dataclasses import dataclass, field
 
 # The average width of a character as a share of the font size. The poster's fonts are not measured here (the
@@ -290,3 +291,41 @@ def tidy(root: Node, gap: float = 1.0) -> tuple[float, int]:
     left = min(lo for lo, _ in contour.values())
     move(root, -left)
     return max(hi for _, hi in contour.values()) - left, max(contour)
+
+
+# ---------------------------------------------------------------------------
+# Sparklines: {spark 1,3,2,5} in a sentence or a table cell
+# ---------------------------------------------------------------------------
+
+SPARK = re.compile(r"\{spark\s+([-\d.,\s]+)\}")
+
+
+def sparkline(values, colour="currentColor", width=64, height=16):
+    """A small inline SVG trend line of ``values``, with a dot at the last one."""
+    if len(values) < 2:
+        return ""
+    low, high = min(values), max(values)
+    x_of = Linear(0, len(values) - 1, 1, width - 3)
+    y_of = Linear(low, high if high > low else low + 1, height - 2, 2)
+    points = " ".join(f"{x_of(i):.1f},{y_of(v):.1f}" for i, v in enumerate(values))
+    last = f'<circle cx="{x_of(len(values) - 1):.1f}" cy="{y_of(values[-1]):.1f}" r="2" fill="{colour}"/>'
+    return (
+        f'<svg class="spark" viewBox="0 0 {width} {height}" width="{width}" height="{height}" role="img" aria-label="trend">'
+        f'<polyline points="{points}" fill="none" stroke="{colour}" stroke-width="1.5"/>{last}</svg>'
+    )
+
+
+def sparklines(html: str) -> str:
+    """``html`` with each ``{spark 1,3,2}`` outside code made a sparkline."""
+    parts = re.split(r"(<code[\s>].*?</code>|<pre[\s>].*?</pre>)", html, flags=re.S)
+    for n in range(0, len(parts), 2):
+        parts[n] = SPARK.sub(lambda m: _spark(m[1]) or m[0], parts[n])
+    return "".join(parts)
+
+
+def _spark(text):
+    try:
+        values = [float(v) for v in re.split(r"[,\s]+", text.strip()) if v]
+    except ValueError:
+        return ""
+    return sparkline(values)

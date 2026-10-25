@@ -25,7 +25,7 @@ from markdown_it import MarkdownIt
 from py_doc.diagrams import BY_FENCE, DiagramError
 from py_doc.diagrams.render import draw_cached, with_mermaid_config
 from py_doc import poster_barcode, poster_math, poster_qr
-from py_doc.poster_svg import Linear, extent, number
+from py_doc.poster_svg import Linear, extent, number, sparklines
 from py_doc.errors import ConversionError, ToolFailed
 from py_doc.poster_themes import Theme
 
@@ -241,7 +241,7 @@ def block(name: str, syntax: str, example: str, info: str = ""):
 
 
 def inline(s):
-    return MD.renderInline(s)
+    return sparklines(MD.renderInline(s))
 
 
 def parse_opts(info):
@@ -1029,4 +1029,4 @@ def block_html(lang, opts, code, ctx):
 
 
 # The blocks of other modules register themselves when they are imported
-from py_doc import poster_scales  # noqa: E402, F401
+from py_doc import poster_embedded, poster_scales  # noqa: E402, F401

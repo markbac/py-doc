@@ -222,6 +222,8 @@ posters:
   reliability:
     source: poster/reliability.md  # the print theme, three columns on A0, and a version from Git
     conditions: {internal: true}   # over the front matter's false: with the costs and customer names
+  embedded:
+    source: poster/embedded.md     # the protocol and embedded blocks: pins, bus captures, bytes and code
   scales:
     source: poster/scales.md       # every scale block: thresholds, a waterfall, buckets, dials and spectra
   diagrams:
