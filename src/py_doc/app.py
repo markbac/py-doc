@@ -32,6 +32,7 @@ from .generators.cli import run_generate
 from .import_cli import run_import
 from .init import run_init
 from .new import run_new
+from .diagram_cli import run_diagram
 from .poster_cli import run_poster
 from .site.cli import run_site
 from .template_cli import run_template
@@ -56,6 +57,8 @@ _DELEGATES = {
     "stats": ("Count the words, headings, tables, pictures and links of documents", run_stats),
     "diff": ("Compare two versions of documents section by section", run_diff),
     "poster": ("Build a self-contained HTML poster from a Markdown file", run_poster),
+    "diagram": ("Draw one diagram or poster block as an SVG or PNG file", run_diagram),
+    "image": ("The same as diagram", run_diagram),
     "doctor": ("Check that the tool container works", run_doctor),
     "setup": ("Install Docker Engine for the tool runner", run_setup),
 }

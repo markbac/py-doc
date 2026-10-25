@@ -49,11 +49,14 @@ def theme_for(spec, folder: Path):
     return load_theme(spec or "print", folder)
 
 
-def prepare(fence: str, info: str, body: str, base: Path, theme, landscape: bool = False) -> tuple[Renderer, str]:
+def prepare(
+    fence: str, info: str, body: str, base: Path, theme, landscape: bool = False, background: str | None = "#ffffff"
+) -> tuple[Renderer, str]:
     """The renderer and source text that draw the block ``fence`` of a document as a picture.
 
     ``info`` is the fence's options as written after its name, ``base`` the folder of the Markdown file (for the
-    pictures of a gallery). Raises BlockError for a mistake in the block.
+    pictures of a gallery). ``background`` goes behind an SVG block; None leaves it transparent. Raises
+    BlockError for a mistake in the block.
     """
     from py_doc import poster, poster_blocks, poster_svg
 
@@ -63,7 +66,7 @@ def prepare(fence: str, info: str, body: str, base: Path, theme, landscape: bool
     except poster_blocks.PosterError as exc:
         raise BlockError(str(exc)) from None
     if drawn.svg:
-        return SVG_BLOCK, poster_svg.standalone(drawn.svg, theme, background="#ffffff")
+        return SVG_BLOCK, poster_svg.standalone(drawn.svg, theme, background=background)
     return HTML_BLOCK, page(drawn.html, theme, TEXT_WIDTH["landscape" if landscape else "portrait"])
 
 

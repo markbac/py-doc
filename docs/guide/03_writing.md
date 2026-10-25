@@ -55,6 +55,24 @@ diagrams:
   theme: brand/poster-theme.yml   # the colours and fonts of the company's posters
 ```
 
+## Diagrams and blocks as image files
+
+`py-doc diagram` (or `py-doc image`) draws one diagram or poster block as a file of its own, for an e-mail, a slide made elsewhere, a README or a wiki:
+
+```bash
+py-doc diagram flow.mmd -o flow.svg                 # a diagram source: the type from its extension
+py-doc diagram flow.puml -o flow.png
+py-doc diagram credit.txt --type threshold -o credit.svg --theme dark
+py-doc diagram returns.txt --type plot --options "type=pareto" -o returns.svg
+py-doc diagram poster.md -o images/                 # every diagram and block of a Markdown file
+py-doc diagram --list                               # every type it draws
+py-doc diagram --help-type gauge                    # the syntax of one, with an example
+```
+
+The type comes from `--type`, or from the extension: `.mmd`, `.puml`, `.dot`, `.ditaa`, `.edn`, `.pikchr`, `.railroad`, `.vl.json`, `.vg.json` and `.wavedrom.json`. `--options` holds a block's options, as they would follow its fence name. The output's extension chooses SVG or PNG; a block made of boxes and text, such as `cards`, and the tools that draw PNG only, such as ditaa, are PNG only. From a Markdown file, each picture is named after the file, its place and its caption or title, such as `poster-01-messages-a-day.svg`, and `--format png` writes PNG.
+
+Poster blocks and plots are drawn as in a document: in the `print` theme, or the one `--theme` names. `--background` is what goes behind an SVG block (default white, or `transparent`), and `--padding` adds space round an SVG picture. A drawing needs the tool container, and is cached as the diagrams of documents are.
+
 ## Front matter
 
 The YAML between `---` lines at the top of the first source of a document gives its properties: `title`, `subtitle`, `author`, `date`, `version`, `status`, `document_number`, `description`, `classification`, `subject`, `keywords`, `category`, `company` and `toc_depth`. A value in `py-doc.yml` wins over the front matter. Every document of py-doc's own repository has front matter, so its properties travel with the file.
