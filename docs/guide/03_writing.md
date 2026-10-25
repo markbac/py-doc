@@ -46,7 +46,7 @@ Radio | Sends one message, then sleeps | green
 ```
 ````
 
-Each block becomes a picture, as a diagram does, with its caption, `width=` and alt text. A block that is all SVG, such as a `chart`, a `qr` or a `barcode`, stays SVG in HTML and a site, and is PNG in Word, PowerPoint and PDF. A block made of boxes and text, such as `cards`, `steps` or `equation`, is laid out at the width of the page's text and becomes a PNG. Pictures are cached as diagrams are, and drawing them needs the tool container.
+A [`plot`](12_posters.md#plots) works the same way. Each block becomes a picture, as a diagram does, with its caption, `width=` and alt text. A block that is all SVG, such as a `chart`, a `qr` or a `barcode`, stays SVG in HTML and a site, and is PNG in Word, PowerPoint and PDF. A block made of boxes and text, such as `cards`, `steps` or `equation`, is laid out at the width of the page's text and becomes a PNG. Pictures are cached as diagrams are, and drawing them needs the tool container.
 
 The blocks are drawn in the `print` theme, so they suit a white page. `diagrams.theme` in `py-doc.yml` chooses another, a built-in name or a theme file:
 

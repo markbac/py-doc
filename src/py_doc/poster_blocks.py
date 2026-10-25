@@ -76,7 +76,23 @@ def series_colours(theme):
     """The colours of a chart's series, in order: the theme's series roles, then its palette. A colour too pale
     to see on white is left out, such as the light box colour the print theme has as ``secondary``."""
     roles = [theme.colours[name] for name in SERIES_COLOURS[:-1]]  # not muted: a series should not look disabled
-    return [colour for colour in dict.fromkeys(roles + list(theme.palette.values())) if not _pale(colour)]
+    out: list[str] = []
+    for colour in dict.fromkeys(roles + list(theme.palette.values())):
+        # a series must stand apart from the others: the default theme's accent is nearly its secondary blue
+        if not _pale(colour) and not any(_close(colour, other) for other in out):
+            out.append(colour)
+    return out
+
+
+def _rgb(colour):
+    m = re.fullmatch(r"#([0-9a-fA-F]{6})(?:[0-9a-fA-F]{2})?", colour.strip())
+    return [int(m[1][i : i + 2], 16) for i in (0, 2, 4)] if m else None
+
+
+def _close(a, b):
+    """Whether two hex colours are too alike to tell two series apart."""
+    ra, rb = _rgb(a), _rgb(b)
+    return ra is not None and rb is not None and sum((x - y) ** 2 for x, y in zip(ra, rb)) ** 0.5 < 48
 
 
 def _pale(colour):
@@ -1024,6 +1040,14 @@ def block_html(lang, opts, code, ctx):
     """HTML for a fence we handle, or None to leave it as an ordinary code block."""
     if lang in BY_FENCE:
         return diagram_html(lang, code, opts, ctx)
+    if lang == "plot":  # a preset, expanded into a Vega-Lite or Vega spec that the container draws
+        from py_doc.poster_plot import PlotError, expand
+
+        try:
+            fence, spec = expand(code, opts)
+        except PlotError as exc:
+            raise PosterError(f"{ctx.where}: {exc}") from None
+        return diagram_html(fence, spec, opts, ctx)
     drawn = block_fragment(lang, opts, code, ctx)
     return drawn.html if drawn else None
 

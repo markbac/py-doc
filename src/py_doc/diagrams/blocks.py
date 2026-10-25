@@ -80,3 +80,17 @@ def page(block_html: str, theme, width: int) -> str:
         f"#block{{width:{width}px;padding:4px}}#block>*:last-child{{margin-bottom:0}}</style>"
         f'</head><body><div class="poster"><div class="body" id="block">{block_html}</div></div></body></html>'
     )
+
+
+def prepare_plot(info: str, body: str, theme) -> tuple[Renderer, str]:
+    """The renderer and spec that draw a ``plot`` block of a document, with the theme's Vega config."""
+    from py_doc import poster_blocks
+    from py_doc.poster_plot import PlotError, expand
+
+    from .registry import BY_FENCE
+
+    try:
+        fence, spec = expand(body, poster_blocks.parse_opts(info))
+    except PlotError as exc:
+        raise BlockError(f"plot: {exc}") from None
+    return BY_FENCE[fence], poster_blocks.with_vega_config(spec, theme)

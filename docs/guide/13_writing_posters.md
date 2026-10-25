@@ -137,6 +137,7 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | How a whole divides into shares | `segments` | One minute of the node's time |
 | Dates and milestones | `timeline` | Pilot, release, retirement |
 | Numbers to compare | `chart` | Messages a day before and after |
+| Causes ranked, quality over time, distributions, curves | `plot` | A Pareto of returns, a control chart, a boxplot, a step response |
 | An amount and where it goes | `chart type=waterfall` | A top-up after its deductions |
 | Bands of a range and the points where things change | `threshold` | Credit counting down to cut-off |
 | How full each store is | `buckets` | Credit, emergency credit and debt |

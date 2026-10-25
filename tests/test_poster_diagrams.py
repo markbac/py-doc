@@ -33,7 +33,8 @@ def test_mermaid_charts_maps_and_timelines_get_the_theme_colour_scales():
 def test_series_colours_start_with_the_theme_roles_and_repeat_no_colour():
     theme = Theme()
     scale = series_colours(theme)
-    assert scale[:3] == [theme.colours["secondary"], theme.colours["accent"], theme.colours["primary"]]
+    assert scale[:3] == [theme.colours["secondary"], theme.colours["primary"], theme.colours["good"]]
+    assert theme.colours["accent"] not in scale  # too like secondary to tell two series apart
     assert len(scale) == len(set(scale))
     assert theme.colours["muted"] not in scale[:5]
 

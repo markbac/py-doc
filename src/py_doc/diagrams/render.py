@@ -199,7 +199,7 @@ def render_parts(
     """
     from . import blocks as poster_blocks
 
-    natives = poster_blocks.names()
+    natives = poster_blocks.names() | {"plot"}
     block_theme = None
     pictures: dict[str, Path] = {}
     failures: list[str] = []
@@ -223,6 +223,13 @@ def render_parts(
             if block.fence in BY_FENCE:
                 renderer = BY_FENCE[block.fence]
                 body = with_mermaid_config(block.body, mermaid) if renderer.name == "mermaid" else block.body
+            elif block.fence == "plot":  # a preset, expanded into a Vega-Lite or Vega spec, in the blocks' theme
+                if block_theme is None:
+                    block_theme = theme if theme is not None else poster_blocks.theme_for(None, file.parent)
+                try:
+                    renderer, body = poster_blocks.prepare_plot(block.info, block.body, block_theme)
+                except poster_blocks.BlockError as exc:
+                    raise DiagramError(f"{file}:{block.line}: {exc}") from None
             else:  # a poster block, drawn here first, then made a picture in the container
                 if block_theme is None:
                     block_theme = theme if theme is not None else poster_blocks.theme_for(None, file.parent)

@@ -32,6 +32,7 @@ The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` li
 | `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a gallery of mounting drawings, an acceptance checklist, handover steps, a QR block and an included table. The words and the layout (orientation, paper) are in the front matter, and the company's look (theme, header, footer) is in `py-doc.yml` |
 | `release.md` | Portrait A3 in the dark theme, with its figures as tiles: a column chart with two series, a before and after `compare` and a Mermaid sequence with notes. Also title cards, a vertical timeline, callouts, `people`, references and a `{{version}}` variable |
 | `shapes.md` | Landscape A1 in four columns: every shape block, from a test pyramid to an iceberg |
+| `plots.md` | Landscape A1 in four columns: every `plot` preset, from a Pareto chart to circle packing |
 | `embedded.md` | Landscape A1: the protocol and embedded blocks. A QFN `pinout`, a logic analyser, a scope with cursors and a meter, `code-compare`, `syntax-anatomy` of an LwM2M address, `hex-dissect` of a CoAP message, `proscons` with a sparkline, an `annotated` board, a `zoom-chain` and a `glossary` |
 | `scales.md` | Landscape A1: every scale block. A prepayment `threshold` and a grid-frequency one with a target, a `waterfall` chart, `buckets`, a `gauge`, a `dial24`, a `rating`, a `gradient-scale`, a `logscale`, and `spectrum` in four modes |
 | `diagrams.md` | Landscape A1: one small example of every diagram the tool container draws, in the poster's theme |
@@ -226,6 +227,110 @@ Warehouse | 1440 | 980
 Each line is a label and one value for each series. `series:` names the series and adds a legend.
 
 A `waterfall` chart shows an amount and what is added to it and taken from it, step by step. Each line is `label | change | colour | note`: a change starting `+` adds, `-` takes away, and `=` shows the total at that point from zero. Without a colour, a rise is `good`, a fall `bad` and a total `primary`. `unit="£"` (or `$`, `€`) goes before the number, any other unit after it.
+
+### Plots
+
+A `plot` is a short chart that py-doc writes as Vega-Lite (or Vega, for the hierarchies) and the tool container draws, in the theme's colours and font. It is one line of options and a few rows:
+
+````markdown
+```plot type=pareto title="Why nodes came back"
+Condensation | 31
+Self-discharge | 23
+Cracked enclosure | 18
+```
+````
+
+| `type=` | Rows | Options |
+|---|---|---|
+| `pareto` | `cause \| count`: bars in descending order and the cumulative share, with an 80 % guide | |
+| `spc` | `label \| value`, in order: a control chart with the centre line, ±1σ and ±2σ bands, UCL and LCL at ±3σ, and points outside the limits in `bad` | `mean=`, `sigma=`, `ucl=`, `lcl=` (worked out from the values when left out) |
+| `boxplot` | `group \| value value ...`: median, quartiles and whiskers | `points=yes` (the samples, jittered) |
+| `violin` | `group \| value value ...`: each group's density | |
+| `scatter` | `label \| x \| y \| size \| colour group` | `xlog=yes`, `ylog=yes`, `xinvert=yes`, `yinvert=yes`, `labels=yes` |
+| `function` | `curve: label \| expression in x` (in [Vega's expression language](https://vega.github.io/vega/docs/expressions/), such as `exp(-x * x / 2)`), `area: from \| to \| label` (shaded under the first curve), `rule: x \| label` | `from=`, `to=` (default 0 to 10), `samples=` (default 200), `preset=normal` (the normal distribution with its sigma bands) |
+| `heatmap` | A header `\| col \| col`, then `row \| value \| value` | `scheme=` (a [Vega colour scheme](https://vega.github.io/vega/docs/schemes/), default `blues`), `unit=`, `preset=risk` (a 5 × 5 likelihood by severity matrix, with `likelihood \| severity \| label` rows to mark risks on it) |
+| `polar` | `label \| value`: equal slices with the value as their radius, as a wind rose | |
+| `slope` | A header `\| Before \| After`, then `label \| before \| after`: rises in `good`, falls in `bad` | |
+| `parallel` | A header `\| axis \| axis \| ...`, then `item \| value \| value`: each axis from its own lowest to highest value | |
+| `fan` | `history: x \| value` and `forecast: x \| median \| 50 % low \| high \| 80 % low \| high \| 95 % low \| high` | |
+| `sunburst`, `icicle`, `pack` | `Group / Item \| value`: a hierarchy as rings, as partition bars, or as nested circles | `size=` (pixels, default 360) |
+
+Every type also takes `title=`, `xtitle=` and `ytitle=`, and the Vega-Lite types `width=` and `height=`. A `plot` works in documents and sites too, drawn in the theme of `diagrams.theme`. `examples/poster/plots.md` has one of each.
+
+#### Recipes
+
+A chart no preset draws is a `vega-lite` fence, which gets the poster's theme too. These are starting points, each checked to draw.
+
+A butterfly (or population pyramid): two sides of one scale, the left drawn negative.
+
+```json
+{
+  "data": {"values": [
+    {"age": "0-19", "side": "Before", "n": 18}, {"age": "0-19", "side": "After", "n": 15},
+    {"age": "20-39", "side": "Before", "n": 26}, {"age": "20-39", "side": "After", "n": 24},
+    {"age": "40-59", "side": "Before", "n": 22}, {"age": "40-59", "side": "After", "n": 27},
+    {"age": "60+", "side": "Before", "n": 14}, {"age": "60+", "side": "After", "n": 19}
+  ]},
+  "transform": [{"calculate": "datum.side == 'Before' ? -datum.n : datum.n", "as": "signed"}],
+  "mark": "bar",
+  "encoding": {
+    "y": {"field": "age", "type": "ordinal", "sort": "descending", "title": null},
+    "x": {"field": "signed", "type": "quantitative", "title": "Share (%)", "axis": {"labelExpr": "abs(datum.value)"}},
+    "color": {"field": "side", "type": "nominal", "title": null}
+  }
+}
+```
+
+A waffle: a whole as 100 squares.
+
+```json
+{
+  "data": {"values": [{"part": "Dark energy", "n": 68}, {"part": "Dark matter", "n": 27}, {"part": "Ordinary", "n": 5}]},
+  "transform": [
+    {"window": [{"op": "sum", "field": "n", "as": "end"}]},
+    {"calculate": "datum.end - datum.n", "as": "start"},
+    {"calculate": "sequence(datum.start, datum.end)", "as": "cell"},
+    {"flatten": ["cell"]},
+    {"calculate": "datum.cell % 10", "as": "col"},
+    {"calculate": "floor(datum.cell / 10)", "as": "row"}
+  ],
+  "mark": {"type": "square", "size": 120},
+  "width": 220, "height": 220,
+  "encoding": {
+    "x": {"field": "col", "type": "ordinal", "axis": null},
+    "y": {"field": "row", "type": "ordinal", "axis": null, "sort": "descending"},
+    "color": {"field": "part", "type": "nominal", "title": null}
+  }
+}
+```
+
+A Bland-Altman plot: how far two instruments agree, with the bias and the limits of agreement (±1.96 standard deviations).
+
+```json
+{
+  "data": {"values": [
+    {"a": 20.1, "b": 20.3}, {"a": 21.4, "b": 21.2}, {"a": 22.0, "b": 22.5}, {"a": 19.8, "b": 19.7},
+    {"a": 23.2, "b": 23.0}, {"a": 21.0, "b": 21.4}, {"a": 20.6, "b": 20.5}, {"a": 22.8, "b": 23.1}
+  ]},
+  "transform": [
+    {"calculate": "(datum.a + datum.b) / 2", "as": "mean"},
+    {"calculate": "datum.a - datum.b", "as": "diff"},
+    {"joinaggregate": [{"op": "mean", "field": "diff", "as": "bias"}, {"op": "stdev", "field": "diff", "as": "sd"}]},
+    {"calculate": "datum.bias + 1.96 * datum.sd", "as": "upper"},
+    {"calculate": "datum.bias - 1.96 * datum.sd", "as": "lower"}
+  ],
+  "layer": [
+    {"mark": {"type": "point", "filled": true}, "encoding": {
+      "x": {"field": "mean", "type": "quantitative", "scale": {"zero": false}, "title": "Mean of the two sensors (°C)"},
+      "y": {"field": "diff", "type": "quantitative", "title": "A minus B (°C)"}}},
+    {"mark": "rule", "encoding": {"y": {"aggregate": "mean", "field": "bias"}}},
+    {"mark": {"type": "rule", "strokeDash": [6, 4]}, "encoding": {"y": {"aggregate": "mean", "field": "upper"}}},
+    {"mark": {"type": "rule", "strokeDash": [6, 4]}, "encoding": {"y": {"aggregate": "mean", "field": "lower"}}}
+  ]
+}
+```
+
+More are in the [Vega-Lite example gallery](https://vega.github.io/vega-lite/examples/): ridgelines, streamgraphs, mosaics, Lorenz curves, forest plots, volcano plots and raster plots among them.
 
 ## Poster blocks
 
