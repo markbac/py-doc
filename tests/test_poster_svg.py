@@ -134,7 +134,7 @@ def test_a_single_node_tree():
 
 def test_every_native_block_is_registered_and_in_the_posters_chapter():
     chapter = (ROOT / "docs" / "guide" / "12_posters.md").read_text(encoding="utf-8")
-    documented = set(re.findall(r"^\| `([a-z-]+)` \|", chapter, re.M))
+    documented = set(re.findall(r"^\| `([a-z0-9-]+)` \|", chapter, re.M))
     expected = {"cards", "lcd", "segments", "flow", "lanes", "figure", "timeline", "chart", "qr", "barcode"}
     expected |= {"steps", "gallery", "progress", "checklist", "compare", "people", "highlight"}
     assert expected <= set(BLOCKS)
@@ -148,7 +148,7 @@ def test_every_block_has_syntax_and_a_working_example(name):
     assert found.syntax
     if found.example is None:  # gallery: its example needs picture files
         return
-    drawn = block_fragment(name, {}, found.example, ctx())
+    drawn = block_fragment(name, parse_opts(found.info), found.example, ctx())
     assert isinstance(drawn, Fragment) and drawn.html
 
 

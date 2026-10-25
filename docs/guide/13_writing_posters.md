@@ -137,6 +137,15 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | How a whole divides into shares | `segments` | One minute of the node's time |
 | Dates and milestones | `timeline` | Pilot, release, retirement |
 | Numbers to compare | `chart` | Messages a day before and after |
+| An amount and where it goes | `chart type=waterfall` | A top-up after its deductions |
+| Bands of a range and the points where things change | `threshold` | Credit counting down to cut-off |
+| How full each store is | `buckets` | Credit, emergency credit and debt |
+| One value on a dial | `gauge` | The grid frequency now |
+| The hours of a day | `dial24` | Friendly hours and the off-peak tariff |
+| A grade from A to G | `rating` | A home's energy rating |
+| Benchmarks on a colour ruler | `gradient-scale` | Cooking temperatures, pH |
+| Values over many orders of magnitude | `logscale` | Latencies from nanoseconds to seconds |
+| Light or radio by wavelength or frequency | `spectrum` | Absorption lines, Wi-Fi channels |
 | A screen the reader will see | `lcd` | The display after joining |
 | A formula the section is about | `equation` | The Schwarzschild radius, with its symbols |
 | Commands and what they print | `terminal` | `git status` and its output |
@@ -287,6 +296,20 @@ Year 5 | 2.62
 ````
 
 [Posters](12_posters.md#diagrams-and-charts) lists every option.
+
+### Scales
+
+````markdown
+```threshold title="Credit counting down to cut-off"
+span: Normal credit | £20.00 to £2.00 | Supply on | green | 4
+pin: £2.00 Low credit alert | amber
+span: Low credit | Emergency credit can be armed | amber | 2
+pin: £0.00 Credit exhausted | red
+span: Emergency credit | A £10.00 pool | purple | 3
+```
+````
+
+A `threshold` keeps every word readable: a band is only as wide as its weight, so its words go under it, and the exact points go on pins above it. Give a band a weight that shows its share, not one that makes room for its words. Write "not to scale" in the title when the weights are not the true proportions.
 
 ### Equations and terminals
 

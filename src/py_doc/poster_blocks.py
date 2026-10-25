@@ -37,7 +37,7 @@ _validate_link = MD.validateLink
 # shown in an <img>, where it cannot run scripts.
 MD.validateLink = lambda url: url.strip().lower().startswith("data:image/svg+xml;") or _validate_link(url)
 poster_math.enable(MD)  # $...$ and $$...$$, as MathML
-CHART_KINDS = ("column", "bar", "line")
+CHART_KINDS = ("column", "bar", "line", "waterfall")
 SERIES_COLOURS = ("secondary", "accent", "primary", "good", "bad", "muted")
 
 
@@ -217,22 +217,24 @@ class Fragment:
 
 @dataclass(frozen=True)
 class Block:
-    """A native block: its fence name, its function, and a line of syntax with an example for the docs."""
+    """A native block: its fence name, its function, and a line of syntax with an example for the docs.
+    ``info`` is the example's options, written as after the fence name."""
 
     name: str
     draw: Callable[[str, dict, Ctx], str | Fragment]
     syntax: str
     example: str
+    info: str = ""
 
 
 BLOCKS: dict[str, Block] = {}
 
 
-def block(name: str, syntax: str, example: str):
+def block(name: str, syntax: str, example: str, info: str = ""):
     """Register the decorated function as the native block ``name``."""
 
     def register(draw):
-        BLOCKS[name] = Block(name, draw, syntax, example)
+        BLOCKS[name] = Block(name, draw, syntax, example, info)
         return draw
 
     return register
@@ -482,6 +484,10 @@ def chart_html(code, opts, ctx):
     kind = opts.get("type", "column").lower()
     if kind not in CHART_KINDS:
         raise PosterError(f"{ctx.where}: chart type must be one of {', '.join(CHART_KINDS)}, not '{kind}'")
+    if kind == "waterfall":
+        from py_doc.poster_scales import waterfall_html
+
+        return waterfall_html(code, opts, ctx)
     line_only = [name for name in ("min", "markers", "area", "dashed") if name in opts and kind != "line"]
     if line_only:
         reason = " (a bar that does not start at zero misleads)" if line_only[0] == "min" else ""
@@ -1020,3 +1026,7 @@ def block_html(lang, opts, code, ctx):
         return diagram_html(lang, code, opts, ctx)
     drawn = block_fragment(lang, opts, code, ctx)
     return drawn.html if drawn else None
+
+
+# The blocks of other modules register themselves when they are imported
+from py_doc import poster_scales  # noqa: E402, F401

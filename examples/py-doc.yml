@@ -222,6 +222,8 @@ posters:
   reliability:
     source: poster/reliability.md  # the print theme, three columns on A0, and a version from Git
     conditions: {internal: true}   # over the front matter's false: with the costs and customer names
+  scales:
+    source: poster/scales.md       # every scale block: thresholds, a waterfall, buckets, dials and spectra
   diagrams:
     source: poster/diagrams.md     # one small example of every diagram the tool container draws, in the poster's theme
 

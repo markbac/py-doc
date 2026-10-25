@@ -31,6 +31,8 @@ The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` li
 | `poster.md` | Portrait A1 in the default theme: a picture, a Mermaid diagram, bar and line charts, segments, flow, lanes and `lcd` screens. Also a timeline, a JSON code block, a full-width section, and a band of three columns (`{cols=3}`) under a band of two. A QR code is in the footer. Every setting is in its front matter |
 | `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a gallery of mounting drawings, an acceptance checklist, handover steps, a QR block and an included table. The words and the layout (orientation, paper) are in the front matter, and the company's look (theme, header, footer) is in `py-doc.yml` |
 | `release.md` | Portrait A3 in the dark theme, with its figures as tiles: a column chart with two series, a before and after `compare` and a Mermaid sequence with notes. Also title cards, a vertical timeline, callouts, `people`, references and a `{{version}}` variable |
+| `scales.md` | Landscape A1: every scale block. A prepayment `threshold` and a grid-frequency one with a target, a `waterfall` chart, `buckets`, a `gauge`, a `dial24`, a `rating`, a `gradient-scale`, a `logscale`, and `spectrum` in four modes |
+| `diagrams.md` | Landscape A1: one small example of every diagram the tool container draws, in the poster's theme |
 | `reliability.md` | Portrait A0 in the print theme, with a quoted abstract and an underlined summary, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, `highlight` figures, `progress` bars, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
 
 ## Settings and where they go
@@ -205,7 +207,7 @@ Warehouse | 1440 | 980
 
 | Option | What it sets |
 |---|---|
-| `type` | `column` (default), `bar` (horizontal) or `line` |
+| `type` | `column` (default), `bar` (horizontal), `line` or `waterfall` (see below) |
 | `title` | The title above the chart |
 | `unit` | Text after each value label, such as `" mA"` |
 | `min` | The bottom of the value axis, for a `line` chart only (default: zero, or a round number below a negative value). A column or bar that does not start at zero misleads |
@@ -220,6 +222,8 @@ Warehouse | 1440 | 980
 | `colours` | Block colours for the series, separated by commas (default: `secondary`, `accent`, `primary`, `good`, `bad`, `muted`) |
 
 Each line is a label and one value for each series. `series:` names the series and adds a legend.
+
+A `waterfall` chart shows an amount and what is added to it and taken from it, step by step. Each line is `label | change | colour | note`: a change starting `+` adds, `-` takes away, and `=` shows the total at that point from zero. Without a colour, a rise is `good`, a fall `bad` and a total `primary`. `unit="£"` (or `$`, `€`) goes before the number, any other unit after it.
 
 ## Poster blocks
 
@@ -237,6 +241,14 @@ A block colour is one of three things. It can be a name from the theme's palette
 | `figure` | Several of `segments`, `flow` and `lanes` in one box, split by `+++` lines, each starting `@segments`, `@flow` or `@lanes` | |
 | `timeline` | `date \| label \| detail \| colour`, the last two optional | `vertical` for a column instead of a row |
 | `chart` | See [Diagrams and charts](#diagrams-and-charts) | |
+| `threshold` | `span: label \| text \| colour \| weight` lines for the bands, in proportion to their weights, and `pin: text \| colour` lines between them for the exact points where something changes. `target: text` marks the middle of the band before it. The words of each band go under it | `target=` (marks the widest band), `width=` (default 960) |
+| `buckets` | `label \| current \| capacity \| colour \| value label; value label` lines: tanks filled to their share, with dashed lines at their thresholds | `unit=` |
+| `gauge` | `from \| to \| colour` lines for its coloured zones | `value=`, `min=`, `max=` (all required), `unit=`, `label=` |
+| `dial24` | `start \| end \| label \| colour` lines, times such as `18:00`. An end before its start runs past midnight. Each label is a ring of its own, with a legend | |
+| `rating` | Optional `band \| range \| colour` lines; without them the A to G bands of an energy label | `current=`, `potential=`, `current-label=`, `potential-label=` |
+| `gradient-scale` | `value \| label` lines as benchmarks above and below a bar shading from colour to colour | `from=`, `to=`, `colours=` (left to right, default blue, green, amber, red), `step=`, `unit=` |
+| `logscale` | `value \| label \| colour` lines, such as `1e-9 \| Cache read`, on a ruler where each power of ten is the same distance apart | `from=`, `to=`, `unit=`, `width=` (default 960) |
+| `spectrum` | Depends on `mode=`: `nm \| label` lines for `visible`, `absorption` (dark lines) and `emission` (bright lines on black); `metres \| label` for `em`, the whole spectrum on a log scale with the visible band opened out; none for `stellar`, the colours of the star classes O to M; `name \| centre \| width \| colour` for `channels`, radio channels as lobes | `mode=` (default `visible`), `shift=` (a redshift z, as a second track), `from=` and `to=` (`channels`), `width=` (`em` default 960) |
 | `qr` | The address or text to encode, or with `type=` the `key: value` lines of a contact, event or other kind. See [QR codes](#qr-codes) | `type=` (default `url`), `file=`, `size=140` (pixels), `label="..."`, `ecc=` `L`, `M` (default), `Q` or `H` |
 | `barcode` | The data to encode, on one line | `type=` `code128` (default), `code39`, `ean13`, `ean8`, `upca` or `itf14`, `width=240` and `height=70` (pixels), `text=no`, `check=yes` (Code 39), `label="..."`. See [Barcodes](#barcodes) |
 | `steps` | `Heading \| text \| colour`, the text and colour optional | `cols=1`, `start=1`: the number of the first step |
@@ -248,6 +260,8 @@ A block colour is one of three things. It can be a name from the theme's palette
 | `highlight` | `value \| label \| detail \| colour`, the last two optional (default colour: `accent`) | `cols=` (default: one for each line) |
 
 In `segments`, `flow` and `lanes`, the lines that are not part of the diagram become notes under it, written in Markdown.
+
+The scale blocks (`threshold`, `buckets`, `gauge`, `dial24`, `rating`, `gradient-scale`, `logscale`, `spectrum` and a `waterfall` chart) are drawn as SVG, like a chart, and scaled to their column. `width=` draws a block wider, so its text stays small in a full-width section. `examples/poster/scales.md` has one of each.
 
 ````markdown
 ```timeline

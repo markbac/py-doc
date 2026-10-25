@@ -207,12 +207,11 @@ def spread(positions: list[float], gap: float, low: float = -math.inf, high: flo
 
 
 def label(x: float, y: float, content, size: float = 13, anchor: str = "start", extra: str = "") -> str:
-    """A ``<text>`` element in the current colour. ``extra`` is more attributes, such as a weight or a fill."""
+    """A ``<text>`` element, in the current colour unless ``extra`` (more attributes, such as a weight) has a fill."""
     more = f" {extra}" if extra else ""
+    fill = "" if "fill=" in extra else ' fill="currentColor"'
     anchored = f' text-anchor="{anchor}"' if anchor != "start" else ""
-    return (
-        f'<text x="{x:.1f}" y="{y:.1f}"{anchored} font-size="{size:g}" fill="currentColor"{more}>{esc(content)}</text>'
-    )
+    return f'<text x="{x:.1f}" y="{y:.1f}"{anchored} font-size="{size:g}"{fill}{more}>{esc(content)}</text>'
 
 
 def svg(width: float, height: float, body: str, title: str, cls: str = "") -> str:
