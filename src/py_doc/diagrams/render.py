@@ -19,6 +19,7 @@ import yaml
 
 from py_doc.errors import ConversionError, ToolFailed
 from py_doc.runtime import Mount, Runtime
+from py_doc.runtime import image as runtime_image
 
 from .registry import BY_FENCE, TOOLS, Job, Renderer
 from .scan import Block, find_blocks
@@ -61,7 +62,8 @@ def _tools_revision() -> str:
 
 
 def _key(runtime: Runtime, renderer: Renderer, job: Job, text: str) -> str:
-    parts = (runtime.image, _tools_revision(), renderer.name, job.kind, str(job.landscape), text)
+    image = runtime_image.science_ref() if renderer.image == "science" else runtime.image
+    parts = (image, _tools_revision(), renderer.name, job.kind, str(job.landscape), text)
     return hashlib.sha256("\0".join(parts).encode("utf-8")).hexdigest()[:32]
 
 
@@ -90,8 +92,9 @@ def _draw(runtime: Runtime, renderer: Renderer, job_text: str, kind: str, landsc
             mounts.append(Mount(source_dir))
             if renderer.environment:
                 env.update(renderer.environment(runtime.container_path(source_dir)))
+        image = runtime_image.ensure_science(runtime) if renderer.image == "science" else None
         for command in renderer.commands(job):
-            runtime.run(command, mounts=mounts, workdir=work, env=env, timeout=TIMEOUT)
+            runtime.run(command, mounts=mounts, workdir=work, env=env, timeout=TIMEOUT, image=image)
         picture = work / f"diagram.{kind}"
         if not picture.is_file() or picture.stat().st_size == 0:
             raise DiagramError("the tool finished but produced no picture")
@@ -160,6 +163,18 @@ def _deep_merge(low: dict, high: dict) -> dict:
     return out
 
 
+def translated(renderer: Renderer, body: str, where: str) -> str:
+    """``body`` as its tool reads it: the written form of a specialist fence turned into its runner's input."""
+    if renderer.translate is None:
+        return body
+    from .declarative import DeclarativeError
+
+    try:
+        return renderer.translate(body)
+    except DeclarativeError as exc:
+        raise DiagramError(f"{where}: {renderer.name}: {exc}") from None
+
+
 def _captioned(lines: list[str], block: Block) -> bool:
     """True when a ``[[CAPTION:]]`` line (not a table's) is the nearest text above or below the diagram."""
     before = next((line for line in reversed(lines[: block.start]) if line.strip()), "")
@@ -223,6 +238,7 @@ def render_parts(
             if block.fence in BY_FENCE:
                 renderer = BY_FENCE[block.fence]
                 body = with_mermaid_config(block.body, mermaid) if renderer.name == "mermaid" else block.body
+                body = translated(renderer, body, f"{file}:{block.line}")
             elif block.fence == "plot":  # a preset, expanded into a Vega-Lite or Vega spec, in the blocks' theme
                 if block_theme is None:
                     block_theme = theme if theme is not None else poster_blocks.theme_for(None, file.parent)

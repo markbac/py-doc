@@ -159,7 +159,11 @@ def one(kind, options, text, base, theme, fmt, output, args, runtime) -> Path:
 
     try:
         if kind in BY_FENCE:
-            renderer, body = BY_FENCE[kind], text
+            renderer = BY_FENCE[kind]
+            try:
+                body = drawing.translated(renderer, text, kind)
+            except drawing.DiagramError as exc:
+                raise DiagramCliError(str(exc)) from None
         elif kind == "plot":
             renderer, body = prepare_plot(options, text, theme)
         else:

@@ -14,3 +14,6 @@ mkdocs==1.6.1
 mkdocs-material==9.7.7
 pymdown-extensions==12.2
 mkdocs-redirects==1.2.2
+# Specialist renderers (diagrams/tools/*_render.py), from a written form py-doc reads; none needs matplotlib
+schemdraw==0.23
+chess==1.11.2  # GPL-3.0, run as a program of its own; py-doc does not import it

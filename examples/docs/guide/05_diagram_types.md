@@ -253,3 +253,23 @@ Sensor | Temperature and humidity on I2C | blue
 Controller | Sleeps at 2 µA | navy
 Radio | Sends one message, then sleeps | green
 ```
+
+## Circuit
+
+[[CAPTION:Figure]] The divider that scales the battery for the analogue-to-digital converter
+```circuit
+V1: battery 3 V | up
+R1: resistor 100 kΩ | right
+R2: resistor 100 kΩ | down
+line | to V1.start
+dot | at R1.end
+```
+
+## Music
+
+[[CAPTION:Figure]] The tune the node plays when it joins
+```music
+T:Joined
+L:1/8
+C E G c2 z G c4
+```

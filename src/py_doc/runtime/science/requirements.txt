@@ -1,0 +1,16 @@
+# The scientific libraries of the science image, for the fences of diagrams/tools/science_render.py.
+# Versions with wheels for the tool image's Python (3.11, Debian 12). All are open source: BSD, MIT or Apache
+# (matplotlib's licence is BSD-style, Biopython's its own BSD-like one).
+matplotlib==3.10.3
+numpy==2.2.6
+pandas==2.3.3
+rdkit==2025.9.6
+logomaker==0.8.7
+upsetplot==0.9.0
+python-ternary==1.0.8
+scikit-rf==1.8.0
+dna-features-viewer==3.1.5
+biopython==1.85
+colour-science==0.4.7
+pvlib==0.13.1
+CoolProp==6.8.0

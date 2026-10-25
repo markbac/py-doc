@@ -23,7 +23,7 @@ import segno
 from markdown_it import MarkdownIt
 
 from py_doc.diagrams import BY_FENCE, DiagramError
-from py_doc.diagrams.render import draw_cached, with_mermaid_config
+from py_doc.diagrams.render import draw_cached, translated, with_mermaid_config
 from py_doc import poster_barcode, poster_math, poster_qr
 from py_doc.poster_svg import Linear, extent, number, sparklines
 from py_doc.errors import ConversionError, ToolFailed
@@ -284,6 +284,7 @@ def render_diagram(lang, code, ctx):
     if lang in ("plantuml", "puml"):
         code = with_plantuml_skin(code, ctx.theme)
     renderer = BY_FENCE[lang]
+    code = translated(renderer, code, ctx.where)
     kind = "svg" if "svg" in renderer.kinds else "png"  # SVG where the tool can write it: it prints sharp at any size
     return draw_cached(ctx.runtime(), renderer, code, kind, False, ctx.base)
 

@@ -27,6 +27,43 @@ py-doc itself never drops a word or a sentence. Anything pandoc cannot represent
 
 A companion VS Code extension in [`editors/vscode/`](../../editors/vscode) previews py-doc Markdown as you write. Click the eye button in the editor title bar. It runs `py-doc docx`, `py-doc slides` or `py-doc poster` with `--watch` on the open file, and shows the page it serves beside the editor. It rebuilds on every save, with every diagram drawn, so the preview is py-doc's own output. A save that does not build shows the error as a warning, and the preview moves to another Markdown file when you switch to it. VS Code's built-in Markdown preview shows plain Markdown only. The extension chooses the command from the file. A poster setting such as `paper` or `byline` in the front matter means a poster. `split_level` or speaker notes mean a deck, and anything else is a Word document. See [live preview](02_projects.md#live-preview) and the extension's [README](../../editors/vscode/README.md).
 
+## Circuits, chess and science
+
+These fences are drawn by open-source libraries in the tool image. Each is written in a short form of its own, which py-doc reads and passes to the library, so no code in a fence runs.
+
+````markdown
+```circuit
+V1: source 5 V | up
+R1: resistor 10 kΩ | right
+R2: resistor 10 kΩ | down
+line | to V1.start
+dot | at R1.end
+```
+````
+
+| Fence | Written as | Drawn by |
+|---|---|---|
+| `circuit` | One element a line: `[name:] element [label] \| direction \| at name.end \| to name.start`. Each element goes on from the end of the one before, `right` unless a direction is given. `at` starts it from a named element's anchor (`start`, `end`, `center`, or one of its own, such as an op-amp's `out`), and `to` draws it to one. The elements are `resistor`, `capacitor`, `polarised`, `inductor`, `diode`, `led`, `zener`, `schottky`, `battery`, `source`, `current`, `ac`, `switch`, `button`, `ground`, `vdd`, `vss`, `line`, `dot`, `lamp`, `fuse`, `crystal`, `antenna`, `speaker`, `motor`, `meter-v`, `meter-a`, `npn`, `pnp`, `nmos`, `pmos`, `opamp`, `relay`, `transformer`, `gap` and the gates `and`, `or`, `not`, `nand`, `nor`, `xor` | [schemdraw](https://schemdraw.readthedocs.io/) (MIT) |
+| `chess` | `fen: <position>`, `highlight: e4 f3`, `arrow: f1 c4 \| colour` and `flip: yes` lines. Without a `fen:` line, the starting position | [python-chess](https://python-chess.readthedocs.io/) (GPL-3.0, run as a program of its own in the image) |
+| `music`, `abc` | [ABC notation](https://abcnotation.com/wiki/abc:standard:v2.1). `X:` and `K:` lines are added when it has none | [abcjs](https://www.abcjs.net/) (MIT) |
+
+The scientific fences are drawn in the **science image**, a second, optional image with the scientific Python libraries. It is built the first time a document or poster uses one of these fences, which takes a few minutes, or ahead of time with `py-doc tools build --science`. A project that uses none of them never downloads them.
+
+| Fence | Written as | Drawn by |
+|---|---|---|
+| `molecule` | A [SMILES](https://en.wikipedia.org/wiki/Simplified_molecular-input_line-entry_system) string, or `name \| SMILES` lines for several, in a grid | RDKit (BSD) |
+| `phylogeny` | A tree in [Newick](https://en.wikipedia.org/wiki/Newick_format) form, such as `((Human,Chimp),Gorilla);` | Biopython |
+| `ternary` | `axes: A \| B \| C` and `label \| a \| b \| c` lines, the three parts in any unit | python-ternary (MIT) |
+| `seq-logo` | Aligned sequences, one a line, of one length. `type: protein` (or `rna`) for other than DNA | logomaker (MIT) |
+| `upset` | `Set A, Set B \| count` lines: how many items are in exactly those sets | UpSetPlot (BSD) |
+| `smith` | `z0: 50` and `label \| 50+25j` lines: impedances in ohms, on a Smith chart | scikit-rf (BSD) |
+| `plasmid`, `gene-locus` | `size: 8450` and `name \| start..end \| + or - \| colour` lines: a circular or linear map | DNA Features Viewer (MIT) |
+| `cie` | `gamut: sRGB` lines (`sRGB`, `Display P3`, `Adobe RGB (1998)`, `ITU-R BT.2020`, `DCI-P3`) and `label \| x \| y` points, on the CIE 1931 diagram | colour-science (BSD) |
+| `sun-path` | `lat: 51.5`, `lon: -0.1`, `timezone: Europe/London` and `day: label \| 2026-06-21` lines (default: the solstices and an equinox) | pvlib (BSD) |
+| `thermo-cycle` | `fluid: Water` and `state: label \| kPa \| °C` lines, joined in order and closed, on the temperature-entropy diagram with the saturation dome | CoolProp (MIT) |
+
+A mistake in a written form stops the build with the file and line of the fence, and the line of the mistake in it.
+
 ## Poster blocks in documents
 
 The blocks of a poster work in a Word document, a PDF, a deck and a site page, written the same way:
@@ -144,6 +181,8 @@ Alice -> Bob : hello
 | `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`, `packetdiag`, `rackdiag` | The blockdiag family |
 | `wavedrom`, `bytefield-svg`, `pikchr`, `railroad`, `wireviz` | Drawn as SVG |
 | `vega`, `vega-lite` | Vega, drawn as SVG |
+| `circuit`, `chess`, `music` (or `abc`) | Specialist libraries in the tool image, from a written form. See [Circuits, chess and science](#circuits-chess-and-science) |
+| `molecule`, `phylogeny`, `ternary`, `seq-logo`, `upset`, `smith`, `plasmid`, `gene-locus`, `cie`, `sun-path`, `thermo-cycle` | Scientific libraries in the optional science image |
 
 - **Format**: HTML and sites keep SVG where the tool can write it. Word, PowerPoint and PDF get PNG at 192 dpi, shrunk to the page width (wider after a `[[LANDSCAPE]]` line, until `[[PORTRAIT]]`).
 - **Alt text** comes from `caption="..."` or `title="..."` after the language, else from a `title` line in the diagram, else the diagram type.
