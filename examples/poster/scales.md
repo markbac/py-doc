@@ -13,7 +13,7 @@ footer:
 
 ## Introduction {.abstract}
 
-A prepayment meter counts credit down to a cut-off, borrows emergency credit, and keeps the supply on in friendly hours. The grid it hangs on runs inside a narrow frequency band. Each section shows one of those with a scale block.
+Prepayment counts credit down to a cut-off, borrows emergency credit, and keeps the supply on in friendly hours. The grid it hangs on runs inside a narrow frequency band. Each section shows one of those with a scale block.
 
 ## 1. Credit: counting down to cut-off {.wide}
 

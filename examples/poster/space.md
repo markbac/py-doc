@@ -13,7 +13,7 @@ footer:
 
 ## Introduction {.abstract}
 
-Each section is one block for physics posters: orbits with a transfer to Mars, the light path of three telescopes and an interferometer, spacetime drawn three ways, the energy levels of hydrogen, Feynman diagrams, the standard model, element tiles and a corner of the chart of nuclides.
+Each section is one block for physics posters. There are orbits with a transfer to Mars, two telescopes, an interferometer and spacetime drawn three ways. Then come the energy levels of hydrogen, Feynman diagrams, the standard model, element tiles and a corner of the chart of nuclides.
 
 ## 1. Orbits: Earth to Mars
 
