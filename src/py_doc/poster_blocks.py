@@ -57,7 +57,114 @@ def mermaid_init(theme):
         "secondaryColor": "#f3f3f7", "tertiaryColor": "#ffffff", "clusterBkg": "#f3f6fb",
         "clusterBorder": c["secondary"], "edgeLabelBackground": "#ffffff",
     }  # fmt: skip
+    # The colour scales of the charts, maps and timelines: pie slices, git branches, timeline and mind map
+    # sections, treemap groups, quadrants and XY series, all from the theme's series colours and palette
+    scale = series_colours(theme)
+    variables.update({f"pie{n + 1}": scale[n % len(scale)] for n in range(12)})
+    variables.update({f"git{n}": scale[n % len(scale)] for n in range(8)})
+    variables.update({f"cScale{n}": scale[n % len(scale)] for n in range(12)})
+    variables.update({f"cScaleLabel{n}": c["on-primary"] for n in range(12)})
+    variables.update(
+        {"quadrant1Fill": c["diagram-fill"], "quadrant2Fill": "#ffffff", "quadrant3Fill": c["diagram-fill"]}
+    )
+    variables.update({"quadrant4Fill": "#ffffff", "quadrantPointFill": c["accent"], "quadrantTitleFill": c["strong"]})
+    variables["xyChart"] = {"plotColorPalette": ", ".join(scale), "titleColor": c["strong"]}
     return "---\nconfig: " + json.dumps({"theme": "base", "themeVariables": variables}) + "\n---\n"
+
+
+def series_colours(theme):
+    """The colours of a chart's series, in order: the theme's series roles, then its palette."""
+    roles = [theme.colours[name] for name in SERIES_COLOURS[:-1]]  # not muted: a series should not look disabled
+    return list(dict.fromkeys(roles + list(theme.palette.values())))
+
+
+def vega_config(theme):
+    """A Vega and Vega-Lite ``config`` in the poster's colours and font. A spec's own config wins over it."""
+    c, font = theme.colours, theme.fonts["body"]
+    text = {"labelColor": c["text"], "titleColor": c["strong"], "labelFont": font, "titleFont": font}
+    return {
+        "background": "#ffffff",
+        "font": font,
+        "view": {
+            "stroke": c["border"],
+            "continuousWidth": 360,
+            "continuousHeight": 220,
+            "discreteWidth": {"step": 60},  # a band, such as a box or a bar of a category, is not a sliver
+        },
+        "axis": {**text, "labelFontSize": 13, "titleFontSize": 13, "gridColor": c["border"], "domainColor": c["muted"]},
+        "legend": {**text, "labelFontSize": 13, "titleFontSize": 13},
+        "title": {"color": c["strong"], "font": font, "fontSize": 15},
+        "range": {"category": series_colours(theme)},
+        "mark": {"color": c["secondary"]},
+        "boxplot": {"box": {"color": c["secondary"]}, "median": {"color": c["on-secondary"]}},
+    }
+
+
+def with_vega_config(code, theme):
+    """``code`` (a Vega or Vega-Lite spec) with the poster's config under its own. Left as it is if it is not JSON."""
+    try:
+        spec = json.loads(code)
+    except ValueError:
+        return code
+    if not isinstance(spec, dict):
+        return code
+    spec["config"] = _merged(vega_config(theme), spec.get("config") or {})
+    return json.dumps(spec)
+
+
+def _merged(base, over):
+    out = dict(base)
+    for key, value in over.items():
+        out[key] = _merged(out[key], value) if isinstance(value, dict) and isinstance(out.get(key), dict) else value
+    return out
+
+
+def plantuml_skin(theme):
+    """``skinparam`` lines in the poster's colours, for a PlantUML diagram that has no ``!theme`` of its own."""
+    c = theme.colours
+    font = theme.fonts["body"].split(",")[0].strip().strip("'\"")
+    params = {
+        "defaultFontName": font, "defaultFontSize": "14", "backgroundColor": "#ffffff",
+        "ArrowColor": c["primary"], "ArrowFontColor": c["text"],
+        "ParticipantBorderColor": c["primary"], "ParticipantBackgroundColor": c["diagram-fill"],
+        "ActorBorderColor": c["primary"], "ActorBackgroundColor": c["diagram-fill"],
+        "SequenceLifeLineBorderColor": c["muted"], "SequenceGroupBorderColor": c["secondary"],
+        "ActivityBorderColor": c["primary"], "ActivityBackgroundColor": c["diagram-fill"],
+        "ActivityDiamondBorderColor": c["primary"], "ActivityDiamondBackgroundColor": "#ffffff",
+        "PartitionBorderColor": c["secondary"], "SwimlaneBorderColor": c["secondary"],
+        "ClassBorderColor": c["primary"], "ClassBackgroundColor": c["diagram-fill"],
+        "ComponentBorderColor": c["primary"], "ComponentBackgroundColor": c["diagram-fill"],
+        "NoteBorderColor": c["callout-border"], "NoteBackgroundColor": c["callout"],
+    }  # fmt: skip
+    return "".join(f"skinparam {name} {value}\n" for name, value in params.items())
+
+
+def with_plantuml_skin(code, theme):
+    """``code`` with the poster's skin after its ``@startuml`` line, unless it sets its own ``!theme``."""
+    if "!theme" in code:
+        return code
+    start = re.search(r"(?m)^\s*@start\w+[^\n]*\n", code)
+    return code[: start.end()] + plantuml_skin(theme) + code[start.end() :] if start else code
+
+
+_SVG_OPEN = re.compile(rb"<svg\b[^>]*>")
+_ATTR = re.compile(rb'\s(width|height)="([^"]*)"')
+_VIEWBOX = re.compile(rb'viewBox="\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*"')
+
+
+def sized_svg(data: bytes) -> bytes:
+    """An SVG picture with a size in pixels. Some tools write ``width="100%"`` and no height, which an ``<img>``
+    stretches to its column, however small the diagram; it gets the size of its ``viewBox`` instead."""
+    opening = _SVG_OPEN.search(data)
+    view = _VIEWBOX.search(opening.group(0)) if opening else None
+    if not view:
+        return data
+    sizes = dict(_ATTR.findall(opening.group(0)))
+    if sizes.get(b"width", b"").strip() and not sizes[b"width"].endswith(b"%"):
+        return data  # it has a size of its own
+    tag = _ATTR.sub(b"", opening.group(0))
+    tag = tag[:4] + b' width="' + view.group(1) + b'" height="' + view.group(2) + b'"' + tag[4:]
+    return data[: opening.start()] + tag + data[opening.end() :]
 
 
 TOK = re.compile(r"\[([^\]|]+)(?:\|([^\]]+))?\]|-(?:([^>\[\]]*?)-)?>")
@@ -143,6 +250,10 @@ def render_diagram(lang, code, ctx):
         code = mermaid_init(ctx.theme) + code
     if lang == "mermaid":
         code = with_mermaid_config(code, ctx.mermaid)
+    if lang in ("vega", "vega-lite"):
+        code = with_vega_config(code, ctx.theme)
+    if lang in ("plantuml", "puml"):
+        code = with_plantuml_skin(code, ctx.theme)
     renderer = BY_FENCE[lang]
     kind = "svg" if "svg" in renderer.kinds else "png"  # SVG where the tool can write it: it prints sharp at any size
     return draw_cached(ctx.runtime(), renderer, code, kind, False, ctx.base)
@@ -152,7 +263,10 @@ def diagram_html(lang, code, opts, ctx):
     try:
         path = render_diagram(lang, code, ctx)
         mime = mimetypes.guess_type(path.name)[0] or "image/png"
-        data = base64.b64encode(path.read_bytes()).decode()
+        picture = path.read_bytes()
+        if mime == "image/svg+xml":
+            picture = sized_svg(picture)
+        data = base64.b64encode(picture).decode()
         return f'<img alt="{esc(opts.get("alt", lang + " diagram"))}" src="data:{mime};base64,{data}">'
     except (ToolFailed, DiagramError) as exc:  # a broken diagram must not stop the poster
         ctx.failed += 1

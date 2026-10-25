@@ -42,6 +42,11 @@ jobs:
       - name: The posters and their PDFs, through the container
         working-directory: examples
         run: py-doc poster --pdf
+      - name: The diagram gallery in the dark and print themes too
+        working-directory: examples
+        run: |
+          py-doc poster poster/diagrams.md -o build/diagrams-dark.html --theme dark
+          py-doc poster poster/diagrams.md -o build/diagrams-print.html --theme print
       - name: Each poster PDF is one page
         working-directory: examples
         run: |

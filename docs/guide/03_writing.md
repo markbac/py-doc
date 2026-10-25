@@ -95,7 +95,7 @@ Alice -> Bob : hello
 | Fences | Tool |
 |---|---|
 | `mermaid` (also `:::mermaid`), `plantuml` or `puml`, `dot` or `graphviz`, `ditaa` | Mermaid, PlantUML, Graphviz, ditaa |
-| `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`, `packetdiag` | The blockdiag family |
+| `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`, `packetdiag`, `rackdiag` | The blockdiag family |
 | `wavedrom`, `bytefield-svg`, `pikchr`, `railroad`, `wireviz` | Drawn as SVG |
 | `vega`, `vega-lite` | Vega, drawn as SVG |
 

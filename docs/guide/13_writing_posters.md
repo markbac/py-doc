@@ -326,6 +326,37 @@ Mermaid diagrams get the poster's colours and font. Diagrams are drawn by the to
 
 A diagram is drawn at its natural size and shrunk to its column. Keep it small: five to ten boxes with short labels read better than one large diagram, and a wide one belongs in a `{.wide}` section.
 
+### Which tool for which diagram
+
+Before you reach for a picture or ask for a new block, look here. Each row is drawn by a tool in the tool container, in the poster's theme, and works in documents and sites too. `examples/poster/diagrams.md` has one of each.
+
+| To show | Fence | Tool's syntax |
+|---|---|---|
+| Flows that split and join, such as energy or money | `mermaid` with `sankey-beta` | [Sankey](https://mermaid.js.org/syntax/sankey.html) |
+| Items on two axes, a 2×2 chart | `mermaid` with `quadrantChart` | [Quadrant chart](https://mermaid.js.org/syntax/quadrantChart.html) |
+| Several options scored on several axes | `mermaid` with `radar-beta` | [Radar](https://mermaid.js.org/syntax/radar.html) |
+| How a whole divides into nested parts | `mermaid` with `treemap-beta` | [Treemap](https://mermaid.js.org/syntax/treemap.html) |
+| What two or three sets share | `mermaid` with `venn-beta` | [Venn](https://mermaid.js.org/syntax/venn.html) |
+| The causes of a problem, a fishbone | `mermaid` with `ishikawa-beta` | [Ishikawa](https://mermaid.js.org/syntax/ishikawa.html) |
+| A value chain against evolution | `mermaid` with `wardley-beta` | [Wardley map](https://mermaid.js.org/syntax/wardley.html) |
+| A folder tree | `mermaid` with `treeView-beta` | [Tree view](https://mermaid.js.org/syntax/treeView.html) |
+| A mind map, or a hierarchy | `mermaid` with `mindmap` | [Mind map](https://mermaid.js.org/syntax/mindmap.html) |
+| Branches and merges | `mermaid` with `gitGraph` | [Git graph](https://mermaid.js.org/syntax/gitgraph.html) |
+| Periods, plans and eras | `mermaid` with `timeline` or `gantt` | [Timeline](https://mermaid.js.org/syntax/timeline.html), [Gantt](https://mermaid.js.org/syntax/gantt.html) |
+| A simple line or bar chart | `chart`, or `mermaid` with `xychart-beta` | [XY chart](https://mermaid.js.org/syntax/xyChart.html) |
+| Blocks laid out on a grid, such as a chip's floorplan | `mermaid` with `block-beta` | [Block diagram](https://mermaid.js.org/syntax/block.html) |
+| Who does what, in lanes | `mermaid` with `swimlane-beta`, or PlantUML activity partitions | [Swimlanes](https://mermaid.js.org/syntax/swimlanes.html) |
+| Decisions and branches | `mermaid` with `flowchart` | [Flowchart](https://mermaid.js.org/syntax/flowchart.html) |
+| The bits of a header or register | `mermaid` with `packet-beta`, `packetdiag` or `bytefield-svg` | [Packet](https://mermaid.js.org/syntax/packet.html) |
+| Digital signals over time | `wavedrom` | [WaveDrom](https://wavedrom.com/tutorial.html) |
+| Task or state changes over time | `plantuml` timing diagram | [Timing](https://plantuml.com/timing-diagram) |
+| Messages with delays and lost packets | `plantuml` sequence with `!pragma teoz true`, `->(10)` and `->x` | [Sequence](https://plantuml.com/sequence-diagram) |
+| Records and pointers, Petri nets, any graph | `dot` | [Graphviz](https://graphviz.org/documentation/) |
+| A rack of equipment | `rackdiag` | [rackdiag](http://blockdiag.com/en/nwdiag/rackdiag-examples.html) |
+| Statistics: boxplots, heatmaps, scatter plots | `vega-lite` | [Vega-Lite](https://vega.github.io/vega-lite/examples/) |
+
+Most new Mermaid types end in `-beta`, so their syntax may still change. A diagram that cannot be drawn shows its code, with a warning.
+
 ### Callouts
 
 ```markdown

@@ -189,6 +189,8 @@ A dollar sign followed by a space or a digit is not maths, so prices such as $5 
 
 Every diagram fence of a document works on a poster: Mermaid, PlantUML, Graphviz, Vega-Lite and the rest. It is drawn by the tool container and embedded as an SVG picture, so it stays sharp when printed. Ditaa and the blockdiag family can only draw PNG, so theirs are PNG. Mermaid gets the colours and body font of the theme, as front matter added to the diagram, unless the diagram has its own front matter or `%%{init`. The `diagrams.mermaid` settings of py-doc.yml apply too, under the theme's colours. A diagram that cannot be drawn is shown as code with a warning, and the poster is still written.
 
+Vega and Vega-Lite diagrams get the theme's colours and font as a `config`, under the spec's own `config`, so a value the spec sets wins. PlantUML diagrams get `skinparam` lines in the theme's colours after `@startuml`, unless they set a `!theme`. A diagram is shown at the size it is drawn. A picture whose tool gives it no size, as some newer Mermaid types do, takes the size of its `viewBox`, not the width of its column.
+
 > **Note:** A diagram wider than its column is scaled down and its text shrinks, so prefer compact layouts, such as Graphviz `dpi=80` or PlantUML `skinparam dpi 80`, or put it in a `{.wide}` section.
 
 A `chart` block is drawn by py-doc itself, as SVG in the theme's colours, so it needs no container and prints sharp:

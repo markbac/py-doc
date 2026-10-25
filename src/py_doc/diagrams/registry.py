@@ -111,7 +111,7 @@ RENDERERS: tuple[Renderer, ...] = (
     Renderer("ditaa", ("ditaa",), ".ditaa", ("png",), lambda job: [["ditaa", job.source, job.output]]),
     *(
         Renderer(tool, (tool,), ".diag", ("png",), _blockdiag(tool))
-        for tool in ("blockdiag", "seqdiag", "actdiag", "nwdiag", "packetdiag")
+        for tool in ("blockdiag", "seqdiag", "actdiag", "nwdiag", "packetdiag", "rackdiag")
     ),
     Renderer(
         "wavedrom",

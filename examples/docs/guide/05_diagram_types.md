@@ -172,3 +172,66 @@ box "Sensor"; arrow; box "Node"; arrow; box "Cloud"
     "y": {"scale": "y", "field": "a"}, "y2": {"scale": "y", "value": 0}}}}]
 }
 ```
+
+## Rack
+
+[[CAPTION:Figure]] The gateway rack
+```rackdiag
+rackdiag {
+  8U;
+  1: Patch panel;
+  2: Switch;
+  3: Firewall;
+  4: Gateway server [2U];
+  6: UPS [2U];
+}
+```
+
+## Energy flow
+
+[[CAPTION:Figure]] Where a day's energy goes, drawn with Mermaid
+```mermaid
+sankey-beta
+Grid,Home,40
+Solar,Home,25
+Solar,Battery,15
+Battery,Home,10
+```
+
+## Trade-offs
+
+[[CAPTION:Figure]] Radios by range and bandwidth
+```mermaid
+quadrantChart
+  title Range against bandwidth
+  x-axis Short range --> Long range
+  y-axis Low bandwidth --> High bandwidth
+  NB-IoT: [0.8, 0.25]
+  BLE: [0.15, 0.4]
+  Wi-Fi: [0.25, 0.85]
+```
+
+## Root cause
+
+[[CAPTION:Figure]] Why a battery drains early
+```mermaid
+ishikawa-beta
+Battery drains in a year
+    Hardware
+        Leaky capacitor
+    Firmware
+        Debug UART on
+    Network
+        Poor indoor signal
+```
+
+## Files
+
+[[CAPTION:Figure]] The firmware source tree
+```mermaid
+treeView-beta
+    firmware/
+        src/
+            main.c
+        README.md
+```
