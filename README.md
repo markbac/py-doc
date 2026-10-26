@@ -3,7 +3,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 
-`py-doc` turns Markdown technical documentation into **Word (`.docx`)** documents, **PowerPoint (`.pptx`)** decks, **PDF**, **HTML** and **web sites** (MkDocs or Astro + Starlight). It checks the writing, draws every common kind of diagram, writes and draws C4 architecture documentation from Structurizr models, imports Word and PowerPoint files, and builds whole sets of documents from one `py-doc.yml`. It replaces three earlier tools (`py-doc2docx`, `py-doc2slides`, `py-doclint`) and the `createdocs` build files from `markbac/technical-documentation`.
+`py-doc` turns Markdown technical documentation into **Word (`.docx`)** documents, **PowerPoint (`.pptx`)** decks, **PDF**, **HTML** and **web sites** (MkDocs or Astro + Starlight). It checks the writing and draws every common kind of diagram. It makes posters, with blocks for charts, scales, shapes, protocols and physics. It writes and draws C4 architecture documentation from Structurizr models, imports Word and PowerPoint files, and builds whole sets of documents from one `py-doc.yml`. It replaces three earlier tools (`py-doc2docx`, `py-doc2slides`, `py-doclint`) and the `createdocs` build files from `markbac/technical-documentation`.
 
 Pandoc writes every output, and it runs in a container with every other tool, so only Python and Docker need installing. The linter reads the Markdown with its own parser.
 
@@ -26,6 +26,7 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | `py-doc c4` | Check, export, draw and edit Structurizr workspaces (`c4 up` opens the live editor) |
 | `py-doc site` | Make and build a web site of the documents with MkDocs or Astro + Starlight |
 | `py-doc poster` | Build self-contained HTML posters from Markdown, and print them to PDF; `--watch` reloads them on every save |
+| `py-doc diagram` | Draw one diagram, poster block or `plot` as an SVG or PNG file, or every one of a Markdown file |
 | `py-doc import` | Convert a Word document or a PowerPoint deck to Markdown |
 | `py-doc template` | Check and list the styles of a Word or PowerPoint template |
 | `py-doc tools`, `doctor`, `setup` | Build and check the tool container, and install Docker Engine |
@@ -43,6 +44,8 @@ py-doc setup                # install Docker Engine (in the WSL distro on Window
 py-doc tools build          # build the tool image (several GB, 5 to 30 minutes the first time)
 py-doc doctor               # check that everything works
 ```
+
+A few scientific fences (`molecule`, `smith`, `plasmid` and others) are drawn in an optional second image, the science image. It is built the first time a document uses one, or ahead of time with `py-doc tools build --science`.
 
 On Windows, `.\scripts\update.ps1` does all of that in a virtual environment of py-doc's own (`.venv`). Run `.\scripts\update.ps1` after every pull: it installs any new dependencies, rebuilds the tool image when it changed, and checks that everything works.
 
@@ -87,19 +90,23 @@ src/
 │   ├── build.py          # joins a document's sources and renders it
 │   ├── directives.py     # includes, conditions and variables
 │   ├── pandoc/           # the pandoc command, Word and PowerPoint finishing, Lua filters
-│   ├── diagrams/         # diagram fences to pictures
+│   ├── diagrams/         # diagram fences to pictures; poster blocks in documents (blocks.py); the written
+│   │                     #   forms of the specialist fences (declarative.py) and their runners (tools/)
 │   ├── c4/               # Structurizr workspaces: model, chapters, pictures, live editor
 │   ├── site/             # web sites: pages, navigation, MkDocs and Starlight engines
 │   ├── docx_import.py    # Word to Markdown
 │   ├── pptx_import.py    # PowerPoint to Markdown
-│   ├── runtime/          # the tool container: image, runner, doctor, setup
+│   ├── runtime/          # the tool container: image, runner, doctor, setup; science/ is the optional science image
 │   ├── markdown/         # parser and front matter, used by the linter
 │   ├── lint/             # rules, structure rules, markdownlint, Vale, JSON and SARIF output
 │   ├── generators/       # content generators and py-doc generate
 │   ├── analysis/         # py-doc stats, check and diff
 │   ├── migrate.py        # createdocs to py-doc.yml
 │   ├── report.py         # the JSON build report
-│   ├── poster*.py        # py-doc poster: Markdown to an HTML poster, its blocks, settings, themes and fonts
+│   ├── poster*.py        # py-doc poster: the page, settings, themes and fonts (poster.py ...), the shared
+│   │                     #   drawing core (poster_svg.py), maths (poster_math.py), the blocks (poster_blocks,
+│   │                     #   poster_scales, poster_embedded, poster_shapes, poster_space) and plot (poster_plot.py)
+│   ├── diagram_cli.py    # py-doc diagram: one diagram or block as an image file
 │   └── watch.py          # the --watch loop and preview server of poster, docx and slides
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/
@@ -122,7 +129,7 @@ cd editors/vscode && npm ci && npm run lint && npm test   # the VS Code extensio
 
 CI runs on Linux and Windows with Python 3.14, the newest supported. Python 3.10, the oldest supported, is not tested in CI. macOS is not supported.
 
-The tests run the tools on the host, so a second workflow, `Tool image`, builds the tool container and draws every diagram type and the example posters with it. It runs when the image definition or the diagram code changes, every Monday, and by hand from the Actions tab.
+The tests run the tools on the host. So a second workflow, `Tool image`, builds the tool container and the science image, and draws every diagram type and the example posters with them. It runs when the image definition or the diagram code changes, every Monday, and by hand from the Actions tab.
 
 ## License
 
