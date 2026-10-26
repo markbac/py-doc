@@ -234,6 +234,8 @@ posters:
     source: poster/scales.md       # every scale block: thresholds, a waterfall, buckets, dials and spectra
   specialist:
     source: poster/specialist.md   # circuit, chess, music and the science image fences
+  engineering:
+    source: poster/engineering.md   # bow-tie, fault tree, GSN, Karnaugh map, ladder, structogram, N2, IDEF0, VSM
   diagrams:
     source: poster/diagrams.md     # one small example of every diagram the tool container draws, in the poster's theme
 

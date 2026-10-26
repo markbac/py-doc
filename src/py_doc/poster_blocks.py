@@ -1087,4 +1087,4 @@ def block_html(lang, opts, code, ctx):
 
 
 # The blocks of other modules register themselves when they are imported
-from py_doc import poster_embedded, poster_scales, poster_shapes, poster_space  # noqa: E402, F401
+from py_doc import poster_embedded, poster_engineering, poster_scales, poster_shapes, poster_space  # noqa: E402, F401

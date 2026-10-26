@@ -269,6 +269,79 @@ Controller | Sleeps at 2 µA | navy
 Radio | Sends one message, then sleeps | green
 ```
 
+## Engineering blocks
+
+The engineering blocks keep the symbols of their notations, in documents as on posters.
+
+[[CAPTION:Figure]] What stops a node reporting, as a fault tree
+```fault-tree
+or: Node stops reporting
+  and: No power
+    basic: Cell flat | 1e-3
+    basic: Backup fails | 0.05
+  basic: Radio fault | 2e-4
+```
+
+[[CAPTION:Figure]] The pump's start and stop, as a ladder
+```plc-ladder
+rung: Start and stop the pump
+NO Start | NC Stop | COIL Pump
+branch: NO Pump
+```
+
+[[CAPTION:Figure]] The alarm's logic, simplified on a Karnaugh map
+```kmap name=Alarm
+vars: A B C
+ones: 1 3 5 7
+```
+
+[[CAPTION:Figure]] The barriers round a cell's thermal runaway
+```bowtie
+top: Thermal runaway
+threat: Overcharge | Charger cut-off
+consequence: Fire | Fire wall
+```
+
+[[CAPTION:Figure]] The safety argument for installing the node
+```gsn
+goal G1: The node is safe to install
+  context C1: Indoor use
+  solution Sn1: Test report
+```
+
+[[CAPTION:Figure]] The wake cycle, as a structogram
+```structogram
+Read the sensor
+if Reading changed?
+  Send it
+else
+  Sleep
+```
+
+[[CAPTION:Figure]] What the parts give each other
+```n2
+Sensor -> Controller | Reading
+Controller -> Radio | Message
+```
+
+[[CAPTION:Figure]] Measuring and sending, as function boxes with their inputs and outputs
+```idef0
+box: A1 Measure
+in: Air
+out: Reading
+box: A2 Send
+in: Reading
+out: Message
+```
+
+[[CAPTION:Figure]] From cell to installer
+```vsm
+inventory: 5 days
+process: Solder | C/T 40 s
+inventory: 1 day
+process: Pack | C/T 20 s
+```
+
 ## Circuit
 
 [[CAPTION:Figure]] The divider that scales the battery for the analogue-to-digital converter

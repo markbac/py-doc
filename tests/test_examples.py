@@ -22,7 +22,7 @@ from conftest import tex_packages_found
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 # The host has Graphviz and pandoc, but not the other diagram tools, so those blocks are taken out
 NO_TOOLS = re.compile(
-    r"```(?:mermaid|plantuml|puml|ditaa|blockdiag|seqdiag|actdiag|nwdiag|packetdiag|rackdiag|wavedrom|bytefield-svg|pikchr|railroad|wireviz|vega-lite|vega|chart|cards|circuit|music)\b[^\n]*\n.*?```\n",
+    r"```(?:mermaid|plantuml|puml|ditaa|blockdiag|seqdiag|actdiag|nwdiag|packetdiag|rackdiag|wavedrom|bytefield-svg|pikchr|railroad|wireviz|vega-lite|vega|chart|cards|circuit|music|bowtie|fault-tree|gsn|kmap|plc-ladder|structogram|n2|idef0|vsm)\b[^\n]*\n.*?```\n",
     re.S,
 )
 

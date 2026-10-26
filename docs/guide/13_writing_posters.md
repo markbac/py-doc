@@ -181,6 +181,15 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | Places on a picture | `annotated` | The parts of a board |
 | From the whole to a detail | `zoom-chain` | Room, bracket, node |
 | A link to more | `qr` | The full manual |
+| Threats, barriers and consequences round one event | `bowtie` | The thermal runaway of a cell |
+| What must fail together, or alone, for a failure | `fault-tree` | Why a node stops reporting |
+| Why a system is safe, claim by claim | `gsn` | The safety case of an installation |
+| A logic function and its simplest form | `kmap` | An alarm's condition |
+| A PLC's logic | `plc-ladder` | Start, stop and a seal-in |
+| The steps, decisions and loops of a routine | `structogram` | The wake cycle of firmware |
+| What the parts of a system give each other | `n2` | The interfaces of a node |
+| Functions with their inputs, outputs, controls and means | `idef0` | Measure, then send |
+| Where time goes in a production line | `vsm` | Waiting and work from cell to box |
 
 The [Posters](12_posters.md) chapter lists every option of every block. The sections below show the common ones.
 
