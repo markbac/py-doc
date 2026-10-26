@@ -33,7 +33,7 @@ _ORIENTATION = re.compile(r"^\s*\[\[(LANDSCAPE|PORTRAIT)\]\]\s*$", re.MULTILINE)
 _CAPTION = re.compile(r"^\s*\[\[CAPTION:(?!\s*Table\s*\]\])[^\]]+\]\]")
 _WIDTH = re.compile(r"^\d+(?:\.\d+)?(?:%|cm|mm|in|px)$")
 _TITLE = re.compile(r"^\s*title(?::|\s)\s*(?P<title>.+?)\s*$", re.MULTILINE | re.IGNORECASE)
-_MAGIC = {"png": b"\x89PNG\r\n\x1a\n", "svg": b"<"}
+_MAGIC = {"png": b"\x89PNG\r\n\x1a\n", "svg": b"<", "pdf": b"%PDF"}
 _FRONT = re.compile(r"\A\s*---[ \t]*\n(.*?)\n---[ \t]*(?:\n|\Z)", re.DOTALL)
 
 
@@ -100,7 +100,7 @@ def _draw(runtime: Runtime, renderer: Renderer, job_text: str, kind: str, landsc
             raise DiagramError("the tool finished but produced no picture")
         if not picture.read_bytes().lstrip()[:8].startswith(_MAGIC[kind]):
             raise DiagramError(f"the tool wrote a file that is not a {kind.upper()} picture")
-        if kind == "png":
+        if kind == "png" and renderer.finish_png:
             _finish_png(picture, landscape)
         return picture.read_bytes()
 

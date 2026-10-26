@@ -296,6 +296,20 @@ rackdiag {
 }
 ```
 
+## 24. Topology: architecture with icons
+
+```mermaid
+architecture-beta
+    group cloud(logos:aws)[Cloud]
+    service api(logos:aws-lambda)[API] in cloud
+    service db(logos:postgresql)[Readings] in cloud
+    service gateway(tabler:router)[Gateway]
+    service node(mdi:thermometer)[Node]
+    api:R -- L:db
+    gateway:T -- B:api
+    node:R -- L:gateway
+```
+
 ## In short {.summary}
 
 Look here first: if a tool in the container draws it, write the diagram, not a new block.

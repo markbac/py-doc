@@ -108,6 +108,17 @@ site:
 
 `py-doc site generate` builds each poster as a page of its own and writes a Posters page that links them, at the end of the navigation. A poster whose PDF is already printed, by `py-doc poster --pdf` or `py-doc build`, also gets a PDF link. With MkDocs the posters go in `docs/posters/`. With Starlight they go in `public/posters/`, which Starlight serves from the site root. So no document of the site may be called `posters`.
 
+## Decks
+
+`site.decks` lists documents to put on the site as HTML decks:
+
+```yaml
+site:
+  decks: [deck]
+```
+
+`py-doc site generate` builds each as an HTML deck, a page of its own, and writes a Decks page that links them, at the end of the navigation. A deck is a document with a `pptx` output, or an `html` output with `deck: true`. Its settings are those of its HTML deck. A deck whose PDF is already printed, by `py-doc build` with `pdf: true`, also gets a PDF link. The decks go in `docs/decks/` with MkDocs and in `public/decks/` with Starlight, so no document of the site may be called `decks`.
+
 ## More than one site
 
 `site.targets` builds several MkDocs sites from one site project, for example the same documents at two addresses with different home pages. Each target names a MkDocs config file in `site.dir`. The pages and the navigation are written once and shared, so each config file takes in `mkdocs.yml` (or `py-doc-nav.yml`) with `INHERIT` and changes only what differs:

@@ -219,6 +219,8 @@ def run(
 ) -> int:
     args = parser.parse_args(argv)
     configure_logging(quiet=args.quiet, verbose=args.verbose)
+    suffix = suffix(args) if callable(suffix) else suffix  # by the format asked for, as py-doc slides -f html
+    label = label(args) if callable(label) else label
     if notice:
         logger.info(notice)
     if args.watch:

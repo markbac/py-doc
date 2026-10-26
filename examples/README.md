@@ -65,7 +65,7 @@ Run these in order from this folder. Each line says what it makes.
 ```bash
 py-doc build guide                                   # build/guide-v1.0.docx, guide.pdf, guide.html
 py-doc build datasheet                               # build/datasheet-1_0.docx and datasheet.pdf
-py-doc build deck                                    # build/deck.pptx
+py-doc build deck                                    # build/deck.pptx, and build/deck.html and deck.pdf: the HTML deck
 py-doc build release-notes                           # build/release-notes-<git version>.docx, needs a Git commit
 py-doc build architecture                            # build/architecture.docx and architecture.html
 py-doc build interfaces                              # build/interfaces.docx and interfaces.html
@@ -88,7 +88,7 @@ py-doc site build                                    # site/build/index.html: th
 |---|---|---|
 | `py-doc build guide` | `docs/guide/*.md`, `docs/includes/`, `templates/sensor.docx` (or `sensor_Draft.docx`), `templates/doc.css` | `build/guide-v1.0.docx`, `build/guide.pdf`, `build/guide.html` |
 | `py-doc build datasheet` | `docs/datasheet.md`, `templates/datasheet.docx`, `templates/report.tex` | `build/datasheet-1_0.docx`, `build/datasheet.pdf` |
-| `py-doc build deck` | `docs/deck/slides.md`, `templates/sensor.pptx` (or `sensor_Draft.pptx`) | `build/deck.pptx` |
+| `py-doc build deck` | `docs/deck/slides.md`, `templates/sensor.pptx` (or `sensor_Draft.pptx`) | `build/deck.pptx`, and the HTML deck `build/deck.html` with its PDF |
 | `py-doc build architecture` | `architecture/workspace.json`, `docs/includes/audience.md` | `build/architecture.docx`, `build/architecture.html` (chapters generated from the model) |
 | `py-doc build api-reference` | `docs/includes/apis/library-openapi.yaml`, `library-asyncapi.yaml`, through the `openapi` and `asyncapi` generators | `build/api-reference.docx`, `build/api-reference.html`, `build/api/rest-api.html` (Redoc), `build/api/events-api.html` (AsyncAPI) |
 | `py-doc build interfaces` | `docs/interfaces.md`, `docs/includes/apis/`, `templates/sensor.docx` (or `sensor_Draft.docx`), `templates/doc.css` | `build/interfaces.docx`, `build/interfaces.html` |

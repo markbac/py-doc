@@ -67,16 +67,18 @@ class _Converter:
         return self._render(md_path, output_path, self.fmt, self.template_path, self.options)
 
     def convert_twin(self, md_path: Path, output_path: Path) -> Path:
-        """Write an HTML preview twin of the document or deck: the same Markdown, as a web page, for ``--watch``."""
-        preview = "slides" if self.fmt == "pptx" else "document"
-        return self._render(md_path, output_path, "html", None, {**self.options, "preview": preview})
+        """Write an HTML preview twin of the document or deck: the same Markdown, as a web page, for ``--watch``.
+        A deck's twin is its HTML deck, so the preview shows the slides as they will be presented."""
+        if self.fmt in ("pptx", "deck"):
+            return self._render(md_path, output_path, "html", None, {**self.options, "deck": True})
+        return self._render(md_path, output_path, "html", None, {**self.options, "preview": "document"})
 
     def _render(self, md_path: Path, output_path: Path, fmt: str, template: Path | None, options: dict) -> Path:
         md_path = Path(md_path).resolve()
         if not md_path.is_file():
             raise FileNotFoundError(f"Markdown file not found: {md_path}")
         joined = join_sources([Source(md_path)], {}, {}, md_path.name)
-        if self.fmt == "pptx" and fmt == "html":  # speaker notes written as comments show in the twin too
+        if self.fmt == "pptx" and fmt == "html" and not options.get("deck"):  # notes written as comments, as notes
             from .pandoc.pptx_finish import notes_to_divs
 
             joined = replace(joined, parts=[(src, notes_to_divs(md)) for src, md in joined.parts])
@@ -102,3 +104,20 @@ class SlidesConverter(_Converter):
 
     def __init__(self, *args, split_level: int = 2, **options) -> None:
         super().__init__(*args, split_level=split_level, **options)
+
+
+class DeckConverter(_Converter):
+    """Markdown to an HTML deck: one self-contained page of slides (see :mod:`py_doc.deck`). The options are
+    those of a deck: ``split_level``, ``aspect``, ``theme``, ``embed_fonts``, ``footer`` and ``pdf``."""
+
+    fmt, kind, template_suffixes = "deck", "HTML deck", ()
+
+    def __init__(self, *args, split_level: int = 2, **options) -> None:
+        super().__init__(*args, split_level=split_level, **options)
+
+    def validate_template(self) -> None:
+        if self.template_path is not None:
+            raise ConversionError("An HTML deck takes a theme (--theme), not a PowerPoint template")
+
+    def convert_file(self, md_path: Path, output_path: Path) -> Path:
+        return self._render(md_path, output_path, "html", None, {**self.options, "deck": True})

@@ -42,6 +42,34 @@ Slides start at headings up to `split_level` (`--split-level`, default 2) and at
 - **PDF** is written by XeLaTeX with a built-in template that has a title page, or the `.tex` file named by `template`. `toc` is on by default. Callouts are coloured boxes, maths is typeset, and task lists keep their boxes.
 - **HTML** is one self-contained file with pictures embedded. `template` is the stylesheet (py-doc's own by default), `toc: true` adds a contents list, and maths is MathML.
 
+## HTML deck
+
+An HTML deck is the same slides as one self-contained web page, for a screen, the web or a PDF handout. It needs no PowerPoint. Build it with `py-doc slides talk.md -f html`, or with an `html` output that has `deck: true`:
+
+```yaml
+documents:
+  deck:
+    sources: [docs/deck/slides.md]
+    outputs:
+      pptx: {split_level: 2, footer: "{title} v{version}"}
+      html: {deck: true, pdf: true}       # build/deck.html, and build/deck.pdf
+```
+
+It splits the slides as the PowerPoint deck does, and takes the same speaker notes, columns and page breaks. An HTML deck that sets no `split_level` or `footer` takes those of the document's `pptx` output, so the two decks match.
+
+| Option | Default | What it sets |
+|---|---|---|
+| `deck` | `false` | `true` makes the `html` output an HTML deck |
+| `split_level`, `footer` | Those of `pptx`, else 2 and none | As for PowerPoint. The footer and the slide number are at the bottom of each slide |
+| `aspect` | `16:9` | `16:9` or `4:3` |
+| `theme` | `default` | A poster theme, `default`, `dark` or `print`, or a theme file. See [Themes](12_posters.md#themes) |
+| `embed_fonts` | `false` | `true` puts the theme's web fonts inside the page |
+| `pdf` | `false` | `true` also prints the deck to a PDF beside it, one slide a page, with the tool container's Chromium |
+
+Poster blocks, such as `cards`, `chart` and `steps`, are drawn on the slide as they are on a poster, with no picture step. Diagrams are SVG, and maths is MathML. The page scales each slide to the window. The keys are listed in [Present an HTML deck](15_writing_slides.md#present-an-html-deck).
+
+A slide of more than 16 lines gets a warning, as in PowerPoint. The page also marks a slide whose content is taller or wider than the slide with a red edge, and names it in the browser's console. With `pdf`, the build names those slides in a warning too. Nothing is shrunk to fit.
+
 ## Heading numbers
 
 Write headings with or without their section numbers. Where the output numbers its headings itself, py-doc takes the written numbers off, so a section is never numbered twice.

@@ -98,17 +98,53 @@ diagrams:
 
 ```bash
 py-doc diagram flow.mmd -o flow.svg                 # a diagram source: the type from its extension
-py-doc diagram flow.puml -o flow.png
-py-doc diagram credit.txt --type threshold -o credit.svg --theme dark
-py-doc diagram returns.txt --type plot --options "type=pareto" -o returns.svg
+py-doc diagram flow.puml -o flow.png --dpi 300      # PNG at 300 dpi, for print
+py-doc diagram credit.txt --type threshold -o credit.pdf --theme dark
+py-doc diagram returns.txt --type plot --options "type=pareto" -o returns.webp
+py-doc diagram flow.mmd -o flow.png --chrome card --title "Joining" --caption "From power on to joined"
 py-doc diagram poster.md -o images/                 # every diagram and block of a Markdown file
+py-doc diagram flow.mmd -o flow.svg --watch         # draw again on every save, and show it in the browser
 py-doc diagram --list                               # every type it draws
 py-doc diagram --help-type gauge                    # the syntax of one, with an example
 ```
 
-The type comes from `--type`, or from the extension: `.mmd`, `.puml`, `.dot`, `.ditaa`, `.edn`, `.pikchr`, `.railroad`, `.vl.json`, `.vg.json` and `.wavedrom.json`. `--options` holds a block's options, as they would follow its fence name. The output's extension chooses SVG or PNG; a block made of boxes and text, such as `cards`, and the tools that draw PNG only, such as ditaa, are PNG only. From a Markdown file, each picture is named after the file, its place and its caption or title, such as `poster-01-messages-a-day.svg`, and `--format png` writes PNG.
+The type comes from `--type`, or from the extension: `.mmd`, `.puml`, `.dot`, `.ditaa`, `.edn`, `.pikchr`, `.railroad`, `.vl.json`, `.vg.json` and `.wavedrom.json`. `--options` holds a block's options, as they would follow its fence name. From a Markdown file, each picture is named after the file, its place and its caption or title, such as `poster-01-messages-a-day.svg`. `--format` chooses the format of all of them.
 
-Poster blocks and plots are drawn as in a document: in the `print` theme, or the one `--theme` names. `--background` is what goes behind an SVG block (default white, or `transparent`), and `--padding` adds space round an SVG picture. A drawing needs the tool container, and is cached as the diagrams of documents are.
+The output's extension chooses the format:
+
+| Format | What it is | Notes |
+|---|---|---|
+| `.svg` | Vector, for the web | For the pictures that are SVG. Blocks made of boxes and text, such as `cards`, are not, nor are PNG-only tools such as ditaa. From a Markdown file, those are written as PNG |
+| `.png` | Pixels, at 192 dpi | `--dpi 300` for print. The picture keeps its size in inches and gets more pixels |
+| `.webp` | The PNG, lossless and smaller | Takes `--dpi` too |
+| `.pdf` | One page the size of the picture | Text and lines stay vector, so it prints sharp at any size. Chromium prints it, so Mermaid's labels are kept |
+
+`--chrome card` puts the picture in a box of the theme, with `--title` above it and `--caption` under it, as a figure is on a poster. From a Markdown file, a block's `caption=` or `title=` is its card's title.
+
+Poster blocks and plots are drawn as in a document: in the `print` theme, or the one `--theme` names. `--background` is what goes behind an SVG block (default white, or `transparent`), and `--padding` adds space round the picture. A block that is all SVG, such as a chart or a gauge, is drawn by py-doc alone as SVG, with no Docker. Everything else needs the tool container, and is cached as the diagrams of documents are.
+
+`--watch` draws the file again on every save, and shows the pictures on a local page that reloads itself, as `py-doc poster --watch` does.
+
+### From Python
+
+The same drawing is a Python function, for a script or a notebook:
+
+```python
+from py_doc import render_diagram
+
+picture = render_diagram("flowchart LR
+  A --> B", kind="mermaid")
+picture.save("flow.svg")                             # or .png, .webp or .pdf
+picture.save("flow.png", dpi=300)
+svg = picture.to_svg()                               # the SVG text; to_png(), to_webp() and to_pdf() give bytes
+
+gauge = render_diagram("0 | 50 | green
+50 | 100 | red", kind="gauge", options="value=40 min=0 max=100",
+                       theme="dark")
+gauge.card(title="Grid load", caption="At noon").save("load.pdf")
+```
+
+`kind` is any type of `py-doc diagram --list`. `theme`, `options`, `background` and `padding` are the options of the command. In Jupyter, a picture shows itself: as SVG when it has one, else as PNG. A picture is drawn only when a format is asked for, so `to_svg()` of a chart needs no Docker.
 
 ## Front matter
 
@@ -215,5 +251,15 @@ Alice -> Bob : hello
     ```
 
     Give settings in front matter, not in a `%%{init: ...}%%` line. Mermaid ignores the whole init line when a value in it has a single quote, such as a font list.
+- **Icons in Mermaid**: an `architecture-beta` diagram can use the icons of four packs in the tool image, with no network. Name an icon by its pack and its name, such as `service db(logos:postgresql)[Readings]`:
+
+    | Prefix | Pack | For | Licence |
+    |---|---|---|---|
+    | `logos` | [logos](https://icon-sets.iconify.design/logos/) | Brands and products: `logos:aws`, `logos:docker`, `logos:postgresql` | CC0, no credit needed |
+    | `tabler` | [Tabler Icons](https://tabler.io/icons) | General UI and tech: `tabler:server`, `tabler:router`, `tabler:lock` | MIT, no credit needed |
+    | `mdi` | [Material Design Icons](https://pictogrammers.com/library/mdi/) | Devices and domains Tabler lacks: `mdi:thermometer`, `mdi:chip` | Apache 2.0 |
+    | `wi` | [Weather Icons](https://erikflowers.github.io/weather-icons/) | Weather: `wi:rain`, `wi:day-sunny` | SIL Open Font License 1.1 |
+
+    Search a pack on its page for the names. Poster blocks use the same four packs, so an icon looks the same in a diagram and in a block. See [Icons](12_posters.md#icons).
 - **Poster blocks** (`cards`, `chart`, `steps`, `equation`, `terminal` and the rest of [the posters chapter](12_posters.md#poster-blocks)) work in documents, decks and sites too. See [Poster blocks in documents](#poster-blocks-in-documents).
 - **Pictures** in Markdown are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown. `![](images/a.png){width=50%}` makes a picture that share of the text width, in Word too, where py-doc works it out from the template's page and margins.

@@ -109,6 +109,11 @@ def render_output(
     """Draw the diagrams of ``joined`` and have pandoc write ``output``. ``name`` is used in messages."""
     if runtime is None:
         raise ConversionError(f"Building {fmt} needs the tool container, but no runtime was given")
+    if fmt == "html" and settings.get("deck"):  # the slides as an HTML deck, drawn by the poster engine
+        from .deck import write_deck
+
+        base = joined.parts[0][0].parent if joined.parts else source_dirs[0]
+        return write_deck(joined, metadata, output, base, settings, runtime, mermaid, name)
     template = status_template(template, metadata.status)
     if template is not None and not template.is_file() and settings.get("allow_missing_template", False):
         logger.warning(f"Template {template} not found, so {name}.{fmt} is built without it")
@@ -165,7 +170,32 @@ def _settings(config: ProjectConfig, doc: DocumentConfig, fmt: str):
     default, own = config.outputs.get(fmt), doc.outputs.get(fmt)
     template = (own.template if own else None) or (default.template if default else None)
     options = {**(default.options if default else {}), **(own.options if own else {})}
+    if fmt == "html" and options.get("deck"):
+        options = {**deck_options(config, doc), **options}
     return template, options
+
+
+def deck_options(config: ProjectConfig, doc: DocumentConfig) -> dict:
+    """The options of the HTML deck of ``doc``: its html output's, else those its PowerPoint deck shares with it
+    (the slide level and footer), so the two decks are split and footed alike."""
+    _, pptx = _settings(config, doc, "pptx") if "pptx" in doc.outputs else (None, {})
+    shared = {key: pptx[key] for key in ("split_level", "footer") if key in pptx}
+    own = doc.outputs.get("html")
+    return {**shared, **(own.options if own and own.options.get("deck") else {}), "deck": True}
+
+
+def deck_page(config: ProjectConfig, doc: DocumentConfig, runtime, variables=None, conditions=None):
+    """The HTML deck of ``doc`` as a page, without writing it: for a site. Returns its page and title."""
+    from .deck import DeckSettings, build_deck
+
+    joined = join_sources(
+        list(doc.sources), {**doc.variables, **(variables or {})}, {**doc.conditions, **(conditions or {})}, doc.id
+    )
+    metadata = _combine_metadata(doc, joined.metadata, joined.first_heading, config.root)
+    settings = DeckSettings.from_options(deck_options(config, doc))
+    base = joined.parts[0][0].parent if joined.parts else config.root
+    page, _, _ = build_deck(joined.markdown, metadata, base, settings, runtime, config.mermaid, doc.id)
+    return page, metadata.title or doc.id
 
 
 def _first_word(renderer: str) -> str:

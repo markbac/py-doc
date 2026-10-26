@@ -22,7 +22,7 @@ from conftest import tex_packages_found
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 # The host has Graphviz and pandoc, but not the other diagram tools, so those blocks are taken out
 NO_TOOLS = re.compile(
-    r"```(?:mermaid|plantuml|puml|ditaa|blockdiag|seqdiag|actdiag|nwdiag|packetdiag|rackdiag|wavedrom|bytefield-svg|pikchr|railroad|wireviz|vega-lite|vega|chart|cards|circuit|music)\b[^\n]*\n.*?```\n",
+    r"```(?:mermaid|plantuml|puml|ditaa|blockdiag|seqdiag|actdiag|nwdiag|packetdiag|rackdiag|wavedrom|bytefield-svg|pikchr|railroad|wireviz|vega-lite|vega|chart|cards|circuit|music|bowtie|fault-tree|gsn|kmap|plc-ladder|structogram|n2|idef0|vsm)\b[^\n]*\n.*?```\n",
     re.S,
 )
 
@@ -219,7 +219,7 @@ def test_the_guide_shows_the_word_features(examples, pandoc_runtime):
 
 @needs_dot
 def test_the_deck_uses_the_layouts_notes_and_footer(examples, pandoc_runtime):
-    assert main(["build", "deck"]) == 0
+    assert main(["build", "deck", "-f", "pptx"]) == 0
     presentation = Presentation(examples / "build" / "deck.pptx")
     slides = presentation.slides
     assert len(slides) >= 15
@@ -243,7 +243,7 @@ def test_the_deck_uses_the_layouts_notes_and_footer(examples, pandoc_runtime):
 def test_a_released_deck_uses_the_base_template(examples, pandoc_runtime):
     slides = examples / "docs" / "deck" / "slides.md"
     slides.write_text(slides.read_text(encoding="utf-8").replace("status: Draft", "status: Released"), encoding="utf-8")
-    assert main(["build", "deck"]) == 0
+    assert main(["build", "deck", "-f", "pptx"]) == 0
     master = "".join(m.part.blob.decode("utf-8") for m in Presentation(examples / "build" / "deck.pptx").slide_masters)
     assert "DRAFT" not in master and "Version 1.0" in master
 
@@ -257,7 +257,7 @@ def test_a_draft_html_guide_uses_the_draft_stylesheet(examples, pandoc_runtime):
 
 @needs_dot
 def test_a_draft_deck_uses_the_draft_template(examples, pandoc_runtime):
-    assert main(["build", "deck"]) == 0  # slides.md says status: Draft
+    assert main(["build", "deck", "-f", "pptx"]) == 0  # slides.md says status: Draft
     master = "".join(m.part.blob.decode("utf-8") for m in Presentation(examples / "build" / "deck.pptx").slide_masters)
     assert "DRAFT" in master
 

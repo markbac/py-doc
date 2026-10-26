@@ -44,6 +44,7 @@ LINT_IN_BUILD = ("off", "on", "strict")
 SITE_ENGINES = ("mkdocs", "starlight")
 DEFAULT_SITE_DIR = "site"
 POSTERS_FOLDER = "posters"  # the site folder of the posters and their page
+DECKS_FOLDER = "decks"  # the site folder of the HTML decks and their page
 
 _META_KEYS = (
     "title", "subtitle", "author", "date", "version", "status", "document_number", "description",
@@ -57,12 +58,16 @@ _OUTPUT_OPTIONS = {
         "path", "template", "allow_missing_template", "split_level", "name", "footer", "heading_numbers",
     ),
     "pdf": ("path", "template", "toc", "name", "number_sections", "heading_numbers"),
-    "html": ("path", "template", "toc", "name", "number_sections", "heading_numbers"),
+    "html": (
+        "path", "template", "toc", "name", "number_sections", "heading_numbers",
+        "deck", "split_level", "footer", "aspect", "theme", "embed_fonts", "pdf",  # an HTML deck (deck: true)
+    ),
 }  # fmt: skip
+DECK_OPTIONS = ("split_level", "footer", "aspect", "theme", "embed_fonts", "pdf")
 
 
 _OPTION_TYPES = {
-    "split_level": int,
+    "split_level": int, "aspect": str, "theme": str,
     "name": str, "placeholder_prefix": str, "marker": str, "footer": str, "heading_numbers": str,
 }  # fmt: skip
 HEADING_NUMBERS = ("auto", "strip", "keep")
@@ -163,6 +168,7 @@ class SiteConfig:
         default_factory=dict
     )  # a navigation section of several documents: title -> documents
     posters: list[str] = field(default_factory=list)  # posters of py-doc.yml on the site, linked from a Posters page
+    decks: list[str] = field(default_factory=list)  # documents shown on the site as HTML decks, from a Decks page
 
 
 @dataclass
@@ -384,6 +390,15 @@ def parse_config(data: Any, root: Path) -> ProjectConfig:
             raise ConfigError(
                 f"site.posters names '{name}', which is not under posters. Defined: {', '.join(config.posters) or 'none'}"
             )
+    for name in config.site.decks if config.site else ():
+        document = config.documents.get(name)
+        if document is None:
+            raise ConfigError(f"site.decks names '{name}', which is not under documents")
+        html = document.outputs.get("html")
+        if "pptx" not in document.outputs and not (html and html.options.get("deck")):
+            raise ConfigError(
+                f"site.decks names '{name}', which is not a deck: give it a pptx output or html: {{deck: true}}"
+            )
     if config.site and config.site.posters and POSTERS_FOLDER in (config.site.documents or config.own_documents):
         raise ConfigError(
             f"site.posters puts the posters in a '{POSTERS_FOLDER}' folder, and a document of the site has that name. Rename the document"
@@ -461,7 +476,11 @@ def _parse_content(data: dict, root: Path) -> list[GeneratorSpec]:
 
 
 def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
-    _only(data, ("engine", "dir", "title", "documents", "downloads", "targets", "pages", "groups", "posters"), "site")
+    _only(
+        data,
+        ("engine", "dir", "title", "documents", "downloads", "targets", "pages", "groups", "posters", "decks"),
+        "site",
+    )
     engine = _typed(data, "engine", str, "site")
     if engine not in SITE_ENGINES:
         raise ConfigError(f"site.engine must be one of {', '.join(SITE_ENGINES)}, not {engine!r}")
@@ -500,6 +519,7 @@ def _parse_site(data: dict, root: Path, config: ProjectConfig) -> SiteConfig:
         pages={str(title): str(path) for title, path in _mapping(data.get("pages") or {}, "site.pages").items()},
         groups=groups,
         posters=[str(name) for name in _typed(data, "posters", list, "site", [])],
+        decks=[str(name) for name in _typed(data, "decks", list, "site", [])],
     )
 
 
@@ -541,8 +561,23 @@ def _parse_outputs(data: dict, root: Path, where: str, defaults: bool = False) -
             raise ConfigError(f"{place}.heading_numbers must be one of {', '.join(HEADING_NUMBERS)}")
         if "split_level" in settings.options and not 1 <= settings.options["split_level"] <= 6:
             raise ConfigError(f"{place}.split_level must be 1 to 6")
+        if fmt == "html":
+            _check_deck(settings, root, place)
         result[fmt] = settings
     return result
+
+
+def _check_deck(settings: OutputSettings, root: Path, place: str) -> None:
+    """The options of an HTML deck are only for one, and its theme file is from py-doc.yml's folder."""
+    options = settings.options
+    given = [name for name in DECK_OPTIONS if name in options]
+    if given and not options.get("deck"):
+        raise ConfigError(f"{place}.{given[0]} is an option of an HTML deck: add deck: true, or remove it")
+    if options.get("aspect", "16:9") not in ("16:9", "4:3"):
+        raise ConfigError(f"{place}.aspect must be 16:9 or 4:3")
+    theme = options.get("theme")
+    if theme and theme.endswith((".yml", ".yaml")):
+        options["theme"] = str(_path(root, theme, f"{place}.theme"))
 
 
 def _parse_collection(name: str, raw: Any, root: Path) -> list[Path]:

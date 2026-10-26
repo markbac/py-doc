@@ -89,8 +89,9 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 | `theme` | `default` | A built-in theme or a theme file. See [Themes](#themes) |
 | `colours`, `palette`, `fonts` | The theme's | Changes over the theme, written as in a theme file |
 | `logo` | The theme's | The picture in the header |
+| `icons` | None | A folder of the project's own SVG icons, for `icon=` on blocks. See [Icons](#icons) |
 | `header` | `{align: centre, logo: left}` | `align`: `centre` or `left`. `logo`: `left`, `right` or `none` |
-| `footer` | Empty | `left`, `centre` and `right` text (Markdown, with `{{variables}}`), `logos` (a list of pictures), `qr` (an address or text), `qr-label`, and `document` and `version` (shown small under the footer) |
+| `footer` | Empty | `left`, `centre` and `right` text (Markdown, with `{{variables}}`), `logos` (a list of pictures), `qr` (an address or text), `qr-label`, and `document` and `version` (shown small under the footer). `credits` is a line or a list of them, for the sources of pictures |
 | `document_number`, `version` | None | The document's number and version, shown small under the footer, unless `footer.document` or `footer.version` names others. `version: git` is the output of `git describe --tags --always`, as for a document |
 | `variables`, `conditions` | None | Values for `{{name}}` and `[[IF:]]`, as for documents |
 | `pdf` | `false` | `true` prints a one-page PDF beside the page, and a path prints it there. `--pdf` and `--no-pdf` win |
@@ -339,12 +340,12 @@ A block colour is one of three things. It can be a name from the theme's palette
 
 | Fence | Lines | Options |
 |---|---|---|
-| `cards` | `Heading \| Text \| colour`, the colour only for the `top` style | `cols=2`, `style=` `title` (default), `label`, `top` or `plain` |
+| `cards` | `Heading \| Text \| colour`, the colour only for the `top` style. An `icon=` cell adds an [icon](#icons) | `cols=2`, `style=` `title` (default), `label`, `top` or `plain` |
 | `lcd` | Screens separated by blank lines. A line starting `--` is the caption | `cols=` (default: up to 3). Six screens with `cols=2` are 2 columns and 3 rows |
 | `equation` | Cards separated by `---` lines. Each has an optional `title:`, the formula in LaTeX (one line or more), then `symbol \| meaning \| unit` lines as its legend, then notes | `cols=` (default: up to 3) |
 | `terminal` | Screens separated by blank lines. A line after a prompt (`$ `, `> `, `PS> `, `PS C:\path> `, `user@host:~$ `) is a command, a line starting `#` is dimmed, and a line starting `--` is the caption | `title=` (in the window's title bar), `cols=` (default: up to 2) |
 | `segments` | `weight \| label \| detail \| colour`, and an optional `title:` and `height:` | |
-| `flow` | `[Filled\|colour]` or `[Outlined]` boxes, joined by `->` or `-label->` arrows | |
+| `flow` | `[Filled\|colour]` or `[Outlined]` boxes, joined by `->` or `-label->` arrows. `[Box\|colour\|icon=tabler:moon]` has an [icon](#icons) | |
 | `lanes` | `Label \| *filled cell \| dashed cell` | |
 | `figure` | Several of `segments`, `flow` and `lanes` in one box, split by `+++` lines, each starting `@segments`, `@flow` or `@lanes` | |
 | `timeline` | `date \| label \| detail \| colour`, the last two optional | `vertical` for a column instead of a row |
@@ -388,15 +389,24 @@ A block colour is one of three things. It can be a name from the theme's palette
 | `glossary` | `Term \| definition` lines | `cols=` (default 2) |
 | `annotated` | The picture on the first line, relative to the Markdown, then `x%, y% \| heading \| text \| colour` lines: a numbered pin at each place, and a legend of the numbers under the picture | `cols=` (of the legend, default 2), `alt=` |
 | `zoom-chain` | `picture \| caption \| magnification \| x%, y%, w%, h%` lines: each box marks the part of its picture that the next one shows, and the magnification goes between them | |
+| `bowtie` | `hazard:`, `top:`, then `threat: name \| barrier, barrier` and `consequence: name \| barrier, barrier` lines. See [Engineering structure diagrams](#engineering-structure-diagrams) | |
+| `fault-tree` | Indented events: `or:`, `and:`, `xor:`, `pand:`, `inhibit:` or `k/n:` gates with their causes under them, and `basic:`, `undeveloped:`, `house:` or `transfer:` causes, each `name \| probability` | |
+| `gsn` | Indented `kind ID: text` lines: `goal`, `strategy`, `solution`, and `context`, `assumption` and `justification` beside the line above them. `\| undeveloped` marks one | |
+| `kmap` | `vars: A B C D` (2 to 4), `ones:` and `dont:` minterms. The loops of a minimal cover and its expression are drawn | `name=` (default `F`), `loops=no` |
+| `plc-ladder` | `rung: comment`, then `NO tag \| NC tag \| COIL tag` in series, and `branch:` lines in parallel with its first elements | |
+| `structogram` | Indented steps, with `if` and `else`, `while`, `for`, `repeat` and `until`, and `case` with `when` lines | |
+| `n2` | `items: A, B, C`, then `A -> B \| interface` lines | |
+| `idef0` | `box: A1 Function` lines, each with `in:`, `out:`, `control:` and `mech:` lines under it. At most five boxes | |
+| `vsm` | `supplier:` and `customer:` lines, then `process: name \| C/T 40 s \| data` and `inventory: amount` lines in flow order | |
 | `qr` | The address or text to encode, or with `type=` the `key: value` lines of a contact, event or other kind. See [QR codes](#qr-codes) | `type=` (default `url`), `file=`, `size=140` (pixels), `label="..."`, `ecc=` `L`, `M` (default), `Q` or `H` |
 | `barcode` | The data to encode, on one line | `type=` `code128` (default), `code39`, `ean13`, `ean8`, `upca` or `itf14`, `width=240` and `height=70` (pixels), `text=no`, `check=yes` (Code 39), `label="..."`. See [Barcodes](#barcodes) |
-| `steps` | `Heading \| text \| colour`, the text and colour optional | `cols=1`, `start=1`: the number of the first step |
+| `steps` | `Heading \| text \| colour`, the text and colour optional, and an `icon=` cell | `cols=1`, `start=1`: the number of the first step |
 | `gallery` | `picture \| caption`, the picture relative to the Markdown and the caption optional | `cols=3` (or fewer pictures), `height=` in pixels: crop every picture to one height |
 | `progress` | `label \| value \| target \| colour`, the colour optional (default: `good` when met, else `accent`, or `bad` over a ceiling) | `unit=" nodes"`, `show=` `values` (default) or `percent`, `better=` `higher` (default) or `lower`, for a ceiling such as a return rate |
 | `checklist` | `[x] done`, `[ ] open` or `[!] failed`, then the text | `cols=1` |
 | `compare` | A header such as `\| Before \| After`, then `label \| before \| after`. Any number of columns; the last is stressed | |
 | `people` | `name \| role \| contact \| photo`, all but the name optional. Without a photo the initials are shown | `cols=2` (or fewer people) |
-| `highlight` | `value \| label \| detail \| colour`, the last two optional (default colour: `accent`) | `cols=` (default: one for each line) |
+| `highlight` | `value \| label \| detail \| colour`, the last two optional (default colour: `accent`), and an `icon=` cell | `cols=` (default: one for each line) |
 
 In `segments`, `flow` and `lanes`, the lines that are not part of the diagram become notes under it, written in Markdown.
 
@@ -482,6 +492,144 @@ SN-100-0042
 - The check digit of an EAN, UPC or ITF-14 code is worked out when it is left out, and checked when it is given. So a mistyped digit stops the build instead of printing a barcode of another product. Spaces and hyphens in the digits are ignored.
 - EAN and UPC are drawn as on products: longer guard bars, and the digits in their groups between them. The space the scanner needs on each side (the quiet zone) is part of the drawing, so nothing should be put closer than its white box.
 - `width=` is the whole drawing, quiet zones included. Print a retail code no smaller than its standard size: about 140 pixels wide for EAN-13 and UPC-A, 100 for EAN-8 and 400 for ITF-14.
+
+### Engineering structure diagrams
+
+Nine blocks draw the notations of safety, reliability and systems engineering with their own symbols. Mermaid flowcharts lose those symbols. Each is SVG, so it works in documents, decks and sites too. `examples/poster/engineering.md` has one of each.
+
+A **bow-tie** puts the threats on the left and the consequences on the right of a top event. Each line has its barriers on it: preventive on the left, mitigating on the right. The hazard is above it.
+
+````markdown
+```bowtie
+hazard: Lithium cell
+top: Thermal runaway
+threat: Overcharge | Charger cut-off, Cell monitor
+consequence: Fire | Vent path, Fire wall
+```
+````
+
+A **fault tree** starts at its top event. Indent the causes of an event under it, two spaces a level. An event that has causes names its gate: `or:`, `and:`, `xor:`, `pand:` (priority AND), `inhibit:` or `k/n:` such as `2/3:`. A cause with none is `basic:` (a circle), `undeveloped:` (a diamond), `house:` or `transfer:` (a triangle). A probability can follow the name. An `inhibit:` gate takes its condition after that, as in `inhibit: Fire spreads | | Door open`.
+
+````markdown
+```fault-tree
+or: Node stops reporting
+  and: No power
+    basic: Cell flat | 1e-3
+    basic: Backup fails | 0.05
+  undeveloped: Gateway down
+```
+````
+
+A **GSN** safety case is indented `kind ID: text` lines. A `goal`, `strategy` or `solution` is supported by the lines under it, drawn with solid arrows. A `context`, `assumption` or `justification` is drawn beside the line it is under, with a hollow arrow. `| undeveloped` marks an element that the case does not develop yet.
+
+````markdown
+```gsn
+goal G1: The node is safe to install
+  context C1: Indoor use, 0 to 40 °C
+  strategy S1: Argue over each hazard
+    goal G2: Overheating is prevented
+      solution Sn1: Thermal test report
+```
+````
+
+A **Karnaugh map** takes 2 to 4 `vars:`, the minterms that are 1 (`ones:`), and those that do not matter (`dont:`). py-doc finds a minimal cover and loops it on the map, round its edges where a loop wraps. The simplified sum of products goes under it, such as `F = B′D′ + BD`. A prime marks a variable that is 0. `name=Alarm` names the function, and `loops=no` leaves the map for the reader to solve.
+
+````markdown
+```kmap
+vars: A B C D
+ones: 0 2 5 7 8 10 13 15
+dont: 6
+```
+````
+
+A **ladder** diagram has a `rung:` line with its comment, then its elements in series, the last at the right end. A `branch:` line goes in parallel with the first elements of its rung, as a seal-in does. The contacts are `NO`, `NC`, `P` and `N`. The coils are `COIL`, `NCOIL`, `SET` and `RESET`. The boxes are `TON`, `TOF`, `TP`, `CTU`, `CTD` and `CTUD`. Each is followed by its tag, then for a box its value, such as `TON T1 PT=30s`.
+
+````markdown
+```plc-ladder
+rung: Start and stop the pump
+NO Start | NC Stop | COIL Pump
+branch: NO Pump
+```
+````
+
+A **structogram** (Nassi-Shneiderman diagram) is indented steps. `if COND` with an `else` is a decision. `while COND` and `for X` test at the top. `repeat`, with `until COND` after its steps, tests at the bottom. `case X` has a `when VALUE` line for each branch, and may have an `else`.
+
+````markdown
+```structogram
+Read the sensor
+if Reading changed?
+  Send it
+else
+  Count the skip
+```
+````
+
+An **N² chart** puts the `items:` on the diagonal. Each `A -> B | what` line goes in A's row and B's column. Feed-forward is above the diagonal, and feedback, below it, is shaded. Without `items:`, the items are in the order the lines name them.
+
+**IDEF0** boxes are `box: A1 Function` lines. Under each are its `in:`, `out:`, `control:` and `mech:` lines, with commas between several. Inputs enter at the left, outputs leave at the right, controls come from the top and mechanisms from below. An output named as a later box's input or control is drawn as one arrow between them. A diagram shows at most five boxes, as IDEF0 asks.
+
+A **value stream map** has a `supplier:` and a `customer:`, each `name | detail`, then `process:` and `inventory:` lines in the order of the flow. A process has its data after its name, such as `C/T 40 s | Uptime 92 %`. Under the flow is the timeline: inventory waits up, processing times (`C/T`) down. The lead time and processing time are added up at its end.
+
+````markdown
+```vsm
+supplier: Cell maker | Weekly
+customer: Installer | 400 a day
+inventory: 5 days
+process: Solder | C/T 40 s | Uptime 92 %
+inventory: 1 day
+process: Pack | C/T 20 s
+```
+````
+
+## Icons
+
+`icon=` puts an icon before the text of a card, a step, a highlight, a stat or a flow box. Write it as a cell of its own, anywhere in the line:
+
+````markdown
+```cards cols=3
+Sensor | Temperature on I2C | icon=tabler:temperature
+Cloud | Stores the readings | icon=logos:aws
+Weather | Rain stops a reading | icon=wi:rain
+```
+
+```flow
+[Asleep|navy|icon=tabler:moon] -timer-> [Measure|blue|icon=mdi:thermometer] -> [Sent|icon=tabler:check]
+```
+````
+
+In a stats table, the cell goes in the row, such as `| 3 | Gateways | icon=mdi:router |`. In a flow, it goes after the box's colour, or alone for an outlined box. The icon takes the colour of its text.
+
+| Prefix | Pack | For | Licence |
+|---|---|---|---|
+| `tabler` | [Tabler Icons](https://tabler.io/icons) | General UI and tech: server, router, cloud, lock | MIT |
+| `mdi` | [Material Design Icons](https://pictogrammers.com/library/mdi/) | Devices and domains that Tabler lacks | Apache 2.0 |
+| `logos` | [logos](https://icon-sets.iconify.design/logos/) | Brands and products, in their own colours | CC0 |
+| `wi` | [Weather Icons](https://erikflowers.github.io/weather-icons/) | Weather | SIL Open Font License 1.1 |
+
+A name without a prefix, such as `icon=server`, is looked up in the project's own icons first, then in Tabler, then in Material Design Icons. `py-doc icons search router` lists the names that have a word in them. Mermaid's `architecture-beta` diagrams draw the same packs, so an icon looks the same in a block and in a diagram.
+
+The packs are not part of py-doc. The first poster that uses an icon downloads its pack once from the npm registry. py-doc checks it against the checksum it has for it, and keeps it in the user cache folder. A poster without icons downloads nothing. For a machine without network, run `py-doc icons fetch` on one that has it, and copy the cache folder (`py-doc icons list` shows it) across.
+
+### The project's own icons
+
+`icons: brand/icons` names a folder of SVG files, such as a company's or a domain's icons. Each file is an icon by its name: `brand/icons/valve.svg` is `icon=valve`. Draw them in `currentColor` to take the colour of the text. An `icons.yml` in the folder gives an icon's licence and its credit:
+
+```yaml
+valve: {licence: CC-BY-4.0, credit: "Valve icon by A. Artist, CC BY 4.0"}
+```
+
+### Credits and licences
+
+The icons of the four packs need no credit on the poster. A project icon under a CC BY licence does: the build stops until its `icons.yml` gives a credit, then the credit is shown under the footer by itself. Credit pictures you put on the poster with `footer.credits`:
+
+```yaml
+footer:
+  credits:
+    - "Photos: NASA image library"
+    - "Cell drawing: Servier Medical Art, CC BY 4.0"
+```
+
+`py-doc build` lists every icon a poster uses, with its pack and licence, under `icons` in the [build report](02_projects.md#build-report). Material Design Icons are Apache 2.0, so the list is the record of the ones used. The licence of each pack is kept with it in the cache, in `info.json`.
 
 ## Proportions and printing
 

@@ -17,7 +17,7 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | `py-doc new` | Start a legacy document, or number an existing Markdown file, from `doc-numbers.yml` at the repository root |
 | `py-doc build` | Build every document described in `py-doc.yml` (generators, lint, documents, site), or one legacy `createdocs` file with `--legacy` |
 | `py-doc docx` | Convert Markdown to Word, or with `--watch` rebuild on every save and serve a live HTML preview |
-| `py-doc slides` | Convert Markdown to PowerPoint, with the same `--watch` live preview |
+| `py-doc slides` | Convert Markdown to PowerPoint, or with `-f html` to an HTML deck with a presenter view; `--watch` shows the deck live |
 | `py-doc lint` | Check writing style, glossary terms, acronyms, structure, links and project conventions; text, CSV, GitHub, JSON or SARIF |
 | `py-doc check` | Check a project without building it: `py-doc.yml`, sources, templates, the site and lint |
 | `py-doc generate` | Write the Markdown that `content.generators` makes: glossaries, indexes, traceability, API references |
@@ -26,7 +26,7 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | `py-doc c4` | Check, export, draw and edit Structurizr workspaces (`c4 up` opens the live editor) |
 | `py-doc site` | Make and build a web site of the documents with MkDocs or Astro + Starlight |
 | `py-doc poster` | Build self-contained HTML posters from Markdown, and print them to PDF; `--watch` reloads them on every save |
-| `py-doc diagram` | Draw one diagram, poster block or `plot` as an SVG or PNG file, or every one of a Markdown file |
+| `py-doc diagram` | Draw one diagram, poster block or `plot` as an SVG, PNG, WebP or PDF file, or every one of a Markdown file; `render_diagram()` does the same from Python |
 | `py-doc import` | Convert a Word document or a PowerPoint deck to Markdown |
 | `py-doc template` | Check and list the styles of a Word or PowerPoint template |
 | `py-doc tools`, `doctor`, `setup` | Build and check the tool container, and install Docker Engine |
@@ -106,7 +106,10 @@ src/
 │   ├── poster*.py        # py-doc poster: the page, settings, themes and fonts (poster.py ...), the shared
 │   │                     #   drawing core (poster_svg.py), maths (poster_math.py), the blocks (poster_blocks,
 │   │                     #   poster_scales, poster_embedded, poster_shapes, poster_space) and plot (poster_plot.py)
-│   ├── diagram_cli.py    # py-doc diagram: one diagram or block as an image file
+│   ├── diagram_api.py    # render_diagram(): one diagram or block as SVG, PNG, WebP or PDF
+│   ├── diagram_cli.py    # py-doc diagram, on diagram_api
+│   ├── icons.py          # the icon packs of poster blocks; icons_cli.py is py-doc icons
+│   ├── deck.py           # an HTML deck: the slides of a deck as one self-contained page
 │   └── watch.py          # the --watch loop and preview server of poster, docx and slides
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/

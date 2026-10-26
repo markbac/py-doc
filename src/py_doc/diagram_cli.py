@@ -1,41 +1,47 @@
 """``py-doc diagram`` (or ``py-doc image``): one diagram or poster block as an image file of its own.
 
 A diagram source file (a ``.mmd``, ``.puml``, ``.dot`` ...), a poster block or ``plot`` with ``--type``, or every
-diagram and block of a Markdown file, is drawn the way a document draws it and written as SVG or PNG.
+diagram and block of a Markdown file, is drawn the way a document draws it and written as SVG, PNG, WebP or
+PDF. The drawing is :mod:`py_doc.diagram_api`, which is also the Python API.
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
+import html
 import re
-import shutil
 import sys
 from pathlib import Path
 
 from py_doc._logging import configure_logging
 from py_doc.config import ConfigError, find_config, load_config
+from py_doc.diagram_api import FORMATS, DiagramApiError, Picture, padded, render_diagram  # noqa: F401 - padded is API
 from py_doc.errors import ConversionError, exit_status
 from py_doc.runtime import RuntimeSettings, connect
 
 EXAMPLES = """examples:
   py-doc diagram flow.mmd -o flow.svg              a Mermaid file, as SVG
-  py-doc diagram flow.puml -o flow.png             a PlantUML file, as PNG
-  py-doc diagram returns.txt --type plot --options "type=pareto" -o returns.svg
+  py-doc diagram flow.puml -o flow.png --dpi 300   a PlantUML file, as PNG at 300 dpi
+  py-doc diagram returns.txt --type plot --options "type=pareto" -o returns.pdf
   py-doc diagram credit.txt --type threshold -o credit.svg --theme dark
+  py-doc diagram parts.txt --type cards -o parts.png           a block made of HTML, photographed
+  py-doc diagram flow.mmd -o flow.png --chrome card --title "Joining" --caption "From power on to joined"
   py-doc diagram poster.md -o images/              every diagram and block of a Markdown file
-  py-doc diagram poster.md -o images/ --format png
+  py-doc diagram poster.md -o images/ --format webp
+  py-doc diagram flow.mmd -o flow.svg --watch      draw again on every save, and show it in the browser
   py-doc diagram --list                            every type it draws
   py-doc diagram --help-type gauge                 the syntax of one, with an example
 
 The type comes from --type, or from the file's extension. Poster blocks are drawn in the theme of
---theme (default: print), the same way documents draw them."""
+--theme (default: print), the same way documents draw them. SVG is for the pictures that are SVG: a block
+made of HTML, and a tool such as ditaa, are PNG, WebP or PDF."""
 
 EXTENSIONS = {
     ".mmd": "mermaid", ".mermaid": "mermaid", ".puml": "plantuml", ".plantuml": "plantuml", ".dot": "dot",
     ".gv": "dot", ".ditaa": "ditaa", ".edn": "bytefield-svg", ".pikchr": "pikchr", ".railroad": "railroad",
     ".vl.json": "vega-lite", ".vg.json": "vega", ".wavedrom.json": "wavedrom",
 }  # fmt: skip
-FORMATS = ("svg", "png")
 
 
 class DiagramCliError(ConversionError):
@@ -48,19 +54,29 @@ def run_diagram(argv: list[str]) -> int:
         epilog=EXAMPLES, formatter_class=argparse.RawDescriptionHelpFormatter,
     )  # fmt: skip
     parser.add_argument("input", nargs="?", help="A diagram source, a block's text, a Markdown file, or - for stdin")
-    parser.add_argument("-o", "--output", help="The image (.svg or .png), or a folder for a Markdown file")
+    parser.add_argument("-o", "--output", help="The image (.svg, .png, .webp or .pdf), or a folder for a Markdown file")
     parser.add_argument("-t", "--type", help="The diagram or block type, when the extension does not say it")
     parser.add_argument("--options", default="", help='The options of a block, as after its fence name: "type=pareto"')
     parser.add_argument(
-        "-f", "--format", choices=FORMATS, default="svg", help="For a Markdown file: svg (default) or png"
+        "-f", "--format", choices=FORMATS, default="svg", help="For a Markdown file: svg (default), png, webp or pdf"
     )
+    parser.add_argument("--dpi", type=int, help="The density of a PNG or WebP (default: 192)")
     parser.add_argument(
         "--theme", help="The theme of poster blocks and plots: a built-in name or a theme file (default: print)"
     )
     parser.add_argument(
         "--background", default="#ffffff", help="Behind an SVG block: a CSS colour, or transparent (default: white)"
     )
-    parser.add_argument("--padding", type=int, default=0, help="Space round an SVG picture, in pixels (default: 0)")
+    parser.add_argument("--padding", type=int, default=0, help="Space round the picture, in pixels (default: 0)")
+    parser.add_argument(
+        "--chrome", choices=("none", "card"), default="none",
+        help="card: the picture in a box of the theme, with --title above it and --caption under it",
+    )  # fmt: skip
+    parser.add_argument("--title", default="", help="With --chrome card, the title (default: the fence's caption)")
+    parser.add_argument("--caption", default="", help="With --chrome card, the text under the picture")
+    parser.add_argument("--watch", action="store_true", help="Draw again on every save, and show it in the browser")
+    parser.add_argument("--port", type=int, default=0, help="With --watch, the local port (default: a free one)")
+    parser.add_argument("--no-open", action="store_true", help="With --watch, do not open the browser")
     parser.add_argument("--list", action="store_true", help="List every type it draws")
     parser.add_argument("--help-type", metavar="TYPE", help="Show the syntax of one type, with an example")
     parser.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
@@ -81,6 +97,12 @@ def run_diagram(argv: list[str]) -> int:
         return 0
     if not args.input:
         parser.error("give a file to draw, or --list")
+    if args.dpi is not None and args.dpi < 24:
+        parser.error("--dpi must be at least 24")
+    if args.watch:
+        if args.input == "-":
+            parser.error("--watch needs a file to watch, not stdin")
+        return _watch(args)
     try:
         written = draw(args)
     except (ConfigError, ConversionError) as exc:
@@ -143,42 +165,25 @@ def draw(args) -> list[Path]:
             raise DiagramCliError(f"{source} not found")
         text, base, stem = source.read_text(encoding="utf-8"), source.resolve().parent, source.stem
         kind = kind_of(source, args.type)
-    output = Path(args.output) if args.output else Path(f"{stem}.svg")
+    output = Path(args.output) if args.output else Path(f"{stem}.{args.format}")
     fmt = output.suffix.lower().lstrip(".")
     if fmt not in FORMATS:
-        raise DiagramCliError(f"the output must be a .svg or .png file, not {output.name}")
-    one(kind, args.options, text, base, theme, fmt, output, args, runtime)
+        raise DiagramCliError(f"the output must be a .svg, .png, .webp or .pdf file, not {output.name}")
+    one(kind, args.options, text, base, theme, output, args, runtime, args.title)
     return [output]
 
 
-def one(kind, options, text, base, theme, fmt, output, args, runtime) -> Path:
-    """Draw one diagram or block into ``output``, as ``fmt``."""
-    from py_doc.diagrams import BY_FENCE
-    from py_doc.diagrams import render as drawing
-    from py_doc.diagrams.blocks import BlockError, prepare, prepare_plot
-
+def one(kind, options, text, base, theme, output, args, runtime, title="") -> Path:
+    """Draw one diagram or block into ``output``, in the format of its extension."""
     try:
-        if kind in BY_FENCE:
-            renderer = BY_FENCE[kind]
-            try:
-                body = drawing.translated(renderer, text, kind)
-            except drawing.DiagramError as exc:
-                raise DiagramCliError(str(exc)) from None
-        elif kind == "plot":
-            renderer, body = prepare_plot(options, text, theme)
-        else:
-            renderer, body = prepare(kind, options, text, base, theme, background=_background(args.background))
-    except BlockError as exc:
+        picture = render_diagram(
+            text, kind, theme, options, base, _background(args.background), args.padding, runtime
+        )  # fmt: skip
+        if args.chrome == "card":
+            picture = picture.card(args.title or title, args.caption)
+        return picture.save(output, args.dpi)
+    except DiagramApiError as exc:
         raise DiagramCliError(str(exc)) from None
-    if fmt == "svg" and "svg" not in renderer.kinds:
-        raise DiagramCliError(f"{kind} is drawn as PNG only: write the output as .png")
-    picture = drawing.draw_cached(runtime(), renderer, body, fmt, False, base)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    if fmt == "svg" and args.padding:
-        output.write_text(padded(picture.read_text(encoding="utf-8"), args.padding), encoding="utf-8")
-    else:
-        shutil.copyfile(picture, output)
-    return output
 
 
 def _background(value: str) -> str | None:
@@ -187,7 +192,7 @@ def _background(value: str) -> str | None:
 
 def _extract(source: Path, folder: Path, args, theme, runtime) -> list[Path]:
     """Every diagram and block of the Markdown file ``source``, as files in ``folder``."""
-    from py_doc.diagrams import BY_FENCE
+    from py_doc.diagram_api import render_diagram as _render
     from py_doc.diagrams.scan import find_blocks
 
     text = source.read_text(encoding="utf-8")
@@ -196,32 +201,19 @@ def _extract(source: Path, folder: Path, args, theme, runtime) -> list[Path]:
         raise DiagramCliError(f"{source} has no diagram or block to draw")
     written = []
     for n, block in enumerate(found, 1):
-        fmt = args.format
-        renderer_kinds = BY_FENCE[block.fence].kinds if block.fence in BY_FENCE else None
-        if fmt == "svg" and renderer_kinds is not None and "svg" not in renderer_kinds:
-            fmt = "png"  # a tool that draws PNG only, such as ditaa
-        name = _slug(block.options.get("caption") or block.options.get("title") or block.fence)
-        output = folder / f"{source.stem}-{n:02d}-{name}.{fmt}"
+        title = block.options.get("caption") or block.options.get("title") or ""
+        name = _slug(title or block.fence)
+        output = folder / f"{source.stem}-{n:02d}-{name}.{args.format}"
         try:
+            if args.format == "svg":  # a block made of HTML, or a tool such as ditaa, has no SVG: PNG instead
+                probe = _render(block.body, block.fence, theme, block.info, source.resolve().parent, runtime=runtime)
+                if not probe.has_svg:
+                    output = output.with_suffix(".png")
             written.append(
-                one(block.fence, block.info, block.body, source.resolve().parent, theme, fmt, output, args, runtime)
+                one(block.fence, block.info, block.body, source.resolve().parent, theme, output, args, runtime, title)
             )
-        except DiagramCliError as exc:
-            if "drawn as PNG only" not in str(exc):
-                raise DiagramCliError(f"{source}:{block.line}: {exc}") from None
-            written.append(
-                one(
-                    block.fence,
-                    block.info,
-                    block.body,
-                    source.resolve().parent,
-                    theme,
-                    "png",
-                    output.with_suffix(".png"),
-                    args,
-                    runtime,
-                )
-            )
+        except (DiagramCliError, DiagramApiError) as exc:
+            raise DiagramCliError(f"{source}:{block.line}: {exc}") from None
     return written
 
 
@@ -229,19 +221,49 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:40] or "diagram"
 
 
-def padded(svg: str, padding: int) -> str:
-    """``svg`` with ``padding`` pixels of space round it: its viewBox, and its width and height, made larger."""
-    view = re.search(r'viewBox="\s*([-\d.]+)[\s,]+([-\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)\s*"', svg)
-    if not view:
-        return svg
-    x, y, w, h = (float(v) for v in view.groups())
-    box = f'viewBox="{x - padding:g} {y - padding:g} {w + 2 * padding:g} {h + 2 * padding:g}"'
-    out = svg[: view.start()] + box + svg[view.end() :]
-    opening = re.search(r"<svg\b[^>]*>", out)
-    tag = opening.group(0)
-    for attr, size in (("width", w), ("height", h)):
-        tag = re.sub(rf'\s{attr}="[\d.]+"', f' {attr}="{size + 2 * padding:g}"', tag, count=1)
-    return out[: opening.start()] + tag + out[opening.end() :]
+# ---------------------------------------------------------------------------
+# --watch: draw again on every save, and show the pictures on a page that reloads
+# ---------------------------------------------------------------------------
+
+
+def _watch(args) -> int:
+    from py_doc.watch import watch
+
+    source = Path(args.input).resolve()
+    preview = source.parent / ".py-doc" / "preview" / f"{source.stem}-diagram.html"
+
+    def build():
+        written = draw(args)
+        for path in written:
+            print(f"wrote {path}", flush=True)
+        preview.parent.mkdir(parents=True, exist_ok=True)
+        preview.write_text(preview_page(source.name, written), encoding="utf-8")
+        return {source.stem: preview}, {source}
+
+    return watch(
+        build, (ConfigError, ConversionError), port=args.port, open_browser=not args.no_open, title="py-doc diagram"
+    )  # fmt: skip
+
+
+def preview_page(name: str, files: list[Path]) -> str:
+    """A page that shows each picture ``files`` holds, under its file name, for --watch."""
+    kinds = {".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp", ".pdf": "application/pdf"}
+    shown = ""
+    for path in files:
+        mime = kinds[path.suffix.lower()]
+        data = base64.b64encode(path.read_bytes()).decode()
+        if mime == "application/pdf":
+            picture = f'<embed type="application/pdf" src="data:{mime};base64,{data}" width="100%" height="800">'
+        else:
+            picture = f'<img alt="{html.escape(path.name)}" src="data:{mime};base64,{data}">'
+        shown += f"<figure>{picture}<figcaption>{html.escape(str(path))}</figcaption></figure>"
+    return (
+        f'<!doctype html><html><head><meta charset="utf-8"><title>{html.escape(name)}</title><style>'
+        "body{margin:0;padding:24px;background:#eef0f4;font:14px/1.4 sans-serif;color:#333}"
+        "figure{margin:0 0 24px;background:#fff;padding:16px;border:1px solid #d5d9e0;display:inline-block}"
+        "img{max-width:100%;display:block}figcaption{margin-top:8px;color:#666}"
+        f"</style></head><body>{shown}</body></html>"
+    )
 
 
 def listing() -> str:

@@ -67,6 +67,20 @@
                 "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
               }
             }
+          },
+          "icons": {
+            "description": "The icons a poster uses, with where each comes from and its licence",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "source", "licence"],
+              "additionalProperties": false,
+              "properties": {
+                "name": {"type": "string"},
+                "source": {"type": "string"},
+                "licence": {"type": "string"}
+              }
+            }
           }
         }
       }

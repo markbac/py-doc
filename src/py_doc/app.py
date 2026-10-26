@@ -33,6 +33,7 @@ from .import_cli import run_import
 from .init import run_init
 from .new import run_new
 from .diagram_cli import run_diagram
+from .icons_cli import run_icons
 from .poster_cli import run_poster
 from .site.cli import run_site
 from .template_cli import run_template
@@ -59,6 +60,7 @@ _DELEGATES = {
     "poster": ("Build a self-contained HTML poster from a Markdown file", run_poster),
     "diagram": ("Draw one diagram or poster block as an SVG or PNG file", run_diagram),
     "image": ("The same as diagram", run_diagram),
+    "icons": ("Download, list and search the icon packs of poster blocks", run_icons),
     "doctor": ("Check that the tool container works", run_doctor),
     "setup": ("Install Docker Engine for the tool runner", run_setup),
 }
@@ -436,6 +438,8 @@ def _build_posters(
             )
             if report:
                 report.output(name, "pdf" if file.suffix == ".pdf" else "html", file)
+        if report:
+            report.icons(name, ctx.icons.manifest())
         written += files
     return status, written
 

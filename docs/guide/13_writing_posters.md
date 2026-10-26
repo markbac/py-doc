@@ -181,6 +181,15 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | Places on a picture | `annotated` | The parts of a board |
 | From the whole to a detail | `zoom-chain` | Room, bracket, node |
 | A link to more | `qr` | The full manual |
+| Threats, barriers and consequences round one event | `bowtie` | The thermal runaway of a cell |
+| What must fail together, or alone, for a failure | `fault-tree` | Why a node stops reporting |
+| Why a system is safe, claim by claim | `gsn` | The safety case of an installation |
+| A logic function and its simplest form | `kmap` | An alarm's condition |
+| A PLC's logic | `plc-ladder` | Start, stop and a seal-in |
+| The steps, decisions and loops of a routine | `structogram` | The wake cycle of firmware |
+| What the parts of a system give each other | `n2` | The interfaces of a node |
+| Functions with their inputs, outputs, controls and means | `idef0` | Measure, then send |
+| Where time goes in a production line | `vsm` | Waiting and work from cell to box |
 
 The [Posters](12_posters.md) chapter lists every option of every block. The sections below show the common ones.
 
@@ -195,6 +204,8 @@ Radio | Sends one message, then switches off | green
 ````
 
 Each line is a heading, a text and, for `style=top`, a colour. `cols` sets how many go across. `style=label` gives small capital headings, and `style=plain` gives text only.
+
+An `icon=tabler:temperature` cell puts an icon before the heading. Cards, steps, highlights, stats and flow boxes all take one: see [Icons](12_posters.md#icons). Give icons to every card of a block or to none, and keep one meaning for each icon across the poster.
 
 ### Steps
 
@@ -418,8 +429,11 @@ Before you reach for a picture or ask for a new block, look here. Each row is dr
 | Records and pointers, Petri nets, any graph | `dot` | [Graphviz](https://graphviz.org/documentation/) |
 | A rack of equipment | `rackdiag` | [rackdiag](http://blockdiag.com/en/nwdiag/rackdiag-examples.html) |
 | Statistics: boxplots, heatmaps, scatter plots | `vega-lite` | [Vega-Lite](https://vega.github.io/vega-lite/examples/) |
+| A topology with icons: services, devices and the links between them | `mermaid` with `architecture-beta`, and `logos:`, `tabler:` or `mdi:` icons | [Architecture](https://mermaid.js.org/syntax/architecture.html) |
 
-Most new Mermaid types end in `-beta`, so their syntax may still change. A diagram that cannot be drawn shows its code, with a warning.
+Most new Mermaid types end in `-beta`, so their syntax may still change.
+
+The icons of an `architecture-beta` diagram come from four packs in the tool image, so they need no network. `logos` has brands and products (CC0), and `tabler` has general UI and tech (MIT). `mdi`, Material Design Icons, has devices and domains (Apache 2.0), and `wi` has weather (OFL 1.1). Write the pack's prefix before the name, as in `service db(logos:postgresql)[Readings]`. Poster blocks take the same icons with `icon=`: see [Icons](12_posters.md#icons). A diagram that cannot be drawn shows its code, with a warning.
 
 ### Callouts
 
@@ -435,6 +449,38 @@ The kinds are note, tip, important, warning and caution, in either spelling, eac
 ### Pictures, tables, code and captions
 
 A local picture, `![Board](board.svg)`, is embedded in the page. A table is shown as in a document, so keep it to two or three columns. A code block is shown as code. A caption is a `[[CAPTION:Figure]] text` or `[[CAPTION:Table]] text` line next to the picture or table. It is numbered for you, "Figure 1:" and "Table 1:", in order down the poster. Give a caption to a figure or table that the text names, or that a reader looks at on its own. A decorative picture needs none.
+
+### Finding pictures
+
+Draw diagrams and charts with py-doc, and source pictures. An illustration such as an exploded rocket, the geometry of a pulsar, a terrain cross-section or a cell is drawing work, not code. Good open-licensed artwork already exists:
+
+| Domain | Source | Licence |
+|---|---|---|
+| Biology, lab and medicine | [Bioicons](https://bioicons.com) | CC0 or CC BY 4.0, per icon |
+| Medicine and anatomy | [Servier Medical Art](https://smart.servier.com) | CC BY 4.0 (check each picture's version) |
+| Neuroscience and lab drawings | [SciDraw](https://scidraw.io) | CC BY, per drawing |
+| Organism silhouettes | [PhyloPic](https://www.phylopic.org) | CC0 or CC BY, per picture |
+| Space and Earth | [NASA image library](https://images.nasa.gov) | Mostly public domain: check each |
+| Electrical and P&ID symbols, chess pieces, weather fronts | [Wikimedia Commons](https://commons.wikimedia.org) | Per file |
+| Electronic symbols | [KiCad symbols](https://www.kicad.org/libraries/) | CC BY-SA 4.0, with an exception for drawings made with them |
+
+Show a sourced picture with the blocks a poster already has. Use `gallery` for pictures side by side, `annotated` for numbered pins on one, and `zoom-chain` to go from the whole to a detail. A picture you draw yourself in a vector editor works the same way.
+
+Credit every picture whose licence asks for it, under the footer:
+
+```yaml
+footer:
+  credits:
+    - "Cell drawing: Servier Medical Art, CC BY 4.0"
+    - "Saturn: NASA/JPL-Caltech"
+```
+
+Avoid pictures you cannot share as the poster will be shared:
+
+- **Non-commercial (NC)** licences, when the poster is for a company or sold. A product poster is commercial use.
+- **No-derivatives (ND)** licences, when you crop, recolour or label the picture: an annotated picture is a derivative.
+- **Share-alike (SA)** licences, unless the poster may be shared under the same licence.
+- Pictures with no licence, such as most search results and stock previews: no licence means no permission.
 
 ## The summary and references
 
