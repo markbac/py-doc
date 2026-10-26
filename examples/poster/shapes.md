@@ -145,6 +145,14 @@ below: Power budget
 below: Firmware updates
 ```
 
+## 16. A node: its layers
+
+```onion
+Cell | Lithium, 2.4 Ah | amber
+Board | Sensor, controller and radio | blue
+Case | IP65, wall mount | grey
+```
+
 ## In short {.summary}
 
 A shape is worth drawing when its form says something the words do not: how much, what wraps what, and what lies beneath.

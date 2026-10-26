@@ -127,6 +127,16 @@ state: Turbine in | 8000 | 500
 state: Condenser in | 10 | 46
 ```
 
+## 14. A gene: its locus
+
+```gene-locus
+size: 4000
+Promoter | 50..300 | + | #0f7b7b
+lacZ | 400..2100 | + | #3b6fb6
+lacY | 2200..3400 | + | #2e7d32
+Terminator | 3500..3600 | - | grey
+```
+
 ## In short {.summary}
 
 Let each library draw what it was made for; py-doc only reads what you wrote.

@@ -43,7 +43,7 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 | `docs/release-notes.md` | A short document whose version comes from Git (`version: git`) |
 | `docs/interfaces.md` | Interface specifications for a sample library system (OpenAPI, AsyncAPI, gRPC and GraphQL), each included from its own file in `docs/includes/apis/`, and a PlantUML use case diagram |
 | `docs/deck/slides.md` | The deck: section slides, bullets, columns, incremental lists, both kinds of speaker notes, diagrams, a picture, a table, maths, callouts, code, an include, a condition, a page break |
-| `poster/` | Four one-page HTML posters, listed under `posters:` in `py-doc.yml`. Between them they use every poster setting and block. `poster.md` is portrait in the default theme, with a picture, a Mermaid diagram, charts, the poster blocks and a QR code, all set in its front matter. `landscape.md` has the words and the layout (`orientation: landscape`) in its front matter. The company's look is in `py-doc.yml`: its theme (`brand/example-instruments.yml`, a made-up company with its logo), embedded fonts, header and footer. It has a gallery and steps. `release.md` uses the dark theme, a two-series chart and a `{{version}}` variable. `reliability.md` is a three-column A0 report in the print theme, with PlantUML, Graphviz, Vega-Lite and ditaa, includes, conditions and `version: git`. They are outside `docs/` because a poster is not a chapter of the guide |
+| `poster/` | One-page HTML posters, listed under `posters:` in `py-doc.yml`. Between them they use every poster setting and block, and every diagram the tool container draws. `poster.md` is portrait in the default theme, with a picture, a Mermaid diagram, charts, the poster blocks and a QR code, all set in its front matter. `landscape.md` has the words and the layout (`orientation: landscape`) in its front matter. The company's look is in `py-doc.yml`: its theme (`brand/example-instruments.yml`, a made-up company with its logo), embedded fonts, header and footer. It has a gallery and steps. `release.md` uses the dark theme, a two-series chart and a `{{version}}` variable. `reliability.md` is a three-column A0 report in the print theme, with PlantUML, Graphviz, Vega-Lite and ditaa, includes, conditions and `version: git`. They are outside `docs/` because a poster is not a chapter of the guide |
 | `docs/includes/` | Files pulled in with `[[INCLUDE:]]` and `[[INCLUDE-CODE:]]` |
 | `templates/sensor.docx` | The Word template: logo, title page with `Replace-with-*` placeholders, header, footer with page numbers, callout styles, a `Lead Paragraph` style, `[[INSERTCONTENT]]` where the body goes |
 | `templates/sensor_Draft.docx` | The same template with a red "DRAFT" header. A document with `status: Draft` uses it without being told to |
@@ -72,6 +72,9 @@ py-doc build interfaces                              # build/interfaces.docx and
 py-doc build api-reference                           # REST and event API reference from the YAML: .docx, .html and two HTML pages
 py-doc poster                                        # build/sensor-node.html, release.html, reliability.html, build/posters/commissioning.html and .pdf
 py-doc poster reliability --watch                    # build it again on every save, and reload it in the browser
+py-doc build deck -f html                            # build/deck.html and deck.pdf: the HTML deck alone
+py-doc diagram poster/engineering.md -o build/images --format png   # every diagram and block of a poster, as files
+py-doc icons search router                           # the names of the icons that icon= takes
 py-doc poster poster/release.md --theme print        # poster/release.html, the file alone, in the low-ink print theme
 py-doc import word/design_review.docx -o imported    # imported/design_review.md and imported/design_review/
 py-doc docx imported/design_review.md                # imported/design_review.docx: the round trip
@@ -93,6 +96,8 @@ py-doc site build                                    # site/build/index.html: th
 | `py-doc build api-reference` | `docs/includes/apis/library-openapi.yaml`, `library-asyncapi.yaml`, through the `openapi` and `asyncapi` generators | `build/api-reference.docx`, `build/api-reference.html`, `build/api/rest-api.html` (Redoc), `build/api/events-api.html` (AsyncAPI) |
 | `py-doc build interfaces` | `docs/interfaces.md`, `docs/includes/apis/`, `templates/sensor.docx` (or `sensor_Draft.docx`), `templates/doc.css` | `build/interfaces.docx`, `build/interfaces.html` |
 | `py-doc import` | `word/design_review.docx`, `build/deck.pptx` | Markdown and pictures in `imported/` |
+| `py-doc poster` | `poster/*.md`, `poster/brand/` | One HTML page for each poster in `build/`, and the PDFs they ask for |
+| `py-doc diagram` | A Markdown file, or one diagram or block | SVG, PNG, WebP or PDF files |
 | `py-doc site build` | The sources of the guide, datasheet and architecture, `site/mkdocs.yml` | Pages in `site/docs/<document>/`, navigation in `site/py-doc-nav.yml`, the site in `site/build` |
 
 Every build also writes `build/report.json`, with the tools and versions used, each source, each output with its SHA-256, and each diagram.

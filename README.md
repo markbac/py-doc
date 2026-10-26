@@ -27,6 +27,7 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | `py-doc site` | Make and build a web site of the documents with MkDocs or Astro + Starlight |
 | `py-doc poster` | Build self-contained HTML posters from Markdown, and print them to PDF; `--watch` reloads them on every save |
 | `py-doc diagram` | Draw one diagram, poster block or `plot` as an SVG, PNG, WebP or PDF file, or every one of a Markdown file; `render_diagram()` does the same from Python |
+| `py-doc icons` | Download, list and search the icon packs that poster blocks draw with `icon=` |
 | `py-doc import` | Convert a Word document or a PowerPoint deck to Markdown |
 | `py-doc template` | Check and list the styles of a Word or PowerPoint template |
 | `py-doc tools`, `doctor`, `setup` | Build and check the tool container, and install Docker Engine |
