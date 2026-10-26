@@ -424,7 +424,7 @@ Before you reach for a picture or ask for a new block, look here. Each row is dr
 
 Most new Mermaid types end in `-beta`, so their syntax may still change.
 
-The icons of an `architecture-beta` diagram come from three packs in the tool image, so they need no network. `logos` has brands and products (CC0), `tabler` has general UI and tech (MIT), and `mdi`, Material Design Icons, has devices and domains (Apache 2.0). Write the pack's prefix before the name, as in `service db(logos:postgresql)[Readings]`. Poster blocks take the same icons with `icon=`: see [Icons](12_posters.md#icons). A diagram that cannot be drawn shows its code, with a warning.
+The icons of an `architecture-beta` diagram come from four packs in the tool image, so they need no network. `logos` has brands and products (CC0), and `tabler` has general UI and tech (MIT). `mdi`, Material Design Icons, has devices and domains (Apache 2.0), and `wi` has weather (OFL 1.1). Write the pack's prefix before the name, as in `service db(logos:postgresql)[Readings]`. Poster blocks take the same icons with `icon=`: see [Icons](12_posters.md#icons). A diagram that cannot be drawn shows its code, with a warning.
 
 ### Callouts
 
@@ -455,7 +455,7 @@ Draw diagrams and charts with py-doc, and source pictures. An illustration such 
 | Electrical and P&ID symbols, chess pieces, weather fronts | [Wikimedia Commons](https://commons.wikimedia.org) | Per file |
 | Electronic symbols | [KiCad symbols](https://www.kicad.org/libraries/) | CC BY-SA 4.0, with an exception for drawings made with them |
 
-Show a sourced picture with the blocks a poster already has: `gallery` for pictures side by side, `annotated` to put numbered pins on one, and `zoom-chain` to go from the whole to a detail. A picture you draw yourself in a vector editor works the same way.
+Show a sourced picture with the blocks a poster already has. Use `gallery` for pictures side by side, `annotated` for numbered pins on one, and `zoom-chain` to go from the whole to a detail. A picture you draw yourself in a vector editor works the same way.
 
 Credit every picture whose licence asks for it, under the footer:
 

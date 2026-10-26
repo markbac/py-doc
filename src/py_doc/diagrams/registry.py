@@ -66,6 +66,7 @@ class Renderer:
     # DeclarativeError for a mistake
     translate: Callable[[str], str] | None = None
     image: str = "tools"  # "science" for a fence drawn by the optional science image
+    finish_png: bool = True  # shrink a PNG to the page and mark it 192 dpi; off for a picture drawn at a dpi asked
 
     def commands(self, job: Job) -> list[Command]:
         """The commands for ``job``. An SVG-only tool is followed by Inkscape when the document needs PNG."""

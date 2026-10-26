@@ -17,7 +17,7 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
                 pipeline = component "Build pipeline" "Joins a document's sources, expands includes, conditions and variables, and picks the template and the output name." "Python"
                 diagrams = component "Diagram renderer" "Turns diagram fences, poster blocks, plots and the written forms of specialist fences into pictures with the right tool, and keeps them in a cache." "Python"
                 posters = component "Poster builder" "Makes a self-contained HTML poster from Markdown: its layout, themes, fonts, maths and native blocks, drawn as SVG and HTML." "Python, segno, latex2mathml"
-                diagramCli = component "Image command" "py-doc diagram: draws one diagram, poster block or plot as an SVG or PNG file, or every one of a Markdown file." "Python"
+                diagramCli = component "Image command" "py-doc diagram and render_diagram(): draw one diagram, poster block or plot as an SVG, PNG, WebP or PDF file, or every one of a Markdown file." "Python"
                 pandocEngine = component "Pandoc engine" "Runs pandoc with py-doc's Lua filters, then finishes Word and PowerPoint files: templates, placeholders, captions, footers." "pandoc, Lua, python-docx, python-pptx"
                 c4 = component "C4 integration" "Reads Structurizr workspaces, writes chapters from the model, draws the views and runs the live editor." "structurizr-cli, Structurizr Local"
                 linter = component "Linter" "Checks the writing with the built-in rules, structure rules, markdownlint and Vale, and reports one list." "markdown-it-py, Vale"

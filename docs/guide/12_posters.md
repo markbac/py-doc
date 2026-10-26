@@ -91,7 +91,7 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 | `logo` | The theme's | The picture in the header |
 | `icons` | None | A folder of the project's own SVG icons, for `icon=` on blocks. See [Icons](#icons) |
 | `header` | `{align: centre, logo: left}` | `align`: `centre` or `left`. `logo`: `left`, `right` or `none` |
-| `footer` | Empty | `left`, `centre` and `right` text (Markdown, with `{{variables}}`), `logos` (a list of pictures), `qr` (an address or text), `qr-label`, `document` and `version` (shown small under the footer), and `credits` (a line or a list, under the footer: the sources of the pictures) |
+| `footer` | Empty | `left`, `centre` and `right` text (Markdown, with `{{variables}}`), `logos` (a list of pictures), `qr` (an address or text), `qr-label`, and `document` and `version` (shown small under the footer). `credits` is a line or a list of them, for the sources of pictures |
 | `document_number`, `version` | None | The document's number and version, shown small under the footer, unless `footer.document` or `footer.version` names others. `version: git` is the output of `git describe --tags --always`, as for a document |
 | `variables`, `conditions` | None | Values for `{{name}}` and `[[IF:]]`, as for documents |
 | `pdf` | `false` | `true` prints a one-page PDF beside the page, and a path prints it there. `--pdf` and `--no-pdf` win |
@@ -511,7 +511,7 @@ In a stats table, the cell goes in the row, such as `| 3 | Gateways | icon=mdi:r
 
 A name without a prefix, such as `icon=server`, is looked up in the project's own icons first, then in Tabler, then in Material Design Icons. `py-doc icons search router` lists the names that have a word in them. Mermaid's `architecture-beta` diagrams draw the same packs, so an icon looks the same in a block and in a diagram.
 
-The packs are not part of py-doc. The first poster that uses an icon downloads its pack once from the npm registry, checks it against the checksum py-doc has for it, and keeps it in the user cache folder. A poster without icons downloads nothing. For a machine without network, run `py-doc icons fetch` on one that has it, and copy the cache folder (`py-doc icons list` shows it) across.
+The packs are not part of py-doc. The first poster that uses an icon downloads its pack once from the npm registry. py-doc checks it against the checksum it has for it, and keeps it in the user cache folder. A poster without icons downloads nothing. For a machine without network, run `py-doc icons fetch` on one that has it, and copy the cache folder (`py-doc icons list` shows it) across.
 
 ### The project's own icons
 
