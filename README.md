@@ -17,7 +17,7 @@ Pandoc writes every output, and it runs in a container with every other tool, so
 | `py-doc new` | Start a legacy document, or number an existing Markdown file, from `doc-numbers.yml` at the repository root |
 | `py-doc build` | Build every document described in `py-doc.yml` (generators, lint, documents, site), or one legacy `createdocs` file with `--legacy` |
 | `py-doc docx` | Convert Markdown to Word, or with `--watch` rebuild on every save and serve a live HTML preview |
-| `py-doc slides` | Convert Markdown to PowerPoint, with the same `--watch` live preview |
+| `py-doc slides` | Convert Markdown to PowerPoint, or with `-f html` to an HTML deck with a presenter view; `--watch` shows the deck live |
 | `py-doc lint` | Check writing style, glossary terms, acronyms, structure, links and project conventions; text, CSV, GitHub, JSON or SARIF |
 | `py-doc check` | Check a project without building it: `py-doc.yml`, sources, templates, the site and lint |
 | `py-doc generate` | Write the Markdown that `content.generators` makes: glossaries, indexes, traceability, API references |
@@ -109,6 +109,7 @@ src/
 │   ├── diagram_api.py    # render_diagram(): one diagram or block as SVG, PNG, WebP or PDF
 │   ├── diagram_cli.py    # py-doc diagram, on diagram_api
 │   ├── icons.py          # the icon packs of poster blocks; icons_cli.py is py-doc icons
+│   ├── deck.py           # an HTML deck: the slides of a deck as one self-contained page
 │   └── watch.py          # the --watch loop and preview server of poster, docx and slides
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/

@@ -66,3 +66,14 @@ Each decision records the context, the choice and its consequences.
 - **Decision**: each such fence has a short written form, which py-doc turns into the JSON of a runner script in the image. No code of a fence runs. The libraries without matplotlib (schemdraw, python-chess, abcjs) are in the tool image. The scientific ones are in a second image, built on top of the tool image the first time a fence needs it.
 - **Consequences**: a fence can only say what its written form allows, so a new feature of a library needs a change to py-doc. A first use of a scientific fence waits a few minutes for the science image. A project without one stays as small as before.
 
+## AD-11 An HTML deck is drawn by the poster engine, not by pandoc
+
+- **Context**: a deck for a screen, the web or a PDF handout needs no PowerPoint. Marp would add a second slide syntax, and pandoc's HTML slides cannot show poster blocks as they are.
+- **Decision**: `deck.py` splits the deck's Markdown into slides as pandoc's PowerPoint writer does. It draws each slide with the poster engine, in a poster theme, with its own script for navigation and the presenter view. Chromium prints its PDF.
+- **Consequences**: one Markdown file makes an editable PowerPoint deck and an HTML deck that match. Blocks stay sharp HTML on a slide, and the deck is one file. A slide that overflows is shown and named, not shrunk.
+
+## AD-12 Icon packs are downloaded once and checked, not kept in the repository
+
+- **Context**: poster blocks and Mermaid diagrams need the same icons. The packs are several MB each, and their licences differ.
+- **Decision**: the tool image installs the Iconify packs pinned in `package.json`. The host downloads the same versions from the npm registry on first use, checks each against a SHA-256 in `icons.py`, and caches it.
+- **Consequences**: an icon looks the same in a block and a diagram, and a poster without icons downloads nothing. An offline machine needs the cache copied across. The build report lists the icons each poster uses, with their licences.

@@ -4,7 +4,7 @@ title: Writing a slide deck
 
 # Writing a slide deck
 
-This chapter walks through writing a PowerPoint deck in Markdown, from planning the talk to a deck in the company template. It shows how headings become slides, how to lay out each kind of slide, and how to keep speaker notes beside the slides. [Outputs](04_outputs.md#powerpoint) is the reference for the PowerPoint settings.
+This chapter walks through writing a PowerPoint deck in Markdown, from planning the talk to a deck in the company template. The same Markdown also makes an HTML deck, to present from a browser. It shows how headings become slides, how to lay out each kind of slide, and how to keep speaker notes beside the slides. [Outputs](04_outputs.md#powerpoint) is the reference for the PowerPoint settings.
 
 A deck written in Markdown is quick to change, reviewed like any text, and shares diagrams, includes and variables with the documents. PowerPoint's own tools are better for a deck that is mostly pictures and animation. py-doc suits the decks engineers give: designs, reviews, plans and training.
 
@@ -196,6 +196,25 @@ documents:
       pptx: {template: templates/Company.pptx, footer: "{title} v{version}"}
 ```
 
+## Present an HTML deck
+
+`py-doc slides talk.md -f html` writes `talk.html`: the same slides as a web page, in a poster theme. Open it in a browser and present from there. It needs no PowerPoint and no network, and it works from a USB stick.
+
+| Key | What it does |
+|---|---|
+| Right arrow, down arrow, space, Page Down, or a click | The next slide. On a phone, swipe |
+| Left arrow, up arrow, Page Up | The slide before |
+| Home, End | The first or the last slide |
+| `o` | Every slide, small. Click one to go to it |
+| `f` | Full screen |
+| `p` | The presenter view, in a second window: this slide, the next one, your notes and a timer. The two windows move together |
+
+The address has the slide in it, such as `talk.html#/12`, so a link can open the deck at a slide. `--theme dark`, `--aspect 4:3` and `--footer "{title} v{version}"` set its look, and `--pdf` also prints it to `talk.pdf`, one slide a page, to hand out or send. [Outputs](04_outputs.md#html-deck) has the settings for `py-doc.yml`.
+
+`py-doc slides talk.md --watch` shows the HTML deck in the browser and updates it on every save, while it writes the PowerPoint file too. So the preview shows the slides as they will be presented.
+
+Poster blocks work on the slides of an HTML deck as they are, without becoming pictures. So a `chart`, `cards` or `steps` block keeps its text sharp at any size.
+
 ## Before you present
 
 1. Read only the slide titles. Do they tell the story on their own?
@@ -209,5 +228,6 @@ documents:
 | Message or symptom | Cause and fix |
 |---|---|
 | A slide of more than 16 lines | Split it, or move the detail to the notes |
+| A slide of an HTML deck has a red edge | Its content is larger than the slide. Split it, or move the detail to the notes |
 | The template gives an empty deck | The template was not made from pandoc's reference deck. Start from `py-doc init --templates` |
 | A layout without a footer placeholder | The `footer` setting needs a footer placeholder in each layout. Add one in the slide master |

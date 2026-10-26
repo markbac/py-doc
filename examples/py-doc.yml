@@ -81,6 +81,9 @@ documents:
       pptx:
         split_level: 2                 # a new slide at each heading up to level 2
         footer: "{title} v{version}"   # fills the footer of every slide
+      html:
+        deck: true                     # build/deck.html: the same slides as an HTML deck, split and footed as above
+        pdf: true                      # and build/deck.pdf, one slide a page, printed by the container's Chromium
 
   interfaces:
     # API specifications kept in their own files and included with [[INCLUDE-CODE:]],
@@ -191,6 +194,7 @@ site:
   dir: site
   documents: [guide, datasheet, architecture]
   posters: [sensor-node, commissioning, release, reliability]   # each a page of the site, and a Posters page
+  decks: [deck]                        # the HTML deck of the deck document, a page of its own, and a Decks page
 
 # Posters for `py-doc poster`: one self-contained HTML page each. `py-doc poster` builds them all,
 # `py-doc poster commissioning` one. Settings in layers: `poster` (every poster), then the front matter

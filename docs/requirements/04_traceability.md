@@ -20,11 +20,14 @@ title: Traceability
 | FR-100 to FR-106 | `lint/`, `markdown/` | `test_lint.py`, `test_lint_cli.py`, `test_structure.py`, `test_vale.py`, `test_markdownlint.py`, `test_markdown_ast.py` |
 | FR-120 to FR-127, QR-082 | `site/`, `pandoc/resources/site.lua` | `test_site.py` |
 | FR-130 to FR-139, FR-150 to FR-160, FR-163 to FR-166 | `poster.py`, `poster_blocks.py`, `poster_svg.py`, `poster_math.py`, `poster_scales.py`, `poster_embedded.py`, `poster_shapes.py`, `poster_space.py`, `poster_elements.py`, `poster_plot.py`, `poster_fonts.py`, `poster_settings.py`, `poster_themes.py`, `poster_cli.py`, `watch.py`, `config.py`, `app.py`, `lint/linter.py`, `diagrams/tools/poster_pdf.js` | `test_poster.py`, `test_poster_svg.py`, `test_poster_math.py`, `test_poster_scales.py`, `test_poster_embedded.py`, `test_poster_shapes.py`, `test_poster_space.py`, `test_poster_plot.py`, `test_poster_browser.py` |
-| FR-161 | `_cli.py`, `convert.py`, `watch.py`, `pandoc/engine.py`, `pandoc/resources/preview.css`, `pandoc/resources/slides-preview.lua` | `test_cli.py`, `test_slides_cli.py`, `test_convert.py`, `test_preview_cases.py` |
+| FR-161 | `_cli.py`, `convert.py`, `watch.py`, `deck.py`, `pandoc/engine.py`, `pandoc/resources/preview.css` | `test_cli.py`, `test_slides_cli.py`, `test_convert.py`, `test_preview_cases.py` |
 | FR-162 | `editors/vscode/extension.js`, `editors/vscode/src/` | `editors/vscode/test/`, `test_preview_cases.py` |
 | FR-028 | `diagrams/render.py`, `config.py` | `test_diagrams.py` |
-| FR-167, FR-168 | `diagrams/blocks.py`, `diagrams/render.py`, `diagrams/scan.py`, `diagrams/tools/block_png.js`, `poster_blocks.py`, `config.py` | `test_document_blocks.py`, `test_poster_diagrams.py` |
-| FR-169 | `diagram_cli.py`, `app.py` | `test_diagram_cli.py` |
+| FR-167, FR-168 | `diagrams/blocks.py`, `diagrams/render.py`, `diagrams/scan.py`, `diagrams/registry.py`, `diagrams/tools/block_png.js`, `poster_blocks.py`, `config.py`, `runtime/definition/package.json` | `test_document_blocks.py`, `test_poster_diagrams.py`, `test_diagrams.py` |
+| FR-169 | `diagram_cli.py`, `diagram_api.py`, `diagrams/tools/block_png.js`, `app.py`, `__init__.py` | `test_diagram_cli.py` |
+| FR-171 | `icons.py`, `icons_cli.py`, `poster_blocks.py`, `poster.py`, `poster_settings.py`, `report.py`, `report.schema.json` | `test_icons.py` |
+| FR-172 | `poster_engineering.py` | `test_poster_engineering.py`, `test_examples.py` |
+| FR-173 | `deck.py`, `convert.py`, `slides_cli.py`, `_cli.py`, `build.py`, `config.py`, `site/pages.py`, `diagrams/tools/deck_pdf.js` | `test_deck.py`, `test_site.py`, `test_slides_cli.py`, `test_preview_cases.py` |
 | FR-170, FR-144 | `diagrams/declarative.py`, `diagrams/registry.py`, `diagrams/tools/*_render.py`, `diagrams/tools/music_render.js`, `runtime/image.py`, `runtime/science/`, `tools_cli.py` | `test_declarative_fences.py`, `test_image.py` |
 | FR-128 | `site/pages.py`, `site/engines.py` | `test_site.py` |
 | FR-140 to FR-143, QR-040 to QR-043 | `runtime/`, `tools_cli.py` | `test_runtime.py`, `test_image.py`, `test_setup.py`, `test_doctor.py`, `test_platform.py` |
@@ -60,11 +63,14 @@ The issues of the repository, as reviewed on 18 October 2026, and the requiremen
 | #152 | Poster: QR code and partner logos in the footer | FR-137 | Done: `footer.qr`, `footer.logos`, and a `qr` block |
 | #153 | Poster: embed theme fonts so a poster looks the same offline | FR-150 | Done: `fonts.files` in a theme, and `embed_fonts` (or `--embed-fonts`) for the stylesheet's web fonts, cached |
 | #161 | A host runtime, to build with the tools on the PATH instead of the container | None yet | Open, low priority |
-| #192 | Roadmap: poster visualisation plan | FR-163 to FR-170, FR-144 | Open: the plan. Phases 0 and 1 are done in #208 |
+| #192 | Roadmap: poster visualisation plan | FR-163 to FR-173, FR-144 | Open: the plan. Phases 0 and 1 are done in #208, and every P0, P1 and P2 issue after it |
 | #178, #193, #194, #196 to #199, #202, #205, #206 | The phase 0 and phase 1 issues of the plan | FR-162 to FR-170, FR-144 | Done in #208 (the stretch items of #206, and sky maps of #202, are left) |
-| #195 | Theme and document the container's diagrams | FR-168 | Done in part in #208: the Mermaid icon packs (logos, tabler, mdi) are open |
-| #190 | `py-doc diagram`, standalone images | FR-169 | Phase 1 done in #208; phase 2 open |
-| #200, #201, #203, #204, #207 | Phase 2 and 3 of the plan: structure diagrams, icons and illustrations, reference data, the science backlog, HTML slides | None yet | Open |
+| #195 | Theme and document the container's diagrams | FR-168 | Done: the themes in #208, then the icon packs logos, tabler, mdi and wi, offline |
+| #190 | `py-doc diagram`, standalone images | FR-169 | Done: phase 1 in #208, then PDF, WebP, `--dpi`, cards, `render_diagram()` and `--watch` |
+| #200 | Engineering structure diagrams | FR-172 | Done: `bowtie`, `fault-tree`, `gsn`, `kmap`, `plc-ladder`, `structogram`, `n2`, `idef0` and `vsm` |
+| #201 | Icons and illustrations from open-licensed sets | FR-171 | Done: `icon=` from four packs and a project folder, credits, the licence list, and a guide to finding pictures |
+| #207 | An HTML deck output from the same Markdown | FR-173 | Done: `py-doc slides -f html` and `deck: true`, with a presenter view, PDF and sites |
+| #203, #204 | Phase 3 of the plan (P3): reference data and the science backlog | None yet | Open |
 
 ## Closed issues
 

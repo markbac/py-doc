@@ -554,3 +554,38 @@ def test_a_documents_properties_go_in_the_front_matter_of_its_first_page():
 
     meta = Metadata(title="Guide", version="1.2", status="Draft", document_id="DOC-7", extra={"description": "How to"})
     assert page_meta(meta) == {"description": "How to", "document_id": "DOC-7", "version": "1.2", "status": "Draft"}
+
+
+@needs_sh
+def test_mkdocs_has_the_decks_of_site_decks_and_a_page_that_links_them(project, pandoc_runtime):
+    (project / "talk.md").write_text("---\ntitle: The talk\n---\n\n## One\n\nText\n", encoding="utf-8")
+    talk = "  talk:\n    sources: [talk.md]\n    outputs: {pptx: {split_level: 2}, html: {deck: true, pdf: true}}\n"
+    text = (project / "py-doc.yml").read_text(encoding="utf-8")
+    (project / "py-doc.yml").write_text(
+        text.replace("site: {engine: ENGINE}\n", talk + "site: {engine: ENGINE, decks: [talk]}\n"), encoding="utf-8"
+    )
+    (project / "build").mkdir()
+    (project / "build" / "talk.pdf").write_bytes(b"%PDF-1.7 deck")
+    config, runtime = _site(project, "mkdocs", pandoc_runtime)
+    generate_site(config, runtime)
+    folder = project / "site" / "docs" / "decks"
+    deck = (folder / "talk.html").read_text(encoding="utf-8")
+    assert "<title>The talk</title>" in deck and deck.count('class="slide ') == 2
+    assert (folder / "talk.pdf").read_bytes() == b"%PDF-1.7 deck"
+    assert (folder / "index.md").read_text(encoding="utf-8") == (
+        "---\ntitle: Decks\n---\n\n# Decks\n\n- [The talk](talk.html) · [PDF](talk.pdf)\n"
+    )
+    nav = yaml.safe_load((project / "site" / MKDOCS_NAV).read_text(encoding="utf-8"))["nav"]
+    assert nav[-1] == {"Decks": "decks/index.md"}
+
+
+def test_site_decks_must_be_decks(tmp_path):
+    (tmp_path / "py-doc.yml").write_text(
+        "documents: {doc: {sources: [d.md], outputs: {docx: {}}}}\nsite: {engine: mkdocs, decks: [doc]}\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigError, match="site.decks names 'doc', which is not a deck"):
+        load_config(tmp_path / "py-doc.yml")
+    (tmp_path / "py-doc.yml").write_text("site: {engine: mkdocs, decks: [nope]}\n", encoding="utf-8")
+    with pytest.raises(ConfigError, match="site.decks names 'nope', which is not under documents"):
+        load_config(tmp_path / "py-doc.yml")

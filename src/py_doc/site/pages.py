@@ -28,7 +28,7 @@ import yaml
 
 from py_doc.build import _combine_metadata, blocks_theme
 from py_doc.c4 import source as c4_source
-from py_doc.config import POSTERS_FOLDER, ProjectConfig
+from py_doc.config import DECKS_FOLDER, POSTERS_FOLDER, ProjectConfig
 from py_doc.diagrams import render_parts
 from py_doc.errors import ConversionError
 from py_doc.pandoc.engine import INPUT_FORMAT, RESOURCES
@@ -107,11 +107,14 @@ def generate_site(
     sections = grouped(names, by_name, site.groups)
     _convert(pages, site.engine, runtime())
     posters = _posters(config, engine, runtime) if site.posters else {}
-    written = _write(pages, engine, posters)
+    decks = _decks(config, engine, runtime, variables or {}, conditions or {}) if site.decks else {}
+    written = _write(pages, engine, {**posters, **decks})
     for title, path in site.pages.items():
         if not (engine.content / path).is_file():
             logger.warning(f"site.pages lists {title}: {engine.content / path} is not there")
-    nav_pages = {**site.pages, "Posters": f"{POSTERS_FOLDER}/index.md"} if posters else site.pages
+    nav_pages = {**site.pages, "Posters": f"{POSTERS_FOLDER}/index.md"} if posters else dict(site.pages)
+    if decks:
+        nav_pages["Decks"] = f"{DECKS_FOLDER}/index.md"
     written.append(engine.write_nav(sections, nav_pages))
     for target in site.targets.values() or [None]:
         for advice in engine.check(target):
@@ -262,6 +265,32 @@ def _posters(config: ProjectConfig, engine: Engine, runtime: Callable[[], Runtim
     files[folder / ".gitignore"] = b"# Written by py-doc site: built from the sources, so not kept in Git\n*\n"
     index = engine.content / POSTERS_FOLDER / "index.md"
     files[index] = ("---\ntitle: Posters\n---\n\n" + "\n".join(lines) + "\n").encode("utf-8")
+    files[index.parent / ".gitignore"] = files[folder / ".gitignore"]
+    return files
+
+
+def _decks(
+    config: ProjectConfig, engine: Engine, runtime: Callable[[], Runtime], variables, conditions
+) -> dict[Path, bytes]:
+    """The decks of ``site.decks``, each an HTML deck of its own, and a Decks page that links them and their PDFs."""
+    from py_doc.build import deck_options, deck_page  # the deck modules are only needed by a site with decks
+
+    folder, href = engine.posters(DECKS_FOLDER)
+    files: dict[Path, bytes] = {}
+    lines = ["# Decks", ""] if engine.name == "mkdocs" else []  # Starlight shows the title itself
+    for name in config.site.decks:
+        doc = config.documents[name]
+        page, title = deck_page(config, doc, runtime, variables, conditions)
+        files[folder / f"{name}.html"] = page.encode("utf-8")
+        line = f"- [{title}]({href}{name}.html)"
+        pdf = config.output_path(doc, "html").with_suffix(".pdf")
+        if deck_options(config, doc).get("pdf") and pdf.is_file():  # printed by `py-doc build`
+            files[folder / f"{name}.pdf"] = pdf.read_bytes()
+            line += f" · [PDF]({href}{name}.pdf)"
+        lines.append(line)
+    files[folder / ".gitignore"] = b"# Written by py-doc site: built from the sources, so not kept in Git\n*\n"
+    index = engine.content / DECKS_FOLDER / "index.md"
+    files[index] = ("---\ntitle: Decks\n---\n\n" + "\n".join(lines) + "\n").encode("utf-8")
     files[index.parent / ".gitignore"] = files[folder / ".gitignore"]
     return files
 

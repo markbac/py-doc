@@ -11,7 +11,7 @@ The preview runs `py-doc docx`, `py-doc slides` or `py-doc poster` with `--watch
 Open a py-doc Markdown file and click the eye button in the editor title bar, or run **py-doc: Open Live Preview** from the Command Palette. The preview opens beside the editor and reloads each time you save.
 
 - **Documents** (`py-doc docx file.md --watch`): rebuilds `file.docx` on save and shows its HTML twin, with every diagram, MathML and page breaks shown as dashed lines. A `.docx` open in Word is left as it is, with a warning, and the preview still updates.
-- **Slide decks** (`py-doc slides deck.md --watch`): rebuilds `deck.pptx` and shows each slide as a numbered 16:9 box, split where PowerPoint splits it, with columns and speaker notes.
+- **Slide decks** (`py-doc slides deck.md --watch`): rebuilds `deck.pptx` and shows its HTML deck, split where PowerPoint splits it, with columns. Press `o` for every slide, and `p` for the presenter view with the speaker notes.
 - **Posters** (`py-doc poster poster.md --watch`): rebuilds the self-contained poster page.
 
 The twins are written to `.py-doc/preview/` below the file's folder, so no file of yours is overwritten. py-doc's output is in the **py-doc live preview** output channel. When a save does not build, the preview keeps the last good page with the error across its top, and VS Code shows the error as a warning.

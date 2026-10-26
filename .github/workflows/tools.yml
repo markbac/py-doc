@@ -9,6 +9,9 @@ on:
       - "src/py_doc/runtime/**"
       - "src/py_doc/diagrams/**"
       - "src/py_doc/poster*.py"
+      - "src/py_doc/deck.py"
+      - "src/py_doc/diagram_api.py"
+      - "src/py_doc/icons.py"
       - ".github/workflows/tools.yml"
   schedule:
     - cron: "17 5 * * 1"  # Mondays
@@ -52,6 +55,25 @@ jobs:
         run: |
           py-doc tools build --science
           py-doc poster poster/specialist.md -o build/specialist.html
+      - name: The example deck as an HTML deck, and its PDF with one page a slide
+        working-directory: examples
+        run: |
+          py-doc build deck -f html
+          slides=$(grep -o 'class="slide ' build/deck.html | wc -l)
+          pages=$(python -c "import re, sys; print(len(re.findall(rb'/Type\s*/Page[^s]', open(sys.argv[1], 'rb').read())))" build/deck.pdf)
+          echo "$slides slides, $pages pages"
+          test "$slides" = "$pages"
+      - name: py-doc diagram in every format, through the container
+        working-directory: examples
+        run: |
+          mkdir -p build/images
+          printf 'flowchart LR\n  A[Power on] --> B[Joined]\n' > build/images/flow.mmd
+          printf 'A | Sensor\nB | Radio\n' > build/images/cards.txt
+          py-doc diagram build/images/flow.mmd -o build/images/flow.pdf
+          py-doc diagram build/images/flow.mmd -o build/images/flow.png --dpi 300
+          py-doc diagram build/images/flow.mmd -o build/images/flow.webp
+          py-doc diagram build/images/cards.txt --type cards -o build/images/cards.pdf --chrome card --title Parts
+          py-doc diagram poster/engineering.md -o build/images/engineering --format png
       - name: Each poster PDF is one page
         working-directory: examples
         run: |
@@ -70,5 +92,6 @@ jobs:
             examples/build/*.docx
             examples/build/*.pdf
             examples/build/posters/
+            examples/build/images/
           if-no-files-found: warn
           retention-days: 14
