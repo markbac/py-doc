@@ -24,9 +24,9 @@ from py_doc.lint import DocLinter
 
 DocxConverter(template_path=Path("Template.docx")).convert_file(Path("a.md"), Path("out/a.docx"))
 SlidesConverter(split_level=1).convert_file(Path("a.md"), Path("out/a.pptx"))
-DeckConverter(theme="dark", pdf=True).convert_file(Path("a.md"), Path("out/a.html"))   # an HTML deck, and its PDF
+DeckConverter(theme="dark", pdf=True).convert_file(Path("a.md"), Path("out/a.html"))  # an HTML deck, and its PDF
 
-render_diagram("flowchart LR\n  A --> B", kind="mermaid").save("out/flow.svg")       # or .png, .webp or .pdf
+render_diagram("flowchart LR\n  A --> B", kind="mermaid").save("out/flow.svg")  # or .png, .webp or .pdf
 
 config = load_config(Path("py-doc.yml"))
 build_document(config, config.documents["c4-guide"])
