@@ -132,9 +132,9 @@ title: Functional requirements
 | FR-165 | A poster shall have blocks for values on a scale, such as bands with trigger points, dials and spectra. It shall have blocks for protocols and embedded systems, such as hex dumps, pinouts and instruments. It shall have blocks for shapes, such as pyramids, cutaways and memory maps. It shall have blocks for space and particle physics, such as orbits, Feynman diagrams and elements. | Could | Met |
 | FR-166 | A `plot` fence shall expand a short preset into Vega-Lite or Vega, drawn by the tool container in the theme's colours. | Could | Met |
 | FR-167 | Documents, decks and sites shall draw poster blocks and plots as pictures, in the theme of `diagrams.theme`. Their captions and sizes shall work as they do for diagrams. | Should | Met |
-| FR-168 | The diagrams the tool container draws shall be in the poster's theme: Mermaid's colour scales, a Vega config and PlantUML skin parameters, and a picture with no size shall get its viewBox size. | Should | Met in part: Mermaid icon packs are open (#195) |
+| FR-168 | The diagrams the tool container draws shall be in the poster's theme: Mermaid's colour scales, a Vega config and PlantUML skin parameters. A picture with no size shall get its viewBox size. | Should | Met in part: Mermaid icon packs are open (#195) |
 | FR-169 | `py-doc diagram` shall draw one diagram, poster block or plot as an SVG or PNG file, or every one of a Markdown file, and list the types it draws with their syntax. | Could | Met in part: PDF, WebP, the Python API and `--watch` are open (#190) |
-| FR-170 | Circuits, chessboards, music and scientific pictures (molecules, trees, ternary plots, sequence logos, set intersections, Smith charts, gene maps, chromaticity, sun paths, thermodynamic cycles) shall be drawn by their libraries from a written form py-doc reads, never from code in the fence. | Could | Met |
+| FR-170 | Circuits, chessboards, music and scientific pictures shall be drawn by their libraries from a written form py-doc reads, never from code in the fence. The scientific pictures are molecules, trees, ternary plots, sequence logos, set intersections, Smith charts, gene maps, chromaticity, sun paths and thermodynamic cycles. | Could | Met |
 
 ## Tool container
 
@@ -144,4 +144,4 @@ title: Functional requirements
 | FR-141 | `py-doc setup` shall install Docker Engine on Ubuntu or Debian, in WSL on Windows, after showing what it will run. | Should | Met |
 | FR-142 | `py-doc doctor` shall say what works, what does not and what to do about it. | Must | Met |
 | FR-143 | `py-doc tools` shall build, inspect, save, load and prune the image, and record tool checksums. | Should | Met |
-| FR-144 | The scientific libraries shall be in a second, optional image built on the tool image, tagged by the hash of both definitions, and built the first time a fence needs it or with `py-doc tools build --science`. | Could | Met |
+| FR-144 | The scientific libraries shall be in a second, optional image built on the tool image and tagged by the hash of both definitions. It shall be built the first time a fence needs it, or by `py-doc tools build --science`. | Could | Met |

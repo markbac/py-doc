@@ -63,6 +63,6 @@ Each decision records the context, the choice and its consequences.
 ## AD-10 Specialist fences have a written form, and the heavy libraries an image of their own
 
 - **Context**: circuits, chessboards, molecules, Smith charts and the like are drawn well by existing libraries, which take code. Running code from a document would make every fence a program; the scientific libraries add a few hundred MB that most projects never use.
-- **Decision**: each such fence has a short written form of its own, which py-doc reads and turns into the JSON of a runner script in the image; no code of a fence runs. The libraries without matplotlib (schemdraw, python-chess, abcjs) are in the tool image. The scientific ones are in a second image, built on top of the tool image the first time a fence needs it.
+- **Decision**: each such fence has a short written form, which py-doc turns into the JSON of a runner script in the image. No code of a fence runs. The libraries without matplotlib (schemdraw, python-chess, abcjs) are in the tool image. The scientific ones are in a second image, built on top of the tool image the first time a fence needs it.
 - **Consequences**: a fence can only say what its written form allows, so a new feature of a library needs a change to py-doc. A first use of a scientific fence waits a few minutes for the science image. A project without one stays as small as before.
 
