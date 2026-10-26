@@ -428,6 +428,22 @@ def prepare(text):
     return "\n".join(out)
 
 
+def split_headings(text, level):
+    """Split ``text`` at its headings of ``level`` (2 for ``##``), as ``re.split`` with one group does:
+    ``[before, heading, content, heading, content, ...]``. A line in a fenced code block is never a heading,
+    so a ``## main`` printed by ``git status -sb`` in a terminal fence stays in its section."""
+    heading = re.compile(rf"^{'#' * level} +(.+)$")
+    parts, lines, fence = [], [], Fence()
+    for line in text.splitlines():
+        m = None if fence.inside(line) else heading.match(line)
+        if m:
+            parts += ["\n".join(lines), m.group(1)]
+            lines = []
+        else:
+            lines.append(line)
+    return [*parts, "\n".join(lines)]
+
+
 def callouts(out):
     """Both spellings of a py-doc callout, ``> [!WARNING]`` and ``> **Warning:**``, as callout boxes."""
     kinds = "|".join(CALLOUTS)
@@ -674,10 +690,10 @@ def build(
     ctx.mermaid = mermaid
     ctx.icons = Icons(meta.get("icons"))
     body = prepare(expand(body, md_path, meta.get("variables"), meta.get("conditions")))
-    h1 = re.search(r"(?m)^# +(.+)$", body)
-    title = meta.get("title") or (h1.group(1) if h1 else md_path.stem)
+    h1 = split_headings(body, 1)
+    title = meta.get("title") or (h1[1] if len(h1) > 1 else md_path.stem)
 
-    parts = re.split(r"(?m)^## +(.+)$", body)
+    parts = split_headings(body, 2)
     items = [
         (*heading_attributes(heading, md_path), content.strip()) for heading, content in zip(parts[1::2], parts[2::2])
     ]
@@ -710,7 +726,7 @@ def build(
             return f"<div{look(attrs, 'abstract')}>{render(c, ctx)}</div>"
         if attrs["role"] == "references":
             return f"<div{look(attrs, 'refs')}><b>{esc(h)}</b>{render(c, ctx)}</div>"
-        chunks = re.split(r"(?m)^### +(.+)$", c)  # the summary: a banner, then a block for each ###
+        chunks = split_headings(c, 3)  # the summary: a banner, then a block for each ###
         banner = " ".join(chunks[0].split())
         blocks = "".join(
             f'<div class="block"><h3>{esc(head.strip())}</h3><div class="body">{render(text.strip(), ctx)}</div></div>'

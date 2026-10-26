@@ -151,6 +151,46 @@ def test_the_page_has_every_part_of_the_poster(tmp_path, drawn):
     assert (ctx.n, ctx.failed) == (1, 0)
 
 
+def test_a_heading_line_inside_a_code_fence_is_not_a_heading(tmp_path, drawn):
+    text = textwrap.dedent(
+        """\
+        ---
+        title: Fences
+        ---
+
+        ## 1. Status
+
+        ```terminal title="git"
+        $ git status -sb
+        ## main
+        ```
+
+        ````text
+        ### not a block
+        # not a title
+        ````
+
+        ## In short {.summary}
+
+        Banner.
+
+        ```text
+        ### still not a block
+        ```
+
+        ### Real block
+
+        Text.
+        """
+    )
+    page, _ = build(write(tmp_path, text), lambda: object())
+    assert page.count("<h2>") == 1 and "## main" in page  # one section, with the output line inside it
+    assert "### not a block" in page and "# not a title" in page
+    assert "<h3>Real block</h3>" in page and "<h3>still not a block</h3>" not in page
+    assert "### still not a block" in page
+    assert "<title>Fences</title>" in page
+
+
 def test_a_diagram_is_drawn_as_svg_with_the_poster_theme_and_embedded(tmp_path, drawn):
     page, _ = build(write(tmp_path), lambda: object())
     [(name, text, kind)] = drawn
