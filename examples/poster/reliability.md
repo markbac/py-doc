@@ -192,6 +192,14 @@ The two chambers run the stages in opposite orders, so an effect of the order sh
 
 Nine of the 120 cells failed during the test. Their ages, converted to field hours with an acceleration factor of 19, give the fit below. The last failure, at 38,900 field hours, came near the end of the test.
 
+```equation
+title: Weibull reliability
+R(t) = e^{-(t/\eta)^{\beta}}
+R(t) | Share of cells still working at age $t$ |
+\eta | Characteristic life: 63 % have failed | h
+\beta | Shape: above 1, the cells wear out |
+```
+
 [[INCLUDE-CODE: reliability/weibull.py]]
 
 ```highlight

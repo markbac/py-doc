@@ -1,4 +1,7 @@
-"""Find diagram fences in Markdown: ```plantuml ... ``` and the Azure DevOps form :::mermaid ... :::."""
+"""Find diagram fences in Markdown: ```plantuml ... ``` and the Azure DevOps form :::mermaid ... :::.
+
+With ``also``, the fences of those names are found too, such as the poster blocks a document draws.
+"""
 
 from __future__ import annotations
 
@@ -23,14 +26,15 @@ class Block:
     body: str
     options: dict[str, str]
     line: int  # 1-based line of the opening fence
+    info: str = ""  # what follows the fence name on the opening line
 
 
 def _options(info: str) -> dict[str, str]:
     return {m["key"]: m["quoted"] if m["quoted"] is not None else m["bare"] for m in _OPTION.finditer(info)}
 
 
-def find_blocks(text: str) -> list[Block]:
-    """Diagram blocks outside other code, in order. Only fence names with a renderer are returned."""
+def find_blocks(text: str, also: frozenset[str] = frozenset()) -> list[Block]:
+    """Diagram blocks outside other code, in order. Only fence names with a renderer, or in ``also``, are returned."""
     lines = text.splitlines()
     blocks: list[Block] = []
     other = Fence()  # code blocks of other languages, in which diagram-like lines are only text
@@ -40,7 +44,7 @@ def find_blocks(text: str) -> list[Block]:
         match = _OPEN.match(line)
         if not other.marker and match:
             name = match["info"].split(None, 1)[0].lower().lstrip("{.").rstrip("}") if match["info"] else ""
-            if name in BY_FENCE:
+            if name in BY_FENCE or name in also:
                 marker = match["fence"]
                 end = index + 1
                 while end < len(lines):
@@ -54,7 +58,10 @@ def find_blocks(text: str) -> list[Block]:
                         break
                     end += 1
                 body = "\n".join(lines[index + 1 : min(end, len(lines))])
-                blocks.append(Block(index, min(end, len(lines) - 1), name, body, _options(match["info"]), index + 1))
+                rest = match["info"].split(None, 1)[1] if len(match["info"].split(None, 1)) > 1 else ""
+                blocks.append(
+                    Block(index, min(end, len(lines) - 1), name, body, _options(match["info"]), index + 1, rest)
+                )
                 index = end + 1
                 continue
         div = None if other.marker else _DIV.match(line)

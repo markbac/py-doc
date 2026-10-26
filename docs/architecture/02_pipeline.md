@@ -71,9 +71,29 @@ flowchart LR
 
 ## Live previews
 
+A poster's native blocks (`cards`, `chart`, `steps` and the rest) are registered in `poster_blocks.BLOCKS`, each with its fence name, its function and a line of syntax with an example. A block function returns its HTML, or a `Fragment`. A `Fragment` also holds the block's picture alone when the block is all SVG. That picture can be written as a file of its own (`poster_svg.standalone`). The blocks draw with the pieces of `poster_svg`: linear, log and band scales, ticks, polar arcs and sectors, text wrapping, label spreading for callouts, and a tidy tree layout.
+
+The blocks themselves are in modules by kind:
+
+| Module | Blocks |
+|---|---|
+| `poster_blocks.py` | Cards, charts, steps, equations, terminals and the rest |
+| `poster_scales.py` | Thresholds, gauges, spectra and the other scales |
+| `poster_embedded.py` | Hex dumps, pinouts, instruments, annotated pictures |
+| `poster_shapes.py` | Pyramids, cutaways, memory maps and the other shapes |
+| `poster_space.py` | Orbits, Feynman diagrams, element tiles (from the table in `poster_elements.py`) |
+
+ Each registers itself in `BLOCKS` when `poster_blocks` imports it. Maths (`$...$`) is compiled to MathML by `poster_math.py`, so a poster needs no script for it. A `plot` fence is not drawn by py-doc. `poster_plot.py` expands it into a Vega-Lite or Vega spec, and the container draws that in the theme's Vega config.
+
+Documents, decks and sites draw poster blocks too. `diagrams/render.py` finds block fences beside diagram fences, and `diagrams/blocks.py` draws each block with the poster code in the theme of `diagrams.theme`. It then gives the container one of two jobs. An all-SVG block is written as an SVG file, which Inkscape makes PNG where the output needs one. A block made of HTML is laid out with the poster's styles at the width of the page's text, and photographed by Chromium (`tools/block_png.js`). Both go through the diagram cache, captions and sizes as diagrams do.
+
+Some fences are drawn by specialist libraries in the image: schemdraw, python-chess, abcjs and, in the optional science image, RDKit, CoolProp, matplotlib and others. No code in such a fence runs. A renderer of `diagrams/registry.py` has a `translate` step, from `diagrams/declarative.py`, that reads the fence's written form, such as one circuit element a line, and writes the JSON its runner script (`tools/*_render.py`) reads. A mistake is reported with the fence's file and line. A renderer with `image="science"` runs in the science image, built on first use.
+
+`py-doc diagram` (`diagram_cli.py`) uses the same pieces to write one diagram or block as a file of its own. It takes a diagram source, a block or plot with `--type`, or every fence of a Markdown file.
+
 `--watch` on `py-doc poster`, `py-doc docx` and `py-doc slides` runs one loop (`watch.py`). It builds, then serves the pages on 127.0.0.1 from a thread of its own. Every half second it looks at the modification times of the source files: the Markdown, includes, pictures, diagram sources and templates below the folders of the sources. The pages it wrote and hidden folders are not watched. A change builds again. Each page is served with a small script that asks `/__status` whether a newer build is there, and reloads when it is. The script is added as the page is served, so the files are the same as without `--watch`. A build that fails keeps the last good page and shows its error over it.
 
 A poster is already a web page. A Word document or deck is not, so `docx` and `slides` (`_cli.py`) also write an *HTML twin* of each file (`convert.py`, `convert_twin`). The twin is the same Markdown through the same pipeline to pandoc's HTML. It adds `preview.css` after `html.css` to show page breaks, speaker notes and columns. The twin of a deck also runs `slides-preview.lua`, which puts each slide in a box. A box starts where pandoc's PowerPoint writer starts a slide: at headings up to the split level and at page breaks. The twins go to `.py-doc/preview/` below the input's folder and are served by their path. No file of the user's is overwritten, and two `readme.md` in different folders stay apart. When Word or PowerPoint has the output open, the engine raises `OutputLocked`; the watch loop warns and still writes the twin.
 
-The VS Code extension (`editors/vscode`) is outside the Python package. Its instant preview is a markdown-it plugin in the editor and runs no tool. Its live preview (`src/watch.js`) runs `py-doc <command> --watch --no-open` as a child process, with the output in an output channel. py-doc picks a free port, and the extension reads the address from the `serving` line it prints, then opens it in VS Code's Simple Browser. Stopping the preview ends the whole process tree. The extension and the instant preview choose the command with one function (`src/detect.js`), from the front matter and the blocks only a deck has.
+The VS Code extension (`editors/vscode`) is outside the Python package. Its only preview is the live preview (`src/watch.js`), so no py-doc block is drawn a second time in JavaScript. It runs `py-doc <command> --watch --no-open` as a child process, with the output in an output channel. py-doc picks a free port, and the extension reads the address from the `serving` line it prints, then opens it in VS Code's Simple Browser. Stopping the preview ends the whole process tree. It chooses the command with one function (`src/detect.js`), from the front matter and the blocks only a deck has. A line `Error: ...` printed after the page is served is a save that did not build, shown as a warning.
 

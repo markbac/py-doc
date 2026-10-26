@@ -15,7 +15,9 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
                 commands = component "Commands" "Parses the command line and hands each command to its module: build, docx, slides, poster, lint, check, generate, stats, diff, c4, site, import, init, new, template, tools, doctor, setup, migrate. Runs the build pipeline around the documents." "argparse"
                 configuration = component "Configuration" "Loads py-doc.yml and checks every key, so a mistake is an error that names its place." "PyYAML"
                 pipeline = component "Build pipeline" "Joins a document's sources, expands includes, conditions and variables, and picks the template and the output name." "Python"
-                diagrams = component "Diagram renderer" "Turns diagram fences into pictures with the right tool, and keeps them in a cache." "Python"
+                diagrams = component "Diagram renderer" "Turns diagram fences, poster blocks, plots and the written forms of specialist fences into pictures with the right tool, and keeps them in a cache." "Python"
+                posters = component "Poster builder" "Makes a self-contained HTML poster from Markdown: its layout, themes, fonts, maths and native blocks, drawn as SVG and HTML." "Python, segno, latex2mathml"
+                diagramCli = component "Image command" "py-doc diagram: draws one diagram, poster block or plot as an SVG or PNG file, or every one of a Markdown file." "Python"
                 pandocEngine = component "Pandoc engine" "Runs pandoc with py-doc's Lua filters, then finishes Word and PowerPoint files: templates, placeholders, captions, footers." "pandoc, Lua, python-docx, python-pptx"
                 c4 = component "C4 integration" "Reads Structurizr workspaces, writes chapters from the model, draws the views and runs the live editor." "structurizr-cli, Structurizr Local"
                 linter = component "Linter" "Checks the writing with the built-in rules, structure rules, markdownlint and Vale, and reports one list." "markdown-it-py, Vale"
@@ -29,7 +31,8 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
                 watch = component "Live preview" "With --watch, builds documents, decks and posters again on every save, writes an HTML twin of each document and deck, and serves the pages on 127.0.0.1 with a script that reloads them." "Python, http.server"
             }
             toolImage = container "Tool image" "Every program that is not Python: pandoc, XeLaTeX, PlantUML, Mermaid, Graphviz, the diagram tools, Chromium, structurizr-cli, Vale, markdownlint, MkDocs and Node." "Docker image on Debian 12"
-            vscode = container "VS Code extension" "Previews py-doc Markdown in the editor as it is typed, and starts the live preview of the open file and shows it beside the editor." "JavaScript, markdown-it, js-yaml"
+            scienceImage = container "Science image" "Optional: the tool image with the scientific libraries some fences need, such as RDKit, matplotlib and CoolProp. Built the first time a fence needs it." "Docker image on the tool image"
+            vscode = container "VS Code extension" "Starts the live preview (--watch) of the open file with the right command and shows it beside the editor. It draws no block itself." "JavaScript, js-yaml"
             local = container "Structurizr Local" "Shows a workspace in a browser to view it and arrange its views, and draws the pictures for documents." "Docker image structurizr/structurizr"
             cache = container "Caches" "Diagram pictures (user cache folder), Structurizr exports, generated chapters and live preview pages (.py-doc in the project)." "Files" "Store"
         }
@@ -72,6 +75,15 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
         pydoc.cli.linter -> pydoc.cli.runner "Runs markdownlint and Vale through"
         pydoc.cli.importers -> pydoc.cli.runner "Converts EMF and WMF pictures through"
         pydoc.cli.runner -> pydoc.toolImage "Starts a container of" "Docker Engine, WSL 2 on Windows"
+        pydoc.cli.runner -> pydoc.scienceImage "Starts a container of, for a scientific fence, building it first" "Docker Engine, WSL 2 on Windows"
+        pydoc.scienceImage -> pydoc.toolImage "Is built on"
+        pydoc.cli.commands -> pydoc.cli.posters "Builds posters with"
+        pydoc.cli.commands -> pydoc.cli.diagramCli "Draws image files with"
+        pydoc.cli.posters -> pydoc.cli.diagrams "Has its diagram fences and plots drawn by"
+        pydoc.cli.posters -> pydoc.cli.runner "Prints its PDF with Chromium through"
+        pydoc.cli.diagrams -> pydoc.cli.posters "Draws poster blocks in documents with"
+        pydoc.cli.diagramCli -> pydoc.cli.diagrams "Draws with"
+        pydoc.cli.watch -> pydoc.cli.posters "Builds each poster with"
         pydoc.toolImage -> pydoc.local "Opens the diagrams in headless Chromium" "HTTP on the shared network"
         pydoc.toolImage -> registries "Is built from, and site builds download from" "HTTPS"
         pydoc.cli.pandocEngine -> office "Writes files for" ".docx, .pptx"
@@ -90,6 +102,7 @@ workspace "py-doc" "The C4 model of py-doc, the Markdown technical documentation
                 deploymentNode "WSL 2 distro" "On Windows only: Docker Engine runs in Ubuntu or Debian under WSL 2. On Linux this level is not there." "Ubuntu, Debian" {
                     deploymentNode "Docker Engine" "Runs every tool in a fresh container." "Docker Engine 27+" {
                         containerInstance pydoc.toolImage
+                        containerInstance pydoc.scienceImage
                         containerInstance pydoc.local
                     }
                 }

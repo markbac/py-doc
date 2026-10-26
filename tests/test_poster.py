@@ -750,7 +750,7 @@ def test_a_chart_is_svg_in_the_theme_colours(tmp_path, drawn, kind):
     page, _ = build(write(tmp_path, f"## A\n\n{code}\n"), lambda: object())
     svg = page.split('<svg class="chart"', 1)[1].split("</svg>", 1)[0]
     assert '<div class="fig-title">Messages a day</div>' in page
-    assert "#3f74b8" in svg and "#4a7fc1" in svg  # secondary, then accent
+    assert "#3f74b8" in svg and "#2a3150" in svg  # secondary, then primary (accent is too like secondary)
     assert ">2.0</text>" in svg and ">2.1</text>" in svg and ">Mon</text>" in svg
 
 

@@ -108,6 +108,14 @@ Fixed | The display no longer shows LINK LOST while the broker is still connecti
 
 > **Warning:** do not update a node whose battery shows below 2.4 V. The update stops and the node keeps 2.0.
 
+```terminal title="sn100-cli"
+$ sn100 update --site leeds --firmware 2.1
+# 48 nodes, 2 skipped (battery below 2.4 V)
+queued   48
+updated  48 / 48, 0 failed
+-- An update of one site, from the field tool
+```
+
 ```timeline vertical
 1 May | Pilot sites | 200 nodes
 15 May | Every site | Over the air, overnight

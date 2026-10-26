@@ -1,7 +1,9 @@
 """The blocks of a poster: fenced code that becomes something other than code.
 
-Diagram fences are drawn by the tool container. ``cards``, ``lcd``, ``segments``, ``flow``, ``lanes``,
-``figure``, ``timeline``, ``chart`` and ``qr`` are HTML and SVG made here, in the theme's colours.
+Diagram fences are drawn by the tool container. The native blocks (``cards``, ``chart``, ``steps`` and the
+rest, listed in ``BLOCKS``) are HTML and SVG made here, in the theme's colours, with the drawing pieces of
+``poster_svg``. Each block is a function ``(code, opts, ctx)`` that returns its HTML, or a ``Fragment`` when
+its picture is all SVG and can also be drawn on its own.
 """
 
 from __future__ import annotations
@@ -10,18 +12,20 @@ import base64
 import html
 import json
 import logging
-import math
 import mimetypes
 import re
 import shlex
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 import segno
 from markdown_it import MarkdownIt
 
 from py_doc.diagrams import BY_FENCE, DiagramError
-from py_doc.diagrams.render import draw_cached, with_mermaid_config
-from py_doc import poster_barcode, poster_qr
+from py_doc.diagrams.render import draw_cached, translated, with_mermaid_config
+from py_doc import poster_barcode, poster_math, poster_qr
+from py_doc.poster_svg import Linear, extent, number, sparklines
 from py_doc.errors import ConversionError, ToolFailed
 from py_doc.poster_themes import Theme
 
@@ -32,7 +36,8 @@ _validate_link = MD.validateLink
 # markdown-it allows only GIF, PNG, JPEG and WebP data addresses. An SVG picture is embedded as one too, and
 # shown in an <img>, where it cannot run scripts.
 MD.validateLink = lambda url: url.strip().lower().startswith("data:image/svg+xml;") or _validate_link(url)
-CHART_KINDS = ("column", "bar", "line")
+poster_math.enable(MD)  # $...$ and $$...$$, as MathML
+CHART_KINDS = ("column", "bar", "line", "waterfall")
 SERIES_COLOURS = ("secondary", "accent", "primary", "good", "bad", "muted")
 
 
@@ -52,7 +57,141 @@ def mermaid_init(theme):
         "secondaryColor": "#f3f3f7", "tertiaryColor": "#ffffff", "clusterBkg": "#f3f6fb",
         "clusterBorder": c["secondary"], "edgeLabelBackground": "#ffffff",
     }  # fmt: skip
+    # The colour scales of the charts, maps and timelines: pie slices, git branches, timeline and mind map
+    # sections, treemap groups, quadrants and XY series, all from the theme's series colours and palette
+    scale = series_colours(theme)
+    variables.update({f"pie{n + 1}": scale[n % len(scale)] for n in range(12)})
+    variables.update({f"git{n}": scale[n % len(scale)] for n in range(8)})
+    variables.update({f"cScale{n}": scale[n % len(scale)] for n in range(12)})
+    variables.update({f"cScaleLabel{n}": c["on-primary"] for n in range(12)})
+    variables.update(
+        {"quadrant1Fill": c["diagram-fill"], "quadrant2Fill": "#ffffff", "quadrant3Fill": c["diagram-fill"]}
+    )
+    variables.update({"quadrant4Fill": "#ffffff", "quadrantPointFill": c["accent"], "quadrantTitleFill": c["strong"]})
+    variables["xyChart"] = {"plotColorPalette": ", ".join(scale), "titleColor": c["strong"]}
     return "---\nconfig: " + json.dumps({"theme": "base", "themeVariables": variables}) + "\n---\n"
+
+
+def series_colours(theme):
+    """The colours of a chart's series, in order: the theme's series roles, then its palette. A colour too pale
+    to see on white is left out, such as the light box colour the print theme has as ``secondary``."""
+    roles = [theme.colours[name] for name in SERIES_COLOURS[:-1]]  # not muted: a series should not look disabled
+    out: list[str] = []
+    for colour in dict.fromkeys(roles + list(theme.palette.values())):
+        # a series must stand apart from the others: the default theme's accent is nearly its secondary blue
+        if not _pale(colour) and not any(_close(colour, other) for other in out):
+            out.append(colour)
+    return out
+
+
+def _rgb(colour):
+    m = re.fullmatch(r"#([0-9a-fA-F]{6})(?:[0-9a-fA-F]{2})?", colour.strip())
+    return [int(m[1][i : i + 2], 16) for i in (0, 2, 4)] if m else None
+
+
+def _close(a, b):
+    """Whether two hex colours are too alike to tell two series apart."""
+    ra, rb = _rgb(a), _rgb(b)
+    return ra is not None and rb is not None and sum((x - y) ** 2 for x, y in zip(ra, rb)) ** 0.5 < 48
+
+
+def _pale(colour):
+    """Whether a hex colour is too light to read as a mark on white (relative luminance above 0.7)."""
+    m = re.fullmatch(r"#([0-9a-fA-F]{6})(?:[0-9a-fA-F]{2})?", colour.strip())
+    if not m:
+        return False
+    channels = [int(m[1][i : i + 2], 16) / 255 for i in (0, 2, 4)]
+    linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2] > 0.7
+
+
+def vega_config(theme):
+    """A Vega and Vega-Lite ``config`` in the poster's colours and font. A spec's own config wins over it."""
+    c, font = theme.colours, theme.fonts["body"]
+    text = {"labelColor": c["text"], "titleColor": c["strong"], "labelFont": font, "titleFont": font}
+    return {
+        "background": "#ffffff",
+        "font": font,
+        "view": {
+            "stroke": c["border"],
+            "continuousWidth": 360,
+            "continuousHeight": 220,
+            "discreteWidth": {"step": 60},  # a band, such as a box or a bar of a category, is not a sliver
+        },
+        "axis": {**text, "labelFontSize": 13, "titleFontSize": 13, "gridColor": c["border"], "domainColor": c["muted"]},
+        "legend": {**text, "labelFontSize": 13, "titleFontSize": 13},
+        "title": {"color": c["strong"], "font": font, "fontSize": 15},
+        "range": {"category": series_colours(theme)},
+        "mark": {"color": c["secondary"]},
+        "boxplot": {"box": {"color": c["secondary"]}, "median": {"color": c["on-secondary"]}},
+    }
+
+
+def with_vega_config(code, theme):
+    """``code`` (a Vega or Vega-Lite spec) with the poster's config under its own. Left as it is if it is not JSON."""
+    try:
+        spec = json.loads(code)
+    except ValueError:
+        return code
+    if not isinstance(spec, dict):
+        return code
+    spec["config"] = _merged(vega_config(theme), spec.get("config") or {})
+    return json.dumps(spec)
+
+
+def _merged(base, over):
+    out = dict(base)
+    for key, value in over.items():
+        out[key] = _merged(out[key], value) if isinstance(value, dict) and isinstance(out.get(key), dict) else value
+    return out
+
+
+def plantuml_skin(theme):
+    """``skinparam`` lines in the poster's colours, for a PlantUML diagram that has no ``!theme`` of its own."""
+    c = theme.colours
+    font = theme.fonts["body"].split(",")[0].strip().strip("'\"")
+    params = {
+        "defaultFontName": font, "defaultFontSize": "14", "backgroundColor": "#ffffff",
+        "ArrowColor": c["primary"], "ArrowFontColor": c["text"],
+        "ParticipantBorderColor": c["primary"], "ParticipantBackgroundColor": c["diagram-fill"],
+        "ActorBorderColor": c["primary"], "ActorBackgroundColor": c["diagram-fill"],
+        "SequenceLifeLineBorderColor": c["muted"], "SequenceGroupBorderColor": c["secondary"],
+        "ActivityBorderColor": c["primary"], "ActivityBackgroundColor": c["diagram-fill"],
+        "ActivityDiamondBorderColor": c["primary"], "ActivityDiamondBackgroundColor": "#ffffff",
+        "PartitionBorderColor": c["secondary"], "SwimlaneBorderColor": c["secondary"],
+        "ClassBorderColor": c["primary"], "ClassBackgroundColor": c["diagram-fill"],
+        "ComponentBorderColor": c["primary"], "ComponentBackgroundColor": c["diagram-fill"],
+        "NoteBorderColor": c["callout-border"], "NoteBackgroundColor": c["callout"],
+    }  # fmt: skip
+    return "".join(f"skinparam {name} {value}\n" for name, value in params.items())
+
+
+def with_plantuml_skin(code, theme):
+    """``code`` with the poster's skin after its ``@startuml`` line, unless it sets its own ``!theme``."""
+    if "!theme" in code:
+        return code
+    start = re.search(r"(?m)^\s*@start\w+[^\n]*\n", code)
+    return code[: start.end()] + plantuml_skin(theme) + code[start.end() :] if start else code
+
+
+_SVG_OPEN = re.compile(rb"<svg\b[^>]*>")
+_ATTR = re.compile(rb'\s(width|height)="([^"]*)"')
+_VIEWBOX = re.compile(rb'viewBox="\s*[-\d.]+[\s,]+[-\d.]+[\s,]+([\d.]+)[\s,]+([\d.]+)\s*"')
+
+
+def sized_svg(data: bytes) -> bytes:
+    """An SVG picture with a size in pixels. Some tools write ``width="100%"`` and no height, which an ``<img>``
+    stretches to its column, however small the diagram; it gets the size of its ``viewBox`` instead."""
+    opening = _SVG_OPEN.search(data)
+    view = _VIEWBOX.search(opening.group(0)) if opening else None
+    if not view:
+        return data
+    sizes = dict(_ATTR.findall(opening.group(0)))
+    if sizes.get(b"width", b"").strip() and not sizes[b"width"].endswith(b"%"):
+        return data  # it has a size of its own
+    tag = _ATTR.sub(b"", opening.group(0))
+    tag = tag[:4] + b' width="' + view.group(1) + b'" height="' + view.group(2) + b'"' + tag[4:]
+    return data[: opening.start()] + tag + data[opening.end() :]
 
 
 TOK = re.compile(r"\[([^\]|]+)(?:\|([^\]]+))?\]|-(?:([^>\[\]]*?)-)?>")
@@ -83,8 +222,42 @@ def esc(s):
     return html.escape(s, quote=True)
 
 
+@dataclass(frozen=True)
+class Fragment:
+    """What a block draws. ``svg`` is the picture alone when the block is all SVG (a chart, a QR code), so it
+    can be written as a file of its own or put in a document; None for a block made of HTML."""
+
+    html: str
+    svg: str | None = None
+
+
+@dataclass(frozen=True)
+class Block:
+    """A native block: its fence name, its function, and a line of syntax with an example for the docs.
+    ``info`` is the example's options, written as after the fence name."""
+
+    name: str
+    draw: Callable[[str, dict, Ctx], str | Fragment]
+    syntax: str
+    example: str
+    info: str = ""
+
+
+BLOCKS: dict[str, Block] = {}
+
+
+def block(name: str, syntax: str, example: str, info: str = ""):
+    """Register the decorated function as the native block ``name``."""
+
+    def register(draw):
+        BLOCKS[name] = Block(name, draw, syntax, example, info)
+        return draw
+
+    return register
+
+
 def inline(s):
-    return MD.renderInline(s)
+    return sparklines(MD.renderInline(s))
 
 
 def parse_opts(info):
@@ -106,7 +279,12 @@ def render_diagram(lang, code, ctx):
         code = mermaid_init(ctx.theme) + code
     if lang == "mermaid":
         code = with_mermaid_config(code, ctx.mermaid)
+    if lang in ("vega", "vega-lite"):
+        code = with_vega_config(code, ctx.theme)
+    if lang in ("plantuml", "puml"):
+        code = with_plantuml_skin(code, ctx.theme)
     renderer = BY_FENCE[lang]
+    code = translated(renderer, code, ctx.where)
     kind = "svg" if "svg" in renderer.kinds else "png"  # SVG where the tool can write it: it prints sharp at any size
     return draw_cached(ctx.runtime(), renderer, code, kind, False, ctx.base)
 
@@ -115,7 +293,10 @@ def diagram_html(lang, code, opts, ctx):
     try:
         path = render_diagram(lang, code, ctx)
         mime = mimetypes.guess_type(path.name)[0] or "image/png"
-        data = base64.b64encode(path.read_bytes()).decode()
+        picture = path.read_bytes()
+        if mime == "image/svg+xml":
+            picture = sized_svg(picture)
+        data = base64.b64encode(picture).decode()
         return f'<img alt="{esc(opts.get("alt", lang + " diagram"))}" src="data:{mime};base64,{data}">'
     except (ToolFailed, DiagramError) as exc:  # a broken diagram must not stop the poster
         ctx.failed += 1
@@ -134,6 +315,11 @@ def diagram_html(lang, code, opts, ctx):
 # ---------------------------------------------------------------------------
 
 
+@block(
+    "cards",
+    "Heading | Text | colour lines; cols=, style=title|label|top|plain",
+    "Sensor | Temperature on I2C | blue\nRadio | Sends, then sleeps | green",
+)
 def cards_html(code, opts, ctx):
     rows = [[c.strip() for c in line.split("|")] for line in code.splitlines() if line.strip()]
     style = opts.get("style", "title")
@@ -147,6 +333,11 @@ def cards_html(code, opts, ctx):
     return f'<div class="cards" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
 
 
+@block(
+    "lcd",
+    "Screens split by blank lines; a line starting -- is the caption; cols=",
+    "T  21.4 C\nRH 48 %\n-- Normal reading",
+)
 def lcd_html(code, opts, ctx):
     """Screens separated by blank lines, in ``cols=`` columns (default: up to 3) and as many rows as they need.
     A line starting ``--`` is the screen's caption."""
@@ -243,6 +434,17 @@ def lanes_part(code, ctx):
 
 
 FIG_KINDS = {"segments": segments_part, "flow": flow_part, "lanes": lanes_part}
+FIG_SYNTAX = {
+    "segments": (
+        "weight | label | detail | colour lines, title: and height:",
+        "6 | Asleep | 2 uA | navy\n2 | Send | 12 mA | amber",
+    ),
+    "flow": (
+        "[Filled|colour] or [Outlined] boxes joined by -> or -label-> arrows",
+        "[Asleep|navy] -timer-> [Measure|blue]",
+    ),
+    "lanes": ("Label | *filled cell | dashed cell lines", "Every minute | *Wake | *Measure | Send if changed"),
+}
 
 
 def figure_html(parts, ctx):
@@ -254,6 +456,11 @@ def figure_html(parts, ctx):
     return f'<div class="fig">{out}</div>'
 
 
+@block(
+    "timeline",
+    "date | label | detail | colour lines; vertical",
+    "Jan 2026 | Pilot | 200 nodes | navy\nApr 2026 | Firmware 2.1",
+)
 def timeline_html(code, opts, ctx):
     """``date | label | detail | colour`` lines as milestones, in a row or (``vertical``) a column."""
     items = ""
@@ -270,18 +477,6 @@ def timeline_html(code, opts, ctx):
     return f'<div class="timeline{" vertical" if "vertical" in opts else ""}">{items}</div>'
 
 
-def _number(value):
-    return f"{value:,.0f}" if abs(value) >= 1000 else f"{value:g}"
-
-
-def _nice(value):
-    """The round number (1, 2, 2.5 or 5 times a power of ten) at or above ``value``, for an axis."""
-    if value <= 0:
-        return 0.0
-    power = 10 ** math.floor(math.log10(value))
-    return next(m * power for m in (1, 2, 2.5, 5, 10) if value <= m * power + 1e-9)
-
-
 def _option(opts, name, choices, default, ctx):
     value = opts.get(name, default).lower()
     if value not in choices:
@@ -296,11 +491,20 @@ def _float(opts, name, ctx):
         raise PosterError(f"{ctx.where}: chart {name} must be a number") from None
 
 
+@block(
+    "chart",
+    "label | value | value ... lines, series: names; type=column|bar|line, title=, unit=, min=, max=, step=",
+    "series: 2.0, 2.1\nOffice | 1440 | 610\nWarehouse | 1440 | 980",
+)
 def chart_html(code, opts, ctx):
     """A ``column``, ``bar`` or ``line`` chart as SVG: ``label | value | value ...`` lines, ``series:`` names them."""
     kind = opts.get("type", "column").lower()
     if kind not in CHART_KINDS:
         raise PosterError(f"{ctx.where}: chart type must be one of {', '.join(CHART_KINDS)}, not '{kind}'")
+    if kind == "waterfall":
+        from py_doc.poster_scales import waterfall_html
+
+        return waterfall_html(code, opts, ctx)
     line_only = [name for name in ("min", "markers", "area", "dashed") if name in opts and kind != "line"]
     if line_only:
         reason = " (a bar that does not start at zero misleads)" if line_only[0] == "min" else ""
@@ -323,8 +527,12 @@ def chart_html(code, opts, ctx):
     if not rows:
         raise PosterError(f"{ctx.where}: a chart needs at least one 'label | value' line")
     count = max(len(values) for _, values in rows)
-    names = opts.get("colours", "").split(",") if opts.get("colours") else SERIES_COLOURS
-    colours = [ctx.theme.colour(names[i % len(names)].strip()) for i in range(count)]
+    if opts.get("colours"):
+        names = opts["colours"].split(",")
+        colours = [ctx.theme.colour(names[i % len(names)].strip()) for i in range(count)]
+    else:
+        scale = series_colours(ctx.theme)
+        colours = [scale[i % len(scale)] for i in range(count)]
     unit = opts.get("unit", "")
     dashed = {name.strip().lower() for name in opts.get("dashed", "").split(",") if name.strip()}
     dashed = {
@@ -332,11 +540,13 @@ def chart_html(code, opts, ctx):
         for j in range(count)
         if (series[j].lower() if j < len(series) else str(j + 1)) in dashed or str(j + 1) in dashed
     }
-    values = [v for _, vs in rows for v in vs]
-    low = _float(opts, "min", ctx) if "min" in opts else -_nice(-min(values)) if min(values) < 0 else 0.0
-    high = _float(opts, "max", ctx) if "max" in opts else _nice(max(values)) or 1.0
+    low, high = extent(
+        (v for _, vs in rows for v in vs),
+        _float(opts, "min", ctx) if "min" in opts else None,
+        _float(opts, "max", ctx) if "max" in opts else None,
+    )
     if high <= low:
-        raise PosterError(f"{ctx.where}: chart max ({_number(high)}) must be above min ({_number(low)})")
+        raise PosterError(f"{ctx.where}: chart max ({number(high)}) must be above min ({number(low)})")
     span = high - low
     step = _float(opts, "step", ctx) if "step" in opts else span / 4
     if step <= 0 or span / step > 20:
@@ -351,20 +561,21 @@ def chart_html(code, opts, ctx):
     if kind == "bar":
         left, top, right, bottom = 140, 8 + legend, 60, 8 + (20 if axis else 0)
         plot_w, band = width - left - right, (height - top - bottom) / len(rows)
-        x0 = left + (0 - low) / span * plot_w
+        x_of = Linear(low, high, left, left + plot_w)
+        x0 = x_of(0)
         for i, (label, vs) in enumerate(rows):
             y = top + i * band
             out.append(f'<text x="{left - 8}" y="{y + band / 2 + 4:.1f}" text-anchor="end" {text}>{esc(label)}</text>')
             thick = band * 0.7 / len(vs)
             for j, v in enumerate(vs):
-                x1 = left + (v - low) / span * plot_w
+                x1 = x_of(v)
                 yy = y + band * 0.15 + j * thick
                 out.append(
                     f'<rect x="{min(x0, x1):.1f}" y="{yy:.1f}" width="{abs(x1 - x0):.1f}" height="{thick:.1f}" fill="{colours[j]}"/>'
                 )
                 if shown == "all" or shown == "last" and i == len(rows) - 1:
                     out.append(
-                        f'<text x="{max(x0, x1) + 4:.1f}" y="{yy + thick / 2 + 4:.1f}" {text}>{_number(v)}{esc(unit)}</text>'
+                        f'<text x="{max(x0, x1) + 4:.1f}" y="{yy + thick / 2 + 4:.1f}" {text}>{number(v)}{esc(unit)}</text>'
                     )
         out.append(f'<line x1="{x0:.1f}" y1="{top}" x2="{x0:.1f}" y2="{height - bottom}" stroke="currentColor"/>')
         if axis:
@@ -374,17 +585,13 @@ def chart_html(code, opts, ctx):
     else:
         left, top, right, bottom = 52 + (22 if axis else 0), 12 + legend, 12, 30
         plot_w, plot_h = width - left - right, height - top - bottom
-
-        def y_of(v):
-            return top + plot_h - (v - low) / span * plot_h
-
-        for n in range(round(span / step) + 1):
-            v = low + step * n
+        y_of = Linear(low, high, top + plot_h, top)
+        for v in y_of.ticks(step):
             out.append(
                 f'<line x1="{left}" y1="{y_of(v):.1f}" x2="{width - right}" y2="{y_of(v):.1f}" stroke="currentColor" stroke-opacity=".25"/>'
             )
             out.append(
-                f'<text x="{left - 6}" y="{y_of(v) + 4:.1f}" text-anchor="end" {text}>{_number(round(v, 9))}</text>'
+                f'<text x="{left - 6}" y="{y_of(v) + 4:.1f}" text-anchor="end" {text}>{number(round(v, 9))}</text>'
             )
         if axis:
             middle = top + plot_h / 2
@@ -407,7 +614,7 @@ def chart_html(code, opts, ctx):
                     )
                     if shown == "all" or shown == "last" and i == len(rows) - 1:
                         out.append(
-                            f'<text x="{x + thick / 2:.1f}" y="{min(y0, y1) - 4:.1f}" text-anchor="middle" {text}>{_number(v)}{esc(unit)}</text>'
+                            f'<text x="{x + thick / 2:.1f}" y="{min(y0, y1) - 4:.1f}" text-anchor="middle" {text}>{number(v)}{esc(unit)}</text>'
                         )
         else:
             placed: dict[float, list[float]] = {}  # the value labels at each point across, so two do not overlap
@@ -430,7 +637,7 @@ def chart_html(code, opts, ctx):
                         at = y - 9 if all(abs(y - 9 - other) >= 16 for other in placed.get(x, [])) else y + 21
                         placed.setdefault(x, []).append(at)
                         out.append(
-                            f'<text x="{x:.1f}" y="{at:.1f}" text-anchor="middle" {text}>{_number(v)}{esc(unit)}</text>'
+                            f'<text x="{x:.1f}" y="{at:.1f}" text-anchor="middle" {text}>{number(v)}{esc(unit)}</text>'
                         )
         zero = y_of(min(max(0, low), high))  # the zero line, or the bottom of the axis when zero is not on it
         out.append(f'<line x1="{left}" y1="{zero:.1f}" x2="{width - right}" y2="{zero:.1f}" stroke="currentColor"/>')
@@ -445,7 +652,7 @@ def chart_html(code, opts, ctx):
         + "".join(out)
         + "</svg>"
     )
-    return f'<div class="fig">{title}{svg}</div>'
+    return Fragment(f'<div class="fig">{title}{svg}</div>', svg)
 
 
 def qr_svg(text, colour, size=140, error="m"):
@@ -461,6 +668,11 @@ def qr_svg(text, colour, size=140, error="m"):
     return code.svg_inline(scale=scale, border=2, dark=colour, light=None)
 
 
+@block(
+    "qr",
+    "The address or text, or key: value lines with type=; size=, label=, ecc=, file=",
+    "https://example.com/manual",
+)
 def qr_html(code, opts, ctx):
     """A QR code of the block's text, or with ``type=`` of a contact card, calendar entry, Wi-Fi network,
     e-mail, phone number, text message or place written as ``key: value`` lines (see ``poster_qr``).
@@ -484,9 +696,13 @@ def qr_html(code, opts, ctx):
         raise PosterError(f"{ctx.where}: {exc}") from None
     size = _whole(opts, "size", 140, ctx)
     label = f'<div class="cap">{inline(opts["label"])}</div>' if opts.get("label") else ""
-    return f'<div class="qr">{qr_svg(target, ctx.theme.colours["strong"], size, ecc)}{label}</div>'
+    svg = qr_svg(target, ctx.theme.colours["strong"], size, ecc)
+    return Fragment(f'<div class="qr">{svg}{label}</div>', svg)
 
 
+@block(
+    "barcode", "The data on one line; type=code128|code39|ean13|ean8|upca|itf14, width=, height=, label=", "SN-100-0042"
+)
 def barcode_html(code, opts, ctx):
     """A linear barcode of the block's first line: ``type=`` code128 (default), code39, ean13, ean8, upca or
     itf14, ``width=`` and ``height=`` in pixels, ``text=no`` to leave out the digits, ``check=yes`` for a
@@ -510,7 +726,7 @@ def barcode_html(code, opts, ctx):
         kind, data, ctx.theme.colours["strong"], width, height, flags["text"], flags["check"]
     )
     label = f'<div class="cap">{inline(opts["label"])}</div>' if opts.get("label") else ""
-    return f'<div class="barcode">{svg}{label}</div>'
+    return Fragment(f'<div class="barcode">{svg}{label}</div>', svg)
 
 
 def _whole(opts, name, default, ctx, low=1):
@@ -520,6 +736,11 @@ def _whole(opts, name, default, ctx, low=1):
     return int(value)
 
 
+@block(
+    "steps",
+    "Heading | text | colour lines; cols=, start=",
+    "Fit the gateways | One a floor\nHold the join button | Three seconds",
+)
 def steps_html(code, opts, ctx):
     """``Heading | text | colour`` lines as numbered steps, in one column or ``cols=`` columns, from ``start=``."""
     rows = [[c.strip() for c in line.split("|")] for line in code.splitlines() if line.strip()]
@@ -535,6 +756,7 @@ def steps_html(code, opts, ctx):
     return f'<ol class="steps" start="{start}" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</ol>'
 
 
+@block("gallery", "picture | caption lines, relative to the Markdown; cols=, height=", None)
 def gallery_html(code, opts, ctx):
     """``picture | caption`` lines as a grid of embedded pictures. ``height=`` crops them all to one height."""
     out, rows = "", [line.strip() for line in code.splitlines() if line.strip()]
@@ -566,6 +788,11 @@ def _value(text, what, ctx):
         raise PosterError(f"{ctx.where}: {what} '{text}' is not a number") from None
 
 
+@block(
+    "progress",
+    "Label | value | target | colour lines; unit=, show=values|percent, better=higher|lower",
+    "Joined | 48 | 50\nLabelled | 50 | 50",
+)
 def progress_html(code, opts, ctx):
     """``Label | value | target | colour`` lines as bars towards their targets. ``better=lower`` for a ceiling."""
     rows = _rows(code)
@@ -599,6 +826,11 @@ def progress_html(code, opts, ctx):
 CHECKS = {"x": ("done", "&#10003;"), " ": ("open", ""), "!": ("failed", "&#10007;")}
 
 
+@block(
+    "checklist",
+    "[x] done, [ ] open or [!] failed lines; cols=",
+    "[x] Signal -95 dBm or better\n[ ] Floor plan uploaded",
+)
 def checklist_html(code, opts, ctx):
     """``[x] done``, ``[ ] open`` and ``[!] failed`` lines as a list of boxes, in ``cols=`` columns."""
     items = ""
@@ -614,6 +846,9 @@ def checklist_html(code, opts, ctx):
     return f'<ul class="checklist" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{items}</ul>'
 
 
+@block(
+    "compare", "A | Before | After header, then Label | before | after lines", "| 2.0 | 2.1\nTypical join | 11 s | 4 s"
+)
 def compare_html(code, opts, ctx):
     """A ``| Before | After`` header, then ``Label | before | after`` lines. The last column is the one to see."""
     rows = _rows(code)
@@ -639,6 +874,7 @@ def compare_html(code, opts, ctx):
     return f'<div class="compare" style="{grid}">{out}</div>'
 
 
+@block("people", "Name | role | contact | photo lines; cols=", "Lena Chen | Release manager | lena@example.com")
 def people_html(code, opts, ctx):
     """``Name | role | contact | photo`` lines as cards. Without a photo, the initials stand in a circle."""
     rows = _rows(code)
@@ -662,6 +898,7 @@ def people_html(code, opts, ctx):
     return f'<div class="people" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
 
 
+@block("highlight", "value | label | detail | colour lines; cols=", "0 | Failed updates | in 200 nodes | good")
 def highlight_html(code, opts, ctx):
     """``value | label | detail | colour`` lines as figures in large type, side by side."""
     rows = _rows(code)
@@ -677,46 +914,144 @@ def highlight_html(code, opts, ctx):
     return f'<div class="highlights" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
 
 
+@block(
+    "equation",
+    "Cards split by --- lines: title:, the LaTeX formula, then symbol | meaning | unit lines and notes; cols=",
+    "title: Schwarzschild radius\nR_s = \\frac{2GM}{c^2}\nR_s | Event horizon radius | m\nM | Mass of the body | kg",
+)
+def equation_html(code, opts, ctx):
+    """Featured formulas, each in a card: a ``title:``, the formula (LaTeX, on one line or more), then
+    ``symbol | meaning | unit`` lines as its legend, and any lines after the legend as notes."""
+    cards = [card for card in re.split(r"(?m)^\s*---\s*$", code) if card.strip()]
+    if not cards:
+        raise PosterError(f"{ctx.where}: an equation block needs a formula")
+    out = ""
+    for card in cards:
+        title, formula, legend, notes = "", [], [], []
+        for line in (line.strip() for line in card.splitlines() if line.strip()):
+            if not formula and line.lower().startswith("title:"):
+                title = line[6:].strip()
+            elif formula and not notes and "|" in line:  # the legend comes after the formula
+                legend.append([cell.strip() for cell in line.split("|")])
+            elif legend:
+                notes.append(line)
+            else:
+                formula.append(line)
+        if not formula:
+            raise PosterError(f"{ctx.where}: the equation card '{title or card.strip()[:40]}' has no formula")
+        rows = "".join(
+            f"<tr><td>{poster_math.mathml(row[0])}</td>"
+            + "".join(f"<td>{inline(cell)}</td>" for cell in (row[1:] + ["", ""])[:2])
+            + "</tr>"
+            for row in legend
+        )
+        out += (
+            '<div class="eq">'
+            + (f'<div class="ch">{inline(title)}</div>' if title else "")
+            + f'<div class="f">{poster_math.mathml(" ".join(formula), True)}</div>'
+            + (f"<table>{rows}</table>" if rows else "")
+            + (f'<div class="notes">{inline(" ".join(notes))}</div>' if notes else "")
+            + "</div>"
+        )
+    cols = _whole(opts, "cols", min(len(cards), 3), ctx)
+    return f'<div class="eqs" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
+
+
+# A shell prompt, then a space: $, >, PS>, PS C:\path>, or user@host:path$ (or #)
+PROMPT = re.compile(r"^(\$|>|PS>|PS [^>]*>|[\w.-]+@[\w.-]+:[^$#\s]*[$#])(?= )")
+
+
+@block(
+    "terminal",
+    "Screens split by blank lines; prompt lines ($ , > , PS> ) stand out, # lines are dimmed, -- is the caption; title=, cols=",
+    "$ git status -sb\n## main\n M src/main.c\n-- One file modified",
+)
+def terminal_html(code, opts, ctx):
+    """A terminal window for each screen of lines (split by blank lines, as ``lcd``), in ``cols=`` columns.
+    The command after a prompt is bold, ``#`` comment lines are dimmed, a line starting ``--`` is the caption,
+    and ``title=`` goes in the window's title bar."""
+    screens = [[]]
+    for line in code.splitlines():
+        if line.strip():
+            screens[-1].append(line)
+        elif screens[-1]:
+            screens.append([])
+    screens = [screen for screen in screens if screen]
+    if not screens:
+        raise PosterError(f"{ctx.where}: a terminal block needs at least one line")
+    title = f"<span>{esc(opts['title'])}</span>" if opts.get("title") else ""
+    bar = f'<div class="tbar"><i></i><i></i><i></i>{title}</div>'
+    out = ""
+    for screen in screens:
+        shown = ""
+        for line in (line for line in screen if not line.startswith("--")):
+            prompt = PROMPT.match(line)
+            if prompt:
+                command = esc(line[prompt.end() :].lstrip())
+                shown += f'<div class="cmd"><span class="p">{esc(prompt[1])}</span><b>{command}</b></div>'
+            elif line.lstrip().startswith("#"):
+                shown += f'<div class="cmt">{esc(line)}</div>'
+            else:
+                shown += f"<div>{esc(line)}</div>"
+        cap = " ".join(line[2:].strip() for line in screen if line.startswith("--"))
+        out += (
+            f'<div class="term"><div class="win">{bar}<div class="scr">{shown}</div></div>'
+            + (f'<div class="cap">{inline(cap)}</div>' if cap else "")
+            + "</div>"
+        )
+    cols = _whole(opts, "cols", min(len(screens), 2), ctx)
+    return f'<div class="terms" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
+
+
+def _figure_kind(part):
+    return lambda code, opts, ctx: figure_html([part(code, ctx)], ctx)
+
+
+for _kind, (_syntax, _example) in FIG_SYNTAX.items():
+    block(_kind, _syntax, _example)(_figure_kind(FIG_KINDS[_kind]))
+
+
+@block(
+    "figure",
+    "Several of segments, flow and lanes in one box, split by +++ lines, each starting @segments, @flow or @lanes",
+    "@flow\n[Asleep|navy] -timer-> [Measure|blue]\n+++\n@lanes\nEvery minute | *Wake | *Measure",
+)
+def figure_block(code, opts, ctx):
+    parts = []
+    for sub in re.split(r"(?m)^\+\+\+\s*$", code):
+        kind, _, body = sub.strip("\n").partition("\n")
+        kind = kind.strip().lstrip("@").lower()
+        if kind not in FIG_KINDS:
+            logger.warning(f"unknown figure part '{kind}'")
+            continue
+        parts.append(FIG_KINDS[kind](body, ctx))
+    return figure_html(parts, ctx)
+
+
+def block_fragment(lang, opts, code, ctx) -> Fragment | None:
+    """What a native block draws, or None when ``lang`` is not one (a diagram, or an ordinary code block)."""
+    found = BLOCKS.get(lang)
+    if found is None:
+        return None
+    drawn = found.draw(code, opts, ctx)
+    return drawn if isinstance(drawn, Fragment) else Fragment(drawn)
+
+
 def block_html(lang, opts, code, ctx):
     """HTML for a fence we handle, or None to leave it as an ordinary code block."""
     if lang in BY_FENCE:
         return diagram_html(lang, code, opts, ctx)
-    if lang == "cards":
-        return cards_html(code, opts, ctx)
-    if lang == "lcd":
-        return lcd_html(code, opts, ctx)
-    if lang == "timeline":
-        return timeline_html(code, opts, ctx)
-    if lang == "chart":
-        return chart_html(code, opts, ctx)
-    if lang == "qr":
-        return qr_html(code, opts, ctx)
-    if lang == "barcode":
-        return barcode_html(code, opts, ctx)
-    if lang == "steps":
-        return steps_html(code, opts, ctx)
-    if lang == "gallery":
-        return gallery_html(code, opts, ctx)
-    if lang == "progress":
-        return progress_html(code, opts, ctx)
-    if lang == "checklist":
-        return checklist_html(code, opts, ctx)
-    if lang == "compare":
-        return compare_html(code, opts, ctx)
-    if lang == "people":
-        return people_html(code, opts, ctx)
-    if lang == "highlight":
-        return highlight_html(code, opts, ctx)
-    if lang in FIG_KINDS:
-        return figure_html([FIG_KINDS[lang](code, ctx)], ctx)
-    if lang == "figure":  # several kinds in one box, split by +++ lines, each starting with @kind
-        parts = []
-        for sub in re.split(r"(?m)^\+\+\+\s*$", code):
-            kind, _, body = sub.strip("\n").partition("\n")
-            kind = kind.strip().lstrip("@").lower()
-            if kind not in FIG_KINDS:
-                logger.warning(f"unknown figure part '{kind}'")
-                continue
-            parts.append(FIG_KINDS[kind](body, ctx))
-        return figure_html(parts, ctx)
-    return None
+    if lang == "plot":  # a preset, expanded into a Vega-Lite or Vega spec that the container draws
+        from py_doc.poster_plot import PlotError, expand
+
+        try:
+            fence, spec = expand(code, opts)
+        except PlotError as exc:
+            raise PosterError(f"{ctx.where}: {exc}") from None
+        return diagram_html(fence, spec, opts, ctx)
+    drawn = block_fragment(lang, opts, code, ctx)
+    return drawn.html if drawn else None
+
+
+# The blocks of other modules register themselves when they are imported
+from py_doc import poster_embedded, poster_scales, poster_shapes, poster_space  # noqa: E402, F401

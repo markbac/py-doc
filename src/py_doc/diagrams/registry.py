@@ -10,6 +10,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import declarative
+from .declarative import translate_chess, translate_circuit, translate_music
+
 TOOLS = Path(__file__).parent / "tools"
 PUPPETEER = "/etc/py-doc/puppeteer.json"  # in the image, next to the Chromium it configures
 DPI = 192
@@ -54,6 +57,11 @@ class Renderer:
     needs_source_dir: bool = False
     environment: Callable[[str], dict[str, str]] | None = None  # from the container path of the source folder
     cacheable: Callable[[str], bool] = field(default=lambda text: True)
+    env: dict[str, str] = field(default_factory=dict)  # environment variables the tool needs
+    # The fence's written form turned into what the tool reads, for the fences of declarative.py; it raises
+    # DeclarativeError for a mistake
+    translate: Callable[[str], str] | None = None
+    image: str = "tools"  # "science" for a fence drawn by the optional science image
 
     def commands(self, job: Job) -> list[Command]:
         """The commands for ``job``. An SVG-only tool is followed by Inkscape when the document needs PNG."""
@@ -111,7 +119,7 @@ RENDERERS: tuple[Renderer, ...] = (
     Renderer("ditaa", ("ditaa",), ".ditaa", ("png",), lambda job: [["ditaa", job.source, job.output]]),
     *(
         Renderer(tool, (tool,), ".diag", ("png",), _blockdiag(tool))
-        for tool in ("blockdiag", "seqdiag", "actdiag", "nwdiag", "packetdiag")
+        for tool in ("blockdiag", "seqdiag", "actdiag", "nwdiag", "packetdiag", "rackdiag")
     ),
     Renderer(
         "wavedrom",
@@ -144,5 +152,35 @@ RENDERERS: tuple[Renderer, ...] = (
     Renderer("wireviz", ("wireviz",), ".yml", ("svg",), lambda j: [["wireviz", "-f", "s", j.source]]),
     Renderer("vega-lite", ("vega-lite",), ".json", ("svg",), _vega("vl2svg")),
     Renderer("vega", ("vega",), ".json", ("svg",), _vega("vg2svg")),
-)
+    # Specialist libraries, from a written form that py-doc reads (declarative.py); no code of the fence runs
+    Renderer(
+        "circuit", ("circuit",), ".json", ("svg",),
+        lambda j: [["python3", TOOLS / "circuit_render.py", j.source, j.output]], translate=translate_circuit,
+    ),
+    Renderer(
+        "chess", ("chess",), ".json", ("svg",),
+        lambda j: [["python3", TOOLS / "chess_render.py", j.source, j.output]], translate=translate_chess,
+    ),
+    Renderer(
+        "music", ("music", "abc"), ".abc", ("svg",),
+        lambda j: [["node", TOOLS / "music_render.js", j.source, j.output, PUPPETEER]],
+        env={"NODE_PATH": "/opt/node/node_modules"}, translate=translate_music,
+    ),
+)  # fmt: skip
+# The fences of the optional science image: a written form py-doc reads, drawn by science_render.py
+SCIENCE_FENCES = (
+    "molecule", "phylogeny", "ternary", "seq-logo", "upset", "smith", "plasmid", "gene-locus", "cie", "sun-path",
+    "thermo-cycle",
+)  # fmt: skip
+
+
+def _science(fence: str) -> Renderer:
+    return Renderer(
+        fence, (fence,), ".json", ("svg",),
+        lambda j: [["python3", TOOLS / "science_render.py", j.source, j.output]],
+        translate=getattr(declarative, "translate_" + fence.replace("-", "_")), image="science",
+    )  # fmt: skip
+
+
+RENDERERS = RENDERERS + tuple(_science(fence) for fence in SCIENCE_FENCES)
 BY_FENCE: dict[str, Renderer] = {fence: renderer for renderer in RENDERERS for fence in renderer.fences}

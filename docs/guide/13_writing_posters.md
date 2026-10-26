@@ -137,10 +137,49 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | How a whole divides into shares | `segments` | One minute of the node's time |
 | Dates and milestones | `timeline` | Pilot, release, retirement |
 | Numbers to compare | `chart` | Messages a day before and after |
+| Causes ranked, quality over time, distributions, curves | `plot` | A Pareto of returns, a control chart, a boxplot, a step response |
+| An amount and where it goes | `chart type=waterfall` | A top-up after its deductions |
+| Bands of a range and the points where things change | `threshold` | Credit counting down to cut-off |
+| How full each store is | `buckets` | Credit, emergency credit and debt |
+| One value on a dial | `gauge` | The grid frequency now |
+| The hours of a day | `dial24` | Friendly hours and the off-peak tariff |
+| A grade from A to G | `rating` | A home's energy rating |
+| Benchmarks on a colour ruler | `gradient-scale` | Cooking temperatures, pH |
+| Values over many orders of magnitude | `logscale` | Latencies from nanoseconds to seconds |
+| Light or radio by wavelength or frequency | `spectrum` | Absorption lines, Wi-Fi channels |
 | A screen the reader will see | `lcd` | The display after joining |
+| A formula the section is about | `equation` | The Schwarzschild radius, with its symbols |
+| Commands and what they print | `terminal` | `git status` and its output |
 | Structure, sequence or architecture | A diagram fence | A Mermaid sequence diagram |
 | A warning or a tip | A callout | Do not update below 2.4 V |
 | A lookup | A table | Error codes and their fixes |
+| Orbits and transfers | `orbits` | Earth to Mars |
+| How a telescope or interferometer folds light | `optics`, `interferometer` | A Cassegrain, LIGO |
+| Light cones, gravity wells, a black hole | `spacetime` | Cause and effect, the depth of a neutron star |
+| Atomic transitions | `energy-levels` | The Balmer lines of hydrogen |
+| Particle interactions | `feynman`, `standard-model` | Beta decay, the particles |
+| Elements and isotopes | `elements`, `nuclide-chart` | What stars make, the light nuclides |
+| Proportions that narrow or widen | `pyramid`, `cone`, `funnel` | The test pyramid, a filtering funnel |
+| Layers in order | `stack` | A protocol stack |
+| Layers that wrap a core | `target`, `cutaway` | Clean architecture, the inside of the Sun |
+| Bands of altitude or depth | `cutaway type=column` | The layers of the atmosphere |
+| Objects to scale | `sizes` | Telescope mirrors, planets |
+| What fills a container | `vessels` | Coffee drinks, battery layers |
+| Where things are in memory | `memory` | Flash and RAM of a controller |
+| A sequence and its groups | `tape` | Codons, bytes in frames |
+| A circular buffer | `ring` | A DMA buffer with its pointers |
+| Steps that come round again | `cycle` | The water cycle |
+| Two sides weighed | `balance` | Generation against demand |
+| The small part seen and the large part not | `iceberg` | What a product hides |
+| What each byte of a message means | `hex-dissect` | A CoAP header |
+| What each part of a string or command means | `syntax-anatomy` | An LwM2M address, an AT command |
+| Wrong code beside right code | `code-compare` | An unbounded copy and its fix |
+| The pins of a chip or connector | `pinout` | A controller, a debug header |
+| What the bench shows | `instrument` | A scope trace, a bus capture, a current reading |
+| For and against | `proscons` | Why NB-IoT for this node |
+| Terms the reader may not know | `glossary` | The acronyms of the poster |
+| Places on a picture | `annotated` | The parts of a board |
+| From the whole to a detail | `zoom-chain` | Room, bracket, node |
 | A link to more | `qr` | The full manual |
 
 The [Posters](12_posters.md) chapter lists every option of every block. The sections below show the common ones.
@@ -286,6 +325,53 @@ Year 5 | 2.62
 
 [Posters](12_posters.md#diagrams-and-charts) lists every option.
 
+### Scales
+
+````markdown
+```threshold title="Credit counting down to cut-off"
+span: Normal credit | £20.00 to £2.00 | Supply on | green | 4
+pin: £2.00 Low credit alert | amber
+span: Low credit | Emergency credit can be armed | amber | 2
+pin: £0.00 Credit exhausted | red
+span: Emergency credit | A £10.00 pool | purple | 3
+```
+````
+
+A `threshold` keeps every word readable: a band is only as wide as its weight, so its words go under it, and the exact points go on pins above it. Give a band a weight that shows its share, not one that makes room for its words. Write "not to scale" in the title when the weights are not the true proportions.
+
+### Bytes, strings and code
+
+````markdown
+```hex-dissect
+bytes: 54 45 7a 31
+0 | Header | NON, token length 4 | navy
+1 | Code | 2.05 Content | blue
+2-3 | Message ID | 0x7a31 | green
+```
+````
+
+A `hex-dissect` and a `syntax-anatomy` replace the carets and arrows that a plain code block needs to say which part is which. Give each field a colour and keep the same colour for it across the poster. In a `code-compare`, put the wrong code first and number only the lines a reader must look at.
+
+### Equations and terminals
+
+````markdown
+```equation
+title: Schwarzschild radius
+R_s = \frac{2GM}{c^2}
+R_s | Event horizon radius | m
+M   | Mass of the body | kg
+```
+
+```terminal title="git"
+$ git status -sb
+## main
+ M src/main.c
+-- One file changed, not staged
+```
+````
+
+An `equation` card shows one formula large, with a legend of its symbols. Write any formula in a sentence as `$...$` instead: see [Maths](12_posters.md#maths). A `terminal` is a window of commands and their output. Keep `lcd` for the screen of a device, where it looks like one.
+
 ### Diagrams
 
 Any diagram fence works, as in a document:
@@ -303,6 +389,37 @@ sequenceDiagram
 Mermaid diagrams get the poster's colours and font. Diagrams are drawn by the tool container, so building a poster with one needs Docker, as a document does. A diagram that cannot be drawn is shown as its code with a warning, and the rest of the poster is still written.
 
 A diagram is drawn at its natural size and shrunk to its column. Keep it small: five to ten boxes with short labels read better than one large diagram, and a wide one belongs in a `{.wide}` section.
+
+### Which tool for which diagram
+
+Before you reach for a picture or ask for a new block, look here. Each row is drawn by a tool in the tool container, in the poster's theme, and works in documents and sites too. `examples/poster/diagrams.md` has one of each.
+
+| To show | Fence | Tool's syntax |
+|---|---|---|
+| Flows that split and join, such as energy or money | `mermaid` with `sankey-beta` | [Sankey](https://mermaid.js.org/syntax/sankey.html) |
+| Items on two axes, a 2×2 chart | `mermaid` with `quadrantChart` | [Quadrant chart](https://mermaid.js.org/syntax/quadrantChart.html) |
+| Several options scored on several axes | `mermaid` with `radar-beta` | [Radar](https://mermaid.js.org/syntax/radar.html) |
+| How a whole divides into nested parts | `mermaid` with `treemap-beta` | [Treemap](https://mermaid.js.org/syntax/treemap.html) |
+| What two or three sets share | `mermaid` with `venn-beta` | [Venn](https://mermaid.js.org/syntax/venn.html) |
+| The causes of a problem, a fishbone | `mermaid` with `ishikawa-beta` | [Ishikawa](https://mermaid.js.org/syntax/ishikawa.html) |
+| A value chain against evolution | `mermaid` with `wardley-beta` | [Wardley map](https://mermaid.js.org/syntax/wardley.html) |
+| A folder tree | `mermaid` with `treeView-beta` | [Tree view](https://mermaid.js.org/syntax/treeView.html) |
+| A mind map, or a hierarchy | `mermaid` with `mindmap` | [Mind map](https://mermaid.js.org/syntax/mindmap.html) |
+| Branches and merges | `mermaid` with `gitGraph` | [Git graph](https://mermaid.js.org/syntax/gitgraph.html) |
+| Periods, plans and eras | `mermaid` with `timeline` or `gantt` | [Timeline](https://mermaid.js.org/syntax/timeline.html), [Gantt](https://mermaid.js.org/syntax/gantt.html) |
+| A simple line or bar chart | `chart`, or `mermaid` with `xychart-beta` | [XY chart](https://mermaid.js.org/syntax/xyChart.html) |
+| Blocks laid out on a grid, such as a chip's floorplan | `mermaid` with `block-beta` | [Block diagram](https://mermaid.js.org/syntax/block.html) |
+| Who does what, in lanes | `mermaid` with `swimlane-beta`, or PlantUML activity partitions | [Swimlanes](https://mermaid.js.org/syntax/swimlanes.html) |
+| Decisions and branches | `mermaid` with `flowchart` | [Flowchart](https://mermaid.js.org/syntax/flowchart.html) |
+| The bits of a header or register | `mermaid` with `packet-beta`, `packetdiag` or `bytefield-svg` | [Packet](https://mermaid.js.org/syntax/packet.html) |
+| Digital signals over time | `wavedrom` | [WaveDrom](https://wavedrom.com/tutorial.html) |
+| Task or state changes over time | `plantuml` timing diagram | [Timing](https://plantuml.com/timing-diagram) |
+| Messages with delays and lost packets | `plantuml` sequence with `!pragma teoz true`, `->(10)` and `->x` | [Sequence](https://plantuml.com/sequence-diagram) |
+| Records and pointers, Petri nets, any graph | `dot` | [Graphviz](https://graphviz.org/documentation/) |
+| A rack of equipment | `rackdiag` | [rackdiag](http://blockdiag.com/en/nwdiag/rackdiag-examples.html) |
+| Statistics: boxplots, heatmaps, scatter plots | `vega-lite` | [Vega-Lite](https://vega.github.io/vega-lite/examples/) |
+
+Most new Mermaid types end in `-beta`, so their syntax may still change. A diagram that cannot be drawn shows its code, with a warning.
 
 ### Callouts
 

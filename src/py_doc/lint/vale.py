@@ -210,7 +210,7 @@ def build_workspace(settings: ValeSettings, config: LintConfig, folder: Path) ->
         "[*.{md,markdown}]",
         f"BasedOnStyles = {styles_used}",
         # Directives and variables are not prose
-        r"TokenIgnores = (\[\[[^\]]*\]\]), (\{\{[^}]*\}\})",
+        r"TokenIgnores = (\[\[[^\]]*\]\]), (\{\{[^}]*\}\}), (\$\$[^$]+\$\$), (\$[^\s\d$][^$\n]*?[^\s\\$]\$), (\$[^\s\d$]\$)",
     ]
     lines += [f"{rule_id} = {level}" for rule_id, level in sorted(_rule_levels(settings).items())]
     ini.write_text("\n".join(lines) + "\n", encoding="utf-8")

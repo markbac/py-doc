@@ -47,6 +47,10 @@ COLOUR_ROLES = {
     "lcd": "the display screen",
     "lcd-text": "text on the display screen",
     "lcd-border": "the edge of the display screen",
+    "terminal": "the terminal window",
+    "terminal-text": "text in the terminal window",
+    "terminal-prompt": "the prompt in the terminal window",
+    "terminal-border": "the edge of the terminal window and its title bar",
     "diagram-fill": "Mermaid boxes",
     "note": "a Note callout",
     "tip": "a Tip callout",
@@ -63,6 +67,7 @@ DEFAULT_COLOURS = {
     "accent": "#4a7fc1", "accent-text": "#2f5f9f", "primary": "#2a3150", "on-primary": "#ffffff", "strong": "#2a3150", "secondary": "#3f74b8",
     "on-secondary": "#ffffff", "highlight": "#7cc0f2", "code": "#e4e8f1", "callout": "#fbeee0", "callout-border": "#e3b88a",
     "lcd": "#b7c79a", "lcd-text": "#1f2a14", "lcd-border": "#3b3b40", "diagram-fill": "#e8eef8",
+    "terminal": "#1e2029", "terminal-text": "#e6e8ef", "terminal-prompt": "#7cc0f2", "terminal-border": "#3b3d49",
     "note": "#3f74b8", "tip": "#2e6b3a", "important": "#6b4bb4", "warning": "#b4540a", "caution": "#a3322b",
     "good": "#2e6b3a", "bad": "#a3322b",
 }  # fmt: skip
@@ -96,6 +101,7 @@ BUILTIN = {
         "colours": {
             "backdrop": "#ffffff", "page": "#ffffff", "header": "#ffffff", "header-text": "#1d1f27", "subtitle": "#2a3150",
             "byline": "#4a4f5c", "secondary": "#eef1f6", "on-secondary": "#1d1f27", "highlight": "#a8c8ee",
+            "terminal": "#f6f7f9", "terminal-text": "#1d1f27", "terminal-prompt": "#2a3150", "terminal-border": "#d5d8e2",
         },
         "fonts": {"body": "Georgia, serif", "heading": "Georgia, serif", "mono": "Consolas, monospace", "stylesheet": None},
     },

@@ -31,6 +31,12 @@ The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` li
 | `poster.md` | Portrait A1 in the default theme: a picture, a Mermaid diagram, bar and line charts, segments, flow, lanes and `lcd` screens. Also a timeline, a JSON code block, a full-width section, and a band of three columns (`{cols=3}`) under a band of two. A QR code is in the footer. Every setting is in its front matter |
 | `landscape.md` | Landscape A1 in three columns, in the theme of a made-up company, with its web fonts inside the page (`embed_fonts: [latin]`) and a partner logo in the footer. A numbered Mermaid sequence from `diagrams.mermaid`, a gallery of mounting drawings, an acceptance checklist, handover steps, a QR block and an included table. The words and the layout (orientation, paper) are in the front matter, and the company's look (theme, header, footer) is in `py-doc.yml` |
 | `release.md` | Portrait A3 in the dark theme, with its figures as tiles: a column chart with two series, a before and after `compare` and a Mermaid sequence with notes. Also title cards, a vertical timeline, callouts, `people`, references and a `{{version}}` variable |
+| `shapes.md` | Landscape A1 in four columns: every shape block, from a test pyramid to an iceberg |
+| `space.md` | Landscape A1: orbits with a Hohmann transfer, two telescopes, an interferometer, spacetime three ways, the energy levels of hydrogen, two Feynman diagrams, the standard model, element tiles and light nuclides |
+| `plots.md` | Landscape A1 in four columns: every `plot` preset, from a Pareto chart to circle packing |
+| `embedded.md` | Landscape A1: the protocol and embedded blocks. A QFN `pinout`, a logic analyser, a scope with cursors and a meter, `code-compare`, `syntax-anatomy` of an LwM2M address, `hex-dissect` of a CoAP message, `proscons` with a sparkline, an `annotated` board, a `zoom-chain` and a `glossary` |
+| `scales.md` | Landscape A1: every scale block. A prepayment `threshold` and a grid-frequency one with a target, a `waterfall` chart, `buckets`, a `gauge`, a `dial24`, a `rating`, a `gradient-scale`, a `logscale`, and `spectrum` in four modes |
+| `diagrams.md` | Landscape A1: one small example of every diagram the tool container draws, in the poster's theme |
 | `reliability.md` | Portrait A0 in the print theme, with a quoted abstract and an underlined summary, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, `highlight` figures, `progress` bars, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
 
 ## Settings and where they go
@@ -171,6 +177,7 @@ Section bodies are ordinary Markdown, with py-doc's own additions as in the [Wri
 | `[[INCLUDE: file.md]]`, `[[INCLUDE-CODE: file.py]]` | The file, or the file as a code block |
 | `[[IF: name]]`, `[[NOT: name]]`, `[[ENDIF]]` | Kept or left out by the `conditions` |
 | `{{name}}` | The value of a variable |
+| `$E = mc^2$`, `$$...$$` | Maths in LaTeX, shown as MathML: inline, or displayed on a line of its own. See [Maths](#maths) |
 | `[[CAPTION:Figure]] text`, `[[CAPTION:Table]] text` | A numbered caption, "Figure 1:" or "Table 1:" as in Word, counted down the poster and through its includes. A paragraph that starts `Fig.` is a caption as written, with no number |
 | `> [!NOTE]`, `> **Warning:** text` | A callout box, in the colour of its kind: note, tip, important, warning or caution |
 | `> text` | A plain callout, in the `callout` colour |
@@ -178,9 +185,17 @@ Section bodies are ordinary Markdown, with py-doc's own additions as in the [Wri
 | `![alt](file.svg)` | The picture, embedded |
 | `[[LANDSCAPE]]`, `[[PORTRAIT]]`, `[[PAGEBREAK]]`, `[[STYLE:Name]]` | Left out (the text after a `[[STYLE:]]` is kept). A poster is one page |
 
+### Maths
+
+Maths is written in LaTeX between dollar signs, as in a document: `$E = mc^2$` in a sentence, and `$$...$$` on lines of its own for a displayed formula. It works in paragraphs, tables, callouts, captions and the text of blocks such as `cards` and `steps`. py-doc turns it into MathML when it builds the page, so the poster needs no script and no maths font, and a PDF keeps the formulas sharp.
+
+A dollar sign followed by a space or a digit is not maths, so prices such as $5 stay as they are. A formula py-doc cannot read is shown as its LaTeX, in the `bad` colour, with a warning, and the poster is still written. For a formula that is the point of a section, use an [`equation`](#poster-blocks) card.
+
 ## Diagrams and charts
 
 Every diagram fence of a document works on a poster: Mermaid, PlantUML, Graphviz, Vega-Lite and the rest. It is drawn by the tool container and embedded as an SVG picture, so it stays sharp when printed. Ditaa and the blockdiag family can only draw PNG, so theirs are PNG. Mermaid gets the colours and body font of the theme, as front matter added to the diagram, unless the diagram has its own front matter or `%%{init`. The `diagrams.mermaid` settings of py-doc.yml apply too, under the theme's colours. A diagram that cannot be drawn is shown as code with a warning, and the poster is still written.
+
+Vega and Vega-Lite diagrams get the theme's colours and font as a `config`, under the spec's own `config`, so a value the spec sets wins. PlantUML diagrams get `skinparam` lines in the theme's colours after `@startuml`, unless they set a `!theme`. A diagram is shown at the size it is drawn. A picture whose tool gives it no size, as some newer Mermaid types do, takes the size of its `viewBox`, not the width of its column.
 
 > **Note:** A diagram wider than its column is scaled down and its text shrinks, so prefer compact layouts, such as Graphviz `dpi=80` or PlantUML `skinparam dpi 80`, or put it in a `{.wide}` section.
 
@@ -196,7 +211,7 @@ Warehouse | 1440 | 980
 
 | Option | What it sets |
 |---|---|
-| `type` | `column` (default), `bar` (horizontal) or `line` |
+| `type` | `column` (default), `bar` (horizontal), `line` or `waterfall` (see below) |
 | `title` | The title above the chart |
 | `unit` | Text after each value label, such as `" mA"` |
 | `min` | The bottom of the value axis, for a `line` chart only (default: zero, or a round number below a negative value). A column or bar that does not start at zero misleads |
@@ -212,6 +227,112 @@ Warehouse | 1440 | 980
 
 Each line is a label and one value for each series. `series:` names the series and adds a legend.
 
+A `waterfall` chart shows an amount and what is added to it and taken from it, step by step. Each line is `label | change | colour | note`: a change starting `+` adds, `-` takes away, and `=` shows the total at that point from zero. Without a colour, a rise is `good`, a fall `bad` and a total `primary`. `unit="£"` (or `$`, `€`) goes before the number, any other unit after it.
+
+### Plots
+
+A `plot` is a short chart that py-doc writes as Vega-Lite (or Vega, for the hierarchies) and the tool container draws, in the theme's colours and font. It is one line of options and a few rows:
+
+````markdown
+```plot type=pareto title="Why nodes came back"
+Condensation | 31
+Self-discharge | 23
+Cracked enclosure | 18
+```
+````
+
+| `type=` | Rows | Options |
+|---|---|---|
+| `pareto` | `cause \| count`: bars in descending order and the cumulative share, with an 80 % guide | |
+| `spc` | `label \| value`, in order: a control chart with the centre line, ±1σ and ±2σ bands, UCL and LCL at ±3σ, and points outside the limits in `bad` | `mean=`, `sigma=`, `ucl=`, `lcl=` (worked out from the values when left out) |
+| `boxplot` | `group \| value value ...`: median, quartiles and whiskers | `points=yes` (the samples, jittered) |
+| `violin` | `group \| value value ...`: each group's density | |
+| `scatter` | `label \| x \| y \| size \| colour group` | `xlog=yes`, `ylog=yes`, `xinvert=yes`, `yinvert=yes`, `labels=yes` |
+| `function` | `curve: label \| expression in x` (in [Vega's expression language](https://vega.github.io/vega/docs/expressions/), such as `exp(-x * x / 2)`), `area: from \| to \| label` (shaded under the first curve), `rule: x \| label` | `from=`, `to=` (default 0 to 10), `samples=` (default 200), `preset=normal` (the normal distribution with its sigma bands) |
+| `heatmap` | A header `\| col \| col`, then `row \| value \| value` | `scheme=` (a [Vega colour scheme](https://vega.github.io/vega/docs/schemes/), default `blues`), `unit=`, `preset=risk` (a 5 × 5 likelihood by severity matrix, with `likelihood \| severity \| label` rows to mark risks on it) |
+| `polar` | `label \| value`: equal slices with the value as their radius, as a wind rose | |
+| `slope` | A header `\| Before \| After`, then `label \| before \| after`: rises in `good`, falls in `bad` | |
+| `parallel` | A header `\| axis \| axis \| ...`, then `item \| value \| value`: each axis from its own lowest to highest value | |
+| `fan` | `history: x \| value` and `forecast: x \| median \| 50 % low \| high \| 80 % low \| high \| 95 % low \| high` | |
+| `sunburst`, `icicle`, `pack` | `Group / Item \| value`: a hierarchy as rings, as partition bars, or as nested circles | `size=` (pixels, default 360) |
+
+Every type also takes `title=`, `xtitle=` and `ytitle=`, and the Vega-Lite types `width=` and `height=`. A `plot` works in documents and sites too, drawn in the theme of `diagrams.theme`. `examples/poster/plots.md` has one of each.
+
+#### Recipes
+
+A chart no preset draws is a `vega-lite` fence, which gets the poster's theme too. These are starting points, each checked to draw.
+
+A butterfly (or population pyramid): two sides of one scale, the left drawn negative.
+
+```json
+{
+  "data": {"values": [
+    {"age": "0-19", "side": "Before", "n": 18}, {"age": "0-19", "side": "After", "n": 15},
+    {"age": "20-39", "side": "Before", "n": 26}, {"age": "20-39", "side": "After", "n": 24},
+    {"age": "40-59", "side": "Before", "n": 22}, {"age": "40-59", "side": "After", "n": 27},
+    {"age": "60+", "side": "Before", "n": 14}, {"age": "60+", "side": "After", "n": 19}
+  ]},
+  "transform": [{"calculate": "datum.side == 'Before' ? -datum.n : datum.n", "as": "signed"}],
+  "mark": "bar",
+  "encoding": {
+    "y": {"field": "age", "type": "ordinal", "sort": "descending", "title": null},
+    "x": {"field": "signed", "type": "quantitative", "title": "Share (%)", "axis": {"labelExpr": "abs(datum.value)"}},
+    "color": {"field": "side", "type": "nominal", "title": null}
+  }
+}
+```
+
+A waffle: a whole as 100 squares.
+
+```json
+{
+  "data": {"values": [{"part": "Dark energy", "n": 68}, {"part": "Dark matter", "n": 27}, {"part": "Ordinary", "n": 5}]},
+  "transform": [
+    {"window": [{"op": "sum", "field": "n", "as": "end"}]},
+    {"calculate": "datum.end - datum.n", "as": "start"},
+    {"calculate": "sequence(datum.start, datum.end)", "as": "cell"},
+    {"flatten": ["cell"]},
+    {"calculate": "datum.cell % 10", "as": "col"},
+    {"calculate": "floor(datum.cell / 10)", "as": "row"}
+  ],
+  "mark": {"type": "square", "size": 120},
+  "width": 220, "height": 220,
+  "encoding": {
+    "x": {"field": "col", "type": "ordinal", "axis": null},
+    "y": {"field": "row", "type": "ordinal", "axis": null, "sort": "descending"},
+    "color": {"field": "part", "type": "nominal", "title": null}
+  }
+}
+```
+
+A Bland-Altman plot: how far two instruments agree, with the bias and the limits of agreement (±1.96 standard deviations).
+
+```json
+{
+  "data": {"values": [
+    {"a": 20.1, "b": 20.3}, {"a": 21.4, "b": 21.2}, {"a": 22.0, "b": 22.5}, {"a": 19.8, "b": 19.7},
+    {"a": 23.2, "b": 23.0}, {"a": 21.0, "b": 21.4}, {"a": 20.6, "b": 20.5}, {"a": 22.8, "b": 23.1}
+  ]},
+  "transform": [
+    {"calculate": "(datum.a + datum.b) / 2", "as": "mean"},
+    {"calculate": "datum.a - datum.b", "as": "diff"},
+    {"joinaggregate": [{"op": "mean", "field": "diff", "as": "bias"}, {"op": "stdev", "field": "diff", "as": "sd"}]},
+    {"calculate": "datum.bias + 1.96 * datum.sd", "as": "upper"},
+    {"calculate": "datum.bias - 1.96 * datum.sd", "as": "lower"}
+  ],
+  "layer": [
+    {"mark": {"type": "point", "filled": true}, "encoding": {
+      "x": {"field": "mean", "type": "quantitative", "scale": {"zero": false}, "title": "Mean of the two sensors (°C)"},
+      "y": {"field": "diff", "type": "quantitative", "title": "A minus B (°C)"}}},
+    {"mark": "rule", "encoding": {"y": {"aggregate": "mean", "field": "bias"}}},
+    {"mark": {"type": "rule", "strokeDash": [6, 4]}, "encoding": {"y": {"aggregate": "mean", "field": "upper"}}},
+    {"mark": {"type": "rule", "strokeDash": [6, 4]}, "encoding": {"y": {"aggregate": "mean", "field": "lower"}}}
+  ]
+}
+```
+
+More are in the [Vega-Lite example gallery](https://vega.github.io/vega-lite/examples/): ridgelines, streamgraphs, mosaics, Lorenz curves, forest plots, volcano plots and raster plots among them.
+
 ## Poster blocks
 
 A block colour is one of three things. It can be a name from the theme's palette: `navy`, `blue`, `amber`, `brown`, `red`, `grey` and `green` in every theme, and the theme's own. It can be a theme colour name such as `primary` or `accent`, or a colour value such as `#2a3150`.
@@ -220,12 +341,53 @@ A block colour is one of three things. It can be a name from the theme's palette
 |---|---|---|
 | `cards` | `Heading \| Text \| colour`, the colour only for the `top` style | `cols=2`, `style=` `title` (default), `label`, `top` or `plain` |
 | `lcd` | Screens separated by blank lines. A line starting `--` is the caption | `cols=` (default: up to 3). Six screens with `cols=2` are 2 columns and 3 rows |
+| `equation` | Cards separated by `---` lines. Each has an optional `title:`, the formula in LaTeX (one line or more), then `symbol \| meaning \| unit` lines as its legend, then notes | `cols=` (default: up to 3) |
+| `terminal` | Screens separated by blank lines. A line after a prompt (`$ `, `> `, `PS> `, `PS C:\path> `, `user@host:~$ `) is a command, a line starting `#` is dimmed, and a line starting `--` is the caption | `title=` (in the window's title bar), `cols=` (default: up to 2) |
 | `segments` | `weight \| label \| detail \| colour`, and an optional `title:` and `height:` | |
 | `flow` | `[Filled\|colour]` or `[Outlined]` boxes, joined by `->` or `-label->` arrows | |
 | `lanes` | `Label \| *filled cell \| dashed cell` | |
 | `figure` | Several of `segments`, `flow` and `lanes` in one box, split by `+++` lines, each starting `@segments`, `@flow` or `@lanes` | |
 | `timeline` | `date \| label \| detail \| colour`, the last two optional | `vertical` for a column instead of a row |
 | `chart` | See [Diagrams and charts](#diagrams-and-charts) | |
+| `threshold` | `span: label \| text \| colour \| weight` lines for the bands, in proportion to their weights, and `pin: text \| colour` lines between them for the exact points where something changes. `target: text` marks the middle of the band before it. The words of each band go under it | `target=` (marks the widest band), `width=` (default 960) |
+| `buckets` | `label \| current \| capacity \| colour \| value label; value label` lines: tanks filled to their share, with dashed lines at their thresholds | `unit=` |
+| `gauge` | `from \| to \| colour` lines for its coloured zones | `value=`, `min=`, `max=` (all required), `unit=`, `label=` |
+| `dial24` | `start \| end \| label \| colour` lines, times such as `18:00`. An end before its start runs past midnight. Each label is a ring of its own, with a legend | |
+| `rating` | Optional `band \| range \| colour` lines; without them the A to G bands of an energy label | `current=`, `potential=`, `current-label=`, `potential-label=` |
+| `gradient-scale` | `value \| label` lines as benchmarks above and below a bar shading from colour to colour | `from=`, `to=`, `colours=` (left to right, default blue, green, amber, red), `step=`, `unit=` |
+| `logscale` | `value \| label \| colour` lines, such as `1e-9 \| Cache read`, on a ruler where each power of ten is the same distance apart | `from=`, `to=`, `unit=`, `width=` (default 960) |
+| `spectrum` | The lines depend on `mode=`. `visible`, `absorption` (dark lines) and `emission` (bright lines on black) take `nm \| label` lines. `em` takes `metres \| label`: the whole spectrum on a log scale, with the visible band opened out. `stellar` takes none: the colours of the star classes O to M. `channels` takes `name \| centre \| width \| colour`: radio channels as lobes | `mode=` (default `visible`), `shift=` (a redshift z, as a second track), `from=` and `to=` (`channels`), `width=` (`em` default 960) |
+| `orbits` | `orbit: name \| radius \| colour \| e=0.1` (an ellipse with the star at a focus), `transfer: from \| to \| label` (a Hohmann half ellipse with its two burns), `lagrange: name` (L1 to L5 of that orbit) and `comet: a \| e \| label` (with its ion and dust tails) lines | `star=`, `unit=`, `habitable=from-to` (a shaded zone), `scale=sqrt` (spreads the inner orbits) |
+| `optics` | No lines: the ray path of a telescope, its parts labelled | `type=` `refractor` (default), `newtonian`, `cassegrain` or `tma` (three mirrors) |
+| `interferometer` | No lines: the beam paths | `type=` `michelson` (default) or `fabry-perot`, `arm=` (the arm length) |
+| `spacetime` | `mode=lightcone`: `worldline: label \| speed as a fraction of c \| colour` and `event: x \| ct \| label` lines. `mode=well`: `body \| depth \| colour` lines, as potential wells side by side. `mode=penrose`: no lines | `mode=`, `scale=log` (wells), `blackhole=yes` (Penrose: the horizon and singularity) |
+| `energy-levels` | `level: name \| energy in eV` and `jump: from \| to \| label` lines: a jump up is absorption, drawn straight; a jump down is emission, drawn wavy. Each is in the colour of its light, from λ = 1239.84 / ΔE nm, or grey outside what the eye sees | |
+| `feynman` | `slot: label \| line kind` lines naming the lines of a preset topology. The slots are `in1`, `in2`, `mid`, `out1`, `out2` and, for some topologies, `out3`, `loop1`, `loop2`, `top`, `bottom`, `left` and `right`. A line kind is `fermion`, `antifermion`, `photon`, `boson`, `gluon`, `scalar` or `loop` | `topology=` `s-channel` (default), `t-channel`, `u-channel`, `decay`, `beta-decay`, `compton`, `annihilation`, `loop`, `penguin` or `box` |
+| `standard-model` | No lines: the 17 particles with their mass, charge and spin | `highlight=` (such as `t,H`) |
+| `elements` | Element symbols or numbers, such as `H He 26 Au`: tiles with number, symbol, name and atomic weight, coloured by category. The data is the PubChem periodic table (public domain) | `cols=` (default up to 8) |
+| `nuclide-chart` | `Z \| N \| label \| decay` lines, the decay `stable`, `beta-`, `beta+`, `alpha`, `fission` or `other`, and `path: Z,N Z,N ... \| label \| colour` lines, such as the s-process | `magic=yes` (the magic numbers), `valley=yes` (the line of stability) |
+| `pyramid`, `cone` | `label \| value \| detail \| colour` lines from the top, as tiers with their labels inside and details beside. A tier too narrow for its label has it beside. A `cone` is wide at the top | `direction=down` (a pyramid as a cone) |
+| `funnel` | `stage \| value \| detail \| colour` lines, each as wide as its value, with the share it keeps of the stage before | `percent=no` |
+| `stack` | `layer \| badge \| detail \| colour` lines from the top, full width, and `side: label \| first-last \| colour` lines for brackets beside layers | |
+| `target`, `onion` | `ring \| detail \| colour` lines from the core outwards, with callouts beside | |
+| `cutaway` | `type=sphere`: `shell \| outer radius \| detail \| colour` lines from the core, shown in a quarter cut out of the sphere. `type=column`: `from \| to \| label \| detail \| colour` lines, as bands of altitude (or, `direction=down`, depth) with their edges marked | `type=`, `unit=`, `direction=` |
+| `sizes` | `label \| size \| detail \| colour` lines, drawn to one scale side by side | `shape=` `circle`, `hexagon` or `square`, `nested=yes` (one inside the other), `unit=` (default ` m`) |
+| `vessels` | `Name \| 30 ml Espresso (amber) + 60 ml Milk (#f3e3c3)` lines: containers on one scale, each filled with its layers from the bottom | `shape=` `glass`, `cup` or `beaker`, `cols=` |
+| `memory` | `start \| size \| region \| colour \| grow` lines, such as `0x0800_0000 \| 32 KB \| Bootloader \| navy`: an address map with the highest address at the top. It shows the start and end of each region, unused gaps, and an arrow for a region that grows `up` or `down` | |
+| `tape` | A `cells: A U G G C U` line, then `first-last \| label \| colour` lines bracketing groups of cells (counted from 1) | |
+| `ring` | `fill: first-last \| label \| colour` lines (a range may wrap past the last cell) and `pointer: cell \| label \| colour` lines, on a ring of numbered cells from 0 | `cells=` (default 16) |
+| `cycle` | 3 to 8 `stage \| detail \| colour` lines, round a circle with an arrow from each to the next | |
+| `balance` | `left: label \| weight \| colour` and `right: ...` lines: a beam that tips to the heavier side, with each side's weights stacked on its pan | `unit=` |
+| `iceberg` | `above: item` and `below: item` lines: a small tip above a waterline and a large body below it | `waterline=` |
+| `hex-dissect` | A `bytes:` line of hex, then `start-end \| field \| value \| colour` lines (or `start+length`, or one byte): each field's bytes in its colour, the text of the bytes beside them, and the fields decoded under them | `cols=` (default 16), `ascii=no` |
+| `syntax-anatomy` | The string on the first line, then `token \| label \| colour` lines, each token found after the one before: a bar under each token, and its label on one of two rows | `width=` |
+| `code-compare` | Panels starting `@bad Title`, `@good Title` or `@plain Title`, then their code. A line ending `<1>` gets a numbered badge, and `-- 1 \| note` lines explain the badges under the panels | `cols=` (default: one for each panel) |
+| `pinout` | `pin \| name \| function` lines. The function is `pwr`, `gnd`, `gpio`, `adc`, `dac`, `i2c`, `spi`, `uart`, `pwm`, `usb`, `swd`, `rf`, `clk`, `reset` or `nc`, each in its own colour with a legend, or a colour | `package=` `dip` (default), `qfn` or `header`, `rows=` (header, default 2) |
+| `instrument` | `type=scope`: `Ch1 \| colour \| values` lines, in volts. `type=logic`: `Name \| 0110` lines. `type=meter`: no lines | `vdiv=`, `tdiv=` (such as `"1 ms"`), `cursors=2,6` (divisions, with the time between them) for a scope; `value=` (required, such as `"2.41 µA"`), `label=`, `min=`, `max=`, `avg=` for a meter |
+| `proscons` | `+ advantage` and `- limitation` lines, in two columns | `pros=`, `cons=` (the column titles) |
+| `glossary` | `Term \| definition` lines | `cols=` (default 2) |
+| `annotated` | The picture on the first line, relative to the Markdown, then `x%, y% \| heading \| text \| colour` lines: a numbered pin at each place, and a legend of the numbers under the picture | `cols=` (of the legend, default 2), `alt=` |
+| `zoom-chain` | `picture \| caption \| magnification \| x%, y%, w%, h%` lines: each box marks the part of its picture that the next one shows, and the magnification goes between them | |
 | `qr` | The address or text to encode, or with `type=` the `key: value` lines of a contact, event or other kind. See [QR codes](#qr-codes) | `type=` (default `url`), `file=`, `size=140` (pixels), `label="..."`, `ecc=` `L`, `M` (default), `Q` or `H` |
 | `barcode` | The data to encode, on one line | `type=` `code128` (default), `code39`, `ean13`, `ean8`, `upca` or `itf14`, `width=240` and `height=70` (pixels), `text=no`, `check=yes` (Code 39), `label="..."`. See [Barcodes](#barcodes) |
 | `steps` | `Heading \| text \| colour`, the text and colour optional | `cols=1`, `start=1`: the number of the first step |
@@ -237,6 +399,10 @@ A block colour is one of three things. It can be a name from the theme's palette
 | `highlight` | `value \| label \| detail \| colour`, the last two optional (default colour: `accent`) | `cols=` (default: one for each line) |
 
 In `segments`, `flow` and `lanes`, the lines that are not part of the diagram become notes under it, written in Markdown.
+
+`{spark 1,3,2,5}` in a sentence or a table cell is a small trend line of those values, with a dot at the last one. It works on posters, not in documents. `examples/poster/embedded.md` has the protocol and embedded blocks and a sparkline.
+
+The scale blocks (`threshold`, `buckets`, `gauge`, `dial24`, `rating`, `gradient-scale`, `logscale`, `spectrum` and a `waterfall` chart) are drawn as SVG, like a chart, and scaled to their column. `width=` draws a block wider, so its text stays small in a full-width section. `examples/poster/scales.md` has one of each.
 
 ````markdown
 ```timeline
@@ -448,4 +614,5 @@ The subset names are the ones Google Fonts gives, such as `latin`, `latin-ext`, 
 | `note`, `tip`, `important`, `warning`, `caution` | The callouts of each kind |
 | `good`, `bad` | Trends that are good or bad news |
 | `lcd`, `lcd-text`, `lcd-border` | The display screen |
+| `terminal`, `terminal-text`, `terminal-prompt`, `terminal-border` | The terminal window: dark in `default` and `dark`, light in `print` |
 | `diagram-fill` | Mermaid boxes |

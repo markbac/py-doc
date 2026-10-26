@@ -24,6 +24,7 @@ from py_doc.directives import Fence, expand
 from py_doc.naming import git_version
 from py_doc.pandoc.source import split_front_matter
 from py_doc.poster_blocks import MD, Ctx, PosterError, block_html, esc, inline, parse_opts, qr_svg
+from py_doc.poster_svg import sparklines
 from py_doc.poster_fonts import font_css, web_faces
 from py_doc.poster_settings import SettingsError, layer, merge
 from py_doc.poster_themes import apply_overrides, load_theme
@@ -172,6 +173,71 @@ section h2 span{color:var(--highlight);font-weight:600}
 .lcd{min-width:0}
 .lcd .scr{background:var(--lcd);border:3px solid var(--lcd-border);border-radius:4px;padding:8px 10px;font-family:var(--font-mono);font-size:14.5px;line-height:1.4;color:var(--lcd-text);font-weight:600;white-space:pre}
 .lcd .cap{font-size:13px;line-height:1.3;color:var(--muted);margin-top:6px}
+.ccs{display:grid;gap:12px;margin:0 0 10px}
+.cc{min-width:0;border:1px solid var(--border);background:var(--surface)}
+.cc-h{padding:6px 12px;font-weight:700;color:#fff;background:var(--primary)}
+.cc.bad .cc-h{background:var(--bad)}
+.cc.good .cc-h{background:var(--good)}
+.cc-b{padding:8px 12px;font-family:var(--font-mono);font-size:13.5px;line-height:1.45;white-space:pre;overflow:hidden}
+.cb{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;font-family:var(--font-body);font-weight:700;margin-left:8px;vertical-align:1px}
+.cc-notes{list-style:none;padding:0;margin:0 0 10px;font-size:14px}
+.cc-notes li{display:flex;gap:8px;align-items:baseline;margin-top:4px}
+.cc-notes .cb{margin-left:0;flex:none}
+.proscons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 10px}
+.pc{background:var(--surface);border:1px solid var(--border);border-top:5px solid var(--good);padding:10px 14px}
+.pc.con{border-top-color:var(--bad)}
+.pc-h{font-weight:700;color:var(--strong);margin-bottom:6px}
+.pc ul{list-style:none;padding:0;margin:0}
+.body .pc ul{padding:0;margin:0}
+.pc li{display:flex;gap:8px;margin-top:4px;font-size:15px;line-height:1.35}
+.pc li b{color:var(--good)}
+.pc.con li b{color:var(--bad)}
+.glossary{display:grid;gap:6px 16px;margin:0 0 10px;font-size:14px;line-height:1.35}
+.gl{display:flex;gap:10px;align-items:baseline}
+.gl b{flex:none;background:var(--primary);color:var(--on-primary);padding:1px 8px;border-radius:10px;font-size:13px}
+.annotated{margin:0 0 10px}
+.an-pic{position:relative}
+.body .an-pic img{margin:0;width:100%}
+.pin{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;color:#fff;font-size:13px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+.an-pic .pin{position:absolute;transform:translate(-50%,-50%)}
+.an-legend{list-style:none;display:grid;gap:6px 16px;padding:0;margin:8px 0 0;font-size:14px;line-height:1.35}
+.body .an-legend{padding:0}
+.an-legend li{display:flex;gap:8px;align-items:flex-start}
+.an-legend .pin{flex:none}
+.an-legend strong{display:block;color:var(--strong)}
+.zoomchain{display:flex;align-items:center;gap:6px;margin:0 0 10px}
+.zp{flex:1;min-width:0;margin:0}
+.zpic{position:relative}
+.body .zpic img{margin:0;width:100%}
+.zbox{position:absolute;border:3px solid var(--accent);box-shadow:0 0 0 2px #fff}
+.zp figcaption{font-size:13px;color:var(--muted);text-align:center;margin-top:4px}
+.zarrow{flex:none;display:flex;flex-direction:column;align-items:center;color:var(--accent)}
+.zarrow b{font-size:14px}
+.zarrow i{font-style:normal;font-size:26px;line-height:1}
+svg.spark{vertical-align:-3px;color:var(--secondary)}
+math{font-size:1.06em}
+.math.display{display:block;margin:6px 0 10px;text-align:center}
+.math-error{color:var(--bad)}
+.eqs{display:grid;gap:12px;margin:0 0 10px}
+.eq{min-width:0;background:var(--surface);border:1px solid var(--border);border-top:4px solid var(--accent);padding:10px 14px}
+.eq .ch{font-size:15px;font-weight:700;color:var(--strong)}
+.eq .f{font-size:22px;margin:8px 0 10px;text-align:center}
+.body .eq table{font-size:13px;margin:0;background:none}
+.body .eq td{padding:3px 8px;border:0;border-top:1px solid var(--border);vertical-align:top}
+.body .eq td:first-child{width:1%;white-space:nowrap;text-align:center}
+.eq .notes{font-size:13px;line-height:1.35;color:var(--muted);margin-top:6px}
+.terms{display:grid;gap:10px;margin:0 0 10px}
+.term{min-width:0}
+.term .win{background:var(--terminal);color:var(--terminal-text);border:1px solid var(--terminal-border);border-radius:6px;overflow:hidden;font-family:var(--font-mono);font-size:14px;line-height:1.45}
+.term .tbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--terminal-border)}
+.term .tbar i{width:10px;height:10px;border-radius:50%;background:#ff5f57}
+.term .tbar i+i{background:#febc2e}
+.term .tbar i+i+i{background:#28c840}
+.term .tbar span{margin-left:8px;font-size:12.5px;opacity:.8;color:inherit}
+.term .scr{padding:8px 12px;white-space:pre;overflow:hidden}
+.term .p{color:var(--terminal-prompt);font-weight:700;margin-right:.6em}
+.term .cmt{opacity:.6}
+.term .cap{font-size:13px;line-height:1.3;color:var(--muted);margin-top:6px}
 .banner{background:var(--c,var(--secondary));color:var(--on-secondary);padding:14px 28px;font-size:22px;line-height:1.35;text-align:center;font-weight:600}
 .blocks{display:flex;gap:20px}
 .block{flex:1;border-left:5px solid var(--c,var(--accent));padding:2px 0 2px 14px}
@@ -385,7 +451,7 @@ def render(text, ctx):
         return f"\n@@BLK{len(stash) - 1}@@\n"
 
     text = FENCE.sub(take, embed_images(text, ctx.base))
-    out = callouts(MD.render(text))
+    out = sparklines(callouts(MD.render(text)))
     out = re.sub(r"<p>(<strong>)?Fig\.", lambda m: f'<p class="caption">{m.group(1) or ""}Fig.', out)
     out = out.replace("<p>@@CAPTION@@ ", '<p class="caption">')
     return re.sub(r"<p>@@BLK(\d+)@@</p>", lambda m: stash[int(m.group(1))], out)

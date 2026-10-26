@@ -47,6 +47,59 @@ def image_ref() -> str:
     return f"{IMAGE_NAME}:{content_hash()}"
 
 
+# The science image: the tool image with the scientific Python libraries a few fences need. It is optional: it is
+# built the first time a fence needs it, so a project that draws none of those fences never downloads them.
+SCIENCE_NAME = "py-doc-science"
+SCIENCE_DIR = Path(__file__).parent / "science"
+
+
+def science_ref() -> str:
+    """The science image's tag: a hash of its folder and of the tool image's, so a change to either rebuilds it."""
+    digest = hashlib.sha256(content_hash().encode("utf-8"))
+    for path in sorted(p for p in SCIENCE_DIR.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
+        digest.update(path.relative_to(SCIENCE_DIR).as_posix().encode("utf-8") + b"\0")
+        digest.update(path.read_bytes().replace(b"\r\n", b"\n") + b"\0")
+    return f"{SCIENCE_NAME}:{digest.hexdigest()[:12]}"
+
+
+def science_exists(runtime: Runtime) -> bool:
+    found = runtime.engine(["image", "inspect", science_ref()], check=False, timeout=STARTUP_TIMEOUT)
+    return found.returncode == 0
+
+
+def build_science(runtime: Runtime, *, no_cache: bool = False) -> None:
+    """Build the science image on top of the tool image, building that first when it is not there."""
+    ensure(runtime)
+    with tempfile.TemporaryDirectory(prefix="py-doc-science-") as folder:
+        context = Path(folder) / "context"
+        shutil.copytree(SCIENCE_DIR, context, ignore=shutil.ignore_patterns("__pycache__"))
+        for path in context.rglob("*"):
+            if path.is_file():
+                path.write_bytes(path.read_bytes().replace(b"\r\n", b"\n"))
+        where = runtime.container_path(context)
+        args = ["build", "--progress=plain", "--tag", science_ref(), "--build-arg", f"BASE={runtime.image}"]
+        args += ["--file", f"{where}/Dockerfile"]
+        for name in _PROXY_VARIABLES:
+            if os.environ.get(name):
+                args += ["--build-arg", f"{name}={os.environ[name]}"]
+        if no_cache:
+            args.append("--no-cache")
+        logger.info("Building %s, the science image: its libraries are a few hundred MB", science_ref())
+        progress = BuildProgress()
+        runtime.engine([*args, where], timeout=BUILD_TIMEOUT, on_line=progress)
+    logger.info("Built %s in %s", science_ref(), progress.elapsed())
+
+
+def ensure_science(runtime: Runtime) -> str:
+    """The science image's tag, building the image first when it is not here."""
+    if not science_exists(runtime):
+        logger.info(
+            "A fence needs the science image %s, which is not built here yet, so it is being built now", science_ref()
+        )
+        build_science(runtime)
+    return science_ref()
+
+
 # --- tools.lock ----------------------------------------------------------------------------------
 
 

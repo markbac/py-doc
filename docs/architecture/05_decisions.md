@@ -51,6 +51,18 @@ Each decision records the context, the choice and its consequences.
 ## AD-08 Previews are served, not written beside the outputs
 
 - **Context**: authors want to see a document while they write it. Word and PowerPoint have no live view, and a document open in Word cannot be written. The in-editor Markdown preview cannot draw most diagrams.
-- **Decision**: `--watch` builds an HTML twin of each document with the same pipeline, and keeps it in `.py-doc/preview`. It serves the twin with a reload script, added as the page is served. The VS Code extension runs that command; its own instant preview is an approximation for typing.
+- **Decision**: `--watch` builds an HTML twin of each document with the same pipeline, and keeps it in `.py-doc/preview`. It serves the twin with a reload script, added as the page is served. Since extension 2.0, the VS Code extension runs that command, and has no preview of its own. Its old instant preview re-implemented py-doc's blocks in JavaScript, and drifted from the build.
 - **Consequences**: the preview shows every diagram exactly as the build draws it, and a document open in Word does not stop it. It is one HTML page: slides are boxes and page breaks are lines, but Word's page layout is not shown. A first build waits for the tool container.
+
+## AD-09 A poster block is drawn once, and is a picture everywhere else
+
+- **Context**: posters have many native blocks (charts, scales, shapes, protocol and physics diagrams), and authors want the same blocks in Word, PowerPoint, PDF and sites. Writing each block again for each output would double the work and drift.
+- **Decision**: a block is drawn by one function, which returns its HTML, or its picture alone when it is all SVG. Documents, decks and sites draw it as a picture through the diagram pipeline: the SVG as it is, or the HTML photographed by the container's Chromium. The VS Code preview shows py-doc's own `--watch` page, and draws no block itself.
+- **Consequences**: a new block works in every output and in the editor as soon as it is written. In Word and PowerPoint a block made of HTML is a PNG, not editable text. Drawing it needs the tool container.
+
+## AD-10 Specialist fences have a written form, and the heavy libraries an image of their own
+
+- **Context**: circuits, chessboards, molecules, Smith charts and the like are drawn well by existing libraries, which take code. Running code from a document would make every fence a program; the scientific libraries add a few hundred MB that most projects never use.
+- **Decision**: each such fence has a short written form, which py-doc turns into the JSON of a runner script in the image. No code of a fence runs. The libraries without matplotlib (schemdraw, python-chess, abcjs) are in the tool image. The scientific ones are in a second image, built on top of the tool image the first time a fence needs it.
+- **Consequences**: a fence can only say what its written form allows, so a new feature of a library needs a change to py-doc. A first use of a scientific fence waits a few minutes for the science image. A project without one stays as small as before.
 

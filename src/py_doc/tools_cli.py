@@ -64,6 +64,11 @@ def tools_parser() -> argparse.ArgumentParser:
     build = commands.add_parser("build", help="Build the tool image here (slow the first time)")
     build.add_argument("--ca-file", type=Path, help="Extra certificate for builds behind a TLS-inspecting proxy")
     build.add_argument("--no-cache", action="store_true", help="Build every layer again")
+    build.add_argument(
+        "--science",
+        action="store_true",
+        help="Also build the science image, for the molecule, smith, plasmid and other fences",
+    )
     commands.add_parser("status", help="Show the image tag, size and the version of each tool in it")
     commands.add_parser("prune", help="Remove tool images left by earlier py-doc versions")
     commands.add_parser("lock", help="Download the tools in tools.lock and record their checksums")
@@ -97,6 +102,8 @@ def run_tools(argv: Sequence[str] | None = None) -> int:
 def _tools_action(args: argparse.Namespace, runtime: Runtime) -> int:
     if args.action == "build":
         image.build(runtime, ca_file=args.ca_file, no_cache=args.no_cache)
+        if args.science:
+            image.build_science(runtime, no_cache=args.no_cache)
     elif args.action == "status":
         return _status(runtime)
     elif args.action == "prune":

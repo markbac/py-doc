@@ -26,7 +26,7 @@ from pathlib import Path
 
 import yaml
 
-from py_doc.build import _combine_metadata
+from py_doc.build import _combine_metadata, blocks_theme
 from py_doc.c4 import source as c4_source
 from py_doc.config import POSTERS_FOLDER, ProjectConfig
 from py_doc.diagrams import render_parts
@@ -136,7 +136,7 @@ def _pages_of(config: ProjectConfig, name: str, runtime, variables: dict, condit
     pages: list[Page] = []
     for order, ((file, text), name_) in enumerate(zip(joined.parts, slugs, strict=True), start=1):
         title = first_heading(text) or (metadata.title if order == 1 else file.stem)
-        rendered = render_parts([(file, text)], "html", runtime, mermaid=config.mermaid)
+        rendered = render_parts([(file, text)], "html", runtime, mermaid=config.mermaid, theme=blocks_theme(config))
         pages.append(
             Page(name, file, name_, title, order, rendered.markdown, rendered.pictures, version=metadata.version)
         )

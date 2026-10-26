@@ -18,7 +18,15 @@ The files in `src/py_doc/runtime/definition` define the image:
 | `fetch.sh` | Downloads one of them and checks it |
 | `export-diagrams.js` | Draws Structurizr views in Chromium |
 
+`requirements.txt` also has schemdraw and python-chess, and `package.json` abcjs, for the `circuit`, `chess` and `music` fences.
+
 The tag is a hash of the folder (`runtime/image.py`). A change to any of these files builds a new image, and a release that changes none of them reuses the old one. Node.js comes from nodejs.org rather than Debian, whose version is too old for the current Vega, markdownlint and Astro packages. The AsyncAPI generator needs Node.js 24.
+
+## The science image
+
+`src/py_doc/runtime/science` defines a second, optional image, `py-doc-science`: the tool image (its `Dockerfile` starts `FROM` the tool image's tag) with the scientific Python libraries of its `requirements.txt`, such as RDKit, matplotlib, CoolProp and pvlib. Its tag is a hash of its folder and of the tool image's definition (`image.science_ref()`). A renderer with `image="science"` runs in it: `diagrams/render.py` asks `image.ensure_science()` for its tag, which builds it when it is not there, and passes it to `Runtime.run(image=...)`. The diagram cache keys such a picture by the science image's tag. `py-doc tools build --science` builds it ahead of time.
+
+It is a second image, not part of the first. A project that draws none of these fences never downloads their few hundred MB of libraries.
 
 ## Running a tool
 

@@ -27,6 +27,7 @@ This guide is for the people who write and build documentation with py-doc. The 
 | `py-doc lint` | Checks writing style, glossary terms, acronyms, structure, links and project conventions |
 | `py-doc check` | Checks a project without building it |
 | `py-doc generate` | Writes the Markdown that the content generators make |
+| `py-doc diagram` | Draws one diagram or poster block as an SVG or PNG file, or every one of a Markdown file |
 | `py-doc stats` | Counts the words, headings, tables, pictures and links of each document |
 | `py-doc diff` | Compares two versions of documents section by section |
 | `py-doc c4` | Checks, exports, draws and edits Structurizr workspaces |

@@ -1,7 +1,7 @@
 """Turn a parsed document into the prose that style rules should look at.
 
 Code, inline code, HTML, link destinations and front matter never reach the rules. URLs, e-mail
-addresses and file names written as plain text are masked with spaces, so offsets stay valid.
+addresses, file names and maths written as plain text are masked with spaces, so offsets stay valid.
 """
 
 from __future__ import annotations
@@ -19,6 +19,8 @@ _GAP = "\ufffc"  # stands in for inline code and inline HTML, which are not pros
 _NAME = re.compile(r"(?<![\w])[\w-]+(?:[./\\][\w-]+)+")
 # py-doc directives ([[INCLUDE: a.md]], [[IF: x]]) and callout markers ([!NOTE]) are markup, not prose.
 _MARKUP = re.compile(r"\[\[[A-Z-]+\b[^\]]*\]\]|\[![A-Za-z]+\]")
+# Maths ($E = mc^2$, $$...$$) is not prose either. A dollar before a space or a digit is money, not maths.
+_MATH = re.compile(r"\$\$.+?\$\$|(?<![\\$\w])\$(?=[^\s\d$])[^$\n]*?(?<=[^\s\\$])\$(?![\w$])")
 
 
 @dataclass
@@ -68,7 +70,7 @@ class _Builder:
 
 
 def _mask(text: str) -> str:
-    for pattern in (_URL, _EMAIL, _NAME, _MARKUP):
+    for pattern in (_MATH, _URL, _EMAIL, _NAME, _MARKUP):
         text = pattern.sub(lambda m: " " * len(m.group(0)), text)
     return text
 

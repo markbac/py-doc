@@ -19,6 +19,7 @@ import yaml
 
 from py_doc.errors import ConversionError, ToolFailed
 from py_doc.runtime import Mount, Runtime
+from py_doc.runtime import image as runtime_image
 
 from .registry import BY_FENCE, TOOLS, Job, Renderer
 from .scan import Block, find_blocks
@@ -61,7 +62,8 @@ def _tools_revision() -> str:
 
 
 def _key(runtime: Runtime, renderer: Renderer, job: Job, text: str) -> str:
-    parts = (runtime.image, _tools_revision(), renderer.name, job.kind, str(job.landscape), text)
+    image = runtime_image.science_ref() if renderer.image == "science" else runtime.image
+    parts = (image, _tools_revision(), renderer.name, job.kind, str(job.landscape), text)
     return hashlib.sha256("\0".join(parts).encode("utf-8")).hexdigest()[:32]
 
 
@@ -85,13 +87,14 @@ def _draw(runtime: Runtime, renderer: Renderer, job_text: str, kind: str, landsc
         source.write_text(job_text, encoding="utf-8", newline="\n")
         job = Job(source, work / f"diagram.{kind}", kind, landscape, source_dir if renderer.needs_source_dir else None)
         mounts = [Mount(work, writable=True), Mount(TOOLS)]
-        env = {}
+        env = dict(renderer.env)
         if renderer.needs_source_dir:
             mounts.append(Mount(source_dir))
             if renderer.environment:
-                env = renderer.environment(runtime.container_path(source_dir))
+                env.update(renderer.environment(runtime.container_path(source_dir)))
+        image = runtime_image.ensure_science(runtime) if renderer.image == "science" else None
         for command in renderer.commands(job):
-            runtime.run(command, mounts=mounts, workdir=work, env=env, timeout=TIMEOUT)
+            runtime.run(command, mounts=mounts, workdir=work, env=env, timeout=TIMEOUT, image=image)
         picture = work / f"diagram.{kind}"
         if not picture.is_file() or picture.stat().st_size == 0:
             raise DiagramError("the tool finished but produced no picture")
@@ -160,6 +163,18 @@ def _deep_merge(low: dict, high: dict) -> dict:
     return out
 
 
+def translated(renderer: Renderer, body: str, where: str) -> str:
+    """``body`` as its tool reads it: the written form of a specialist fence turned into its runner's input."""
+    if renderer.translate is None:
+        return body
+    from .declarative import DeclarativeError
+
+    try:
+        return renderer.translate(body)
+    except DeclarativeError as exc:
+        raise DiagramError(f"{where}: {renderer.name}: {exc}") from None
+
+
 def _captioned(lines: list[str], block: Block) -> bool:
     """True when a ``[[CAPTION:]]`` line (not a table's) is the nearest text above or below the diagram."""
     before = next((line for line in reversed(lines[: block.start]) if line.strip()), "")
@@ -171,7 +186,7 @@ def _alt_text(block: Block, renderer: Renderer) -> str:
     text = block.options.get("caption") or block.options.get("title")
     if not text:
         found = _TITLE.search(block.body)
-        text = found["title"] if found else f"{renderer.name} diagram"
+        text = found["title"] if found else f"{block.fence if block.fence not in BY_FENCE else renderer.name} diagram"
     return re.sub(r"[\[\]\\]", "", text).strip()
 
 
@@ -188,13 +203,19 @@ def render_parts(
     keep_going: bool = False,
     events: list[dict] | None = None,
     mermaid: dict | None = None,
+    theme=None,
 ) -> Rendered:
     """Replace the diagram fences of each ``(file, text)`` part by pictures, and join the parts.
 
     HTML gets SVG where the tool can write it, everything else PNG. A failure stops the build with the
     file and line of the diagram, or with every failure when ``keep_going`` is set. ``mermaid`` is the
-    Mermaid configuration of every Mermaid diagram (``diagrams.mermaid`` of py-doc.yml).
+    Mermaid configuration of every Mermaid diagram (``diagrams.mermaid`` of py-doc.yml). Poster blocks
+    (``cards``, ``chart``...) are drawn as pictures too, in ``theme`` (``diagrams.theme``; ``print`` when None).
     """
+    from . import blocks as poster_blocks
+
+    natives = poster_blocks.names() | {"plot"}
+    block_theme = None
     pictures: dict[str, Path] = {}
     failures: list[str] = []
     landscape = False
@@ -207,17 +228,37 @@ def render_parts(
         offsets = [0]
         for line in lines:
             offsets.append(offsets[-1] + len(line) + 1)
-        for block in find_blocks(text):
+        for block in find_blocks(text, natives):
             replaced += lines[cursor : block.start]
             cursor = block.end + 1
             for position, name in orientation:
                 if position < offsets[block.start]:
                     landscape = name == "LANDSCAPE"
-            renderer = BY_FENCE[block.fence]
-            body = with_mermaid_config(block.body, mermaid) if renderer.name == "mermaid" else block.body
+            started = time.monotonic()
+            if block.fence in BY_FENCE:
+                renderer = BY_FENCE[block.fence]
+                body = with_mermaid_config(block.body, mermaid) if renderer.name == "mermaid" else block.body
+                body = translated(renderer, body, f"{file}:{block.line}")
+            elif block.fence == "plot":  # a preset, expanded into a Vega-Lite or Vega spec, in the blocks' theme
+                if block_theme is None:
+                    block_theme = theme if theme is not None else poster_blocks.theme_for(None, file.parent)
+                try:
+                    renderer, body = poster_blocks.prepare_plot(block.info, block.body, block_theme)
+                except poster_blocks.BlockError as exc:
+                    raise DiagramError(f"{file}:{block.line}: {exc}") from None
+            else:  # a poster block, drawn here first, then made a picture in the container
+                if block_theme is None:
+                    block_theme = theme if theme is not None else poster_blocks.theme_for(None, file.parent)
+                try:
+                    renderer, body = poster_blocks.prepare(
+                        block.fence, block.info, block.body, file.parent, block_theme, landscape
+                    )
+                except poster_blocks.BlockError as exc:
+                    raise DiagramError(f"{file}:{block.line}: {exc}") from None
             kind = "svg" if fmt == "html" and "svg" in renderer.kinds else "png"
             event: dict = {"type": renderer.name, "file": str(file), "line": block.line, "kind": kind}
-            started = time.monotonic()
+            if block.fence not in BY_FENCE:
+                event["type"] = block.fence
             try:
                 picture = draw_cached(runtime(), renderer, body, kind, landscape, file.parent, event)
                 event.update(status="ok", seconds=round(time.monotonic() - started, 3))

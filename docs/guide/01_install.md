@@ -56,6 +56,16 @@ runtime:
 > [!NOTE]
 > WSL stops a distribution soon after its last `wsl.exe` process ends, and Docker and its containers with it. py-doc keeps one running for as long as a long-lived container needs it, such as Structurizr Local during `py-doc c4 up`.
 
+### The science image
+
+The scientific fences, `molecule`, `phylogeny`, `ternary`, `seq-logo`, `upset`, `smith`, `plasmid`, `gene-locus`, `cie`, `sun-path` and `thermo-cycle`, are drawn in a second image, `py-doc-science`. It is the tool image with RDKit, matplotlib, CoolProp and the other libraries they need, a few hundred MB more. It is optional. py-doc builds it the first time a document or poster uses one of those fences, which takes a few minutes. A project that uses none never downloads it. To build it ahead of time, such as on a machine that will be offline:
+
+```bash
+py-doc tools build --science
+```
+
+Its tag is a hash of its own definition and of the tool image's, so it is built again when either changes.
+
 ## Keeping up to date
 
 After a pull, a change of dependencies or the tool image takes effect only after a reinstall and a rebuild. On Windows, `scripts/update.ps1` does every step and checks each one, stopping at the first that fails with what to do about it:

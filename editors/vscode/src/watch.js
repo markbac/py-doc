@@ -2,8 +2,9 @@
 
 // The live preview: runs `py-doc <command> FILE --watch --no-open` as a child process, shows what it prints
 // in an output channel, reads the address it serves from its "serving http://..." line, and opens that in
-// VS Code's Simple Browser. py-doc picks a free port unless the pydoc.watch.port setting names one, so two
-// windows never fight over a port. One preview runs at a time: starting another stops it first.
+// VS Code's Simple Browser beside the editor. py-doc picks a free port unless the pydoc.watch.port setting
+// names one, so two windows never fight over a port. One preview runs at a time: starting another stops it
+// first. A build that fails after the preview opened ("Error: ..." on a line) is also shown as a warning.
 
 const path = require('path');
 const { spawn, execFile } = require('child_process');
@@ -11,6 +12,8 @@ const { spawn, execFile } = require('child_process');
 const START_TIMEOUT = 180000;  // ms: a first build may have to start the tool container
 const STOP_TIMEOUT = 5000;
 const SERVING = /^serving (http:\/\/127\.0\.0\.1:\d+\/)/m;
+const FAILED = /^Error: (.+?)\r?$/m;  // what py-doc --watch prints when a build on save fails
+const BUILT = /^built in /m;
 
 class LiveWatch {
   /**
@@ -21,6 +24,8 @@ class LiveWatch {
     this.vscode = vscode;
     this.command = options.command || null;
     this.child = null;
+    this.filePath = null;  // the file being previewed
+    this.lastError = null;  // the build error last shown, so a repeated one is not shown again
     this.output = vscode.window.createOutputChannel('py-doc live preview');
   }
 
@@ -36,6 +41,8 @@ class LiveWatch {
     const port = config.get('watch.port', 0);
     const args = [...first, command, filePath, '--watch', '--no-open', ...(port ? ['--port', String(port)] : [])];
 
+    this.filePath = filePath;
+    this.lastError = null;
     this.output.clear();
     this.output.appendLine(`> ${program} ${args.join(' ')}`);
     const child = spawn(program, args, {
@@ -55,6 +62,7 @@ class LiveWatch {
       child.stdout.on('data', (chunk) => {
         const text = chunk.toString();
         this.output.append(text);
+        if (seen === null) this.report(text);
         if (seen !== null) {
           seen += text;
           const m = seen.match(SERVING);
@@ -82,7 +90,11 @@ class LiveWatch {
     );
     if (child.stoppedByUs) return null;  // stopped, or replaced by another preview, while it started
     if (address) {
-      await this.vscode.commands.executeCommand('simpleBrowser.show', address);
+      const { Uri, ViewColumn } = this.vscode;
+      await this.vscode.commands.executeCommand('simpleBrowser.api.open', Uri.parse(address), {
+        viewColumn: ViewColumn.Beside,
+        preserveFocus: true,
+      });
       return address;
     }
     await this.stop();
@@ -91,10 +103,22 @@ class LiveWatch {
     return null;
   }
 
+  /** Show a build failure from what py-doc printed after the preview opened, once until a build succeeds. */
+  report(text) {
+    const failed = text.match(FAILED);
+    if (failed && failed[1] !== this.lastError) {
+      this.lastError = failed[1];
+      this.vscode.window.showWarningMessage(`py-doc preview: ${failed[1]}`);
+    } else if (BUILT.test(text)) {
+      this.lastError = null;
+    }
+  }
+
   /** Stop the running preview, and its whole process tree. Resolves to whether one was running. */
   stop() {
     const child = this.child;
     this.child = null;
+    this.filePath = null;
     if (child) child.stoppedByUs = true;
     if (!child || child.exitCode !== null || child.signalCode !== null) return Promise.resolve(false);
     return new Promise((resolve) => {
@@ -118,4 +142,4 @@ class LiveWatch {
   }
 }
 
-module.exports = { LiveWatch, SERVING };
+module.exports = { LiveWatch, SERVING, FAILED };

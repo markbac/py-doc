@@ -8,18 +8,4 @@ function asText(val) {
   return String(val);
 }
 
-// A colour name written in the Markdown, made safe to use as part of a class name
-function cssName(val) {
-  return asText(val).toLowerCase().replace(/[^a-z0-9_-]/g, '');
-}
-
-function escapeHtml(val) {
-  const str = asText(val);
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-}
-
-module.exports = { asText, cssName, escapeHtml };
+module.exports = { asText };
