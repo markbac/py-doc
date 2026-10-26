@@ -19,6 +19,10 @@ DPI = 192
 
 # The widest a Mermaid diagram is drawn, in CSS pixels. A landscape page can show a wider diagram.
 MERMAID_WIDTH = {"portrait": 1200, "landscape": 1800}
+# The Iconify packs installed in the image (package.json), for Mermaid's architecture diagrams: logos:aws,
+# tabler:server, mdi:router, wi:rain. Mermaid reads a pack only when a diagram uses one of its icons, from the
+# file. Poster blocks draw the same packs (py_doc.icons).
+ICON_PACKS = ("logos", "tabler", "mdi", "wi")
 
 
 @dataclass(frozen=True)
@@ -79,7 +83,8 @@ def _mermaid(job: Job) -> list[Command]:
     # turns useMaxWidth off, so a diagram keeps its natural size and only a larger one is shrunk to --size.
     size = MERMAID_WIDTH["landscape" if job.landscape else "portrait"]
     command = ["mmdc", "-i", job.source, "-o", job.output, "-p", PUPPETEER, "-c", TOOLS / "mermaid.json"]
-    command += ["--backgroundColor", "white", "--size", str(size)]
+    command += ["--backgroundColor", "white", "--size", str(size), "--iconPacksNamesAndUrls"]
+    command += [f"{pack}#file:///opt/node/node_modules/@iconify-json/{pack}/icons.json" for pack in ICON_PACKS]
     if job.kind == "png":
         command += ["--scale", "2"]
     return [command]

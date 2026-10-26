@@ -135,6 +135,17 @@ class TestRegistry:
         assert png[png.index("--scale") + 1] == "2" and "--scale" not in svg
         assert svg[svg.index("--size") + 1] == "1200"
 
+    def test_mermaid_draws_the_icon_packs_of_the_image_offline(self):
+        """architecture diagrams draw logos:, tabler:, mdi: and wi: icons from the packs in the image."""
+        names = ["logos", "tabler", "mdi", "wi"]
+        command = BY_FENCE["mermaid"].commands(self.job())[0]
+        start = command.index("--iconPacksNamesAndUrls") + 1
+        packs = command[start : start + len(names)]
+        assert [pack.split("#")[0] for pack in packs] == names
+        assert all(pack.split("#")[1].startswith("file:///opt/node/node_modules/@iconify-json/") for pack in packs)
+        package = json.loads((TOOLS.parent.parent / "runtime/definition/package.json").read_text(encoding="utf-8"))
+        assert {f"@iconify-json/{p}" for p in names} <= set(package["dependencies"])
+
     def test_mermaid_keeps_a_small_diagram_at_its_natural_size(self):
         """With useMaxWidth on, mermaid-cli 12 stretches every diagram to --size; off, it only shrinks a larger one."""
         config = json.loads((TOOLS / "mermaid.json").read_text(encoding="utf-8"))

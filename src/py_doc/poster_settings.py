@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 TEXT = ("title", "subtitle", "byline", "orientation", "paper", "version", "document_number")
 NUMBERS = ("width", "columns")
 MAPPINGS = ("colours", "palette", "fonts", "header", "footer", "variables", "conditions")
-KEYS = (*TEXT, *NUMBERS, "split", "theme", "logo", "pdf", "embed_fonts", *MAPPINGS)
+KEYS = (*TEXT, *NUMBERS, "split", "theme", "logo", "icons", "pdf", "embed_fonts", *MAPPINGS)
 ENTRY_KEYS = ("source", "output")  # only for a poster of py-doc.yml
 HEADER_KEYS = ("align", "logo")
-FOOTER_KEYS = ("left", "centre", "right", "logos", "qr", "qr-label", "document", "version")
+FOOTER_KEYS = ("left", "centre", "right", "logos", "qr", "qr-label", "document", "version", "credits")
 LEGACY = {"footer-left": "left", "footer-right": "right"}  # the front matter keys of md2poster
 
 
@@ -68,7 +68,7 @@ def layer(data: dict, folder: Path, where: str, strict: bool = True) -> dict:
         elif key == "theme":
             text = str(value).strip()  # a file name is from this layer's file, a bare word is a built-in theme
             out[key] = _path(text, folder, place) if text.endswith((".yml", ".yaml")) else text
-        elif key == "logo":
+        elif key in ("logo", "icons"):  # icons: a folder of the project's own SVG icons
             out[key] = _path(value, folder, place)
         elif key == "embed_fonts":  # true: every font of the stylesheet; a list: only those subsets, such as latin
             if (
@@ -108,6 +108,11 @@ def layer(data: dict, folder: Path, where: str, strict: bool = True) -> dict:
         if "logos" in footer:
             logos = footer["logos"] if isinstance(footer["logos"], list) else [footer["logos"]]
             footer["logos"] = [_path(item, folder, f"{where}.footer.logos") for item in logos]
+        if "credits" in footer:  # the sources of the pictures: a line, or a list of them
+            credits = footer["credits"] if isinstance(footer["credits"], list) else [footer["credits"]]
+            if not all(isinstance(item, str) and item.strip() for item in credits):
+                raise SettingsError(f"{where}.footer.credits must be a line of text, or a list of them")
+            footer["credits"] = [item.strip() for item in credits]
     return out
 
 

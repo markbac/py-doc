@@ -115,6 +115,11 @@ class BuildReport:
             {"format": fmt, "path": self.shown(path), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
         )
 
+    def icons(self, doc_id: str, manifest: list[dict[str, str]]) -> None:
+        """The icons a poster uses, each with its source and licence, such as the MDI icons Apache 2.0 covers."""
+        if manifest:
+            self.document(doc_id)["icons"] = manifest
+
     def diagram(self, doc_id: str, fmt: str, event: dict[str, Any]) -> None:
         entry = {"document": doc_id, "format": fmt, **event}
         if "file" in entry:

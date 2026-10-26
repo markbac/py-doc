@@ -89,8 +89,9 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 | `theme` | `default` | A built-in theme or a theme file. See [Themes](#themes) |
 | `colours`, `palette`, `fonts` | The theme's | Changes over the theme, written as in a theme file |
 | `logo` | The theme's | The picture in the header |
+| `icons` | None | A folder of the project's own SVG icons, for `icon=` on blocks. See [Icons](#icons) |
 | `header` | `{align: centre, logo: left}` | `align`: `centre` or `left`. `logo`: `left`, `right` or `none` |
-| `footer` | Empty | `left`, `centre` and `right` text (Markdown, with `{{variables}}`), `logos` (a list of pictures), `qr` (an address or text), `qr-label`, and `document` and `version` (shown small under the footer) |
+| `footer` | Empty | `left`, `centre` and `right` text (Markdown, with `{{variables}}`), `logos` (a list of pictures), `qr` (an address or text), `qr-label`, `document` and `version` (shown small under the footer), and `credits` (a line or a list, under the footer: the sources of the pictures) |
 | `document_number`, `version` | None | The document's number and version, shown small under the footer, unless `footer.document` or `footer.version` names others. `version: git` is the output of `git describe --tags --always`, as for a document |
 | `variables`, `conditions` | None | Values for `{{name}}` and `[[IF:]]`, as for documents |
 | `pdf` | `false` | `true` prints a one-page PDF beside the page, and a path prints it there. `--pdf` and `--no-pdf` win |
@@ -482,6 +483,56 @@ SN-100-0042
 - The check digit of an EAN, UPC or ITF-14 code is worked out when it is left out, and checked when it is given. So a mistyped digit stops the build instead of printing a barcode of another product. Spaces and hyphens in the digits are ignored.
 - EAN and UPC are drawn as on products: longer guard bars, and the digits in their groups between them. The space the scanner needs on each side (the quiet zone) is part of the drawing, so nothing should be put closer than its white box.
 - `width=` is the whole drawing, quiet zones included. Print a retail code no smaller than its standard size: about 140 pixels wide for EAN-13 and UPC-A, 100 for EAN-8 and 400 for ITF-14.
+
+## Icons
+
+`icon=` puts an icon before the text of a card, a step, a highlight, a stat or a flow box. Write it as a cell of its own, anywhere in the line:
+
+````markdown
+```cards cols=3
+Sensor | Temperature on I2C | icon=tabler:temperature
+Cloud | Stores the readings | icon=logos:aws
+Weather | Rain stops a reading | icon=wi:rain
+```
+
+```flow
+[Asleep|navy|icon=tabler:moon] -timer-> [Measure|blue|icon=mdi:thermometer] -> [Sent|icon=tabler:check]
+```
+````
+
+In a stats table, the cell goes in the row, such as `| 3 | Gateways | icon=mdi:router |`. In a flow, it goes after the box's colour, or alone for an outlined box. The icon takes the colour of its text.
+
+| Prefix | Pack | For | Licence |
+|---|---|---|---|
+| `tabler` | [Tabler Icons](https://tabler.io/icons) | General UI and tech: server, router, cloud, lock | MIT |
+| `mdi` | [Material Design Icons](https://pictogrammers.com/library/mdi/) | Devices and domains that Tabler lacks | Apache 2.0 |
+| `logos` | [logos](https://icon-sets.iconify.design/logos/) | Brands and products, in their own colours | CC0 |
+| `wi` | [Weather Icons](https://erikflowers.github.io/weather-icons/) | Weather | SIL Open Font License 1.1 |
+
+A name without a prefix, such as `icon=server`, is looked up in the project's own icons first, then in Tabler, then in Material Design Icons. `py-doc icons search router` lists the names that have a word in them. Mermaid's `architecture-beta` diagrams draw the same packs, so an icon looks the same in a block and in a diagram.
+
+The packs are not part of py-doc. The first poster that uses an icon downloads its pack once from the npm registry, checks it against the checksum py-doc has for it, and keeps it in the user cache folder. A poster without icons downloads nothing. For a machine without network, run `py-doc icons fetch` on one that has it, and copy the cache folder (`py-doc icons list` shows it) across.
+
+### The project's own icons
+
+`icons: brand/icons` names a folder of SVG files, such as a company's or a domain's icons. Each file is an icon by its name: `brand/icons/valve.svg` is `icon=valve`. Draw them in `currentColor` to take the colour of the text. An `icons.yml` in the folder gives an icon's licence and its credit:
+
+```yaml
+valve: {licence: CC-BY-4.0, credit: "Valve icon by A. Artist, CC BY 4.0"}
+```
+
+### Credits and licences
+
+The icons of the four packs need no credit on the poster. A project icon under a CC BY licence does: the build stops until its `icons.yml` gives a credit, then the credit is shown under the footer by itself. Credit pictures you put on the poster with `footer.credits`:
+
+```yaml
+footer:
+  credits:
+    - "Photos: NASA image library"
+    - "Cell drawing: Servier Medical Art, CC BY 4.0"
+```
+
+`py-doc build` lists every icon a poster uses, with its pack and licence, under `icons` in the [build report](02_projects.md#build-report). Material Design Icons are Apache 2.0, so the list is the record of the ones used. The licence of each pack is kept with it in the cache, in `info.json`.
 
 ## Proportions and printing
 

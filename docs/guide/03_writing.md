@@ -215,5 +215,14 @@ Alice -> Bob : hello
     ```
 
     Give settings in front matter, not in a `%%{init: ...}%%` line. Mermaid ignores the whole init line when a value in it has a single quote, such as a font list.
+- **Icons in Mermaid**: an `architecture-beta` diagram can use the icons of three packs in the tool image, with no network. Name an icon by its pack and its name, such as `service db(logos:postgresql)[Readings]`:
+
+    | Prefix | Pack | For | Licence |
+    |---|---|---|---|
+    | `logos` | [logos](https://icon-sets.iconify.design/logos/) | Brands and products: `logos:aws`, `logos:docker`, `logos:postgresql` | CC0, no credit needed |
+    | `tabler` | [Tabler Icons](https://tabler.io/icons) | General UI and tech: `tabler:server`, `tabler:router`, `tabler:lock` | MIT, no credit needed |
+    | `mdi` | [Material Design Icons](https://pictogrammers.com/library/mdi/) | Devices and domains Tabler lacks: `mdi:thermometer`, `mdi:chip` | Apache 2.0 |
+
+    Search a pack on its page for the names. Poster blocks use the same three packs, so an icon looks the same in a diagram and in a block. See [Icons](12_posters.md#icons).
 - **Poster blocks** (`cards`, `chart`, `steps`, `equation`, `terminal` and the rest of [the posters chapter](12_posters.md#poster-blocks)) work in documents, decks and sites too. See [Poster blocks in documents](#poster-blocks-in-documents).
 - **Pictures** in Markdown are looked up in the folders of the source files, so `![](images/a.png)` works as it does next to the Markdown. `![](images/a.png){width=50%}` makes a picture that share of the text width, in Word too, where py-doc works it out from the template's page and margins.

@@ -15,12 +15,12 @@ footer:
 
 ## Key figures {.stats}
 
-| Value | Label | Change | Verdict |
-|---|---|---|---|
-| 2 µA | Sleep current | -0.5 µA | good |
-| 5 years | Battery life at one reading a minute | +14 % | |
-| 0.2 °C | Temperature accuracy | | |
-| 1 KB | Firmware update block | | |
+| Value | Label | Change | Verdict | Icon |
+|---|---|---|---|---|
+| 2 µA | Sleep current | -0.5 µA | good | icon=tabler:zzz |
+| 5 years | Battery life at one reading a minute | +14 % | | icon=tabler:battery-3 |
+| 0.2 °C | Temperature accuracy | | | icon=tabler:temperature |
+| 1 KB | Firmware update block | | | icon=tabler:download |
 
 ## Introduction {.abstract}
 
@@ -35,9 +35,9 @@ The node has a sensor, a microcontroller and a radio on one 52 by 29 mm board, p
 [[CAPTION:Figure]] The board, top side, to scale. The cell holder takes most of it.
 
 ```cards cols=3 style=top
-Sensor | Temperature and humidity on I2C, up to 400 kHz | blue
-Controller | Sleeps at 2 µA, wakes on its own timer | navy
-Radio | Sends one MQTT message, then switches off | green
+Sensor | Temperature and humidity on I2C, up to 400 kHz | blue | icon=tabler:temperature
+Controller | Sleeps at 2 µA, wakes on its own timer | navy | icon=tabler:cpu
+Radio | Sends one MQTT message, then switches off | green | icon=tabler:antenna
 ```
 
 ```mermaid

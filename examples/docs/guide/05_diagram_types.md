@@ -236,6 +236,21 @@ treeView-beta
         README.md
 ```
 
+## Topology
+
+[[CAPTION:Figure]] Where a reading goes, with icons from the logos, tabler and mdi packs
+```mermaid
+architecture-beta
+    group cloud(logos:aws)[Cloud]
+    service api(logos:aws-lambda)[API] in cloud
+    service db(logos:postgresql)[Readings] in cloud
+    service gateway(tabler:router)[Gateway]
+    service node(mdi:thermometer)[Node]
+    api:R -- L:db
+    gateway:T -- B:api
+    node:R -- L:gateway
+```
+
 ## Poster blocks
 
 The blocks of a poster work in a document too. Each becomes a picture.

@@ -27,6 +27,7 @@ from py_doc.diagrams.render import draw_cached, translated, with_mermaid_config
 from py_doc import poster_barcode, poster_math, poster_qr
 from py_doc.poster_svg import Linear, extent, number, sparklines
 from py_doc.errors import ConversionError, ToolFailed
+from py_doc.icons import IconError, Icons
 from py_doc.poster_themes import Theme
 
 logger = logging.getLogger(__name__)
@@ -210,6 +211,7 @@ class Ctx:
         self.failed = 0
         self.mermaid = None  # diagrams.mermaid of py-doc.yml
         self.stylesheet = None  # the web fonts the page links, not embedded
+        self.icons = Icons()  # the icon packs, and the project's icons: folder when the poster names one
 
     def runtime(self):
         """The tool container, started on the first diagram, so a poster without one needs no Docker."""
@@ -220,6 +222,29 @@ class Ctx:
 
 def esc(s):
     return html.escape(s, quote=True)
+
+
+_ICON_CELL = re.compile(r"^icon=(\S+)$", re.I)
+
+
+def take_icon(cells, ctx, size="1.25em"):
+    """The cells of a row without its ``icon=name`` cell, and that icon as inline SVG ("" when it has none)."""
+    rest, icon = [], ""
+    for cell in cells:
+        m = _ICON_CELL.match(cell.strip())
+        if m and not icon:
+            icon = icon_html(m[1], ctx, size)
+        else:
+            rest.append(cell)
+    return rest, icon
+
+
+def icon_html(name, ctx, size="1.25em"):
+    """The icon ``name`` in a span that sits before a line of text. Raises PosterError for an unknown one."""
+    try:
+        return f'<span class="ico">{ctx.icons.svg(name, size)}</span>'
+    except IconError as exc:
+        raise PosterError(f"{ctx.where}: {exc}") from None
 
 
 @dataclass(frozen=True)
@@ -317,19 +342,20 @@ def diagram_html(lang, code, opts, ctx):
 
 @block(
     "cards",
-    "Heading | Text | colour lines; cols=, style=title|label|top|plain",
+    "Heading | Text | colour lines, and icon=tabler:name in any line; cols=, style=title|label|top|plain",
     "Sensor | Temperature on I2C | blue\nRadio | Sends, then sleeps | green",
 )
 def cards_html(code, opts, ctx):
-    rows = [[c.strip() for c in line.split("|")] for line in code.splitlines() if line.strip()]
+    rows = [take_icon([c.strip() for c in line.split("|")], ctx) for line in code.splitlines() if line.strip()]
     style = opts.get("style", "title")
     cols = int(opts.get("cols", min(len(rows), 4) or 1))
     out = ""
-    for r in rows:
+    for r, icon in rows:
         head, text, colour = ("", r[0], None) if len(r) == 1 else (r[0], r[1], r[2] if len(r) > 2 else None)
         top = f' style="border-top:4px solid {ctx.theme.colour(colour, "secondary")}"' if style == "top" else ""
-        h = f'<div class="ch">{inline(head)}</div>' if head else ""
-        out += f'<div class="card {esc(style)}"{top}>{h}<div class="ct">{inline(text)}</div></div>'
+        h = f'<div class="ch">{icon}{inline(head)}</div>' if head else ""
+        text_icon = "" if head else icon
+        out += f'<div class="card {esc(style)}"{top}>{h}<div class="ct">{text_icon}{inline(text)}</div></div>'
     return f'<div class="cards" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
 
 
@@ -403,10 +429,13 @@ def flow_part(code, ctx):
         parts = ""
         for m in TOK.finditer(line):
             if m.group(1) is not None:
-                if m.group(2):
-                    parts += f'<div class="node" style="background:{ctx.theme.colour(m.group(2))}">{inline(m.group(1))}</div>'
+                # [Text|colour], [Text|colour|icon=name] or [Text|icon=name]: an outlined box has no colour
+                rest, icon = take_icon((m.group(2) or "").split("|"), ctx)
+                colour = next((cell.strip() for cell in rest if cell.strip()), None)
+                if colour:
+                    parts += f'<div class="node" style="background:{ctx.theme.colour(colour)}">{icon}{inline(m.group(1))}</div>'
                 else:
-                    parts += f'<div class="node out">{inline(m.group(1))}</div>'
+                    parts += f'<div class="node out">{icon}{inline(m.group(1))}</div>'
             else:
                 label = (m.group(3) or "").strip()
                 parts += f'<div class="arr">{inline(label) + "<br>" if label else ""}<i>→</i></div>'
@@ -440,7 +469,7 @@ FIG_SYNTAX = {
         "6 | Asleep | 2 uA | navy\n2 | Send | 12 mA | amber",
     ),
     "flow": (
-        "[Filled|colour] or [Outlined] boxes joined by -> or -label-> arrows",
+        "[Filled|colour] or [Outlined] boxes, [Box|colour|icon=tabler:name] with an icon, joined by -> or -label-> arrows",
         "[Asleep|navy] -timer-> [Measure|blue]",
     ),
     "lanes": ("Label | *filled cell | dashed cell lines", "Every minute | *Wake | *Measure | Send if changed"),
@@ -738,21 +767,21 @@ def _whole(opts, name, default, ctx, low=1):
 
 @block(
     "steps",
-    "Heading | text | colour lines; cols=, start=",
+    "Heading | text | colour lines, and icon=tabler:name in any line; cols=, start=",
     "Fit the gateways | One a floor\nHold the join button | Three seconds",
 )
 def steps_html(code, opts, ctx):
     """``Heading | text | colour`` lines as numbered steps, in one column or ``cols=`` columns, from ``start=``."""
-    rows = [[c.strip() for c in line.split("|")] for line in code.splitlines() if line.strip()]
+    rows = [take_icon([c.strip() for c in line.split("|")], ctx) for line in code.splitlines() if line.strip()]
     if not rows:
         raise PosterError(f"{ctx.where}: a steps block needs at least one 'Heading | text' line")
     cols, start = _whole(opts, "cols", 1, ctx), _whole(opts, "start", 1, ctx, low=0)
     out = ""
-    for n, row in enumerate(rows, start):
+    for n, (row, icon) in enumerate(rows, start):
         head, text = row[0], row[1] if len(row) > 1 else ""
         colour = ctx.theme.colour(row[2] if len(row) > 2 else None, "primary")
         body = f'<div class="ct">{inline(text)}</div>' if text else ""
-        out += f'<li class="step"><b class="num" style="background:{colour}">{n}</b><div><div class="ch">{inline(head)}</div>{body}</div></li>'
+        out += f'<li class="step"><b class="num" style="background:{colour}">{n}</b><div><div class="ch">{icon}{inline(head)}</div>{body}</div></li>'
     return f'<ol class="steps" start="{start}" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</ol>'
 
 
@@ -898,18 +927,22 @@ def people_html(code, opts, ctx):
     return f'<div class="people" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
 
 
-@block("highlight", "value | label | detail | colour lines; cols=", "0 | Failed updates | in 200 nodes | good")
+@block(
+    "highlight",
+    "value | label | detail | colour lines, and icon=tabler:name in any line; cols=",
+    "0 | Failed updates | in 200 nodes | good",
+)
 def highlight_html(code, opts, ctx):
     """``value | label | detail | colour`` lines as figures in large type, side by side."""
-    rows = _rows(code)
+    rows = [take_icon(row, ctx, "1em") for row in _rows(code)]
     if not rows:
         raise PosterError(f"{ctx.where}: a highlight block needs at least one 'value | label' line")
     out = ""
-    for row in rows:
+    for row, icon in rows:
         value, label, detail = (row + ["", ""])[:3]
         colour = ctx.theme.colour(row[3] if len(row) > 3 else None, "accent")
         note = f"<small>{inline(detail)}</small>" if detail else ""
-        out += f'<div class="hl" style="border-color:{colour}"><b style="color:{colour}">{inline(value)}</b><span>{inline(label)}</span>{note}</div>'
+        out += f'<div class="hl" style="border-color:{colour}"><b style="color:{colour}">{icon}{inline(value)}</b><span>{inline(label)}</span>{note}</div>'
     cols = _whole(opts, "cols", len(rows), ctx)
     return f'<div class="highlights" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
 

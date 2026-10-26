@@ -23,7 +23,8 @@ from py_doc.diagrams.registry import PUPPETEER, TOOLS
 from py_doc.directives import Fence, expand
 from py_doc.naming import git_version
 from py_doc.pandoc.source import split_front_matter
-from py_doc.poster_blocks import MD, Ctx, PosterError, block_html, esc, inline, parse_opts, qr_svg
+from py_doc.icons import Icons
+from py_doc.poster_blocks import MD, Ctx, PosterError, block_html, esc, icon_html, inline, parse_opts, qr_svg
 from py_doc.poster_svg import sparklines
 from py_doc.poster_fonts import font_css, web_faces
 from py_doc.poster_settings import SettingsError, layer, merge
@@ -275,6 +276,11 @@ footer .logos{display:flex;gap:18px;align-items:center}
 footer .logos img{max-height:56px;max-width:160px}
 .docinfo{display:flex;gap:18px;font-size:12px;color:var(--muted);margin-top:-12px}
 footer .fqr{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.credits{font-size:11.5px;line-height:1.35;color:var(--muted);margin-top:-12px}
+.ico{display:inline-flex;vertical-align:-.2em;margin-right:.35em;flex:none}
+.ico svg{display:block}
+.stat .ico{display:flex;justify-content:center;margin:0 0 6px;font-size:34px;color:var(--c,var(--accent))}
+.hl b .ico{font-size:.8em;vertical-align:-.08em}
 @media print{body{background:none}.poster{margin:0}}
 """
 
@@ -536,16 +542,22 @@ def heading_attributes(heading, where):
 
 
 def parse_stats(text):
-    """``value | label | change | good or bad`` rows. The change and its verdict are optional."""
+    """``value | label | change | good or bad`` rows. The change and its verdict are optional, and an
+    ``icon=name`` cell, anywhere in the row, gives the figure an icon. Returns the icon's name last ("" if none)."""
     rows = [line.strip() for line in text.splitlines() if line.strip().startswith("|")]
     rows = [r for r in rows if not re.match(r"^\|[\s:|-]+\|?$", r)][1:]  # drop separator and header row
     out = []
     for r in rows:
         cells = [c.strip() for c in r.strip("|").split("|")]
+        icon = next((c[5:] for c in cells if c.lower().startswith("icon=")), "")
+        cells = [c for c in cells if not c.lower().startswith("icon=")]
         if len(cells) >= 2:
             out.append(
-                (cells[0], cells[1], cells[2] if len(cells) > 2 else "", cells[3].lower() if len(cells) > 3 else "")
-            )
+                (
+                    cells[0], cells[1], cells[2] if len(cells) > 2 else "", cells[3].lower() if len(cells) > 3 else "",
+                    icon,
+                )
+            )  # fmt: skip
     return out
 
 
@@ -660,6 +672,7 @@ def build(
     ctx = Ctx(md_path.parent, runtime, theme, render, str(md_path))
     ctx.settings = meta
     ctx.mermaid = mermaid
+    ctx.icons = Icons(meta.get("icons"))
     body = prepare(expand(body, md_path, meta.get("variables"), meta.get("conditions")))
     h1 = re.search(r"(?m)^# +(.+)$", body)
     title = meta.get("title") or (h1.group(1) if h1 else md_path.stem)
@@ -688,8 +701,9 @@ def build(
         """A stats strip, abstract, summary or references list: full width, where it is in the file."""
         if attrs["role"] == "stats":
             figures = "".join(
-                f'<div class="stat"><b>{esc(v)}</b><span>{esc(label)}</span>{trend_html(change, verdict)}</div>'
-                for v, label, change, verdict in parse_stats(c)
+                f'<div class="stat">{icon_html(icon, ctx, "1em") if icon else ""}<b>{esc(v)}</b><span>{esc(label)}</span>'
+                f"{trend_html(change, verdict)}</div>"
+                for v, label, change, verdict, icon in parse_stats(c)
             )
             return f"<div{look(attrs, 'stats')}>{figures}</div>" if figures else ""
         if attrs["role"] == "abstract":
@@ -820,6 +834,8 @@ def footer_html(footer, ctx):
         qr = f'<div class="fqr">{qr_svg(str(footer["qr"]), ctx.theme.colours["strong"], 96)}{label}</div>'
     info = [text("document"), f"Version {text('version')}" if text("version") else ""]
     docinfo = "".join(f"<span>{item}</span>" for item in info if item)
+    # The credits the footer names, then those the icons used ask for, such as a CC BY icon's
+    credits = list(dict.fromkeys([*(footer.get("credits") or []), *ctx.icons.credits()]))
     return (
         f'<footer><b class="fl">{text("left")}</b><span class="fc">{text("centre")}</span>'
         f'<span class="fr">{text("right")}</span>'
@@ -827,6 +843,7 @@ def footer_html(footer, ctx):
         + qr
         + "</footer>"
         + (f'<div class="docinfo">{docinfo}</div>' if docinfo else "")
+        + (f'<div class="credits">{" · ".join(inline(c) for c in credits)}</div>' if credits else "")
     )
 
 
