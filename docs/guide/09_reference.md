@@ -16,13 +16,17 @@ Legacy `createdocs` build files, `py-doc build --legacy`, `py-doc new`, the docu
 
 ```python
 from pathlib import Path
-from py_doc import DocxConverter, SlidesConverter
+from py_doc import DocxConverter, SlidesConverter, render_diagram
+from py_doc.convert import DeckConverter
 from py_doc.config import load_config
 from py_doc.build import build_document
 from py_doc.lint import DocLinter
 
 DocxConverter(template_path=Path("Template.docx")).convert_file(Path("a.md"), Path("out/a.docx"))
 SlidesConverter(split_level=1).convert_file(Path("a.md"), Path("out/a.pptx"))
+DeckConverter(theme="dark", pdf=True).convert_file(Path("a.md"), Path("out/a.html"))  # an HTML deck, and its PDF
+
+render_diagram("flowchart LR\n  A --> B", kind="mermaid").save("out/flow.svg")  # or .png, .webp or .pdf
 
 config = load_config(Path("py-doc.yml"))
 build_document(config, config.documents["c4-guide"])
@@ -31,7 +35,7 @@ for issue in DocLinter().lint_path("docs").issues:
     print(issue)
 ```
 
-Failures raise `py_doc.ConversionError` (unreadable or unsupported input, bad template, unwritable output) or `FileNotFoundError` (missing input or template). The library only uses the standard `logging` module and never configures it. The command line tools configure it with [ctxlogkit](https://github.com/markbac/py-logkit): progress on stderr, colour on a terminal only.
+`render_diagram` is described in [Diagrams and blocks as image files](03_writing.md#from-python). Failures raise `py_doc.ConversionError` (unreadable or unsupported input, bad template, unwritable output) or `FileNotFoundError` (missing input or template). The library only uses the standard `logging` module and never configures it. The command line tools configure it with [ctxlogkit](https://github.com/markbac/py-logkit): progress on stderr, colour on a terminal only.
 
 ## Exit statuses
 

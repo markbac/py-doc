@@ -134,6 +134,16 @@ PSM | Power saving mode
 QFN | Quad flat package with no leads
 ```
 
+## 11. Label: the serial number
+
+```barcode label="Serial, on the back of the case"
+SN-100-0042
+```
+
+```barcode type=ean13 label="Retail box"
+501234567890
+```
+
 ## In short {.summary}
 
 From pin to packet, a reading is one small message: each block shows one step of its way.

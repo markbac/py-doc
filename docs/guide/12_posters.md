@@ -24,7 +24,7 @@ py-doc poster commissioning --watch       # build again on every save, and reloa
 
 For a step-by-step introduction, read [Writing a poster](13_writing_posters.md) first. This chapter is the reference.
 
-The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` lists them under `posters:`. Between them they use every setting and block in this chapter:
+The examples in `examples/poster/` are listed under `posters:` in `examples/py-doc.yml`. Between them they use every setting and block in this chapter:
 
 | Example | What it shows |
 |---|---|
@@ -36,6 +36,8 @@ The examples in `examples/poster/` show four kinds, and `examples/py-doc.yml` li
 | `plots.md` | Landscape A1 in four columns: every `plot` preset, from a Pareto chart to circle packing |
 | `embedded.md` | Landscape A1: the protocol and embedded blocks. A QFN `pinout`, a logic analyser, a scope with cursors and a meter, `code-compare`, `syntax-anatomy` of an LwM2M address, `hex-dissect` of a CoAP message, `proscons` with a sparkline, an `annotated` board, a `zoom-chain` and a `glossary` |
 | `scales.md` | Landscape A1: every scale block. A prepayment `threshold` and a grid-frequency one with a target, a `waterfall` chart, `buckets`, a `gauge`, a `dial24`, a `rating`, a `gradient-scale`, a `logscale`, and `spectrum` in four modes |
+| `engineering.md` | Landscape A1 in three columns: every engineering block. A bow-tie, a fault tree, a GSN safety case, a Karnaugh map, a ladder, a structogram, an N² chart, IDEF0 boxes and a value stream map |
+| `specialist.md` | Landscape A1: a circuit, a chess game and music from the tool image, and every fence of the science image, from a molecule to a steam cycle |
 | `diagrams.md` | Landscape A1: one small example of every diagram the tool container draws, in the poster's theme |
 | `reliability.md` | Portrait A0 in the print theme, with a quoted abstract and an underlined summary, in three columns set by `columns` and `split`, with the logo on the right and `version: git`. PlantUML, Graphviz, Vega-Lite and ditaa (PNG) diagrams, a `figure` block, a line chart with `max`, `height` and `colours`, `highlight` figures, `progress` bars, `[[INCLUDE:]]`, `[[INCLUDE-CODE:]]`, `[[IF:]]` and `[[NOT:]]` with `conditions` from `py-doc.yml`, and table and figure captions |
 
