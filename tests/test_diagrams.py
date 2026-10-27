@@ -429,6 +429,17 @@ def test_the_python_tools_write_svg(tmp_path, script):
     assert "<svg" in out.read_text(encoding="utf-8")
 
 
+@pytest.mark.parametrize("choice", ["Choice", "Choice 1", "MultipleChoice", "HorizontalChoice"])
+def test_a_railroad_choice_in_the_indented_form(tmp_path, choice):
+    pytest.importorskip("railroad")
+    source = tmp_path / "in.txt"
+    source.write_text(f'Sequence\n  Terminal "0"\n  {choice}\n    Terminal "a"\n    Terminal "b"\n', encoding="utf-8")
+    out = tmp_path / "out.svg"
+    done = subprocess.run([sys.executable, str(TOOLS / "railroad_render.py"), str(source), str(out)], capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    assert ">0<" in out.read_text(encoding="utf-8")  # a terminal that is a number stays text
+
+
 def test_a_pikchr_syntax_error_fails_loudly(tmp_path):
     pytest.importorskip("pypikchr")
     source = tmp_path / "in.txt"
