@@ -1,0 +1,63 @@
+name: Pages
+
+# Builds py-doc's own documentation site with py-doc (`py-doc site build`, MkDocs in the tool container) and
+# publishes it to GitHub Pages. The tool image is kept in the Actions cache, keyed on its definition, so it is
+# built again (5 to 30 minutes) only when the definition changes.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - run: python -m pip install -e .
+      - name: The tool image, from the cache
+        id: image
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/py-doc-tools.tar
+          key: py-doc-tools-${{ hashFiles('src/py_doc/runtime/definition/**') }}
+      - name: Load the tool image
+        if: steps.image.outputs.cache-hit == 'true'
+        run: py-doc tools load /tmp/py-doc-tools.tar
+      - name: Build the tool image
+        if: steps.image.outputs.cache-hit != 'true'
+        run: |
+          py-doc tools build
+          py-doc tools save /tmp/py-doc-tools.tar
+      - name: Build the site
+        run: py-doc site build
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site/build
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
