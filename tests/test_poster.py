@@ -475,6 +475,21 @@ def test_an_unknown_block_colour_is_an_error(tmp_path):
         build(write(tmp_path, "## A\n\n```flow\n[Start|not a colour!] -> [End]\n```\n"), lambda: object())
 
 
+def test_a_section_heading_renders_its_inline_markdown(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "## 1. The `gauge` block: **live**\n\nText.\n"), lambda: object())
+    assert "<h2>1. The <code>gauge</code> block: <span><strong>live</strong></span></h2>" in page
+
+
+def test_a_colour_word_the_theme_does_not_have_falls_back_with_a_warning(caplog):
+    from py_doc.poster_themes import Theme
+
+    theme = Theme()
+    assert theme.colour("teal") == "teal" and theme.colour("blue") == theme.palette["blue"]
+    # a palette name of another theme would be drawn as no colour at all, so the default is drawn instead
+    assert theme.colour("sea", "accent") == theme.colours["accent"]
+    assert "'sea' is not a colour of this theme" in caplog.text
+
+
 def test_the_project_sets_the_default_theme_and_the_command_line_wins(tmp_path, drawn, monkeypatch):
     monkeypatch.setattr("py_doc.poster_cli.connect", lambda settings: object())
     brand(tmp_path)
@@ -995,7 +1010,9 @@ def test_a_new_block_mistake_is_an_error(tmp_path, code, message):
 def test_lcd_screens_in_columns_and_rows(tmp_path, drawn, info, columns):
     screens = "\n\n".join(f"SCREEN {n}\n-- Caption {n}" for n in range(1, 7))  # six screens
     page, _ = build(write(tmp_path, f"## A\n\n```{info}\n{screens}\n```\n"), lambda: object())
-    assert f'<div class="lcds" style="grid-template-columns:repeat({columns},minmax(0,1fr))">' in page
+    # at most that many a row; "SCREEN 1" is 8 letters, so no screen is narrower than 8 * 8.8 + 28 px
+    track = f"minmax(min(100%,max(98px,calc((100% - {(columns - 1) * 10}px) / {columns}))),1fr)"
+    assert f'<div class="lcds" style="grid-template-columns:repeat(auto-fill,{track})">' in page
     assert page.count('<div class="lcd">') == 6 and '<div class="cap">Caption 6</div>' in page
 
 
@@ -1004,7 +1021,7 @@ def test_two_lcd_screens_sit_side_by_side_as_before(tmp_path, drawn):
         write(tmp_path, "## A\n\n```lcd\nJOINED GW-2\n-- Good signal\n\nT 21.4 C\n-- First reading\n```\n"),
         lambda: object(),
     )
-    assert '<div class="lcds" style="grid-template-columns:repeat(2,minmax(0,1fr))">' in page
+    assert "repeat(auto-fill,minmax(min(100%,max(125px,calc((100% - 10px) / 2))),1fr))" in page
 
 
 def test_a_qr_block_draws_the_code_with_its_label(tmp_path, drawn):

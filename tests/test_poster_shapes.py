@@ -44,9 +44,16 @@ def test_a_narrow_tier_puts_its_name_beside_it():
     assert ">Apex 1 %<" in svg  # the top tier is too narrow for its name
 
 
+def test_a_name_too_long_for_its_tier_goes_beside_it():
+    # the top tier of four is 42 pixels wide half way down, too narrow for this name though wider than a short one
+    svg = draw("pyramid", "End-to-end | 5 %\nB | 15 %\nC | 25 %\nD | 55 %").svg
+    assert ">End-to-end 5 %<" in svg
+
+
 def test_a_funnel_shows_what_each_stage_keeps():
     svg = draw("funnel", "All | 1000\nHalf | 500\nTenth | 50").svg
-    assert ">50 % kept<" in svg and ">10 % kept<" in svg
+    assert ">50 % kept<" in svg
+    assert ">Tenth 50, 10 % kept<" in svg  # a stage too narrow for its name has it beside, with the share
     assert "kept" not in draw("funnel", "All | 1000\nHalf | 500", "percent=no").svg
 
 

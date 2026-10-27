@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 import re
 
-from py_doc.poster_blocks import Fragment, PosterError, _whole, block, esc
+from py_doc.poster_blocks import Fragment, PosterError, _whole, block, esc, mark_colour
 from py_doc.poster_svg import Linear, arc, label, number, polar, sector, spread, svg, text_width, wrap
 
 WIDTH = 640
@@ -93,10 +93,10 @@ def pyramid_html(code, opts, ctx):
         out.append(
             f'<path d="M{cx - w0:.1f},{y0} L{cx + w0:.1f},{y0} L{cx + w1:.1f},{y0 + tier} L{cx - w1:.1f},{y0 + tier} Z" fill="{colour}"/>'
         )
-        room = max(w0, w1) * 2 - 30
+        room = w0 + w1 - 16  # the tier's width half way down, where its name is written
         name = wrap(row[0], room, SIZE, True)
         value = row[1] if len(row) > 1 else ""
-        if room > 50:
+        if len(name) <= 2 and all(text_width(part, SIZE, True) <= room for part in name):
             for k, part in enumerate(name[:2]):
                 out.append(
                     label(cx, y0 + tier / 2 + 1 + (k - (len(name[:2]) - 1) / 2) * 14, part, SIZE, "middle", WHITE)
@@ -133,9 +133,13 @@ def funnel_html(code, opts, ctx):
         out.append(
             f'<path d="M{cx - w0 / 2:.1f},{y0} L{cx + w0 / 2:.1f},{y0} L{cx + w1 / 2:.1f},{y0 + tier} L{cx - w1 / 2:.1f},{y0 + tier} Z" fill="{colour}"/>'
         )
-        out.append(label(cx, y0 + tier / 2 - 2, row[0], SIZE, "middle", WHITE))
-        out.append(label(cx, y0 + tier / 2 + 13, row[1], SMALL, "middle", 'fill="#fff"'))
         head = f"{v / values[i - 1] * 100:.0f} % kept" if show and i and values[i - 1] else ""
+        room = (w0 + w1) / 2 - 12  # the stage's width half way down
+        if max(text_width(row[0], SIZE, True), text_width(row[1], SMALL)) <= room:
+            out.append(label(cx, y0 + tier / 2 - 2, row[0], SIZE, "middle", WHITE))
+            out.append(label(cx, y0 + tier / 2 + 13, row[1], SMALL, "middle", 'fill="#fff"'))
+        else:  # too narrow: the name and value go beside it
+            head = ", ".join(part for part in (f"{row[0]} {row[1]}".strip(), head) if part)
         items.append((cx + w0 / 2 + 4, y0 + tier / 2, head, row[2] if len(row) > 2 else ""))
     bottom = top + len(rows) * (tier + gap)
     end = _callouts(out, items, cx + full / 2 + 26, top + 10, bottom - 10, ctx)
@@ -765,13 +769,13 @@ def iceberg_html(code, opts, ctx):
         if side.strip().lower() not in parts or not rest.strip():
             raise PosterError(f"{ctx.where}: an iceberg line starts above: or below:, not '{line}'")
         parts[side.strip().lower()].append(rest.strip())
-    water = 110
+    water, ink = 110, mark_colour(ctx.theme)
     height = water + 50 + max(len(parts["below"]), 3) * 34
     out = [
         f'<rect x="0" y="{water}" width="{WIDTH}" height="{height - water}" fill="{ctx.theme.colours["secondary"]}" fill-opacity=".25"/>',
-        f'<path d="M260,{water} L300,20 L335,48 L380,{water} Z" fill="#ffffff" stroke="{ctx.theme.colours["secondary"]}" stroke-width="2"/>',
-        f'<path d="M260,{water} L380,{water} L470,{water + 60} L430,{height - 20} L210,{height - 10} L150,{water + 80} Z" fill="#ffffff" fill-opacity=".85" stroke="{ctx.theme.colours["secondary"]}" stroke-width="2"/>',
-        f'<line x1="0" y1="{water}" x2="{WIDTH}" y2="{water}" stroke="{ctx.theme.colours["secondary"]}" stroke-width="3"/>',
+        f'<path d="M260,{water} L300,20 L335,48 L380,{water} Z" fill="#ffffff" stroke="{ink}" stroke-width="2"/>',
+        f'<path d="M260,{water} L380,{water} L470,{water + 60} L430,{height - 20} L210,{height - 10} L150,{water + 80} Z" fill="#ffffff" fill-opacity=".85" stroke="{ink}" stroke-width="2"/>',
+        f'<line x1="0" y1="{water}" x2="{WIDTH}" y2="{water}" stroke="{ink}" stroke-width="3"/>',
     ]
     if opts.get("waterline"):
         out.append(
@@ -781,7 +785,7 @@ def iceberg_html(code, opts, ctx):
                 opts["waterline"],
                 SMALL,
                 "end",
-                f'fill="{ctx.theme.colours["secondary"]}" font-weight="700"',
+                f'fill="{ink}" font-weight="700"',
             )
         )
     for n, item in enumerate(parts["above"]):

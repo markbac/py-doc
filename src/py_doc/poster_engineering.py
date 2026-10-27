@@ -10,7 +10,7 @@ import math
 import re
 from dataclasses import dataclass, field
 
-from py_doc.poster_blocks import PosterError, block, series_colours
+from py_doc.poster_blocks import PosterError, block, mark_colour, series_colours
 from py_doc.poster_shapes import _cells, _fig, _lines, _muted
 from py_doc.poster_svg import Node, label, number, svg, tidy, wrap
 
@@ -109,7 +109,7 @@ def bowtie_html(code, opts, ctx):
         )
         out.append(_box_text(cx, 28, hazard, 148, SIZE, 2, BOLD + ' fill="#1d1f27"'))
         out.append(f'<line x1="{cx}" y1="48" x2="{cx}" y2="{cy - r}" {_stroke(ctx)}/>')
-    for side, items, colour in ((-1, threats, c["secondary"]), (1, consequences, c["bad"])):
+    for side, items, colour in ((-1, threats, mark_colour(ctx.theme)), (1, consequences, c["bad"])):
         for i, (name, barriers) in enumerate(items):
             y = head + (i + (rows - len(items)) / 2) * row_h + row_h / 2
             x_box = 4 if side < 0 else WIDTH - 4 - box_w
@@ -233,7 +233,7 @@ def fault_tree_html(code, opts, ctx):
         if node.children:
             gw = min(40, box_w * 0.6)
             out.append(f'<line x1="{x:.1f}" y1="{below}" x2="{x:.1f}" y2="{below + 8}" {_stroke(ctx)}/>')
-            fill = c["secondary"] if kind != "inhibit" else c["accent"]
+            fill = mark_colour(ctx.theme) if kind != "inhibit" else c["accent"]
             out.append(f'<path d="{_gate_path(kind, x, below + 8, gw, gate_h)}" fill="{fill}" {_stroke(ctx)}/>')
             mark = {"and": "", "or": "", "xor": "", "inhibit": "", "pand": "P"}.get(kind, kind)
             if mark:
@@ -1024,7 +1024,7 @@ def vsm_html(code, opts, ctx):
     out = []
     for place, party in ((6, supplier), (WIDTH - 90, customer)):
         if party:
-            out.append(_factory(place, 8, 84, 40, c["secondary"]))
+            out.append(_factory(place, 8, 84, 40, mark_colour(ctx.theme)))
             out.append(label(place + 42, 62, party[0], SMALL, "middle", BOLD))
             if len(party) > 1:
                 out.append(label(place + 42, 75, party[1], 9.5, "middle", _muted(ctx)))

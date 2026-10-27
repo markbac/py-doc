@@ -209,6 +209,7 @@ def render_diagram(
     if not isinstance(theme, Theme):
         theme = theme_for(str(theme) if theme else None, Path.cwd())
     kind = kind.lower()
+    options = options or ""
     try:
         if kind in BY_FENCE:
             renderer = BY_FENCE[kind]

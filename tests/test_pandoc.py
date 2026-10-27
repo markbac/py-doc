@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import struct
+import subprocess
 import zlib
 from pathlib import Path
 
@@ -321,6 +322,18 @@ def test_pdf_with_amsmath_maths(tmp_path, host):
     )
     (out,) = build_document(config, doc, ["pdf"], runtime=runtime)
     assert out.read_bytes().startswith(b"%PDF")
+
+
+@needs_xelatex
+@pytest.mark.skipif(shutil.which("pdftotext") is None, reason="pdftotext is not installed")
+def test_greek_and_subscripts_are_kept_in_a_pdf_whose_font_has_none(tmp_path, host):
+    """Caladea, the body font, has no Greek and no subscript digits: they come from DejaVu Serif instead."""
+    _, runtime = host
+    config, doc = project(tmp_path, "      pdf: {}\n")
+    (tmp_path / "guide.md").write_text("# Parts\n\nA 4.7 kΩ pull-up, λ = 656 nm and CO₂, **1 MΩ**.\n", encoding="utf-8")
+    (out,) = build_document(config, doc, ["pdf"], runtime=runtime)
+    text = subprocess.run(["pdftotext", "-enc", "UTF-8", str(out), "-"], capture_output=True, encoding="utf-8").stdout
+    assert "4.7 kΩ" in text and "λ = 656" in text and "CO₂" in text and "1 MΩ" in text
 
 
 def test_pdf_html_and_pptx_turn_caption_markers_into_captions():

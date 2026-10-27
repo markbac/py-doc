@@ -57,6 +57,17 @@ def test_vega_config_uses_the_theme_font():
     assert vega_config(Theme())["font"] == Theme().fonts["body"]
 
 
+def test_a_single_mark_is_never_the_print_theme_s_light_box_colour():
+    from pathlib import Path
+
+    from py_doc.diagrams.blocks import theme_for
+
+    print_theme = theme_for("print", Path("."))
+    config = vega_config(print_theme)
+    assert config["mark"]["color"] != print_theme.colours["secondary"]  # Pareto bars, boxes and lines can be seen
+    assert vega_config(Theme())["mark"]["color"] == Theme().colours["secondary"]
+
+
 def test_plantuml_gets_the_skin_after_its_start_line_unless_it_has_a_theme():
     code = "@startuml\nA -> B\n@enduml"
     out = with_plantuml_skin(code, Theme())

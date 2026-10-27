@@ -98,6 +98,11 @@ def test_the_lines_of_a_slide_are_counted_as_powerpoint_counts_them():
     )
 
 
+def test_a_diagram_on_a_slide_counts_as_one_line_however_long_its_source():
+    body = ["Why it matters", "```mermaid", *["  a --> b"] * 30, "```", "```wavedrom", "{}", "```"]
+    assert line_count(Slide("content", "T", body)) == 3  # the sentence and two pictures
+
+
 # --- the page ---------------------------------------------------------------------------------------
 
 

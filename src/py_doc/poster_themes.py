@@ -7,6 +7,7 @@ changes only what it names. Every colour of the page is a CSS variable, so a the
 from __future__ import annotations
 
 import base64
+import logging
 import mimetypes
 import re
 from dataclasses import dataclass, field
@@ -15,6 +16,8 @@ from pathlib import Path
 import yaml
 
 from py_doc.errors import ConversionError
+
+logger = logging.getLogger(__name__)
 
 GOOGLE_FONTS = (
     "https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700"
@@ -140,7 +143,19 @@ class Theme:
         name = (name or "").strip()
         if not name:
             return self.colours[default]
-        return self.palette.get(name.lower()) or self.colours.get(name.lower()) or _checked(name, "a block colour")
+        found = self.palette.get(name.lower()) or self.colours.get(name.lower())
+        if found:
+            return found
+        if name.isalpha() and name.lower() not in CSS_NAMES:
+            # a palette name of another theme, such as a poster's, would be drawn as no colour at all
+            logger.warning(
+                "'%s' is not a colour of this theme (%s) nor a CSS colour name, so %s is used",
+                name,
+                ", ".join(self.palette),
+                default,
+            )
+            return self.colours[default]
+        return _checked(name, "a block colour")
 
     def css_variables(self) -> str:
         values = {**self.colours, **{f"font-{k}": v for k, v in self.fonts.items() if k != "stylesheet" and v}}
@@ -155,9 +170,28 @@ class Theme:
 
 def _checked(value, where: str) -> str:
     value = str(value).strip()
-    if not _COLOUR.match(value):
+    if not _COLOUR.match(value) or (value.isalpha() and value.lower() not in CSS_NAMES):
         raise ThemeError(f"{where}: '{value}' is not a colour (use a hex value such as #2a3150, or a CSS colour name)")
     return value
+
+
+# The colour keywords of CSS. Any other word would be drawn as no colour at all, so it is a mistake.
+CSS_NAMES = frozenset(
+    "aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood "
+    "cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod "
+    "darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon "
+    "darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray "
+    "dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green "
+    "greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon "
+    "lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon "
+    "lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen "
+    "magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue "
+    "mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy "
+    "oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip "
+    "peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown "
+    "seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal "
+    "thistle tomato turquoise violet wheat white whitesmoke yellow yellowgreen transparent currentcolor".split()
+)
 
 
 def _apply(theme: Theme, data: dict, where: str, folder: Path | None) -> None:

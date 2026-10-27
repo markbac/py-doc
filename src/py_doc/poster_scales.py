@@ -850,9 +850,12 @@ def _spectrum_channels(code, opts, ctx, mode):
         raise PosterError(f"{ctx.where}: a channels spectrum needs at least one 'name | centre | width' line")
     low = _number_of(opts["from"], "from", ctx) if "from" in opts else min(c - w / 2 for _, c, w, _ in rows)
     high = _number_of(opts["to"], "to", ctx) if "to" in opts else max(c + w / 2 for _, c, w, _ in rows)
-    left, right, base = 20, WIDTH - 20, 170
-    x_of = Linear(low, high, left, right)
     unit = opts.get("unit", " MHz")
+    ticks = Linear(low, high, 0, 1).ticks((high - low) / 5)
+    # a tick's value is written centred under it, so the ends leave room for half of the widest one
+    margin = max([20] + [text_width(f"{number(round(v, 6))}{unit}", SMALL) / 2 + 4 for v in ticks])
+    left, right, base = margin, WIDTH - margin, 170
+    x_of = Linear(low, high, left, right)
     out = []
     widest = max(w for _, _, w, _ in rows)
     for name, centre, width, colour in rows:
@@ -863,7 +866,7 @@ def _spectrum_channels(code, opts, ctx, mode):
         )
         out.append(label((x0 + x1) / 2, base - h * 0.75 - 4, name, SMALL, "middle", 'font-weight="700"'))
     out.append(f'<line x1="{left}" y1="{base}" x2="{right}" y2="{base}" stroke="currentColor" stroke-width="2"/>')
-    for v in Linear(low, high, left, right).ticks((high - low) / 5):
+    for v in ticks:
         out.append(f'<line x1="{x_of(v):.1f}" y1="{base}" x2="{x_of(v):.1f}" y2="{base + 6}" stroke="currentColor"/>')
         out.append(label(x_of(v), base + 20, f"{number(round(v, 6))}{unit}", SMALL, "middle"))
     return svg(WIDTH, base + 30, "".join(out), opts.get("title", "channels"), "chart")

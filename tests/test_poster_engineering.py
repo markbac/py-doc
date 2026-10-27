@@ -140,6 +140,14 @@ def test_a_bowtie_draws_threats_barriers_and_consequences():
         draw("bowtie", "top: X\nrisk: Y")
 
 
+def test_a_bowtie_s_threats_can_be_read_in_the_print_theme():
+    # the print theme's secondary is a light box colour, which white text cannot be read on
+    print_theme = theme_for("print", Path("."))
+    ctx = Ctx(Path("."), lambda: None, print_theme, render=lambda text, c: text, where="test.md")
+    svg = block_fragment("bowtie", {}, BLOCKS["bowtie"].example, ctx).svg
+    assert print_theme.colours["secondary"] not in svg
+
+
 # --- plc-ladder -----------------------------------------------------------------------------------
 
 

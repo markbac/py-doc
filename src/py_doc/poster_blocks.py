@@ -85,6 +85,13 @@ def series_colours(theme):
     return out
 
 
+def mark_colour(theme):
+    """The colour of a single mark or a filled box with white text: the theme's ``secondary``, unless that is too
+    pale to see on white, as the print theme's light box colour is. Then it is the first series colour."""
+    secondary = theme.colours["secondary"]
+    return series_colours(theme)[0] if _pale(secondary) else secondary
+
+
 def _rgb(colour):
     m = re.fullmatch(r"#([0-9a-fA-F]{6})(?:[0-9a-fA-F]{2})?", colour.strip())
     return [int(m[1][i : i + 2], 16) for i in (0, 2, 4)] if m else None
@@ -123,8 +130,11 @@ def vega_config(theme):
         "legend": {**text, "labelFontSize": 13, "titleFontSize": 13},
         "title": {"color": c["strong"], "font": font, "fontSize": 15},
         "range": {"category": series_colours(theme)},
-        "mark": {"color": c["secondary"]},
-        "boxplot": {"box": {"color": c["secondary"]}, "median": {"color": c["on-secondary"]}},
+        "mark": {"color": mark_colour(theme)},
+        "boxplot": {
+            "box": {"color": mark_colour(theme)},
+            "median": {"color": "#ffffff" if _pale(c["secondary"]) else c["on-secondary"]},
+        },
     }
 
 
@@ -386,7 +396,12 @@ def lcd_html(code, opts, ctx):
         )
     count = sum(1 for s in screens if s)
     cols = _whole(opts, "cols", min(count, 3) or 1, ctx)
-    return f'<div class="lcds" style="grid-template-columns:repeat({cols},minmax(0,1fr))">{out}</div>'
+    # at most `cols` a row, but never narrower than the longest line (a mono letter is about 0.6 of 14.5 px, and
+    # the screen has 26 px of padding and border), so in a narrow column the screens go on to another row
+    chars = max((len(x) for s in screens for x in s if not x.startswith("--")), default=0)
+    least = f"{chars * 8.8 + 28:.0f}px"
+    track = f"minmax(min(100%,max({least},calc((100% - {(cols - 1) * 10}px) / {cols}))),1fr)"
+    return f'<div class="lcds" style="grid-template-columns:repeat(auto-fill,{track})">{out}</div>'
 
 
 def kv_split(code):

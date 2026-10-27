@@ -338,7 +338,7 @@ More are in the [Vega-Lite example gallery](https://vega.github.io/vega-lite/exa
 
 ## Poster blocks
 
-A block colour is one of three things. It can be a name from the theme's palette: `navy`, `blue`, `amber`, `brown`, `red`, `grey` and `green` in every theme, and the theme's own. It can be a theme colour name such as `primary` or `accent`, or a colour value such as `#2a3150`.
+A block colour is one of three things. It can be a name from the theme's palette: `navy`, `blue`, `amber`, `brown`, `red`, `grey` and `green` in every theme, and the theme's own. It can be a theme colour name such as `primary` or `accent`, or a colour value such as `#2a3150`. A word that is none of these, such as a palette name of another theme, gets a warning that names it, and the block draws in its default colour instead.
 
 | Fence | Lines | Options |
 |---|---|---|
