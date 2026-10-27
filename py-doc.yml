@@ -65,6 +65,26 @@ documents:
       docx: {toc: true}
       html: {toc: true}
 
+  gallery:
+    # One example of every diagram type and poster block: its Markdown, then the picture it draws
+    sources:
+      - docs/gallery/00_introduction.md
+      - docs/gallery/01_general.md
+      - docs/gallery/02_mermaid.md
+      - docs/gallery/03_plantuml.md
+      - docs/gallery/04_charts.md
+      - docs/gallery/05_scales.md
+      - docs/gallery/06_process.md
+      - docs/gallery/07_systems.md
+      - docs/gallery/08_shapes.md
+      - docs/gallery/09_engineering.md
+      - docs/gallery/10_science.md
+      - docs/gallery/11_media.md
+    outputs:
+      docx: {toc: true}
+      html: {toc: true}
+      pdf: {toc: true}
+
   bundle-audit:
     sources: [docs/bundle-audit.md]
     outputs:
@@ -73,11 +93,11 @@ documents:
 reports:
   path: build/docs/report.json
 
-# The web site of the three main documents: py-doc site build, then open site/build/index.html.
+# The web site of the main documents: py-doc site build, then open site/build/index.html.
 site:
   engine: mkdocs
   dir: site
-  documents: [user-guide, requirements, architecture]
+  documents: [user-guide, gallery, requirements, architecture]
 
 lint:
   exclude: [build, site]

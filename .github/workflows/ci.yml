@@ -42,9 +42,23 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
+      # The packages are about 400 MB, and a slow Ubuntu mirror once took the job past its timeout downloading
+      # them, so the .deb files are kept in the Actions cache. apt downloads only what has a newer version.
+      - name: The packages for Pandoc, XeLaTeX and Graphviz, from the cache
+        if: runner.os == 'Linux'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: apt-${{ runner.os }}-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: apt-${{ runner.os }}-
       - name: Pandoc, XeLaTeX and Graphviz (the tests run them on the host in place of the container)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pandoc texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-plain-generic texlive-fonts-recommended fonts-crosextra-caladea fonts-crosextra-carlito graphviz
+        run: |
+          mkdir -p ~/apt-archives/partial
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends -o Dir::Cache::Archives="$HOME/apt-archives" pandoc texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-plain-generic texlive-fonts-recommended fonts-crosextra-caladea fonts-crosextra-carlito graphviz
+          sudo rm -rf ~/apt-archives/partial ~/apt-archives/lock
+          sudo chown -R "$USER" ~/apt-archives
       - name: Vale (for the end-to-end test)
         if: runner.os == 'Linux'
         run: |

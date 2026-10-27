@@ -770,9 +770,12 @@ def elements_html(code, opts, ctx):
     y = 5 + rows * (size + gap) + 12
     x = 5
     for category in dict.fromkeys(used):
+        step = 30 + len(category) * 6.5
+        if x > 5 and x + step - 12 > WIDTH:  # the legend goes on to another line rather than off the edge
+            x, y = 5, y + 20
         out.append(f'<rect x="{x}" y="{y - 10}" width="12" height="12" rx="2" fill="{CATEGORIES[category]}"/>')
         out.append(label(x + 17, y, category, SMALL - 1))
-        x += 30 + len(category) * 6.5
+        x += step
     return _fig(opts, svg(WIDTH, y + 8, "".join(out), opts.get("title", "elements"), "chart"))
 
 

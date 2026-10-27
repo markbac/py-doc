@@ -12,6 +12,25 @@ nav:
   - Linting: user-guide/07-lint.md
   - Web sites with MkDocs or Astro + Starlight: user-guide/08-sites.md
   - Reference: user-guide/09-reference.md
+  - Legacy build files: user-guide/10-legacy.md
+  - Generators, the build pipeline and analysis: user-guide/11-pipeline.md
+  - Posters: user-guide/12-posters.md
+  - Writing a poster: user-guide/13-writing-posters.md
+  - Writing a document: user-guide/14-writing-documents.md
+  - Writing a slide deck: user-guide/15-writing-slides.md
+- py-doc diagram gallery:
+  - Introduction: gallery/00-introduction.md
+  - Graphviz, ditaa, blockdiag and Pikchr: gallery/01-general.md
+  - Mermaid: gallery/02-mermaid.md
+  - PlantUML: gallery/03-plantuml.md
+  - Charts and plots: gallery/04-charts.md
+  - Scales, measures and proportions: gallery/05-scales.md
+  - Processes, plans and comparisons: gallery/06-process.md
+  - Safety and systems engineering: gallery/07-systems.md
+  - Concept shapes: gallery/08-shapes.md
+  - Electronics, embedded and code: gallery/09-engineering.md
+  - Science, maths, music and games: gallery/10-science.md
+  - Pictures, QR codes and barcodes: gallery/11-media.md
 - py-doc requirements specification:
   - Introduction: requirements/00-introduction.md
   - Functional requirements: requirements/01-functional.md

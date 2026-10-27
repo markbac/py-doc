@@ -208,6 +208,22 @@ class TestDot:
         render_parts(part(tmp_path, f"```dot\n{self.DOT}\n```\n"), "html", runtime)
         assert len(list(cache.iterdir())) == 3
 
+    def test_a_picture_another_build_has_open_is_kept(self, tmp_path, host, cache, monkeypatch):
+        # on Windows, os.replace onto a file another process has open is refused; that build drew the same picture
+        _, runtime = host
+        render_parts(part(tmp_path, f"```dot\n{self.DOT}\n```\n"), "docx", runtime)
+        (drawn,) = cache.iterdir()
+        drawn.with_suffix(".tmp").write_bytes(drawn.read_bytes())
+        drawn.unlink()
+
+        def refused(source, target):
+            Path(target).write_bytes(Path(target).with_suffix(".tmp").read_bytes())  # the other build's copy
+            raise PermissionError(5, "Access is denied")
+
+        monkeypatch.setattr(diagrams.render.os, "replace", refused)
+        rendered = render_parts(part(tmp_path, f"```dot\n{self.DOT}\n```\n"), "docx", runtime)
+        assert list(rendered.pictures.values()) == [drawn] and not list(cache.glob("*.part"))
+
     def test_a_broken_diagram_names_file_line_and_the_tool_message(self, tmp_path, host):
         _, runtime = host
         text = f"```dot\n{self.DOT}\n```\n\ntext\n\n```dot\ndigraph {{ a -> \n```\n"
@@ -322,6 +338,13 @@ def test_a_width_on_a_diagram_or_picture_is_a_share_of_the_text_width(tmp_path, 
     assert re.findall(r'style="width:([\d.]+)%"', html.read_text(encoding="utf-8")) == ["100.0", "50.0"]
 
 
+def test_a_block_s_own_width_in_pixels_is_not_its_size_on_the_page(tmp_path, monkeypatch):
+    picture = png(tmp_path / "pic.png")
+    monkeypatch.setattr(diagrams.render, "draw_cached", lambda *args, **kwargs: picture)
+    done = render_parts(part(tmp_path, "```barcode width=320\nSN-100-0042\n```\n"), "docx", lambda: None)
+    assert "{width=" not in done.markdown  # the barcode is drawn 320 pixels wide; the page keeps its drawn size
+
+
 def test_a_diagram_width_that_is_not_a_size_is_an_error(tmp_path, monkeypatch):
     picture = png(tmp_path / "pic.png")
     monkeypatch.setattr(diagrams.render, "draw_cached", lambda *args, **kwargs: picture)
@@ -427,6 +450,19 @@ def test_the_python_tools_write_svg(tmp_path, script):
     done = subprocess.run([sys.executable, str(TOOLS / script), str(source), str(out)], capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
     assert "<svg" in out.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("choice", ["Choice", "Choice 1", "MultipleChoice", "HorizontalChoice"])
+def test_a_railroad_choice_in_the_indented_form(tmp_path, choice):
+    pytest.importorskip("railroad")
+    source = tmp_path / "in.txt"
+    source.write_text(f'Sequence\n  Terminal "0"\n  {choice}\n    Terminal "a"\n    Terminal "b"\n', encoding="utf-8")
+    out = tmp_path / "out.svg"
+    done = subprocess.run(
+        [sys.executable, str(TOOLS / "railroad_render.py"), str(source), str(out)], capture_output=True, text=True
+    )
+    assert done.returncode == 0, done.stderr
+    assert ">0<" in out.read_text(encoding="utf-8")  # a terminal that is a number stays text
 
 
 def test_a_pikchr_syntax_error_fails_loudly(tmp_path):

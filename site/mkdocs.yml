@@ -2,6 +2,8 @@
 # under docs/) and the navigation (py-doc-nav.yml, taken in by INHERIT). A nav: here replaces that one.
 INHERIT: py-doc-nav.yml
 site_name: "py-doc"
+site_url: https://markbac.github.io/py-doc/
+repo_url: https://github.com/markbac/py-doc
 docs_dir: docs
 site_dir: build
 theme:

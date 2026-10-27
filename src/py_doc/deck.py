@@ -125,10 +125,23 @@ def _text(lines: list[str]) -> str:
 
 
 def line_count(slide: Slide) -> int:
-    """The lines a slide shows, roughly as PowerPoint counts its paragraphs: its text, items, rows and code."""
-    count = 0
+    """The lines a slide shows, roughly as PowerPoint counts its paragraphs: its text, items, rows and code. A
+    diagram or block is drawn as a picture, so its lines are not shown: it counts as one."""
+    from py_doc.diagrams.registry import BY_FENCE
+    from py_doc.poster_blocks import BLOCKS
+
+    count, picture = 0, None
     for line in slide.body:
         stripped = line.strip()
+        if picture:
+            if stripped == picture:
+                picture = None
+            continue
+        opening = re.match(r"^(`{3,}|~{3,})\s*\{?\.?([\w-]+)", stripped)
+        if opening and (opening[2] in BY_FENCE or opening[2] in BLOCKS or opening[2] == "plot"):
+            picture = opening[1]
+            count += 1
+            continue
         if (
             not stripped
             or stripped.startswith(("```", ":::", "<div", "</div"))

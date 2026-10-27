@@ -480,10 +480,11 @@ def render(text, ctx):
 
 
 def heading_html(h):
+    """A section heading, its inline Markdown (such as `code`) rendered; the part after a colon is set apart."""
     if ":" in h:
         a, b = h.split(":", 1)
-        return f"{esc(a)}: <span>{esc(b.strip())}</span>"
-    return esc(h)
+        return f"{MD.renderInline(a)}: <span>{MD.renderInline(b.strip())}</span>"
+    return MD.renderInline(h)
 
 
 ROLES = (

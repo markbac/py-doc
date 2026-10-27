@@ -7,6 +7,8 @@
 
 Pandoc writes every output, and it runs in a container with every other tool, so only Python and Docker need installing. The linter reads the Markdown with its own parser.
 
+The user guide, requirements and architecture are published at **<https://markbac.github.io/py-doc/>**, built by py-doc itself (`.github/workflows/pages.yml`).
+
 > **Important:** Docker is required for every conversion. On Windows that is Docker Engine in WSL 2, which `py-doc setup` installs.
 
 ## Commands

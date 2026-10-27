@@ -23,7 +23,9 @@ SVG_NS = "http://www.w3.org/2000/svg"
 ALIASES = {
     "terminal": "Terminal", "nonterminal": "NonTerminal", "comment": "Comment", "skip": "Skip",
     "sequence": "Sequence", "choice": "Choice", "optional": "Optional", "oneormore": "OneOrMore",
-    "zeroormore": "ZeroOrMore", "group": "Group", "diagram": "Diagram",
+    "zeroormore": "ZeroOrMore", "group": "Group", "diagram": "Diagram", "stack": "Stack",
+    "horizontalchoice": "HorizontalChoice", "multiplechoice": "MultipleChoice",
+    "optionalsequence": "OptionalSequence", "alternatingsequence": "AlternatingSequence",
 }  # fmt: skip
 
 
@@ -53,6 +55,12 @@ def build(node):
     cls = getattr(railroad, kind, None)
     if cls is None:
         raise ValueError(f"Unknown railroad node: {kind!r}")
+    if kind in ("Choice", "MultipleChoice"):
+        # The library takes the index of the default branch first: `Choice 1` names it, plain `Choice` is the first
+        default = int(args[0]) if args and args[0].isdigit() else 0
+        args = [default, *(args[1:] if args and args[0].isdigit() else args)]
+        if kind == "MultipleChoice" and len(args) < 2:
+            args.append("any")
     return cls(*args, *[build(child) for child in children])
 
 

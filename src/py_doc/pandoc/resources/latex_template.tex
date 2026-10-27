@@ -15,6 +15,18 @@
   \IfFontExistsTF{Calibri}{\setsansfont{Calibri}[Ligatures=NoCommon]}{\setsansfont{Latin Modern Sans}}}
 \IfFontExistsTF{DejaVu Sans Mono}{\setmonofont{DejaVu Sans Mono}[Scale=0.88]}{%
   \IfFontExistsTF{Consolas}{\setmonofont{Consolas}[Scale=0.88]}{\setmonofont{Latin Modern Mono}}}
+% Caladea and Carlito have no Greek letters and no subscript or superscript digits, so "4.7 kΩ" or "CO₂" would
+% lose them. Each of those is drawn by DejaVu Serif where the font in use has no glyph for it.
+\IfFontExistsTF{Caladea}{\IfFontExistsTF{DejaVu Serif}{%
+  \usepackage{newunicodechar}
+  \newfontfamily\pydocsymbols{DejaVu Serif}[Scale=MatchLowercase]
+  \def\pydocFallback#1{\expandafter\newunicodechar\expandafter{\Uchar#1}%
+    {\iffontchar\font#1 \char#1 \else{\pydocsymbols\char#1}\fi}}
+  \def\pydocRange#1#2{\count255=#1 \loop\ifnum\count255<#2 \edef\pydocN{\the\count255}%
+    \expandafter\pydocFallback\expandafter{\pydocN}\advance\count255 by 1 \repeat}
+  \pydocRange{913}{938}\pydocRange{945}{970}% Greek capitals and small letters
+  \pydocRange{8304}{8335}% superscript and subscript digits and signs
+}{}}{}
 
 \usepackage[a4paper,margin=2.4cm,headheight=14pt]{geometry}
 \usepackage{graphicx}

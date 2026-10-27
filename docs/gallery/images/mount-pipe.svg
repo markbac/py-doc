@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200" font-family="Arial, sans-serif">
+  <!-- Pipe: a drawing for the mounting gallery of the commissioning poster -->
+  <rect width="300" height="200" fill="#e3efed"/>
+  <rect x="0" y="86" width="300" height="34" fill="#b9bfc6" stroke="#6f767e" stroke-width="2"/>
+  <rect x="112" y="80" width="14" height="46" rx="3" fill="#4a5a5a"/>
+  <rect x="174" y="80" width="14" height="46" rx="3" fill="#4a5a5a"/>
+  <rect x="122" y="44" width="56" height="36" rx="6" fill="#f4f8f7" stroke="#0f5e5e" stroke-width="3"/><circle cx="150" cy="62" r="5" fill="#e8684a"/>
+  <text x="150" y="160" text-anchor="middle" font-size="15" fill="#1c2b2b">Two clamps, 20 to 60 mm</text>
+  <text x="150" y="178" text-anchor="middle" font-size="12" fill="#4a5a5a">not on a hot pipe</text>
+</svg>

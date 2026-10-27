@@ -133,7 +133,13 @@ def draw_cached(
     folder.mkdir(parents=True, exist_ok=True)
     partial = cached.with_suffix(cached.suffix + f".{os.getpid()}.part")
     partial.write_bytes(picture)
-    os.replace(partial, cached)
+    try:
+        os.replace(partial, cached)
+    except PermissionError:
+        # Windows: another build drew the same picture and has it open. Its copy is the same, so it is kept
+        partial.unlink(missing_ok=True)
+        if not (cached.is_file() and cached.stat().st_size):
+            raise
     logger.info(f"Diagram {renderer.name} {key[:8]}: drawn")
     return cached
 
@@ -280,6 +286,8 @@ def render_parts(
             pictures[name] = picture
             picture_line = f"![{_alt_text(block, renderer)}]({name})"
             width = block.options.get("width")
+            if width and block.fence not in BY_FENCE and width.replace(".", "", 1).isdigit():
+                width = None  # a block's own width in pixels, such as a barcode's, which the block has drawn to
             if width:
                 if not _WIDTH.match(width):
                     raise DiagramError(f'{file}:{block.line}: width="{width}" is not a size such as 100%, 12cm or 4in')
