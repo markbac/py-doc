@@ -8,10 +8,10 @@ from __future__ import annotations
 import math
 import re
 
-from py_doc.poster_blocks import Fragment, PosterError, _whole, block, esc
-from py_doc.poster_elements import BY_NUMBER, CATEGORIES, ELEMENTS
+from py_doc.poster_blocks import Fragment, PosterError, _whole, block, esc, mark_colour
+from py_doc.poster_elements import BY_NUMBER, CATEGORIES, ELEMENTS, configuration_text, shells
 from py_doc.poster_scales import wavelength_to_rgb
-from py_doc.poster_svg import Linear, label, number, spread, svg, wrap
+from py_doc.poster_svg import Linear, label, number, polar, spread, svg, wrap
 
 WIDTH = 640
 SIZE = 13
@@ -51,9 +51,9 @@ def _kinds(code, ctx, allowed, what):
     return out
 
 
-def _arrow_defs(ident, colour):
+def _arrow_defs(ident, colour, size=7):
     return (
-        f'<marker id="{ident}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">'
+        f'<marker id="{ident}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="{size}" markerHeight="{size}" orient="auto-start-reverse">'
         f'<path d="M0,0 L10,5 L0,10 Z" fill="{colour}"/></marker>'
     )
 
@@ -409,19 +409,31 @@ def _well(code, opts, ctx):
     shown = [math.log10(d + 1) for d in depths] if log else depths
     deepest = max(shown) or 1
     slot = WIDTH / len(rows)
-    top, depth_px = 30, 220
+    top, depth_px, lines, samples = 34, 220, 15, 60
     out = []
     for n, (row, d) in enumerate(zip(rows, shown)):
         cx = slot * (n + 0.5)
         h = depth_px * d / deepest
         colour = ctx.theme.colour(row[2] if len(row) > 2 and row[2] else None, "secondary")
-        w = slot * 0.45
-        for k in range(1, 6):  # the grid lines of the sheet, bent into the well
-            yk = top + k * 8
-            out.append(
-                f'<path d="M{cx - w:.1f},{yk} C{cx - w * 0.3:.1f},{yk} {cx - 6:.1f},{yk + h * (1 - k / 7):.1f} {cx:.1f},{yk + h * (1 - k / 7):.1f} C{cx + 6:.1f},{yk + h * (1 - k / 7):.1f} {cx + w * 0.3:.1f},{yk} {cx + w:.1f},{yk}" fill="none" stroke="{colour}" stroke-opacity="{0.25 + k * 0.12:.2f}" stroke-width="1.5"/>'
-            )
-        out.append(f'<circle cx="{cx:.1f}" cy="{top + 8 + h * (1 - 1 / 7):.1f}" r="6" fill="{colour}"/>')
+        half = slot * 0.46
+        # a sheet seen from above and in front, sagging under the body: the deeper the well, the narrower its
+        # throat, as a compact body's is
+        throat = 0.5 - 0.26 * d / deepest
+
+        def point(u, v, cx=cx, half=half, h=h, throat=throat):
+            sag = h * throat**2 / (u * u + v * v + throat**2)
+            sag -= h * throat**2 / (2 + throat**2)  # the corners stay on the flat sheet
+            scale = 0.82 + 0.18 * (v + 1) / 2  # nearer is wider
+            return cx + u * half * scale, top + 22 + v * 20 + max(sag, 0)
+
+        steps = [-1 + 2 * k / samples for k in range(samples + 1)]
+        for k in range(lines):
+            g = -1 + 2 * k / (lines - 1)
+            for curve in ([point(t, g) for t in steps], [point(g, t) for t in steps]):
+                path = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in curve)
+                out.append(f'<path d="{path}" fill="none" stroke="{colour}" stroke-opacity=".75" stroke-width="1.2"/>')
+        x, y = point(0, 0)
+        out.append(f'<circle cx="{x:.1f}" cy="{y - 7:.1f}" r="8" fill="{colour}" stroke="#fff" stroke-width="1.5"/>')
         out.append(label(cx, top + depth_px + 60, row[0], SIZE, "middle", 'font-weight="700"'))
     return svg(WIDTH, top + depth_px + 72, "".join(out), opts.get("title", "potential wells"), "chart")
 
@@ -501,11 +513,15 @@ def energy_levels_html(code, opts, ctx):
             label(right + 14, ty + 4, f"{number(levels[name])} eV", SMALL, extra=f'fill="{ctx.theme.colours["muted"]}"')
         )
     xs = [left + 30 + n * (right - left - 60) / max(len(jumps) - 1, 1) for n in range(len(jumps))]
+    key = set()  # the kinds of arrow drawn, explained in the key
     for x, (a, b, text) in zip(xs, jumps):
         ya, yb = y_of(levels[a]), y_of(levels[b])
         delta = abs(levels[b] - levels[a])
         nm = 1239.84 / delta if delta else 0
         colour = wavelength_to_rgb(nm) if 380 <= nm <= 750 else ctx.theme.colours["muted"]
+        key.add(0 if levels[b] > levels[a] else 1)
+        if not 380 <= nm <= 750:
+            key.add(2)
         if levels[b] > levels[a]:  # absorption: a straight arrow up
             out.append(
                 f'<line x1="{x:.1f}" y1="{ya:.1f}" x2="{x:.1f}" y2="{yb + 8:.1f}" stroke="{colour}" stroke-width="3"/>'
@@ -536,7 +552,41 @@ def energy_levels_html(code, opts, ctx):
                 'font-weight="700" paint-order="stroke" stroke="#fff" stroke-width="3"',
             )
         )
+    out += _energy_key(key, ctx, x=500, y=top + 4)
     return _fig(opts, svg(WIDTH, top + height + 20, "".join(out), opts.get("title", "energy levels"), "chart"))
+
+
+def _energy_key(kinds, ctx, x, y):
+    """The key of an energy-level diagram, beside it: a sample of each kind of arrow drawn (0 absorbed, 1 emitted)
+    with what it means, then the colours: a strip of the visible spectrum, and grey for light that is not."""
+    muted = ctx.theme.colours["muted"]
+    out = [label(x, y + 10, "Key", SMALL, extra='font-weight="700"')]
+    y += 30
+    if 0 in kinds:
+        out.append(f'<line x1="{x + 8}" y1="{y + 10}" x2="{x + 8}" y2="{y - 6}" stroke="{muted}" stroke-width="2.5"/>')
+        out.append(f'<path d="M{x + 3},{y - 4} L{x + 8},{y - 12} L{x + 13},{y - 4}" fill="{muted}"/>')
+        out.append(label(x + 24, y + 4, "Absorbed: up, straight", SMALL - 1))
+        y += 30
+    if 1 in kinds:
+        wave = f"M{x + 8},{y - 12}" + "".join(f" q{4 if k % 2 else -4},3 0,6" for k in range(3))
+        out.append(f'<path d="{wave}" fill="none" stroke="{muted}" stroke-width="2"/>')
+        out.append(f'<path d="M{x + 3},{y + 4} L{x + 8},{y + 12} L{x + 13},{y + 4}" fill="{muted}"/>')
+        out.append(label(x + 24, y + 4, "Emitted: down, wavy", SMALL - 1))
+        y += 30
+    stops = "".join(
+        f'<stop offset="{(nm - 380) / 370:.2f}" stop-color="{wavelength_to_rgb(nm)}"/>' for nm in range(380, 751, 30)
+    )
+    out.append(f'<defs><linearGradient id="energy-spectrum">{stops}</linearGradient></defs>')
+    out.append(f'<rect x="{x}" y="{y - 8}" width="120" height="10" fill="url(#energy-spectrum)"/>')
+    out.append(label(x, y + 14, "380 nm", SMALL - 3, extra=f'fill="{muted}"'))
+    out.append(label(x + 120, y + 14, "750 nm", SMALL - 3, "end", f'fill="{muted}"'))
+    out.append(label(x, y + 30, "The colour of its light", SMALL - 1))
+    if 2 in kinds:
+        y += 52
+        out.append(f'<rect x="{x}" y="{y - 8}" width="16" height="10" fill="{muted}"/>')
+        out.append(label(x + 24, y + 2, "Ultraviolet or infrared,", SMALL - 1))
+        out.append(label(x + 24, y + 16, "not visible", SMALL - 1))
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -606,6 +656,20 @@ def _coil(x0, y0, x1, y1, radius=6):
     return "M" + " L".join(points)
 
 
+def _crossed(p, q, segments):
+    """Whether another of ``segments`` crosses the segment p-q in its middle third."""
+    (x0, y0), (x1, y1) = p, q
+    for (x2, y2), (x3, y3) in segments:
+        den = (x1 - x0) * (y3 - y2) - (y1 - y0) * (x3 - x2)
+        if not den or {p, q} & {(x2, y2), (x3, y3)}:
+            continue
+        t = ((x2 - x0) * (y3 - y2) - (y2 - y0) * (x3 - x2)) / den
+        u = ((x2 - x0) * (y1 - y0) - (y2 - y0) * (x1 - x0)) / den
+        if 1 / 3 < t < 2 / 3 and 0 < u < 1:
+            return True
+    return False
+
+
 @block(
     "feynman",
     "topology= s-channel|t-channel|u-channel|decay|beta-decay|compton|annihilation|loop|penguin|box; slot: label | line kind lines (in1, in2, mid, out1, out2...)",
@@ -635,14 +699,17 @@ def feynman_html(code, opts, ctx):
                 raise PosterError(f"{ctx.where}: a line kind is one of {', '.join(LINE_KINDS)}, not '{cells[1]}'")
             kinds[slot] = cells[1].lower()
     colour = ctx.theme.colours["strong"]
-    accent = ctx.theme.colours["secondary"]
+    accent = mark_colour(ctx.theme)  # the print theme's secondary is a pale box colour, unseen as a line
     out = [f"<defs>{_arrow_defs('fey-arrow', colour)}</defs>"]
     for a, b, kind, slot in lines:
         kind = kinds.get(slot, kind)
         (x0, y0), (x1, y1) = vertices[a], vertices[b]
+        # where along the line its arrow and label go: half way, unless another line crosses it there, as the
+        # outgoing lines of the u-channel do, when they go three quarters of the way, clear of the crossing
+        at = 0.78 if _crossed((x0, y0), (x1, y1), [(vertices[c], vertices[d]) for c, d, *_ in lines]) else 0.5
         if kind in ("fermion", "antifermion"):
             out.append(f'<line x1="{x0}" y1="{y0}" x2="{x1}" y2="{y1}" stroke="{colour}" stroke-width="2.5"/>')
-            mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+            mx, my = x0 + (x1 - x0) * at, y0 + (y1 - y0) * at
             dx, dy = (x1 - x0), (y1 - y0)
             if kind == "antifermion":  # the arrow against the line: an antiparticle forward in time
                 dx, dy = -dx, -dy
@@ -666,7 +733,7 @@ def feynman_html(code, opts, ctx):
                 f'<circle cx="{(x0 + x1) / 2:.1f}" cy="{(y0 + y1) / 2:.1f}" r="{r:.1f}" fill="none" stroke="{colour}" stroke-width="2.5"/>'
             )
         if slot in labels:
-            mx, my = (x0 + x1) / 2, (y0 + y1) / 2
+            mx, my = x0 + (x1 - x0) * at, y0 + (y1 - y0) * at
             dx, dy = x1 - x0, y1 - y0
             d = math.hypot(dx, dy) or 1
             offset = 18 if kind != "loop" else math.hypot(dx, dy) / 2 + 16
@@ -738,13 +805,18 @@ def standard_model_html(code, opts, ctx):
 
 @block(
     "elements",
-    "Element symbols or numbers, on lines or split by spaces; cols=",
+    "Element symbols or numbers, on lines or split by spaces; cols=, or layout=table for the periodic table "
+    "with those elements picked out (all of them when none is named); show= name, weight, shells, config, groups",
     "H He C N O Fe Au U",
 )
 def elements_html(code, opts, ctx):
-    """Periodic-table tiles for the elements named: number, symbol, name and atomic weight, coloured by category."""
+    """Periodic-table tiles for the elements named: number, symbol, name and atomic weight, coloured by category.
+    ``layout=table`` puts them in their places in the whole periodic table instead."""
     wanted = [token for token in re.split(r"[\s,]+", code.strip()) if token]
-    if not wanted:
+    layout = opts.get("layout", "tiles").lower()
+    if layout not in ("tiles", "table"):
+        raise PosterError(f"{ctx.where}: elements layout must be tiles or table, not '{layout}'")
+    if not wanted and layout == "tiles":
         raise PosterError(f"{ctx.where}: an elements block needs element symbols or numbers")
     found = []
     for token in wanted:
@@ -752,31 +824,282 @@ def elements_html(code, opts, ctx):
         if element is None:
             raise PosterError(f"{ctx.where}: '{token}' is not an element symbol or number")
         found.append(element)
+    shown = [part.strip().lower() for part in opts.get("show", "").split(",") if part.strip()]
+    for part in shown:
+        if part not in TILE_FIELDS + ("groups",):
+            raise PosterError(f"{ctx.where}: elements show= takes {', '.join(TILE_FIELDS)} and groups, not '{part}'")
+    if not shown:  # tiles have room for the weight, the table's smaller tiles only for the name
+        shown = ["name"] if layout == "table" else ["name", "weight"]
+    fields = [part for part in TILE_FIELDS if part in shown]
+    if layout == "table":
+        return _fig(opts, _periodic_table(found, fields, "groups" in shown, opts, ctx))
     cols = _whole(opts, "cols", min(len(found), 8), ctx)
     gap = 6
     size = min(76, (WIDTH - 10 - gap * (cols - 1)) / cols)
+    height = _tile_height(size, fields)
     out = []
-    used = []
-    for n, (number_, symbol, name, weight, category) in enumerate(found):
-        x, y = 5 + (n % cols) * (size + gap), 5 + (n // cols) * (size + gap)
-        colour = CATEGORIES[category]
-        used.append(category)
-        out.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size:.1f}" height="{size:.1f}" rx="6" fill="{colour}"/>')
-        out.append(label(x + 6, y + 14, str(number_), SMALL - 1, extra='fill="#fff"'))
-        out.append(label(x + size / 2, y + size * 0.58, symbol, size * 0.36, "middle", WHITE))
-        out.append(label(x + size / 2, y + size - 16, name, min(SMALL - 2, size / 7), "middle", 'fill="#fff"'))
-        out.append(label(x + size / 2, y + size - 5, weight, SMALL - 3, "middle", 'fill="#fff"'))
+    for n, element in enumerate(found):
+        x, y = 5 + (n % cols) * (size + gap), 5 + (n // cols) * (height + gap)
+        out += _tile(x, y, size, element, fields, True, ctx)
     rows = (len(found) + cols - 1) // cols
-    y = 5 + rows * (size + gap) + 12
+    y = _legend(out, [e[4] for e in found], 5 + rows * (height + gap) + 12, WIDTH)
+    return _fig(opts, svg(WIDTH, y + 8, "".join(out), opts.get("title", "elements"), "chart"))
+
+
+TILE_FIELDS = ("name", "weight", "shells", "config")  # what a tile may show under its symbol, in this order
+TILE_KEY = {
+    "name": "Name",
+    "weight": "Atomic weight",
+    "shells": "Electrons per shell",
+    "config": "Electron configuration",
+}
+
+
+def _tile_height(size, fields):
+    return size * (0.66 + 0.17 * len(fields) + 0.06)
+
+
+def _tile_lines(element, fields):
+    number_, symbol, name, weight, _ = element
+    values = {
+        "name": name,
+        "weight": weight,
+        "shells": "-".join(map(str, shells(number_))),
+        "config": configuration_text(number_),
+    }
+    return [values[field] for field in fields]
+
+
+def _tile(x, y, size, element, fields, solid, ctx):
+    """An element's tile: its number, its symbol large, and under it the ``fields`` asked for. A tile not
+    ``solid`` is a pale tint of its category's colour, with grey text."""
+    number_, symbol, _, _, category = element
+    colour, height = CATEGORIES[category], _tile_height(size, fields)
+    if solid:
+        out = [f'<rect x="{x:.1f}" y="{y:.1f}" width="{size:.1f}" height="{height:.1f}" rx="4" fill="{colour}"/>']
+        ink, strong = 'fill="#fff"', WHITE
+    else:
+        out = [
+            f'<rect x="{x + 0.5:.1f}" y="{y + 0.5:.1f}" width="{size - 1:.1f}" height="{height - 1:.1f}" rx="4" '
+            f'fill="{colour}" fill-opacity=".14" stroke="{colour}" stroke-opacity=".45"/>'
+        ]
+        ink = strong = f'fill="{ctx.theme.colours["muted"]}"'
+    out.append(label(x + size * 0.07, y + size * 0.2, str(number_), size * 0.16, extra=ink))
+    out.append(label(x + size / 2, y + size * 0.58, symbol, size * 0.36, "middle", strong))
+    for k, text in enumerate(_tile_lines(element, fields)):
+        fit = min(size * 0.15, (size - 6) / max(len(text), 1) / 0.5)  # shrunk to fit the tile's width
+        out.append(label(x + size / 2, y + size * (0.82 + 0.17 * k), text, fit, "middle", ink))
+    return out
+
+
+def _legend(out, categories, y, width):
+    """The key of the categories drawn, in the order of CATEGORIES, in lines across ``width``; returns its foot."""
     x = 5
-    for category in dict.fromkeys(used):
+    for category in dict.fromkeys(sorted(categories, key=list(CATEGORIES).index)):
         step = 30 + len(category) * 6.5
-        if x > 5 and x + step - 12 > WIDTH:  # the legend goes on to another line rather than off the edge
+        if x > 5 and x + step - 12 > width:  # the legend goes on to another line rather than off the edge
             x, y = 5, y + 20
         out.append(f'<rect x="{x}" y="{y - 10}" width="12" height="12" rx="2" fill="{CATEGORIES[category]}"/>')
         out.append(label(x + 17, y, category, SMALL - 1))
         x += step
-    return _fig(opts, svg(WIDTH, y + 8, "".join(out), opts.get("title", "elements"), "chart"))
+    return y
+
+
+def _table_place(z):
+    """The row and column of element ``z`` in the periodic table: periods 1 to 7 in rows 0 to 6, and the
+    lanthanides and actinides in rows 7 and 8, under the table, from the third column."""
+    if z <= 2:
+        return 0, 0 if z == 1 else 17
+    for start, row in ((3, 1), (11, 2)):  # periods 2 and 3: the s-block, then a gap, then the p-block
+        if z < start + 8:
+            k = z - start
+            return row, k if k < 2 else k + 10
+    if z <= 54:
+        return (3, z - 19) if z <= 36 else (4, z - 37)
+    for first, row, f_row in ((55, 5, 7), (87, 6, 8)):  # periods 6 and 7, their f-block on a row of its own
+        if z < first + 32:
+            k = z - first
+            if k < 2:
+                return row, k
+            if k < 17:
+                return f_row, k + 1
+            return row, k - 14
+    raise ValueError(z)
+
+
+def _periodic_table(found, fields, groups, opts, ctx):
+    """Every element in its place, in its category's colour: solid for those in ``found`` (or all, when it is
+    empty), a pale tint for the rest. ``groups`` numbers the groups along the top and the periods down the side.
+    When the tiles show more than the name, a large tile in the gap at the top says what each line is."""
+    width = 960 if fields == ["name"] else 1200  # more lines need wider tiles
+    gap = 3
+    left, top = (22, 18) if groups else (5, 5)
+    size = (width - left - 5 - gap * 17) / 18
+    height = _tile_height(size, fields)
+    picked = {e[0] for e in found} or set(BY_NUMBER)
+    muted = f'fill="{ctx.theme.colours["muted"]}"'
+    out = []
+
+    def at(row, col):
+        return left + col * (size + gap), top + row * (height + gap) + (height * 0.4 if row >= 7 else 0)
+
+    for z, element in sorted(BY_NUMBER.items()):
+        out += _tile(*at(*_table_place(z)), size, element, fields, z in picked, ctx)
+    for row, text in ((5, "57-71"), (6, "89-103")):  # where the lanthanides and actinides belong
+        x, y = at(row, 2)
+        out.append(label(x + size / 2, y + height / 2 + 4, text, 9, "middle", muted))
+    if groups:
+        for col in range(18):
+            row = 0 if col in (0, 17) else 1 if col == 1 or col >= 12 else 3
+            x, y = at(row, col)
+            out.append(label(x + size / 2, y - 5, str(col + 1), 10, "middle", f'{muted} font-weight="700"'))
+        for row in range(7):
+            x, y = at(row, 0)
+            out.append(label(x - 8, y + height / 2 + 4, str(row + 1), 10, "middle", f'{muted} font-weight="700"'))
+    if fields != ["name"]:
+        sample = found[0] if found else ELEMENTS["C"]
+        big = size * 2.2
+        x, y = at(0, 3)
+        y += (3 * (height + gap) - _tile_height(big, fields)) / 2
+        out += _tile(x, y, big, sample, fields, True, ctx)
+        parts = [("Atomic number", big * 0.14), ("Symbol", big * 0.48)]
+        parts += [(TILE_KEY[field], big * (0.78 + 0.17 * k)) for k, field in enumerate(fields)]
+        for text, dy in parts:
+            out.append(
+                f'<line x1="{x + big + 4:.1f}" y1="{y + dy:.1f}" x2="{x + big + 26:.1f}" y2="{y + dy:.1f}" '
+                f'stroke="currentColor" stroke-opacity=".5"/>'
+            )
+            out.append(label(x + big + 30, y + dy + 4, text, SMALL - 1))
+    y = _legend(out, [e[4] for z, e in BY_NUMBER.items()], at(8, 0)[1] + height + 18, width)
+    return svg(width, y + 8, "".join(out), opts.get("title", "the periodic table"), "chart")
+
+
+# ---------------------------------------------------------------------------
+# atom: the structure of an atom, its nucleus and its electrons
+# ---------------------------------------------------------------------------
+
+ATOM_STYLES = ("shells", "orbits")
+NUCLEONS_DRAWN = 60  # a larger nucleus is one disc, with its counts written on it
+
+
+def _particles(kind):
+    """The shaded sphere of a proton, a neutron or an electron, as a radial gradient."""
+    light, dark = {"p": ("#f0a070", "#a8431a"), "n": ("#e6e6e6", "#7f8590"), "e": ("#9cc4f2", "#2c5fa8")}[kind]
+    return (
+        f'<radialGradient id="atom-{kind}" cx=".35" cy=".35" r=".7">'
+        f'<stop offset="0" stop-color="{light}"/><stop offset="1" stop-color="{dark}"/></radialGradient>'
+    )
+
+
+def _sphere(x, y, r, kind):
+    sign = {"p": "+", "e": "−"}.get(kind)
+    out = f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" fill="url(#atom-{kind})" stroke="#fff" stroke-width=".8"/>'
+    if sign:
+        out += label(x, y + r * 0.42, sign, r * 1.3, "middle", 'fill="#fff" font-weight="700"')
+    return out
+
+
+def _nucleus(cx, cy, protons, neutrons, max_r):
+    """The protons and neutrons packed in a ball, mixed evenly, or one disc with its counts if there are many."""
+    total = protons + neutrons
+    if total > NUCLEONS_DRAWN:
+        r = max_r
+        return [
+            f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="url(#atom-p)" stroke="#fff"/>',
+            label(cx, cy - 2, f"{protons} p⁺", SMALL - 2, "middle", 'fill="#fff" font-weight="700"'),
+            label(cx, cy + 11, f"{neutrons} n", SMALL - 2, "middle", 'fill="#fff" font-weight="700"'),
+        ]
+    r = min(9.0, max_r / (math.sqrt(total) * 1.05 + 0.5))
+    spots, kinds, placed = [], [], 0
+    for i in range(total):  # a sunflower's spiral: even packing in a disc, the first at the centre
+        radius, angle = r * 1.05 * math.sqrt(i), i * 137.508
+        spots.append((cx + radius * math.cos(math.radians(angle)), cy + radius * math.sin(math.radians(angle))))
+        proton = placed < protons and (placed + 0.5) / protons <= (i + 1) / total if protons else False
+        kinds.append("p" if proton else "n")
+        placed += proton
+    return [_sphere(x, y, r, k) for (x, y), k in reversed(list(zip(spots, kinds)))]  # the centre drawn last, on top
+
+
+def _atom(cx, cy, element, neutrons, style, ctx):
+    z = element[0]
+    counts, out = shells(z), []
+    line = ctx.theme.colours["muted"]
+    if style == "shells":
+        inner, step = 34, min(18.0, 92 / max(len(counts), 1))
+        for k, count in enumerate(counts):
+            radius = inner + k * step
+            out.append(f'<circle cx="{cx}" cy="{cy}" r="{radius:.1f}" fill="none" stroke="{line}" stroke-width="1.2"/>')
+            size = min(4.5, math.pi * radius / count * 0.8)
+            for j in range(count):
+                x, y = polar(cx, cy, radius, j * 360 / count)
+                out.append(_sphere(x, y, size, "e"))
+            out.append(
+                label(cx + radius * 0.71 + 4, cy - radius * 0.71 - 2, str(count), SMALL - 3, extra=f'fill="{line}"')
+            )
+        out[:0] = _nucleus(cx, cy, z, neutrons, inner - 8)
+    else:  # orbits: three tilted ellipses with the electrons shared out along them, as the atom is often drawn
+        rx, ry = 120, 42
+        for tilt in (0, 60, 120):
+            out.append(
+                f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" fill="none" stroke="{line}" stroke-width="2" '
+                f'transform="rotate({tilt} {cx} {cy})"/>'
+            )
+        out += _nucleus(cx, cy, z, neutrons, 30)
+        for j in range(z):
+            tilt, turn = (0, 60, 120)[j % 3], math.radians(200 + 137.5 * j)
+            x, y = rx * math.cos(turn), ry * math.sin(turn)
+            t = math.radians(tilt)
+            out.append(_sphere(cx + x * math.cos(t) - y * math.sin(t), cy + x * math.sin(t) + y * math.cos(t), 7, "e"))
+    out.append(label(cx, cy + 148, f"{element[2]} ({element[1]})", SIZE, "middle", 'font-weight="700"'))
+    detail = f"{z} p⁺, {neutrons} n, {z} e⁻ · shells {'-'.join(map(str, counts))}"
+    out.append(label(cx, cy + 166, detail, SMALL - 1, "middle", f'fill="{line}"'))
+    out.append(label(cx, cy + 182, configuration_text(z), SMALL - 1, "middle", f'fill="{line}"'))
+    return out
+
+
+@block(
+    "atom",
+    "element | neutrons lines, one atom each (neutrons optional: the most common isotope's, near the atomic weight); "
+    "style=shells (default) or orbits, key=no",
+    "C\nNa",
+)
+def atom_html(code, opts, ctx):
+    """Atoms side by side: the nucleus of protons and neutrons, and the electrons on their shells (``shells``,
+    the Bohr model) or round three tilted orbits (``orbits``, for a small atom), with a key to the particles."""
+    style = opts.get("style", "shells").lower()
+    if style not in ATOM_STYLES:
+        raise PosterError(f"{ctx.where}: atom style must be shells or orbits, not '{style}'")
+    atoms = []
+    for line in _lines(code):
+        cells = _cells(line)
+        token = cells[0]
+        element = BY_NUMBER.get(int(token)) if token.isdigit() else ELEMENTS.get(token[:1].upper() + token[1:].lower())
+        if element is None:
+            raise PosterError(f"{ctx.where}: '{token}' is not an element symbol or number")
+        if style == "orbits" and element[0] > 12:
+            raise PosterError(
+                f"{ctx.where}: {element[2]} has {element[0]} electrons, too many to draw as orbits: use style=shells"
+            )
+        if len(cells) > 1 and cells[1]:
+            neutrons = int(_num(cells[1], ctx, "a number of neutrons"))
+        else:
+            neutrons = round(float(element[3].strip("[]"))) - element[0]
+        atoms.append((element, neutrons))
+    if not atoms:
+        raise PosterError(f"{ctx.where}: an atom block needs an element on a line")
+    slot = 300
+    out = [f"<defs>{_particles('p')}{_particles('n')}{_particles('e')}</defs>"]
+    for n, (element, neutrons) in enumerate(atoms):
+        out += _atom(slot * n + slot / 2, 140, element, neutrons, style, ctx)
+    width = slot * len(atoms)
+    if opts.get("key", "yes").lower() not in ("no", "false"):
+        x = width + 10
+        out.append(label(x, 70, "Key", SIZE, extra='font-weight="700"'))
+        for k, (kind, name) in enumerate((("p", "Proton"), ("n", "Neutron"), ("e", "Electron"))):
+            out.append(_sphere(x + 9, 98 + k * 30, 9, kind))
+            out.append(label(x + 26, 103 + k * 30, name, SIZE))
+        width += 120
+    return _fig(opts, svg(width, 330, "".join(out), opts.get("title", "atomic structure"), "chart"))
 
 
 # ---------------------------------------------------------------------------
@@ -838,7 +1161,7 @@ def nuclide_chart_html(code, opts, ctx):
     zmax = max([z for z, *_ in nuclides] + [z for pts, *_ in paths for z, _ in pts] + [1])
     nmax = max([n for _, n, *_ in nuclides] + [n for pts, *_ in paths for _, n in pts] + [1])
     left, top = 40, 10
-    cell = min((WIDTH - left - 10) / (nmax + 1), 300 / (zmax + 1), 40)
+    cell = min((WIDTH - left - 10) / (nmax + 1), 420 / (zmax + 1), 48)
     height = top + (zmax + 1) * cell
 
     def at(z, n):
@@ -880,20 +1203,17 @@ def nuclide_chart_html(code, opts, ctx):
         )
         if cell >= 24 and text:
             out.append(label(x + cell / 2, y + cell / 2 + 4, text, min(SMALL, cell / 3), "middle", 'fill="#fff"'))
-    for points, text, colour in paths:
-        coords = " ".join(f"{left + (n + 0.5) * cell:.1f},{top + (zmax - z + 0.5) * cell:.1f}" for z, n in points)
-        out.append(f'<polyline points="{coords}" fill="none" stroke="{colour}" stroke-width="3"/>')
-        if text and points:
-            z, n = points[-1]
-            out.append(
-                label(
-                    left + (n + 0.5) * cell + 6,
-                    top + (zmax - z + 0.5) * cell,
-                    text,
-                    SMALL,
-                    extra=f'fill="{colour}" font-weight="700"',
-                )
-            )
+    for k, (points, _, colour) in enumerate(paths):
+        # each step an arrow, stopping short of the squares' centres so their labels stay readable
+        out.append(f"<defs>{_arrow_defs(f'nuc-path{k}', colour, 4)}</defs>")
+        centres = [(left + (n + 0.5) * cell, top + (zmax - z + 0.5) * cell) for z, n in points]
+        for (x0, y0), (x1, y1) in zip(centres, centres[1:]):
+            d = math.hypot(x1 - x0, y1 - y0) or 1
+            trim = min(cell * 0.3, d / 3)
+            ux, uy = (x1 - x0) / d * trim, (y1 - y0) / d * trim
+            ends = f'x1="{x0 + ux:.1f}" y1="{y0 + uy:.1f}" x2="{x1 - ux:.1f}" y2="{y1 - uy:.1f}"'
+            out.append(f'<line {ends} stroke="#fff" stroke-width="6" stroke-linecap="round"/>')  # clear of the squares
+            out.append(f'<line {ends} stroke="{colour}" stroke-width="3" marker-end="url(#nuc-path{k})"/>')
     out.append(label(left + (nmax + 1) * cell / 2, height + 18, "Neutrons, N", SMALL, "middle", 'font-weight="700"'))
     out.append(
         f'<text x="14" y="{(top + height) / 2:.1f}" transform="rotate(-90 14 {(top + height) / 2:.1f})" text-anchor="middle" font-size="{SMALL}" font-weight="700" fill="currentColor">Protons, Z</text>'
@@ -904,4 +1224,9 @@ def nuclide_chart_html(code, opts, ctx):
         out.append(f'<rect x="{x}" y="{y - 10}" width="12" height="12" fill="{DECAY[decay]}"/>')
         out.append(label(x + 17, y, decay, SMALL - 1))
         x += 40 + len(decay) * 6.5
+    for _, text, colour in paths:  # a path is named in the key, not on the chart, where it would cover squares
+        if text:
+            out.append(f'<line x1="{x}" y1="{y - 4}" x2="{x + 18}" y2="{y - 4}" stroke="{colour}" stroke-width="2.5"/>')
+            out.append(label(x + 24, y, text, SMALL - 1))
+            x += 44 + len(text) * 6.5
     return _fig(opts, svg(WIDTH, y + 8, "".join(out), opts.get("title", "chart of nuclides"), "chart"))

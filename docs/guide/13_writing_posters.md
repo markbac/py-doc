@@ -140,6 +140,7 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | Causes ranked, quality over time, distributions, curves | `plot` | A Pareto of returns, a control chart, a boxplot, a step response |
 | An amount and where it goes | `chart type=waterfall` | A top-up after its deductions |
 | Bands of a range and the points where things change | `threshold` | Credit counting down to cut-off |
+| How sure an estimate is, milestone by milestone | `uncertainty` | A cone of uncertainty over a project |
 | How full each store is | `buckets` | Credit, emergency credit and debt |
 | One value on a dial | `gauge` | The grid frequency now |
 | The hours of a day | `dial24` | Friendly hours and the off-peak tariff |

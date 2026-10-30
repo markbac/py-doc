@@ -188,7 +188,7 @@ event: 0.3 | 1.2 | Inside: in the future of the origin
 
 ## `spacetime`: gravity wells
 
-Bodies as potential wells side by side, on a log scale.
+Bodies as sheets of spacetime side by side, each sagging into its well, on a log scale: the deeper the well, the narrower its throat.
 
 ````markdown
 ```spacetime mode=well scale=log
@@ -220,7 +220,7 @@ A conformal diagram of all of spacetime, here with a black hole's horizon and si
 
 ## `energy-levels`
 
-Energy levels and the jumps between them, each in the colour of its light.
+Energy levels and the jumps between them. A straight arrow up is light absorbed and a wavy arrow down is light emitted. Each is in the colour of its light, or grey when that is ultraviolet or infrared, as the Lyman lines are. A key beside the levels shows each kind of arrow and the colours.
 
 ````markdown
 ```energy-levels
@@ -474,6 +474,68 @@ H Li C N O Na Mg Al Si S Cl Ca Fe Cu Zn Ag Sn Au Pb U
 H Li C N O Na Mg Al Si S Cl Ca Fe Cu Zn Ag Sn Au Pb U
 ```
 
+## `elements`: periodic table
+
+`layout=table` sets every element in its place in the periodic table, coloured by category: those named solid, the rest in a pale tint. With none named, every element is solid. `show=` picks what each tile gives under its symbol, from `name`, `weight`, `shells` (electrons per shell) and `config` (the electron configuration), and `groups` numbers the groups and periods. Beyond the name, a large tile in the gap says what each line is.
+
+````markdown
+```elements layout=table show=name,weight,shells,groups title="What an SN-100 is made of"
+Li Mn O C F P Cu Al Sn Ag Si Au Ni Fe
+```
+````
+
+```elements layout=table show=name,weight,shells,groups title="What an SN-100 is made of"
+Li Mn O C F P Cu Al Sn Ag Si Au Ni Fe
+```
+
+## `elements`: what a tile shows
+
+The same `show=` on tiles: here every line a tile can have.
+
+````markdown
+```elements show=name,weight,shells,config
+H C Si Fe Au U
+```
+````
+
+```elements show=name,weight,shells,config
+H C Si Fe Au U
+```
+
+## `atom`: shells
+
+The structure of an atom: its nucleus of protons and neutrons, and its electrons on their shells (the Bohr model), with the count on each shell. A line is `element | neutrons`; without the neutrons, it has those of its most common isotope, from the atomic weight. A nucleus of more than 60 is one disc with its counts on it.
+
+````markdown
+```atom
+C
+Na
+Fe
+```
+````
+
+```atom
+C
+Na
+Fe
+```
+
+## `atom`: orbits
+
+`style=orbits` draws a small atom as it is often pictured, its electrons round three tilted orbits. Here carbon-14, with its two extra neutrons.
+
+````markdown
+```atom style=orbits
+Li
+C | 8
+```
+````
+
+```atom style=orbits
+Li
+C | 8
+```
+
 ## `nuclide-chart`
 
 Nuclides by protons and neutrons, coloured by how they decay, with the magic numbers, the valley of stability and a reaction path.
@@ -495,10 +557,12 @@ Nuclides by protons and neutrons, coloured by how they decay, with the magic num
 6 | 6 | ¹²C | stable
 6 | 7 | ¹³C | stable
 6 | 8 | ¹⁴C | beta-
+7 | 6 | ¹³N | beta+
 7 | 7 | ¹⁴N | stable
 7 | 8 | ¹⁵N | stable
+8 | 7 | ¹⁵O | beta+
 8 | 8 | ¹⁶O | stable
-path: 6,6 7,6 6,7 7,7 8,7 7,8 6,6 | CNO cycle | red
+path: 6,6 7,6 6,7 7,7 8,7 7,8 6,6 | CNO cycle | amber
 ```
 ````
 
@@ -518,10 +582,12 @@ path: 6,6 7,6 6,7 7,7 8,7 7,8 6,6 | CNO cycle | red
 6 | 6 | ¹²C | stable
 6 | 7 | ¹³C | stable
 6 | 8 | ¹⁴C | beta-
+7 | 6 | ¹³N | beta+
 7 | 7 | ¹⁴N | stable
 7 | 8 | ¹⁵N | stable
+8 | 7 | ¹⁵O | beta+
 8 | 8 | ¹⁶O | stable
-path: 6,6 7,6 6,7 7,7 8,7 7,8 6,6 | CNO cycle | red
+path: 6,6 7,6 6,7 7,7 8,7 7,8 6,6 | CNO cycle | amber
 ```
 
 ## `chess`

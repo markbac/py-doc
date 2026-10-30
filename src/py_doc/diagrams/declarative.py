@@ -37,7 +37,12 @@ CIRCUIT_ELEMENTS = {  # what a line names: the schemdraw element
     "crystal": "Crystal", "antenna": "Antenna", "speaker": "Speaker", "motor": "Motor", "meter-v": "MeterV",
     "meter-a": "MeterA", "npn": "BjtNpn", "pnp": "BjtPnp", "nmos": "NFet", "pmos": "PFet", "opamp": "Opamp",
     "gap": "Gap", "and": "And", "or": "Or", "not": "Not", "nand": "Nand", "nor": "Nor", "xor": "Xor",
-    "relay": "Relay", "transformer": "Transformer",
+    "relay": "Relay", "transformer": "Transformer", "potentiometer": "Potentiometer",
+    "variable-resistor": "ResistorVar", "ldr": "Photoresistor", "thermistor": "Thermistor",
+    "photodiode": "Photodiode", "varactor": "Varactor", "variable-capacitor": "CapacitorVar", "microphone": "Mic",
+    "breaker": "Breaker", "solar": "Solar", "spdt": "SwitchSpdt2", "dpst": "SwitchDpst", "scr": "SCR",
+    "triac": "Triac", "diac": "Diac", "njfet": "JFetN", "pjfet": "JFetP", "igbt": "IgbtN",
+    "optocoupler": "Optocoupler", "xnor": "Xnor", "buffer": "Buf", "schmitt": "Schmitt",
 }  # fmt: skip
 DIRECTIONS = ("right", "left", "up", "down")
 ANCHOR = re.compile(r"^([A-Za-z][\w-]*)\.([A-Za-z]\w*)$")

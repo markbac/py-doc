@@ -142,7 +142,7 @@ def test_the_page_has_every_part_of_the_poster(tmp_path, drawn):
         in page
     )
     assert '<div class="fig-title">Day</div>' in page and 'class="bar" style="min-height:64px"' in page
-    assert '<div class="node" style="background:#a3322b">CLOSED</div>' in page
+    assert 'rx="5" fill="#a3322b"/>' in page and 'font-weight="700">CLOSED</text>' in page
     assert '<div class="cell fill">Scheduled wake‑up</div>' in page
     assert '<div class="fig-notes"><p>A note under the lanes.</p>' in page
     assert '<div class="banner">The valve is safe.</div>' in page and "<h3>Safe</h3>" in page
@@ -427,7 +427,7 @@ def test_a_theme_file_extends_a_built_in_theme_and_brings_a_logo_palette_and_fon
     assert "--primary:#0f5e5e;" in page and "--page:#141923;" in page  # its own colour, and the dark theme's
     assert "--font-body:'Brand Sans', Arial, sans-serif" in page and "fonts.googleapis.com" not in page
     assert '<header class="align-centre logo-left"><img alt="Logo" src="data:image/svg+xml;base64,' in page
-    assert page.count('<div class="node" style="background:#0f5e5e">') == 2
+    assert page.count('rx="5" fill="#0f5e5e"/>') == 2
     assert '"primaryBorderColor": "#0f5e5e"' in drawn[0][1] and "Brand Sans" in drawn[0][1]
 
 
@@ -1691,3 +1691,22 @@ def test_watch_watches_the_folder_of_the_markdown_and_the_files_its_settings_nam
     theme.write_text("x", encoding="utf-8")
     found = watched_files({tmp_path}, {theme}, {tmp_path / "out.html"})
     assert set(found) == {tmp_path / "poster.md", tmp_path / "shared" / "part.md", tmp_path / "board.svg", theme}
+
+
+def test_a_flow_draws_each_box_once_with_branches_under_and_loops_over():
+    from py_doc.poster_blocks import Ctx, flow_part
+
+    code = (
+        "[Asleep|navy] -timer-> [Measure|blue] -changed-> [Send|amber] -acknowledged-> [Asleep|navy]\n"
+        "[Measure|blue] -unchanged-> [Count the skip]\nA note."
+    )
+    _, picture, notes = flow_part(code, Ctx(Path("."), lambda: None))
+    assert picture.count(">Asleep</text>") == 1 and picture.count(">Measure</text>") == 1
+    assert notes == "A note."
+    boxes = {
+        m[3]: (float(m[1]), float(m[2]))
+        for m in re.finditer(r'<rect x="([\d.]+)" y="([\d.]+)"[^>]*/>.*?>([^<]+)</text>', picture)
+    }
+    assert boxes["Measure"][1] < boxes["Count the skip"][1]  # the branch goes under the box it leaves
+    assert boxes["Asleep"][1] == boxes["Measure"][1] == boxes["Send"][1]  # the first line along the top
+    assert re.search(r'<path d="M[\d.]+,[\d.]+ C', picture)  # the arrow back to Asleep is a curve over the top

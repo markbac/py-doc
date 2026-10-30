@@ -43,9 +43,27 @@ dot | at R1.end
 
 | Fence | Written as | Drawn by |
 |---|---|---|
-| `circuit` | One element a line: `[name:] element [label] \| direction \| at name.end \| to name.start`. Each element goes on from the end of the one before, `right` unless a direction is given. `at` starts it from a named element's anchor (`start`, `end`, `center`, or one of its own, such as an op-amp's `out`), and `to` draws it to one. The elements are `resistor`, `capacitor`, `polarised`, `inductor`, `diode`, `led`, `zener`, `schottky`, `battery`, `source`, `current`, `ac`, `switch`, `button`, `ground`, `vdd`, `vss`, `line`, `dot`, `lamp`, `fuse`, `crystal`, `antenna`, `speaker`, `motor`, `meter-v`, `meter-a`, `npn`, `pnp`, `nmos`, `pmos`, `opamp`, `relay`, `transformer`, `gap` and the gates `and`, `or`, `not`, `nand`, `nor`, `xor` | [schemdraw](https://schemdraw.readthedocs.io/) (MIT) |
+| `circuit` | One element a line: `[name:] element [label] \| direction \| at name.end \| to name.start`. Each element goes on from the end of the one before, `right` unless a direction is given. `at` starts it from a named element's anchor (`start`, `end`, `center`, or one of its own, such as an op-amp's `out`), and `to` draws it to one. The elements, and the anchors of their own, are listed under [Circuit elements](#circuit-elements) | [schemdraw](https://schemdraw.readthedocs.io/) (MIT) |
 | `chess` | `fen: <position>`, `highlight: e4 f3`, `arrow: f1 c4 \| colour` and `flip: yes` lines. Without a `fen:` line, the starting position | [python-chess](https://python-chess.readthedocs.io/) (GPL-3.0, run as a program of its own in the image) |
 | `music`, `abc` | [ABC notation](https://abcnotation.com/wiki/abc:standard:v2.1). `X:` and `K:` lines are added when it has none | [abcjs](https://www.abcjs.net/) (MIT) |
+
+### Circuit elements
+
+Every element has the anchors `start`, `end` and `center`. Those with more legs have their own, for `at` and `to`.
+
+| Kind | Elements | Their own anchors |
+|---|---|---|
+| Resistors | `resistor`, `potentiometer`, `variable-resistor`, `thermistor`, `ldr` (a light-dependent resistor) | `potentiometer`: `tap` |
+| Capacitors and inductors | `capacitor`, `polarised`, `variable-capacitor`, `varactor`, `inductor`, `crystal` | |
+| Diodes | `diode`, `led`, `zener`, `schottky`, `photodiode` | |
+| Thyristors | `scr`, `triac`, `diac` | `scr`, `triac`: `gate` |
+| Transistors | `npn`, `pnp`, `nmos`, `pmos`, `njfet`, `pjfet`, `igbt` | `npn`, `pnp`, `igbt`: `base`, `collector`, `emitter`. The FETs: `gate`, `drain`, `source` |
+| Sources | `battery`, `source`, `current`, `ac`, `solar` | |
+| Switches and protection | `switch`, `button`, `spdt`, `dpst`, `relay`, `fuse`, `breaker` | `spdt`: `a`, `b`, `c`. `dpst`: `p1`, `p2`, `t1`, `t2`. `relay`: `in1`, `in2`, `a`, `b` |
+| Supplies and wiring | `ground`, `vdd`, `vss`, `line`, `dot`, `gap` | |
+| Parts | `lamp`, `antenna`, `speaker`, `microphone`, `motor`, `meter-v`, `meter-a`, `transformer`, `optocoupler` | `speaker`, `microphone`: `in1`, `in2`. `transformer`: `p1`, `p2`, `s1`, `s2`. `optocoupler`: `anode`, `cathode`, `collector`, `emitter` |
+| Integrated circuits | `opamp` | `in1` (inverting), `in2`, `out`, `vd`, `vs` |
+| Logic gates | `and`, `or`, `not`, `nand`, `nor`, `xor`, `xnor`, `buffer`, `schmitt` | `in1`, `in2` (not on the one-input gates), `out` |
 
 The scientific fences are drawn in the **science image**, a second, optional image with the scientific Python libraries. It is built the first time a document or poster uses one of these fences, which takes a few minutes, or ahead of time with `py-doc tools build --science`. A project that uses none of them never downloads them.
 

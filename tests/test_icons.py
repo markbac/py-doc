@@ -244,8 +244,9 @@ def test_every_block_takes_an_icon(packs, tmp_path):
     assert page.count('class="icon"') == 6
     assert re.search(r'<div class="stat"><span class="ico"><svg', page)
     assert re.search(r'<div class="ch"><span class="ico"><svg[^>]*>.*?</svg></span>Server', page)
-    assert re.search(r'<div class="node" style="background:[^"]+"><span class="ico">', page)
-    assert re.search(r'<div class="node out"><span class="ico">', page)  # an outlined box keeps its outline
+    # in a flow, the icon is SVG in the picture, white on a filled box, in the text colour on an outlined one
+    assert re.search(r'<g transform="translate\([^)]+\)" color="#fff"><svg class="icon"', page)
+    assert re.search(r'<g transform="translate\([^)]+\)" color="currentColor"><svg class="icon"', page)
     assert "icon=" not in page  # the cell is taken out, not shown
 
 

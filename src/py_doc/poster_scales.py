@@ -1,6 +1,6 @@
-"""Poster blocks that show values on a scale: bands with trigger points, a waterfall, tanks, a dial, a 24-hour
-clock, a rating, a colour ruler, a log ruler and spectra. Each is drawn as SVG with ``poster_svg``, so it prints
-sharp and can be a picture of its own in a document.
+"""Poster blocks that show values on a scale: bands with trigger points, a cone of uncertainty, a waterfall,
+tanks, a dial, a 24-hour clock, a rating, a colour ruler, a log ruler and spectra. Each is drawn as SVG with
+``poster_svg``, so it prints sharp and can be a picture of its own in a document.
 """
 
 from __future__ import annotations
@@ -188,6 +188,103 @@ def threshold_html(code, opts, ctx):
         out += [head, body]
         bottom = max(bottom, y)
     return _fig(opts, svg(WIDTH, bottom + 6, "".join(out), opts.get("title", "threshold"), "chart"))
+
+
+# ---------------------------------------------------------------------------
+# uncertainty: a cone of uncertainty, an estimate's range narrowing milestone by milestone
+# ---------------------------------------------------------------------------
+
+
+@block(
+    "uncertainty",
+    "milestone | low | high lines (multiples of the final value, such as 0.25 and 4) and an optional | time; "
+    "label=, colour=, scale=log (default) or linear",
+    "Initial concept | 0.25 | 4\nRequirements complete | 0.67 | 1.5\nDesign complete | 0.9 | 1.1\nShipped | 1 | 1",
+)
+def uncertainty_html(code, opts, ctx):
+    """A cone of uncertainty: how far an estimate may be from the outcome at each milestone, as a band over and
+    under the final value that narrows to it. Milestones are evenly spaced unless a line gives its time."""
+    WIDTH = _width(opts, ctx)  # noqa: N806
+    rows = []
+    for line in _lines(code):
+        cells = _cells(line)
+        if len(cells) < 3:
+            raise PosterError(f"{ctx.where}: an uncertainty line is 'milestone | low | high', not '{line}'")
+        low, high = _number_of(cells[1], "a low", ctx), _number_of(cells[2], "a high", ctx)
+        if not 0 < low <= high:
+            raise PosterError(f"{ctx.where}: '{line}' needs 0 < low <= high")
+        when = _number_of(cells[3], "a time", ctx) if len(cells) > 3 and cells[3] else None
+        rows.append((cells[0], low, high, when))
+    if len(rows) < 2:
+        raise PosterError(f"{ctx.where}: an uncertainty block needs at least two milestones")
+    times = [when if when is not None else n for n, (*_, when) in enumerate(rows)]
+    if any(b <= a for a, b in zip(times, times[1:])):
+        raise PosterError(f"{ctx.where}: the milestones' times must rise, line by line")
+    scale = opts.get("scale", "log").lower()
+    if scale not in ("log", "linear"):
+        raise PosterError(f"{ctx.where}: uncertainty scale must be log or linear, not '{scale}'")
+    lows, highs = [r[1] for r in rows], [r[2] for r in rows]
+    left, right, top, plot_h = 64, WIDTH - 50, 12, 230
+    bottom = top + plot_h
+    if scale == "log":
+        y_of = Log10(min(lows + [1]) / 1.15, max(highs + [1]) * 1.15, bottom, top)
+    else:
+        y_of = Linear(0, max(highs + [1]) * 1.08, bottom, top)
+    x_of = Linear(times[0], times[-1], left, right)
+    colour = ctx.theme.colour(opts.get("colour"), "accent")
+    ink, muted = ctx.theme.colours["strong"], ctx.theme.colours["muted"]
+    upper = [(x_of(t), y_of(h)) for t, h in zip(times, highs)]
+    lower = [(x_of(t), y_of(lo)) for t, lo in zip(times, lows)]
+    out = [
+        f'<path d="M{" L".join(f"{x:.1f},{y:.1f}" for x, y in upper + lower[::-1])} Z" fill="{colour}" fill-opacity=".14"/>'
+    ]
+    for edge in (upper, lower):
+        out.append(
+            f'<polyline points="{" ".join(f"{x:.1f},{y:.1f}" for x, y in edge)}" fill="none" stroke="{colour}" stroke-width="3.5" stroke-linejoin="round"/>'
+        )
+    # the value axis: a tick at each multiple the lines give, labelled where there is room, the final value first
+    marks = sorted(set(lows + highs + [1.0]), key=lambda v: -abs(math.log(v)) if v != 1 else -math.inf)
+    shown: list[float] = []
+    for value in marks:
+        y = y_of(value)
+        out.append(f'<line x1="{left - 5}" y1="{y:.1f}" x2="{left}" y2="{y:.1f}" stroke="{muted}"/>')
+        if all(abs(y - other) >= 13 for other in shown):
+            shown.append(y)
+            out.append(label(left - 8, y + 4, f"{number(value)}×", SMALL - 1, "end", f'fill="{muted}"'))
+    out.append(
+        f'<line x1="{left}" y1="{y_of(1):.1f}" x2="{right}" y2="{y_of(1):.1f}" stroke="{ink}" stroke-width="1.5"/>'
+    )
+    out.append(f'<line x1="{left}" y1="{top}" x2="{left}" y2="{bottom}" stroke="{muted}"/>')
+    out.append(f'<line x1="{left}" y1="{bottom}" x2="{right}" y2="{bottom}" stroke="{muted}"/>')
+    middle = (top + bottom) / 2
+    out.append(
+        f'<text x="14" y="{middle:.1f}" transform="rotate(-90 14 {middle:.1f})" text-anchor="middle" font-size="{SMALL}" '
+        f'fill="{muted}">{esc(opts.get("label", "Range of the estimate"))}</text>'
+    )
+    # each milestone: a dotted line up to the band, and its name under the axis, in rows where they would touch
+    used: list[list[tuple[float, float]]] = []
+    y_end = bottom
+    for (name, low, high, _), t in zip(rows, times):
+        x = x_of(t)
+        out.append(
+            f'<line x1="{x:.1f}" y1="{y_of(high):.1f}" x2="{x:.1f}" y2="{bottom + 6}" stroke="{muted}" stroke-dasharray="2 3"/>'
+        )
+        lines = wrap(name, 84, SMALL - 0.5)
+        half = max(text_width(part, SMALL - 0.5) for part in lines) / 2 + 4
+        lo, hi = x - half, x + half
+        level = next((n for n, taken in enumerate(used) if all(hi < a or lo > b for a, b in taken)), len(used))
+        if level == len(used):
+            used.append([])
+        used[level].append((lo, hi))
+        y = bottom + 20 + level * (len(lines) * 14 + 6)
+        if level:
+            out.append(
+                f'<line x1="{x:.1f}" y1="{bottom + 6}" x2="{x:.1f}" y2="{y - 12:.1f}" stroke="{muted}" stroke-dasharray="2 3"/>'
+            )
+        for k, part in enumerate(lines):
+            out.append(label(x, y + k * 14, part, SMALL - 0.5, "middle"))
+        y_end = max(y_end, y + len(lines) * 14)
+    return _fig(opts, svg(WIDTH, y_end + 4, "".join(out), opts.get("title", "cone of uncertainty"), "chart"))
 
 
 # ---------------------------------------------------------------------------

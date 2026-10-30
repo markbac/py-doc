@@ -14,7 +14,7 @@ from py_doc.poster_themes import Theme
 
 SPACE = (
     "orbits", "optics", "interferometer", "spacetime", "energy-levels", "feynman", "standard-model", "elements",
-    "nuclide-chart",
+    "nuclide-chart", "atom",
 )  # fmt: skip
 
 
@@ -148,3 +148,88 @@ def test_a_nuclide_chart_colours_each_nuclide_by_its_decay():
     assert "#1d1f27" in svg and "#3f74b8" in svg and ">Protons, Z<" in svg
     with pytest.raises(PosterError, match="a decay is one of"):
         draw("nuclide-chart", "1 | 0 | H | spontaneous")
+
+
+def test_energy_levels_have_a_key_of_what_they_drew():
+    svg = draw("energy-levels", "level: a | -3\nlevel: b | -1\njump: b | a | down").svg
+    assert ">Emitted: down, wavy<" in svg and "Absorbed" not in svg  # only the kinds of arrow drawn
+    assert 'fill="url(#energy-spectrum)"' in svg and "Ultraviolet" not in svg  # 2 eV is 620 nm: visible...
+    svg = draw("energy-levels", "level: a | -3\nlevel: b | -2.5\njump: b | a | down").svg
+    assert "Ultraviolet or infrared" in svg  # ...0.5 eV is infrared
+
+
+def test_the_u_channel_keeps_its_arrows_and_labels_off_the_crossing():
+    svg = draw("feynman", "out1: c\nout2: d", "topology=u-channel").svg
+    # the outgoing lines cross at (440, 160); their arrows sit three quarters along, clear of it
+    heads = re.findall(r'<line x1="[\d.]+" y1="[\d.]+" x2="([\d.]+)" y2="([\d.]+)"[^>]*marker-end', svg)
+    assert heads and all(abs(float(x) - 440) > 40 for x, _ in heads[-2:])
+
+
+def test_a_periodic_table_puts_every_element_in_its_place():
+    svg = draw("elements", "Fe Au", "layout=table").svg
+    assert svg.count("<rect") >= 118 + len(CATEGORIES)
+    assert svg.count('fill-opacity=".14"') == 116  # the rest in a pale tint of their category
+    assert ">57-71<" in svg and ">89-103<" in svg
+    assert draw("elements", "", "layout=table").svg.count('fill-opacity=".14"') == 0  # none named: all solid
+
+
+def test_a_nuclide_path_is_arrows_named_in_the_key():
+    svg = draw("nuclide-chart", "6 | 6 | C | stable\n7 | 6 | N | beta+\npath: 6,6 7,6 | Capture | amber").svg
+    assert 'marker-end="url(#nuc-path0)"' in svg and ">Capture<" in svg
+
+
+@pytest.mark.parametrize(
+    "z, shells_, text",
+    [
+        (1, [1], "1s¹"),
+        (14, [2, 8, 4], "[Ne] 3s² 3p²"),
+        (24, [2, 8, 13, 1], "[Ar] 3d⁵ 4s¹"),  # chromium: a half-filled d shell, not Madelung's 3d⁴ 4s²
+        (29, [2, 8, 18, 1], "[Ar] 3d¹⁰ 4s¹"),
+        (46, [2, 8, 18, 18], "[Kr] 4d¹⁰"),
+        (79, [2, 8, 18, 32, 18, 1], "[Xe] 4f¹⁴ 5d¹⁰ 6s¹"),
+        (118, [2, 8, 18, 32, 32, 18, 8], "[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁶"),
+    ],
+)
+def test_electron_configurations_follow_madelung_with_the_measured_exceptions(z, shells_, text):
+    from py_doc.poster_elements import configuration_text, shells
+
+    assert shells(z) == shells_ and configuration_text(z) == text
+
+
+def test_every_element_has_its_electrons():
+    from py_doc.poster_elements import shells
+
+    assert all(sum(shells(z)) == z for z in BY_NUMBER)
+
+
+def test_element_tiles_show_what_is_asked():
+    svg = draw("elements", "Si", "show=name,shells,config").svg
+    assert ">Silicon<" in svg and ">2-8-4<" in svg and ">[Ne] 3s² 3p²<" in svg and ">28.09<" not in svg
+    assert ">28.09<" in draw("elements", "Si").svg  # tiles show the weight unless told otherwise
+    table = draw("elements", "Si", "layout=table show=name,weight,groups").svg
+    assert ">Atomic weight<" in table and ">18<" in table  # the key tile, and the group numbers
+    with pytest.raises(PosterError, match="show= takes"):
+        draw("elements", "Si", "show=colour")
+
+
+def test_an_atom_has_its_particles_and_its_shells():
+    svg = draw("atom", "Na").svg
+    assert svg.count('fill="url(#atom-e)"') == 11 + 1  # its electrons, and the key's
+    assert svg.count('fill="url(#atom-p)"') == 11 + 1 and svg.count('fill="url(#atom-n)"') == 12 + 1
+    assert "shells 2-8-1" in svg and "[Ne] 3s¹" in svg
+    assert "6 p⁺, 8 n" in draw("atom", "C | 8").svg  # carbon-14
+    assert draw("atom", "Fe", "key=no").svg.count('fill="url(#atom-p)"') == 26  # 56 nucleons drawn one by one...
+    assert ">79 p⁺<" in draw("atom", "Au").svg  # ...but gold's 197 as one disc
+
+
+@pytest.mark.parametrize(
+    "code, info, message",
+    [
+        ("Xx", "", "not an element"),
+        ("Al", "style=orbits", "too many to draw as orbits"),
+        ("C", "style=cloud", "shells or orbits"),
+    ],
+)
+def test_atom_mistakes_are_errors(code, info, message):
+    with pytest.raises(PosterError, match=message):
+        draw("atom", code, info)
