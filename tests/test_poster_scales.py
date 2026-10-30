@@ -38,7 +38,7 @@ def test_every_svg_block_is_valid_xml_on_its_own(name):
     ET.fromstring(standalone(drawn.svg, Theme()).split("\n", 1)[1])  # a duplicate attribute would raise here
 
 
-SCALES = ("threshold", "buckets", "gauge", "dial24", "rating", "gradient-scale", "logscale", "spectrum")
+SCALES = ("threshold", "uncertainty", "buckets", "gauge", "dial24", "rating", "gradient-scale", "logscale", "spectrum")
 
 
 @pytest.mark.parametrize("name", SCALES)
@@ -196,3 +196,25 @@ def test_channels_are_lobes_on_a_frequency_axis():
 def test_an_unknown_spectrum_mode_is_an_error():
     with pytest.raises(PosterError, match="spectrum mode must be one of"):
         draw("spectrum", "", "mode=sound")
+
+
+def test_a_cone_of_uncertainty_narrows_to_the_final_value():
+    svg = block_fragment("uncertainty", {}, "Start | 0.25 | 4\nMiddle | 0.8 | 1.25\nDone | 1 | 1", ctx()).svg
+    upper = re.findall(r'<polyline points="([^"]+)"', svg)[0].split()
+    ys = [float(point.split(",")[1]) for point in upper]
+    assert ys == sorted(ys)  # the top edge falls to the final value
+    assert ">4×<" in svg and ">1×<" in svg and ">Middle<" in svg
+
+
+@pytest.mark.parametrize(
+    "code, message",
+    [
+        ("Start | 4", "is 'milestone | low | high'"),
+        ("Start | 2 | 1\nEnd | 1 | 1", "needs 0 < low <= high"),
+        ("Start | 0.5 | 2", "at least two milestones"),
+        ("A | 0.5 | 2 | 3\nB | 1 | 1 | 1", "times must rise"),
+    ],
+)
+def test_uncertainty_mistakes_are_errors(code, message):
+    with pytest.raises(PosterError, match=message):
+        block_fragment("uncertainty", {}, code, ctx())

@@ -24,7 +24,7 @@ Unit | 55 % | Off target, under a second each | green
 
 ## `pyramid`: upside down
 
-`direction=down` puts the widest tier at the top.
+`direction=down` puts the widest tier at the top: still flat, where a `cone` is round.
 
 ````markdown
 ```pyramid direction=down
@@ -44,7 +44,7 @@ Site visits | 1 a year | Booked by support | red
 
 ## `cone`
 
-Tiers as a cone, widest at the top: here, ideas narrowing to what was built.
+Tiers as bands of a solid cone, round and widest at the top: here, ideas narrowing to what was built.
 
 ````markdown
 ```cone

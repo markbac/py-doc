@@ -25,7 +25,7 @@ from markdown_it import MarkdownIt
 from py_doc.diagrams import BY_FENCE, DiagramError
 from py_doc.diagrams.render import draw_cached, translated, with_mermaid_config
 from py_doc import poster_barcode, poster_math, poster_qr
-from py_doc.poster_svg import Linear, extent, number, sparklines
+from py_doc.poster_svg import Linear, extent, label, number, sparklines, svg, text_width, wrap
 from py_doc.errors import ConversionError, ToolFailed
 from py_doc.icons import IconError, Icons
 from py_doc.poster_themes import Theme
@@ -39,6 +39,7 @@ _validate_link = MD.validateLink
 MD.validateLink = lambda url: url.strip().lower().startswith("data:image/svg+xml;") or _validate_link(url)
 poster_math.enable(MD)  # $...$ and $$...$$, as MathML
 CHART_KINDS = ("column", "bar", "line", "waterfall")
+SMALL_ARROW = 12.5  # the words on a flow's arrows
 SERIES_COLOURS = ("secondary", "accent", "primary", "good", "bad", "muted")
 
 
@@ -251,8 +252,13 @@ def take_icon(cells, ctx, size="1.25em"):
 
 def icon_html(name, ctx, size="1.25em"):
     """The icon ``name`` in a span that sits before a line of text. Raises PosterError for an unknown one."""
+    return f'<span class="ico">{icon_svg(name, ctx, size)}</span>'
+
+
+def icon_svg(name, ctx, size="1.25em"):
+    """The icon ``name`` as inline SVG alone, to go in a picture. Raises PosterError for an unknown one."""
     try:
-        return f'<span class="ico">{ctx.icons.svg(name, size)}</span>'
+        return ctx.icons.svg(name, size)
     except IconError as exc:
         raise PosterError(f"{ctx.where}: {exc}") from None
 
@@ -434,28 +440,179 @@ def segments_part(code, ctx):
     return meta.get("title"), f'<div class="bar" style="min-height:{h}px">{cells}</div>', "\n".join(notes).strip()
 
 
-def flow_part(code, ctx):
-    meta, lines = kv_split(code)
-    rows, notes = "", []
+FLOW_SIZE = 15  # the text of a box
+FLOW_PAD, FLOW_LINE, FLOW_WIDEST = 14, 19, 170  # a box's padding and line height, and its widest line of text
+
+
+def _flow_parse(lines, ctx):
+    """The boxes and arrows of a flow: each box once, by its text, with the colour and icon it first had."""
+    nodes, edges, notes = {}, [], []
     for line in lines:
         if "->" not in line or "[" not in line:
             notes.append(line)
             continue
-        parts = ""
+        previous, arrow = None, None
         for m in TOK.finditer(line):
-            if m.group(1) is not None:
-                # [Text|colour], [Text|colour|icon=name] or [Text|icon=name]: an outlined box has no colour
-                rest, icon = take_icon((m.group(2) or "").split("|"), ctx)
-                colour = next((cell.strip() for cell in rest if cell.strip()), None)
-                if colour:
-                    parts += f'<div class="node" style="background:{ctx.theme.colour(colour)}">{icon}{inline(m.group(1))}</div>'
-                else:
-                    parts += f'<div class="node out">{icon}{inline(m.group(1))}</div>'
-            else:
-                label = (m.group(3) or "").strip()
-                parts += f'<div class="arr">{inline(label) + "<br>" if label else ""}<i>→</i></div>'
-        rows += f'<div class="flow">{parts}</div>'
-    return meta.get("title"), rows, "\n".join(notes).strip()
+            if m.group(1) is None:
+                arrow = (m.group(3) or "").strip()
+                continue
+            name = m.group(1).strip()
+            cells = [cell.strip() for cell in (m.group(2) or "").split("|")]
+            icons = [found[1] for found in map(_ICON_CELL.match, cells) if found]
+            icon = icon_svg(icons[0], ctx, "18") if icons else ""
+            colour = next((cell for cell in cells if cell and not _ICON_CELL.match(cell)), None)
+            if name not in nodes:
+                nodes[name] = {"colour": colour, "icon": icon}
+            elif colour and not nodes[name]["colour"]:
+                nodes[name]["colour"] = colour
+            nodes[name]["icon"] = nodes[name]["icon"] or icon
+            if previous is not None and arrow is not None:
+                edges.append((previous, name, arrow))
+            previous, arrow = name, None
+    return nodes, edges, notes
+
+
+def _flow_place(main, names, edges):
+    """Each box's column and row. The boxes of the first line run along the top row, left to right; a box off
+    it goes under the box it leaves from, and what follows it goes on to the right in its row. An arrow to a box
+    already placed to its left is a loop back."""
+    col = {name: n for n, name in enumerate(main)}
+    row = dict.fromkeys(main, 0)
+    taken = {(c, 0) for c in col.values()}
+    pending = [name for name in names if name not in col]
+    while pending:
+        # the next box reached from one already placed, else the first left, which starts a row of its own
+        name = next((n for n in pending if any(a in col for a, b, _ in edges if b == n)), pending[0])
+        pending.remove(name)
+        source = next((a for a, b, _ in edges if b == name and a in col), None)
+        if source is None:
+            c, r = 0, max(r for _, r in taken) + 1
+        elif row[source] == 0:
+            c, r = col[source], 1
+        else:
+            c, r = col[source] + 1, row[source]
+        while (c, r) in taken:
+            r += 1
+        col[name], row[name] = c, r
+        taken.add((c, r))
+    return col, row
+
+
+def flow_part(code, ctx):
+    """Boxes joined by labelled arrows, as one picture: each box drawn once, however many lines name it."""
+    meta, lines = kv_split(code)
+    nodes, edges, notes = _flow_parse(lines, ctx)
+    if not nodes:
+        return meta.get("title"), "", "\n".join(notes).strip()
+    first_line = next(line for line in lines if "->" in line and "[" in line)
+    main = list(dict.fromkeys(m.group(1).strip() for m in TOK.finditer(first_line) if m.group(1) is not None))
+    col, row = _flow_place(main, list(nodes), edges)
+    # the size of each box, from its text, wrapped to FLOW_WIDEST
+    for name, node in nodes.items():
+        filled = bool(node["colour"])
+        node["lines"] = wrap(name, FLOW_WIDEST, FLOW_SIZE, filled)
+        widest = max(text_width(line, FLOW_SIZE, filled) for line in node["lines"])
+        node["w"] = widest + 2 * FLOW_PAD + (24 if node["icon"] else 0)
+        node["h"] = len(node["lines"]) * FLOW_LINE + 2 * FLOW_PAD - 4
+    cols, rows = max(col.values()) + 1, max(row.values()) + 1
+    col_w = [max([nodes[n]["w"] for n in nodes if col[n] == c] or [60]) for c in range(cols)]
+    row_h = [max([nodes[n]["h"] for n in nodes if row[n] == r] or [40]) for r in range(rows)]
+    # the gap after each column fits the words of the arrows across it; the gap under a row, those down it
+    gap_w = [56.0] * cols
+    gap_h = [34.0] * rows
+    for a, b, text in edges:
+        if not text:
+            continue
+        if row[a] == row[b] and col[b] == col[a] + 1:
+            gap_w[col[a]] = max(gap_w[col[a]], text_width(text, SMALL_ARROW, True) + 24)
+        elif col[a] == col[b] and row[b] == row[a] + 1:
+            gap_h[row[a]] = max(gap_h[row[a]], 40)
+    loops = [(a, b, t) for a, b, t in edges if (row[b], col[b]) <= (row[a], col[a]) and row[a] == row[b] == 0]
+    top = 46.0 if loops else 6.0
+    xs, x = [], 6.0
+    for c in range(cols):
+        xs.append(x)
+        x += col_w[c] + gap_w[c]
+    ys, y = [], top
+    for r in range(rows):
+        ys.append(y)
+        y += row_h[r] + gap_h[r]
+    width, height = x - gap_w[-1] + 6, y - gap_h[-1] + 6
+    box = {}
+    for name, node in nodes.items():
+        c, r = col[name], row[name]
+        bx = xs[c] + (col_w[c] - node["w"]) / 2
+        by = ys[r] + (row_h[r] - node["h"]) / 2
+        box[name] = (bx, by, node["w"], node["h"])
+    ink = ctx.theme.colours["muted"]
+    words = ctx.theme.colours.get("accent-text", ctx.theme.colours["accent"])
+    out = [
+        f'<defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" '
+        f'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="{ink}"/></marker></defs>'
+    ]
+    arrow = f'fill="none" stroke="{ink}" stroke-width="2" marker-end="url(#flow-arrow)"'
+    tag = f'fill="{words}" font-weight="700" paint-order="stroke" stroke="{ctx.theme.colours["surface"]}" stroke-width="4"'
+    for a, b, text in edges:
+        ax, ay, aw, ah = box[a]
+        bx, by, bw, bh = box[b]
+        if (a, b, text) in loops:  # back along the top row: an arc over the boxes between
+            x0, x1 = ax + aw / 2, bx + bw / 2
+            lift = top - 30
+            out.append(
+                f'<path d="M{x0:.1f},{ay:.1f} C{x0:.1f},{lift:.1f} {x1:.1f},{lift:.1f} {x1:.1f},{by - 2:.1f}" {arrow}/>'
+            )
+            if text:
+                out.append(label((x0 + x1) / 2, lift + 8, text, SMALL_ARROW, "middle", tag))
+        elif row[a] == row[b] and col[b] > col[a]:  # along a row
+            y0 = ay + ah / 2
+            out.append(f'<path d="M{ax + aw:.1f},{y0:.1f} L{bx - 2:.1f},{y0:.1f}" {arrow}/>')
+            if text:
+                out.append(label((ax + aw + bx) / 2, y0 - 7, text, SMALL_ARROW, "middle", tag))
+        elif col[a] == col[b] and row[b] > row[a]:  # down a column
+            x0 = ax + aw / 2
+            out.append(f'<path d="M{x0:.1f},{ay + ah:.1f} L{x0:.1f},{by - 2:.1f}" {arrow}/>')
+            if text:
+                out.append(label(x0 + 8, (ay + ah + by) / 2 + 4, text, SMALL_ARROW, "start", tag))
+        else:  # any other way: a curve from side to side
+            x0, y0 = (ax + aw, ay + ah / 2) if bx > ax else (ax + aw / 2, ay + ah)
+            x1, y1 = (bx - 2, by + bh / 2) if bx > ax else (bx + bw / 2, by + bh + 2)
+            bend = max(abs(x1 - x0), abs(y1 - y0)) / 2
+            c0 = f"{x0 + bend:.1f},{y0:.1f}" if bx > ax else f"{x0:.1f},{y0 + bend:.1f}"
+            c1 = f"{x1 - bend:.1f},{y1:.1f}" if bx > ax else f"{x1:.1f},{y1 + bend:.1f}"
+            out.append(f'<path d="M{x0:.1f},{y0:.1f} C{c0} {c1} {x1:.1f},{y1:.1f}" {arrow}/>')
+            if text:
+                out.append(label((x0 + x1) / 2, (y0 + y1) / 2 - 6, text, SMALL_ARROW, "middle", tag))
+    for name, node in nodes.items():
+        x0, y0, w, h = box[name]
+        if node["colour"]:
+            out.append(
+                f'<rect x="{x0:.1f}" y="{y0:.1f}" width="{w:.1f}" height="{h:.1f}" rx="5" fill="{ctx.theme.colour(node["colour"])}"/>'
+            )
+            text_attrs = 'fill="#fff" font-weight="700"'
+        else:
+            out.append(
+                f'<rect x="{x0 + 1:.1f}" y="{y0 + 1:.1f}" width="{w - 2:.1f}" height="{h - 2:.1f}" fill="{ctx.theme.colours["surface"]}" '
+                f'stroke="{ctx.theme.colours["strong"]}" stroke-width="2"/>'
+            )
+            text_attrs = ""
+        cx = x0 + w / 2
+        if node["icon"]:
+            cx += 12
+            icon_y = y0 + h / 2 - 9
+            colour = "#fff" if node["colour"] else "currentColor"
+            out.append(
+                f'<g transform="translate({x0 + FLOW_PAD:.1f},{icon_y:.1f})" color="{colour}">{node["icon"]}</g>'
+            )
+        first = y0 + h / 2 - (len(node["lines"]) - 1) * FLOW_LINE / 2 + FLOW_SIZE * 0.35
+        for k, line in enumerate(node["lines"]):
+            out.append(label(cx, first + k * FLOW_LINE, line, FLOW_SIZE, "middle", text_attrs))
+    title = meta.get("title") or "flow"
+    picture = svg(width, height, "".join(out), title, "chart")
+    return (
+        meta.get("title"),
+        f'<div class="flow-chart" style="max-width:{width:.0f}px">{picture}</div>',
+        "\n".join(notes).strip(),
+    )
 
 
 def lanes_part(code, ctx):

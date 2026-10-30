@@ -97,7 +97,7 @@ def hex_dissect_html(code, opts, ctx):
     rows = (len(data) + cols - 1) // cols
     out = []
     for r in range(rows):
-        y = top + r * (cell_h + 4)
+        y = top + r * (cell_h + 8)
         out.append(
             label(
                 left - 8, y + 18, f"{r * cols:04x}", SMALL, "end", f'{_mono(ctx)} fill="{ctx.theme.colours["muted"]}"'
@@ -113,6 +113,8 @@ def hex_dissect_html(code, opts, ctx):
             out.append(
                 f'<rect x="{x}" y="{y}" width="{cell_w - 2}" height="{cell_h}" rx="3" {fill} stroke="{colour or ctx.theme.colours["border"]}"/>'
             )
+            if colour:  # a solid bar under the byte, the colour of its swatch in the key
+                out.append(f'<rect x="{x}" y="{y + cell_h + 1}" width="{cell_w - 2}" height="3" fill="{colour}"/>')
             out.append(
                 label(x + (cell_w - 2) / 2, y + 18, f"{data[n]:02x}", SIZE, "middle", f'{_mono(ctx)} font-weight="700"')
             )
@@ -122,14 +124,15 @@ def hex_dissect_html(code, opts, ctx):
                 out.append(
                     label(ax, y + 18, ch, SIZE, "middle", f'{_mono(ctx)} fill="{colour or ctx.theme.colours["muted"]}"')
                 )
-    y = top + rows * (cell_h + 4) + 14
+    y = top + rows * (cell_h + 8) + 16
+    values_x = left + 80 + max((text_width(name, SIZE, True) for _, _, name, _, _ in fields), default=0)
     for start, end, name, value, colour in fields:
         span = f"{start}" if start == end else f"{start}-{end}"
         out.append(f'<rect x="{left}" y="{y - 12}" width="14" height="14" rx="2" fill="{colour}"/>')
         out.append(label(left + 22, y, f"{span}", SMALL, extra=f'{_mono(ctx)} fill="{ctx.theme.colours["muted"]}"'))
         out.append(label(left + 72, y, name, SIZE, extra='font-weight="700"'))
         if value:
-            out.append(label(left + 80 + text_width(name, SIZE, True), y, value, SIZE))
+            out.append(label(values_x, y, value, SIZE))  # the values in a column of their own
         y += 20
     width = max(WIDTH, left + cols * cell_w + (14 + cols * 10 if show_ascii else 0) + 10)
     return _fig(opts, svg(width, y, "".join(out), opts.get("title", "hex dump"), "chart"))

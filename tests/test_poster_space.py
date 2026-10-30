@@ -148,3 +148,31 @@ def test_a_nuclide_chart_colours_each_nuclide_by_its_decay():
     assert "#1d1f27" in svg and "#3f74b8" in svg and ">Protons, Z<" in svg
     with pytest.raises(PosterError, match="a decay is one of"):
         draw("nuclide-chart", "1 | 0 | H | spontaneous")
+
+
+def test_energy_levels_have_a_key_of_what_they_drew():
+    svg = draw("energy-levels", "level: a | -3\nlevel: b | -1\njump: b | a | down").svg
+    assert ">Emitted: down, wavy<" in svg and "Absorbed" not in svg  # only the kinds of arrow drawn
+    assert 'fill="url(#energy-spectrum)"' in svg and "Ultraviolet" not in svg  # 2 eV is 620 nm: visible...
+    svg = draw("energy-levels", "level: a | -3\nlevel: b | -2.5\njump: b | a | down").svg
+    assert "Ultraviolet or infrared" in svg  # ...0.5 eV is infrared
+
+
+def test_the_u_channel_keeps_its_arrows_and_labels_off_the_crossing():
+    svg = draw("feynman", "out1: c\nout2: d", "topology=u-channel").svg
+    # the outgoing lines cross at (440, 160); their arrows sit three quarters along, clear of it
+    heads = re.findall(r'<line x1="[\d.]+" y1="[\d.]+" x2="([\d.]+)" y2="([\d.]+)"[^>]*marker-end', svg)
+    assert heads and all(abs(float(x) - 440) > 40 for x, _ in heads[-2:])
+
+
+def test_a_periodic_table_puts_every_element_in_its_place():
+    svg = draw("elements", "Fe Au", "layout=table").svg
+    assert svg.count("<rect") >= 118 + len(CATEGORIES)
+    assert svg.count('fill-opacity=".14"') == 116  # the rest in a pale tint of their category
+    assert ">57-71<" in svg and ">89-103<" in svg
+    assert draw("elements", "", "layout=table").svg.count('fill-opacity=".14"') == 0  # none named: all solid
+
+
+def test_a_nuclide_path_is_arrows_named_in_the_key():
+    svg = draw("nuclide-chart", "6 | 6 | C | stable\n7 | 6 | N | beta+\npath: 6,6 7,6 | Capture | amber").svg
+    assert 'marker-end="url(#nuc-path0)"' in svg and ">Capture<" in svg

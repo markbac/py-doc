@@ -30,13 +30,16 @@ def test_every_shape_draws_its_example_as_svg(name):
     assert draw(name, BLOCKS[name].example, BLOCKS[name].info).svg.startswith('<svg class="chart"')
 
 
-def test_a_pyramid_points_up_and_a_cone_down():
+def test_a_pyramid_points_up_and_down_and_a_cone_is_round():
     up = draw("pyramid", "Top | 5 %\nBase | 95 %").svg
-    down = draw("cone", "Top | 95 %\nTip | 5 %").svg
+    down = draw("pyramid", "Top | 95 %\nTip | 5 %", "direction=down").svg
     first_up = re.search(r'<path d="M([\d.]+),\d+ L([\d.]+),', up)
     first_down = re.search(r'<path d="M([\d.]+),\d+ L([\d.]+),', down)
     assert float(first_up[2]) - float(first_up[1]) == 0  # the point, at the top
     assert float(first_down[2]) - float(first_down[1]) > 300  # the wide end, at the top
+    cone = draw("cone", "Top | 95 %\nTip | 5 %").svg
+    assert re.search(r'<ellipse cx="180" cy="24" rx="170.0"', cone)  # its round top, as wide as the cone
+    assert " A" in cone and "A" not in down  # its bands have curved edges, the pyramid's straight ones
 
 
 def test_a_narrow_tier_puts_its_name_beside_it():

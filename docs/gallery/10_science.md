@@ -188,7 +188,7 @@ event: 0.3 | 1.2 | Inside: in the future of the origin
 
 ## `spacetime`: gravity wells
 
-Bodies as potential wells side by side, on a log scale.
+Bodies as sheets of spacetime side by side, each sagging into its well, on a log scale: the deeper the well, the narrower its throat.
 
 ````markdown
 ```spacetime mode=well scale=log
@@ -220,7 +220,7 @@ A conformal diagram of all of spacetime, here with a black hole's horizon and si
 
 ## `energy-levels`
 
-Energy levels and the jumps between them, each in the colour of its light.
+Energy levels and the jumps between them. A straight arrow up is light absorbed and a wavy arrow down is light emitted. Each is in the colour of its light, or grey when that is ultraviolet or infrared, as the Lyman lines are. A key beside the levels shows each kind of arrow and the colours.
 
 ````markdown
 ```energy-levels
@@ -474,6 +474,20 @@ H Li C N O Na Mg Al Si S Cl Ca Fe Cu Zn Ag Sn Au Pb U
 H Li C N O Na Mg Al Si S Cl Ca Fe Cu Zn Ag Sn Au Pb U
 ```
 
+## `elements`: periodic table
+
+`layout=table` sets every element in its place in the periodic table, coloured by category: those named solid, the rest in a pale tint. With none named, every element is solid.
+
+````markdown
+```elements layout=table title="What an SN-100 is made of"
+Li Mn O C F P Cu Al Sn Ag Si Au Ni Fe
+```
+````
+
+```elements layout=table title="What an SN-100 is made of"
+Li Mn O C F P Cu Al Sn Ag Si Au Ni Fe
+```
+
 ## `nuclide-chart`
 
 Nuclides by protons and neutrons, coloured by how they decay, with the magic numbers, the valley of stability and a reaction path.
@@ -495,10 +509,12 @@ Nuclides by protons and neutrons, coloured by how they decay, with the magic num
 6 | 6 | ¹²C | stable
 6 | 7 | ¹³C | stable
 6 | 8 | ¹⁴C | beta-
+7 | 6 | ¹³N | beta+
 7 | 7 | ¹⁴N | stable
 7 | 8 | ¹⁵N | stable
+8 | 7 | ¹⁵O | beta+
 8 | 8 | ¹⁶O | stable
-path: 6,6 7,6 6,7 7,7 8,7 7,8 6,6 | CNO cycle | red
+path: 6,6 7,6 6,7 7,7 8,7 7,8 6,6 | CNO cycle | amber
 ```
 ````
 
@@ -518,10 +534,12 @@ path: 6,6 7,6 6,7 7,7 8,7 7,8 6,6 | CNO cycle | red
 6 | 6 | ¹²C | stable
 6 | 7 | ¹³C | stable
 6 | 8 | ¹⁴C | beta-
+7 | 6 | ¹³N | beta+
 7 | 7 | ¹⁴N | stable
 7 | 8 | ¹⁵N | stable
+8 | 7 | ¹⁵O | beta+
 8 | 8 | ¹⁶O | stable
-path: 6,6 7,6 6,7 7,7 8,7 7,8 6,6 | CNO cycle | red
+path: 6,6 7,6 6,7 7,7 8,7 7,8 6,6 | CNO cycle | amber
 ```
 
 ## `chess`

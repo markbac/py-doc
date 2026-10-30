@@ -9,7 +9,7 @@ import math
 import re
 
 from py_doc.poster_blocks import Fragment, PosterError, _whole, block, esc, mark_colour
-from py_doc.poster_svg import Linear, arc, label, number, polar, sector, spread, svg, text_width, wrap
+from py_doc.poster_svg import Linear, label, number, polar, sector, spread, svg, text_width, wrap
 
 WIDTH = 640
 SIZE = 13
@@ -77,7 +77,7 @@ def _callouts(out, items, x_text, top, bottom, ctx, gap=34):
     "End-to-end | 5 % | Real network and hardware | red\nHardware in the loop | 20 % | HIL rig | amber\nIntegration | 25 % | Simulated peripherals | blue\nUnit tests | 50 % | Fast, off target | green",
 )
 def pyramid_html(code, opts, ctx):
-    """Tiers of a pyramid (or, ``direction=down``, a cone), with labels inside and details beside."""
+    """Tiers of a pyramid (or, ``direction=down``, upside down), with labels inside and details beside."""
     rows = _rows(code, ctx, "pyramid")
     down = opts.get("direction", "up").lower() == "down"
     n = len(rows)
@@ -108,6 +108,58 @@ def pyramid_html(code, opts, ctx):
     bottom = top + n * (tier + gap)
     end = _callouts(out, items, cx + width / 2 + 30, top + 10, bottom - 10, ctx)
     return _fig(opts, svg(WIDTH, max(bottom, end), "".join(out), opts.get("title", "pyramid"), "chart"))
+
+
+@block(
+    "cone",
+    "label | value | detail | colour lines from the wide top to the point, drawn as a solid cone",
+    "Ideas | 400 | Every request | blue\nScoped | 120 | Fits the plan | navy\nBuilt | 30 | Shipped | green",
+)
+def cone_html(code, opts, ctx):
+    """Bands of a solid cone, its round top seen from a little above, its point at the bottom: the shape of a
+    pyramid upside down, drawn in the round so the two do not look alike."""
+    rows = _rows(code, ctx, "cone")
+    n = len(rows)
+    tier, top = 48, 24
+    width, cx, tilt = 340, 180, 0.14  # tilt: an ellipse's height to its width, how far above the cone is seen from
+    out = [
+        '<defs><linearGradient id="cone-shade" x1="0" x2="1" y1="0" y2="0">'
+        '<stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/>'
+        '<stop offset="1" stop-color="#000" stop-opacity=".28"/></linearGradient></defs>'
+    ]
+    items, bands = [], []
+    for i, row in enumerate(rows):
+        y0, y1 = top + i * tier, top + (i + 1) * tier
+        w0, w1 = width / 2 * (n - i) / n, width / 2 * (n - i - 1) / n
+        colour = _colour(row, 3, ctx)
+        # the band's front: the near half of the ellipse at its top, down its sides, the near half at its bottom
+        band = (
+            f"M{cx - w0:.1f},{y0} A{w0:.1f},{w0 * tilt:.1f} 0 0 0 {cx + w0:.1f},{y0} "
+            f"L{cx + w1:.1f},{y1} A{max(w1, 0.01):.1f},{w1 * tilt:.1f} 0 0 1 {cx - w1:.1f},{y1} Z"
+        )
+        # drawn from the point up, each band's white edge over the top of the one below
+        bands.insert(
+            0,
+            f'<path d="{band}" fill="{colour}"/><path d="{band}" fill="url(#cone-shade)" stroke="#fff" stroke-width="2.5"/>',
+        )
+        if i == 0:  # the round top, lit
+            bands.append(
+                f'<ellipse cx="{cx}" cy="{y0}" rx="{w0:.1f}" ry="{w0 * tilt:.1f}" fill="{colour}"/>'
+                f'<ellipse cx="{cx}" cy="{y0}" rx="{w0:.1f}" ry="{w0 * tilt:.1f}" fill="#fff" fill-opacity=".35"/>'
+            )
+        room = w0 + w1 - 16
+        middle = (y0 + y1) / 2 + (w0 + w1) / 2 * tilt  # the middle of the band's front, below its curved top
+        value = row[1] if len(row) > 1 else ""
+        if text_width(row[0], SIZE, True) <= room:
+            bands.append(label(cx, middle + 4, row[0], SIZE, "middle", WHITE))
+            head = value
+        else:  # too narrow near the point: the name goes beside it
+            head = f"{row[0]} {value}".strip()
+        items.append((cx + (w0 + w1) / 2 + 4, (y0 + y1) / 2, head, row[2] if len(row) > 2 else ""))
+    out += bands
+    bottom = top + n * tier + 4
+    end = _callouts(out, items, cx + width / 2 + 30, top + 10, bottom - 10, ctx)
+    return _fig(opts, svg(WIDTH, max(bottom, end), "".join(out), opts.get("title", "cone"), "chart"))
 
 
 @block(
@@ -678,29 +730,43 @@ def cycle_html(code, opts, ctx):
     rows = _rows(code, ctx, "cycle", least=3)
     if len(rows) > 8:
         raise PosterError(f"{ctx.where}: a cycle has at most 8 stages")
-    cx, cy, r = WIDTH / 2, 190, 140
     n = len(rows)
-    box_w, box_h = 150, 54
+    box_w, box_h = 150, 58
+    # an ellipse, wider than tall, so the boxes at the sides do not crowd those at the top and bottom
+    cx, cy, rx, ry = WIDTH / 2, 170, WIDTH / 2 - box_w / 2 - 10, 170 - box_h / 2 - 8
+
+    def at(degrees):
+        return cx + rx * math.sin(math.radians(degrees)), cy - ry * math.cos(math.radians(degrees))
+
+    centres = [at(i * 360 / n) for i in range(n)]
+
+    def inside(point, centre, margin=8):
+        return abs(point[0] - centre[0]) < box_w / 2 + margin and abs(point[1] - centre[1]) < box_h / 2 + margin
+
     out = [
-        f'<defs><marker id="cyc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="{ctx.theme.colours["muted"]}"/></marker></defs>'
+        f'<defs><marker id="cyc-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="{ctx.theme.colours["muted"]}"/></marker></defs>'
     ]
-    half = math.degrees(math.atan2(box_w / 2 + 8, r)) * 0.9
     for i in range(n):
-        a0, a1 = i * 360 / n + half, (i + 1) * 360 / n - half
-        out.append(
-            f'<path d="{arc(cx, cy, r, a0, a1)}" fill="none" stroke="{ctx.theme.colours["muted"]}" stroke-width="3" marker-end="url(#cyc-arrow)"/>'
-        )
-    for i, row in enumerate(rows):
-        x, y = polar(cx, cy, r, i * 360 / n)
+        # the arc from where the ellipse leaves this box to where it meets the next, in steps of a degree
+        here, there = centres[i], centres[(i + 1) % n]
+        points = [at(i * 360 / n + d / 4) for d in range(0, int(360 / n * 4) + 1)]
+        points = [p for p in points if not inside(p, here) and not inside(p, there)]
+        if len(points) > 1:
+            path = "M" + " L".join(f"{x:.1f},{y:.1f}" for x, y in points)
+            out.append(
+                f'<path d="{path}" fill="none" stroke="{ctx.theme.colours["muted"]}" stroke-width="3" marker-end="url(#cyc-arrow)"/>'
+            )
+    for (x, y), row in zip(centres, rows):
         colour = _colour(row, 2, ctx)
+        detail = wrap(row[1], box_w - 14, SMALL - 1)[:2] if len(row) > 1 and row[1] else []
         out.append(
             f'<rect x="{x - box_w / 2:.1f}" y="{y - box_h / 2:.1f}" width="{box_w}" height="{box_h}" rx="10" fill="{colour}"/>'
         )
-        out.append(label(x, y - 4, row[0], SIZE, "middle", WHITE))
-        if len(row) > 1 and row[1]:
-            for k, part in enumerate(wrap(row[1], box_w - 12, SMALL - 1)[:2]):
-                out.append(label(x, y + 12 + k * 12, part, SMALL - 1, "middle", 'fill="#fff"'))
-    return _fig(opts, svg(WIDTH, cy * 2 + 10, "".join(out), opts.get("title", "cycle"), "chart"))
+        first = y + 5 - len(detail) * 6.5
+        out.append(label(x, first, row[0], SIZE, "middle", WHITE))
+        for k, part in enumerate(detail):
+            out.append(label(x, first + 15 + k * 13, part, SMALL - 1, "middle", 'fill="#fff"'))
+    return _fig(opts, svg(WIDTH, cy * 2, "".join(out), opts.get("title", "cycle"), "chart"))
 
 
 @block(
@@ -804,12 +870,7 @@ def iceberg_html(code, opts, ctx):
     return _fig(opts, svg(WIDTH, height, "".join(out), opts.get("title", "iceberg"), "chart"))
 
 
-# Aliases: a cone is a pyramid upside down, an onion is a target
-block(
-    "cone",
-    "As pyramid, wide at the top: label | value | detail | colour lines",
-    "Ideas | 400 | Every request | blue\nScoped | 120 | Fits the plan | navy\nBuilt | 30 | Shipped | green",
-)(lambda code, opts, ctx: pyramid_html(code, {**opts, "direction": "down"}, ctx))
+# An onion is a target
 block(
     "onion",
     "As target: ring | detail | colour lines from the core outwards",

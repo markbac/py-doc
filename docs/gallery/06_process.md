@@ -4,7 +4,7 @@ How work flows, what happens when, and how options compare. Each is a poster blo
 
 ## `flow`
 
-Filled and outlined boxes joined by labelled arrows. Lines that are not part of the flow become notes under it.
+Filled and outlined boxes joined by labelled arrows. A box named on several lines is drawn once: the first line runs along the top, a branch drops under the box it leaves, and an arrow back to an earlier box arcs over the top. Lines that are not part of the flow become notes under it.
 
 ````markdown
 ```flow

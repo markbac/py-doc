@@ -75,25 +75,49 @@ G | 1-20
 Bands in proportion to their weights, with the exact points where something changes pinned between them.
 
 ````markdown
-```threshold title="Smart prepayment credit"
-span: Normal credit | £20.00 to £2.00 | Everyday use, supply on | green | 4
-pin: £2.00 Low credit alert, emergency credit can be armed | amber
-span: Low credit | £2.00 to £0.00 | The customer can arm emergency credit | amber | 2
-pin: £0.00 Credit exhausted | red
-span: Emergency credit | A £10.00 pool | Borrowed, the supply stays on | purple | 3
-pin: -£10.00 Hard cut-off, the valve closes | red
-span: Disconnected | A top-up repays the £10.00 first | grey | 2
+```threshold title="SN-100 battery, by cell voltage"
+span: Healthy | 3.6 V to 3.3 V | A reading every 15 minutes | green | 5
+pin: 3.3 V Low battery flag sent with each reading | amber
+span: Low | 3.3 V to 3.1 V | A reading every hour, fewer radio retries | amber | 2
+pin: 3.1 V Replace the cell, support is told | red
+span: Critical | 3.1 V to 2.9 V | A daily heartbeat only | red | 2
+pin: 2.9 V Brown-out, the node shuts down | red
+span: Off | Below 2.9 V | Queued readings kept in flash | grey | 1
 ```
 ````
 
-```threshold title="Smart prepayment credit"
-span: Normal credit | £20.00 to £2.00 | Everyday use, supply on | green | 4
-pin: £2.00 Low credit alert, emergency credit can be armed | amber
-span: Low credit | £2.00 to £0.00 | The customer can arm emergency credit | amber | 2
-pin: £0.00 Credit exhausted | red
-span: Emergency credit | A £10.00 pool | Borrowed, the supply stays on | purple | 3
-pin: -£10.00 Hard cut-off, the valve closes | red
-span: Disconnected | A top-up repays the £10.00 first | grey | 2
+```threshold title="SN-100 battery, by cell voltage"
+span: Healthy | 3.6 V to 3.3 V | A reading every 15 minutes | green | 5
+pin: 3.3 V Low battery flag sent with each reading | amber
+span: Low | 3.3 V to 3.1 V | A reading every hour, fewer radio retries | amber | 2
+pin: 3.1 V Replace the cell, support is told | red
+span: Critical | 3.1 V to 2.9 V | A daily heartbeat only | red | 2
+pin: 2.9 V Brown-out, the node shuts down | red
+span: Off | Below 2.9 V | Queued readings kept in flash | grey | 1
+```
+
+## `uncertainty`
+
+A cone of uncertainty: how far an estimate may be from the outcome at each milestone, narrowing to it. Each line is `milestone | low | high`, as multiples of the final value, with an optional fourth cell for its time. Without times the milestones are evenly spaced.
+
+````markdown
+```uncertainty label="Estimate variability"
+Initial concept | 0.25 | 4 | 0
+Approved product definition | 0.5 | 2 | 1
+Requirements complete | 0.67 | 1.5 | 2
+User interface design complete | 0.8 | 1.25 | 3
+Detailed design complete | 0.9 | 1.1 | 5
+Software complete | 1 | 1 | 10
+```
+````
+
+```uncertainty label="Estimate variability"
+Initial concept | 0.25 | 4 | 0
+Approved product definition | 0.5 | 2 | 1
+Requirements complete | 0.67 | 1.5 | 2
+User interface design complete | 0.8 | 1.25 | 3
+Detailed design complete | 0.9 | 1.1 | 5
+Software complete | 1 | 1 | 10
 ```
 
 ## `buckets`
