@@ -476,16 +476,64 @@ H Li C N O Na Mg Al Si S Cl Ca Fe Cu Zn Ag Sn Au Pb U
 
 ## `elements`: periodic table
 
-`layout=table` sets every element in its place in the periodic table, coloured by category: those named solid, the rest in a pale tint. With none named, every element is solid.
+`layout=table` sets every element in its place in the periodic table, coloured by category: those named solid, the rest in a pale tint. With none named, every element is solid. `show=` picks what each tile gives under its symbol, from `name`, `weight`, `shells` (electrons per shell) and `config` (the electron configuration), and `groups` numbers the groups and periods. Beyond the name, a large tile in the gap says what each line is.
 
 ````markdown
-```elements layout=table title="What an SN-100 is made of"
+```elements layout=table show=name,weight,shells,groups title="What an SN-100 is made of"
 Li Mn O C F P Cu Al Sn Ag Si Au Ni Fe
 ```
 ````
 
-```elements layout=table title="What an SN-100 is made of"
+```elements layout=table show=name,weight,shells,groups title="What an SN-100 is made of"
 Li Mn O C F P Cu Al Sn Ag Si Au Ni Fe
+```
+
+## `elements`: what a tile shows
+
+The same `show=` on tiles: here every line a tile can have.
+
+````markdown
+```elements show=name,weight,shells,config
+H C Si Fe Au U
+```
+````
+
+```elements show=name,weight,shells,config
+H C Si Fe Au U
+```
+
+## `atom`: shells
+
+The structure of an atom: its nucleus of protons and neutrons, and its electrons on their shells (the Bohr model), with the count on each shell. A line is `element | neutrons`; without the neutrons, it has those of its most common isotope, from the atomic weight. A nucleus of more than 60 is one disc with its counts on it.
+
+````markdown
+```atom
+C
+Na
+Fe
+```
+````
+
+```atom
+C
+Na
+Fe
+```
+
+## `atom`: orbits
+
+`style=orbits` draws a small atom as it is often pictured, its electrons round three tilted orbits. Here carbon-14, with its two extra neutrons.
+
+````markdown
+```atom style=orbits
+Li
+C | 8
+```
+````
+
+```atom style=orbits
+Li
+C | 8
 ```
 
 ## `nuclide-chart`

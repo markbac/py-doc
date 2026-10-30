@@ -145,3 +145,57 @@ def _load():
 
 ELEMENTS = _load()
 BY_NUMBER = {e[0]: e for e in ELEMENTS.values()}
+
+
+# The ground-state electron configuration of each element: the subshells filled in Madelung's order (by n + l,
+# then n), except for these, whose measured configurations differ (PubChem). Each is {"nl": electrons}.
+_ORDER = sorted(((n, l) for n in range(1, 8) for l in range(4) if l < n), key=lambda s: (s[0] + s[1], s[0]))  # noqa: E741
+_LETTERS = "spdf"
+_EXCEPTIONS = {
+    24: {"3d": 5, "4s": 1}, 29: {"3d": 10, "4s": 1}, 41: {"4d": 4, "5s": 1}, 42: {"4d": 5, "5s": 1},
+    44: {"4d": 7, "5s": 1}, 45: {"4d": 8, "5s": 1}, 46: {"4d": 10, "5s": 0}, 47: {"4d": 10, "5s": 1},
+    57: {"4f": 0, "5d": 1}, 58: {"4f": 1, "5d": 1}, 64: {"4f": 7, "5d": 1}, 78: {"5d": 9, "6s": 1},
+    79: {"5d": 10, "6s": 1}, 89: {"5f": 0, "6d": 1}, 90: {"5f": 0, "6d": 2}, 91: {"5f": 2, "6d": 1},
+    92: {"5f": 3, "6d": 1}, 93: {"5f": 4, "6d": 1}, 96: {"5f": 7, "6d": 1}, 103: {"6d": 0, "7p": 1},
+}  # fmt: skip
+_NOBLE = {2: "He", 10: "Ne", 18: "Ar", 36: "Kr", 54: "Xe", 86: "Rn"}
+
+
+def configuration(z: int) -> dict[str, int]:
+    """The electrons in each subshell of element ``z``, such as {"1s": 2, "2s": 2, "2p": 2} for carbon, in
+    the order the subshells fill."""
+    out, left = {}, z
+    for n, l in _ORDER:  # noqa: E741
+        if left <= 0:
+            break
+        take = min(left, 4 * l + 2)
+        out[f"{n}{_LETTERS[l]}"] = take
+        left -= take
+    for subshell, count in _EXCEPTIONS.get(z, {}).items():
+        out[subshell] = count
+    return {name: count for name, count in out.items() if count}
+
+
+def shells(z: int) -> list[int]:
+    """The electrons in each shell of element ``z``, from the innermost: [2, 8, 4] for silicon."""
+    counts = [0] * 7
+    for subshell, count in configuration(z).items():
+        counts[int(subshell[0]) - 1] += count
+    return [count for count in counts if count] if z else []
+
+
+def _superscript(number: int) -> str:
+    return str(number).translate(str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹"))
+
+
+def configuration_text(z: int) -> str:
+    """The configuration of element ``z`` after the noble gas before it, as written: "[Ne] 3s² 3p²" for silicon,
+    its subshells in order of n then l."""
+    core = max((n for n in _NOBLE if n < z), default=0)
+    inner = configuration(core) if core else {}
+    rest = {name: count for name, count in configuration(z).items() if count != inner.get(name, 0)}
+    parts = [
+        f"{name}{_superscript(count)}"
+        for name, count in sorted(rest.items(), key=lambda s: (s[0][0], _LETTERS.index(s[0][1])))
+    ]
+    return " ".join(([f"[{_NOBLE[core]}]"] if core else []) + parts)

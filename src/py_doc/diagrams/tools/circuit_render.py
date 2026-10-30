@@ -11,6 +11,7 @@ import sys
 
 import schemdraw
 import schemdraw.elements as elm
+import schemdraw.logic as logic
 
 
 def main(source, output):
@@ -22,7 +23,8 @@ def main(source, output):
     drawing.config(unit=3, fontsize=13, font="sans-serif")
     for item in spec["elements"]:
         line = item["line"]
-        element = getattr(elm, item["element"])()
+        # the gates are in schemdraw.logic, the rest in schemdraw.elements
+        element = (getattr(elm, item["element"], None) or getattr(logic, item["element"]))()
 
         def anchor(ref):
             target = named[ref[0]]

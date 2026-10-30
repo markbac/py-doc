@@ -183,3 +183,15 @@ def test_a_science_fence_runs_in_the_science_image(monkeypatch, tmp_path):
 def test_a_mistake_in_a_written_form_names_its_file_and_line(tmp_path):
     with pytest.raises(render.DiagramError, match=r"doc\.md:3: circuit: line 1: 'blob' is not a circuit element"):
         render.render_parts([(tmp_path / "doc.md", "Text.\n\n```circuit\nblob\n```\n")], "docx", lambda: None)
+
+
+def test_every_circuit_element_is_one_schemdraw_draws():
+    schemdraw = pytest.importorskip("schemdraw")
+    import schemdraw.elements as elm
+    import schemdraw.logic as logic
+
+    from py_doc.diagrams.declarative import CIRCUIT_ELEMENTS
+
+    assert schemdraw  # the version the tool image pins: src/py_doc/runtime/definition/requirements.txt
+    missing = [name for name, cls in CIRCUIT_ELEMENTS.items() if not hasattr(elm, cls) and not hasattr(logic, cls)]
+    assert not missing

@@ -52,6 +52,40 @@ ground
 ground | at V1.start
 ```
 
+## `circuit`: sensors and gates
+
+A thermistor in a divider, squared up by a Schmitt trigger to drive an LED. The elements, and their anchors, are listed in the user guide under Circuit elements.
+
+````markdown
+```circuit
+V1: battery 3.6 V | up
+RT1: thermistor 10 kΩ NTC | right
+J1: dot
+R1: resistor 10 kΩ | down
+ground
+line | at J1.end | right
+U1: schmitt | right
+R2: resistor 330 Ω | right
+LED1: led | down
+ground
+ground | at V1.start
+```
+````
+
+```circuit
+V1: battery 3.6 V | up
+RT1: thermistor 10 kΩ NTC | right
+J1: dot
+R1: resistor 10 kΩ | down
+ground
+line | at J1.end | right
+U1: schmitt | right
+R2: resistor 330 Ω | right
+LED1: led | down
+ground
+ground | at V1.start
+```
+
 ## `wavedrom`
 
 Digital timing: clocks, data with values, groups and arrows between edges.

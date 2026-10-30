@@ -9,9 +9,9 @@ import math
 import re
 
 from py_doc.poster_blocks import Fragment, PosterError, _whole, block, esc, mark_colour
-from py_doc.poster_elements import BY_NUMBER, CATEGORIES, ELEMENTS
+from py_doc.poster_elements import BY_NUMBER, CATEGORIES, ELEMENTS, configuration_text, shells
 from py_doc.poster_scales import wavelength_to_rgb
-from py_doc.poster_svg import Linear, label, number, spread, svg, wrap
+from py_doc.poster_svg import Linear, label, number, polar, spread, svg, wrap
 
 WIDTH = 640
 SIZE = 13
@@ -806,7 +806,7 @@ def standard_model_html(code, opts, ctx):
 @block(
     "elements",
     "Element symbols or numbers, on lines or split by spaces; cols=, or layout=table for the periodic table "
-    "with those elements picked out (all of them when none is named)",
+    "with those elements picked out (all of them when none is named); show= name, weight, shells, config, groups",
     "H He C N O Fe Au U",
 )
 def elements_html(code, opts, ctx):
@@ -824,33 +824,85 @@ def elements_html(code, opts, ctx):
         if element is None:
             raise PosterError(f"{ctx.where}: '{token}' is not an element symbol or number")
         found.append(element)
+    shown = [part.strip().lower() for part in opts.get("show", "").split(",") if part.strip()]
+    for part in shown:
+        if part not in TILE_FIELDS + ("groups",):
+            raise PosterError(f"{ctx.where}: elements show= takes {', '.join(TILE_FIELDS)} and groups, not '{part}'")
+    if not shown:  # tiles have room for the weight, the table's smaller tiles only for the name
+        shown = ["name"] if layout == "table" else ["name", "weight"]
+    fields = [part for part in TILE_FIELDS if part in shown]
     if layout == "table":
-        return _fig(opts, _periodic_table(found, opts, ctx))
+        return _fig(opts, _periodic_table(found, fields, "groups" in shown, opts, ctx))
     cols = _whole(opts, "cols", min(len(found), 8), ctx)
     gap = 6
     size = min(76, (WIDTH - 10 - gap * (cols - 1)) / cols)
+    height = _tile_height(size, fields)
     out = []
-    used = []
-    for n, (number_, symbol, name, weight, category) in enumerate(found):
-        x, y = 5 + (n % cols) * (size + gap), 5 + (n // cols) * (size + gap)
-        colour = CATEGORIES[category]
-        used.append(category)
-        out.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size:.1f}" height="{size:.1f}" rx="6" fill="{colour}"/>')
-        out.append(label(x + 6, y + 14, str(number_), SMALL - 1, extra='fill="#fff"'))
-        out.append(label(x + size / 2, y + size * 0.58, symbol, size * 0.36, "middle", WHITE))
-        out.append(label(x + size / 2, y + size - 16, name, min(SMALL - 2, size / 7), "middle", 'fill="#fff"'))
-        out.append(label(x + size / 2, y + size - 5, weight, SMALL - 3, "middle", 'fill="#fff"'))
+    for n, element in enumerate(found):
+        x, y = 5 + (n % cols) * (size + gap), 5 + (n // cols) * (height + gap)
+        out += _tile(x, y, size, element, fields, True, ctx)
     rows = (len(found) + cols - 1) // cols
-    y = 5 + rows * (size + gap) + 12
+    y = _legend(out, [e[4] for e in found], 5 + rows * (height + gap) + 12, WIDTH)
+    return _fig(opts, svg(WIDTH, y + 8, "".join(out), opts.get("title", "elements"), "chart"))
+
+
+TILE_FIELDS = ("name", "weight", "shells", "config")  # what a tile may show under its symbol, in this order
+TILE_KEY = {
+    "name": "Name",
+    "weight": "Atomic weight",
+    "shells": "Electrons per shell",
+    "config": "Electron configuration",
+}
+
+
+def _tile_height(size, fields):
+    return size * (0.66 + 0.17 * len(fields) + 0.06)
+
+
+def _tile_lines(element, fields):
+    number_, symbol, name, weight, _ = element
+    values = {
+        "name": name,
+        "weight": weight,
+        "shells": "-".join(map(str, shells(number_))),
+        "config": configuration_text(number_),
+    }
+    return [values[field] for field in fields]
+
+
+def _tile(x, y, size, element, fields, solid, ctx):
+    """An element's tile: its number, its symbol large, and under it the ``fields`` asked for. A tile not
+    ``solid`` is a pale tint of its category's colour, with grey text."""
+    number_, symbol, _, _, category = element
+    colour, height = CATEGORIES[category], _tile_height(size, fields)
+    if solid:
+        out = [f'<rect x="{x:.1f}" y="{y:.1f}" width="{size:.1f}" height="{height:.1f}" rx="4" fill="{colour}"/>']
+        ink, strong = 'fill="#fff"', WHITE
+    else:
+        out = [
+            f'<rect x="{x + 0.5:.1f}" y="{y + 0.5:.1f}" width="{size - 1:.1f}" height="{height - 1:.1f}" rx="4" '
+            f'fill="{colour}" fill-opacity=".14" stroke="{colour}" stroke-opacity=".45"/>'
+        ]
+        ink = strong = f'fill="{ctx.theme.colours["muted"]}"'
+    out.append(label(x + size * 0.07, y + size * 0.2, str(number_), size * 0.16, extra=ink))
+    out.append(label(x + size / 2, y + size * 0.58, symbol, size * 0.36, "middle", strong))
+    for k, text in enumerate(_tile_lines(element, fields)):
+        fit = min(size * 0.15, (size - 6) / max(len(text), 1) / 0.5)  # shrunk to fit the tile's width
+        out.append(label(x + size / 2, y + size * (0.82 + 0.17 * k), text, fit, "middle", ink))
+    return out
+
+
+def _legend(out, categories, y, width):
+    """The key of the categories drawn, in the order of CATEGORIES, in lines across ``width``; returns its foot."""
     x = 5
-    for category in dict.fromkeys(used):
+    for category in dict.fromkeys(sorted(categories, key=list(CATEGORIES).index)):
         step = 30 + len(category) * 6.5
-        if x > 5 and x + step - 12 > WIDTH:  # the legend goes on to another line rather than off the edge
+        if x > 5 and x + step - 12 > width:  # the legend goes on to another line rather than off the edge
             x, y = 5, y + 20
         out.append(f'<rect x="{x}" y="{y - 10}" width="12" height="12" rx="2" fill="{CATEGORIES[category]}"/>')
         out.append(label(x + 17, y, category, SMALL - 1))
         x += step
-    return _fig(opts, svg(WIDTH, y + 8, "".join(out), opts.get("title", "elements"), "chart"))
+    return y
 
 
 def _table_place(z):
@@ -875,47 +927,179 @@ def _table_place(z):
     raise ValueError(z)
 
 
-def _periodic_table(found, opts, ctx):
+def _periodic_table(found, fields, groups, opts, ctx):
     """Every element in its place, in its category's colour: solid for those in ``found`` (or all, when it is
-    empty), a pale tint for the rest."""
-    width = 960
+    empty), a pale tint for the rest. ``groups`` numbers the groups along the top and the periods down the side.
+    When the tiles show more than the name, a large tile in the gap at the top says what each line is."""
+    width = 960 if fields == ["name"] else 1200  # more lines need wider tiles
     gap = 3
-    size = (width - 10 - gap * 17) / 18
+    left, top = (22, 18) if groups else (5, 5)
+    size = (width - left - 5 - gap * 17) / 18
+    height = _tile_height(size, fields)
     picked = {e[0] for e in found} or set(BY_NUMBER)
-    out, used = [], []
-    for z, (number_, symbol, name, _, category) in sorted(BY_NUMBER.items()):
-        row, col = _table_place(z)
-        x = 5 + col * (size + gap)
-        y = 5 + row * (size + gap) + (size * 0.4 if row >= 7 else 0)  # the f-block a little apart
-        colour = CATEGORIES[category]
-        used.append(category)
-        if z in picked:
-            out.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size:.1f}" height="{size:.1f}" rx="4" fill="{colour}"/>')
-            ink, strong = 'fill="#fff"', WHITE
-        else:  # in a pale tint of its category's colour, so the table reads by category all the same
-            out.append(
-                f'<rect x="{x + 0.5:.1f}" y="{y + 0.5:.1f}" width="{size - 1:.1f}" height="{size - 1:.1f}" rx="4" '
-                f'fill="{colour}" fill-opacity=".14" stroke="{colour}" stroke-opacity=".45"/>'
-            )
-            ink = strong = f'fill="{ctx.theme.colours["muted"]}"'
-        out.append(label(x + 4, y + 11, str(number_), 8.5, extra=ink))
-        out.append(label(x + size / 2, y + size * 0.62, symbol, size * 0.34, "middle", strong))
-        out.append(
-            label(x + size / 2, y + size - 5, name, min(7.5, (size - 4) / max(len(name), 1) / 0.55), "middle", ink)
-        )
+    muted = f'fill="{ctx.theme.colours["muted"]}"'
+    out = []
+
+    def at(row, col):
+        return left + col * (size + gap), top + row * (height + gap) + (height * 0.4 if row >= 7 else 0)
+
+    for z, element in sorted(BY_NUMBER.items()):
+        out += _tile(*at(*_table_place(z)), size, element, fields, z in picked, ctx)
     for row, text in ((5, "57-71"), (6, "89-103")):  # where the lanthanides and actinides belong
-        x, y = 5 + 2 * (size + gap), 5 + row * (size + gap)
-        out.append(label(x + size / 2, y + size / 2 + 4, text, 9, "middle", f'fill="{ctx.theme.colours["muted"]}"'))
-    y = 5 + 9 * (size + gap) + size * 0.4 + 16
-    x = 5
-    for category in dict.fromkeys(sorted(used, key=list(CATEGORIES).index)):
-        step = 30 + len(category) * 6.5
-        if x > 5 and x + step - 12 > width:
-            x, y = 5, y + 20
-        out.append(f'<rect x="{x}" y="{y - 10}" width="12" height="12" rx="2" fill="{CATEGORIES[category]}"/>')
-        out.append(label(x + 17, y, category, SMALL - 1))
-        x += step
+        x, y = at(row, 2)
+        out.append(label(x + size / 2, y + height / 2 + 4, text, 9, "middle", muted))
+    if groups:
+        for col in range(18):
+            row = 0 if col in (0, 17) else 1 if col == 1 or col >= 12 else 3
+            x, y = at(row, col)
+            out.append(label(x + size / 2, y - 5, str(col + 1), 10, "middle", f'{muted} font-weight="700"'))
+        for row in range(7):
+            x, y = at(row, 0)
+            out.append(label(x - 8, y + height / 2 + 4, str(row + 1), 10, "middle", f'{muted} font-weight="700"'))
+    if fields != ["name"]:
+        sample = found[0] if found else ELEMENTS["C"]
+        big = size * 2.2
+        x, y = at(0, 3)
+        y += (3 * (height + gap) - _tile_height(big, fields)) / 2
+        out += _tile(x, y, big, sample, fields, True, ctx)
+        parts = [("Atomic number", big * 0.14), ("Symbol", big * 0.48)]
+        parts += [(TILE_KEY[field], big * (0.78 + 0.17 * k)) for k, field in enumerate(fields)]
+        for text, dy in parts:
+            out.append(
+                f'<line x1="{x + big + 4:.1f}" y1="{y + dy:.1f}" x2="{x + big + 26:.1f}" y2="{y + dy:.1f}" '
+                f'stroke="currentColor" stroke-opacity=".5"/>'
+            )
+            out.append(label(x + big + 30, y + dy + 4, text, SMALL - 1))
+    y = _legend(out, [e[4] for z, e in BY_NUMBER.items()], at(8, 0)[1] + height + 18, width)
     return svg(width, y + 8, "".join(out), opts.get("title", "the periodic table"), "chart")
+
+
+# ---------------------------------------------------------------------------
+# atom: the structure of an atom, its nucleus and its electrons
+# ---------------------------------------------------------------------------
+
+ATOM_STYLES = ("shells", "orbits")
+NUCLEONS_DRAWN = 60  # a larger nucleus is one disc, with its counts written on it
+
+
+def _particles(kind):
+    """The shaded sphere of a proton, a neutron or an electron, as a radial gradient."""
+    light, dark = {"p": ("#f0a070", "#a8431a"), "n": ("#e6e6e6", "#7f8590"), "e": ("#9cc4f2", "#2c5fa8")}[kind]
+    return (
+        f'<radialGradient id="atom-{kind}" cx=".35" cy=".35" r=".7">'
+        f'<stop offset="0" stop-color="{light}"/><stop offset="1" stop-color="{dark}"/></radialGradient>'
+    )
+
+
+def _sphere(x, y, r, kind):
+    sign = {"p": "+", "e": "−"}.get(kind)
+    out = f'<circle cx="{x:.1f}" cy="{y:.1f}" r="{r:.1f}" fill="url(#atom-{kind})" stroke="#fff" stroke-width=".8"/>'
+    if sign:
+        out += label(x, y + r * 0.42, sign, r * 1.3, "middle", 'fill="#fff" font-weight="700"')
+    return out
+
+
+def _nucleus(cx, cy, protons, neutrons, max_r):
+    """The protons and neutrons packed in a ball, mixed evenly, or one disc with its counts if there are many."""
+    total = protons + neutrons
+    if total > NUCLEONS_DRAWN:
+        r = max_r
+        return [
+            f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r:.1f}" fill="url(#atom-p)" stroke="#fff"/>',
+            label(cx, cy - 2, f"{protons} p⁺", SMALL - 2, "middle", 'fill="#fff" font-weight="700"'),
+            label(cx, cy + 11, f"{neutrons} n", SMALL - 2, "middle", 'fill="#fff" font-weight="700"'),
+        ]
+    r = min(9.0, max_r / (math.sqrt(total) * 1.05 + 0.5))
+    spots, kinds, placed = [], [], 0
+    for i in range(total):  # a sunflower's spiral: even packing in a disc, the first at the centre
+        radius, angle = r * 1.05 * math.sqrt(i), i * 137.508
+        spots.append((cx + radius * math.cos(math.radians(angle)), cy + radius * math.sin(math.radians(angle))))
+        proton = placed < protons and (placed + 0.5) / protons <= (i + 1) / total if protons else False
+        kinds.append("p" if proton else "n")
+        placed += proton
+    return [_sphere(x, y, r, k) for (x, y), k in reversed(list(zip(spots, kinds)))]  # the centre drawn last, on top
+
+
+def _atom(cx, cy, element, neutrons, style, ctx):
+    z = element[0]
+    counts, out = shells(z), []
+    line = ctx.theme.colours["muted"]
+    if style == "shells":
+        inner, step = 34, min(18.0, 92 / max(len(counts), 1))
+        for k, count in enumerate(counts):
+            radius = inner + k * step
+            out.append(f'<circle cx="{cx}" cy="{cy}" r="{radius:.1f}" fill="none" stroke="{line}" stroke-width="1.2"/>')
+            size = min(4.5, math.pi * radius / count * 0.8)
+            for j in range(count):
+                x, y = polar(cx, cy, radius, j * 360 / count)
+                out.append(_sphere(x, y, size, "e"))
+            out.append(
+                label(cx + radius * 0.71 + 4, cy - radius * 0.71 - 2, str(count), SMALL - 3, extra=f'fill="{line}"')
+            )
+        out[:0] = _nucleus(cx, cy, z, neutrons, inner - 8)
+    else:  # orbits: three tilted ellipses with the electrons shared out along them, as the atom is often drawn
+        rx, ry = 120, 42
+        for tilt in (0, 60, 120):
+            out.append(
+                f'<ellipse cx="{cx}" cy="{cy}" rx="{rx}" ry="{ry}" fill="none" stroke="{line}" stroke-width="2" '
+                f'transform="rotate({tilt} {cx} {cy})"/>'
+            )
+        out += _nucleus(cx, cy, z, neutrons, 30)
+        for j in range(z):
+            tilt, turn = (0, 60, 120)[j % 3], math.radians(200 + 137.5 * j)
+            x, y = rx * math.cos(turn), ry * math.sin(turn)
+            t = math.radians(tilt)
+            out.append(_sphere(cx + x * math.cos(t) - y * math.sin(t), cy + x * math.sin(t) + y * math.cos(t), 7, "e"))
+    out.append(label(cx, cy + 148, f"{element[2]} ({element[1]})", SIZE, "middle", 'font-weight="700"'))
+    detail = f"{z} p⁺, {neutrons} n, {z} e⁻ · shells {'-'.join(map(str, counts))}"
+    out.append(label(cx, cy + 166, detail, SMALL - 1, "middle", f'fill="{line}"'))
+    out.append(label(cx, cy + 182, configuration_text(z), SMALL - 1, "middle", f'fill="{line}"'))
+    return out
+
+
+@block(
+    "atom",
+    "element | neutrons lines, one atom each (neutrons optional: the most common isotope's, near the atomic weight); "
+    "style=shells (default) or orbits, key=no",
+    "C\nNa",
+)
+def atom_html(code, opts, ctx):
+    """Atoms side by side: the nucleus of protons and neutrons, and the electrons on their shells (``shells``,
+    the Bohr model) or round three tilted orbits (``orbits``, for a small atom), with a key to the particles."""
+    style = opts.get("style", "shells").lower()
+    if style not in ATOM_STYLES:
+        raise PosterError(f"{ctx.where}: atom style must be shells or orbits, not '{style}'")
+    atoms = []
+    for line in _lines(code):
+        cells = _cells(line)
+        token = cells[0]
+        element = BY_NUMBER.get(int(token)) if token.isdigit() else ELEMENTS.get(token[:1].upper() + token[1:].lower())
+        if element is None:
+            raise PosterError(f"{ctx.where}: '{token}' is not an element symbol or number")
+        if style == "orbits" and element[0] > 12:
+            raise PosterError(
+                f"{ctx.where}: {element[2]} has {element[0]} electrons, too many to draw as orbits: use style=shells"
+            )
+        if len(cells) > 1 and cells[1]:
+            neutrons = int(_num(cells[1], ctx, "a number of neutrons"))
+        else:
+            neutrons = round(float(element[3].strip("[]"))) - element[0]
+        atoms.append((element, neutrons))
+    if not atoms:
+        raise PosterError(f"{ctx.where}: an atom block needs an element on a line")
+    slot = 300
+    out = [f"<defs>{_particles('p')}{_particles('n')}{_particles('e')}</defs>"]
+    for n, (element, neutrons) in enumerate(atoms):
+        out += _atom(slot * n + slot / 2, 140, element, neutrons, style, ctx)
+    width = slot * len(atoms)
+    if opts.get("key", "yes").lower() not in ("no", "false"):
+        x = width + 10
+        out.append(label(x, 70, "Key", SIZE, extra='font-weight="700"'))
+        for k, (kind, name) in enumerate((("p", "Proton"), ("n", "Neutron"), ("e", "Electron"))):
+            out.append(_sphere(x + 9, 98 + k * 30, 9, kind))
+            out.append(label(x + 26, 103 + k * 30, name, SIZE))
+        width += 120
+    return _fig(opts, svg(width, 330, "".join(out), opts.get("title", "atomic structure"), "chart"))
 
 
 # ---------------------------------------------------------------------------
