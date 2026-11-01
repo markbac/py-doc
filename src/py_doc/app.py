@@ -460,7 +460,7 @@ def _lint_sources(config, names: list[str], mode: str, output: Path | None, runt
     if not files:
         return 0
     try:
-        lint = DocLinter(config=config.lint, runtime=runtime).lint_paths(files)
+        lint = DocLinter(config=config.lint, runtime=runtime, bpmn_runtime=runtime).lint_paths(files)
     except (LintTargetError, ConversionError) as exc:
         _error(str(exc))
         return 2

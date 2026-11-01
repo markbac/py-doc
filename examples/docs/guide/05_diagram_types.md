@@ -361,3 +361,26 @@ T:Joined
 L:1/8
 C E G c2 z G c4
 ```
+
+## Business process
+
+[[CAPTION:Figure]] How a node joins on install day
+```bpmnt
+pool Installer
+  start Install day
+  task Mount the node
+  send Scan the QR code ~> Register the node
+  receive Joined
+  end Installed
+
+pool Platform
+  start Node registered
+  receive Register the node
+  xor Known node?
+    yes:
+      task Send the configuration
+    no:
+      task Ask support to check it
+  send Confirm the join ~> Joined
+  end Node live
+```

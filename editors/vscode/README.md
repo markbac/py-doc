@@ -28,6 +28,12 @@ VS Code's own Markdown preview (`Ctrl+Shift+V`) still works, but shows plain Mar
 
 ---
 
+## BPMN highlighting
+
+`.bpmnt` files and ```` ```bpmnt ```` fences in Markdown are highlighted as the [bpmn-text](https://github.com/markbac/bpmn-text) notation: keywords, event types, flows and their labels, branch labels, `@` IDs, attributes, strings, `doc` text and comments. py-doc draws the fences as BPMN diagrams, and `py-doc lint` reports their mistakes.
+
+---
+
 ## Install
 
 The extension is not on the Marketplace yet. Build it and install the file:
@@ -64,6 +70,7 @@ editors/vscode/
 │   ├── frontmatter.js # front matter (js-yaml)
 │   ├── text.js        # front matter values as text
 │   └── watch.js       # the live preview process
+├── syntaxes/          # bpmn-text highlighting: .bpmnt files and ```bpmnt fences
 ├── images/icon.png
 ├── examples/          # a document, a deck and a poster to try it on
 └── test/

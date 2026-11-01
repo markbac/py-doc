@@ -7,6 +7,7 @@ names its place (``documents.guide.sources[1].page_brek``), never a setting that
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -790,7 +791,7 @@ def _parse_lint(data: dict, root: Path) -> LintConfig:
     severities = dict(config.severities)
     disabled: set[str] = set()
     for rule, level in rules.items():
-        if rule not in severities:
+        if rule not in severities and not re.fullmatch(r"BT\d{3}", str(rule)):  # BTxxx: bpmn-text's codes
             raise ConfigError(f"lint.rules has unknown rule '{rule}'. Rules: {', '.join(sorted(severities))}")
         if level in (False, "off", "none"):  # YAML reads a bare `off` as false
             disabled.add(rule)

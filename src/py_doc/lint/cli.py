@@ -109,6 +109,7 @@ def run(argv: list[str] | None = None, legacy: bool = False) -> int:
         config=config,
         runtime=lambda: connect(settings),
         engine=args.engine,
+        bpmn_runtime=lambda: connect(settings, build_image=False),
         extra_checks=_model_checks(args, config, settings),
     )
     try:

@@ -1,8 +1,8 @@
 {
   "name": "vscode-py-doc-preview",
   "displayName": "py-doc Live Preview",
-  "description": "Live preview of py-doc documents, slide decks and posters in VS Code: py-doc's own output, rebuilt on every save.",
-  "version": "2.0.0",
+  "description": "Live preview of py-doc documents, slide decks and posters in VS Code: py-doc's own output, rebuilt on every save. Highlights bpmn-text (.bpmnt) files and ```bpmnt fences.",
+  "version": "2.1.0",
   "publisher": "py-doc",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -30,12 +30,43 @@
     "docx",
     "slides",
     "posters",
-    "live preview"
+    "live preview",
+    "bpmn"
   ],
   "activationEvents": [
     "onLanguage:markdown"
   ],
   "contributes": {
+    "languages": [
+      {
+        "id": "bpmnt",
+        "aliases": [
+          "bpmn-text",
+          "bpmnt"
+        ],
+        "extensions": [
+          ".bpmnt"
+        ],
+        "configuration": "./syntaxes/bpmnt.language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "bpmnt",
+        "scopeName": "source.bpmnt",
+        "path": "./syntaxes/bpmnt.tmLanguage.json"
+      },
+      {
+        "scopeName": "markdown.bpmnt.codeblock",
+        "path": "./syntaxes/bpmnt.markdown.tmLanguage.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.bpmnt": "bpmnt"
+        }
+      }
+    ],
     "commands": [
       {
         "command": "pydoc.openLiveWatch",
@@ -98,7 +129,7 @@
     }
   },
   "scripts": {
-    "test": "node --test test/detect.test.js test/cases.test.js test/watch.test.js",
+    "test": "node --test test/detect.test.js test/cases.test.js test/watch.test.js test/grammar.test.js",
     "lint": "eslint ."
   },
   "devDependencies": {

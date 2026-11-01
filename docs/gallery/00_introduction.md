@@ -52,7 +52,7 @@ In documents and sites, the blocks are drawn in the `print` theme, which suits a
 4. **Charts and plots**: `chart`, every `plot` type, Vega-Lite and Vega.
 5. **Scales, measures and proportions**: gauges, thresholds, spectra, sizes and amounts.
 6. **Processes, plans and comparisons**: flows, steps, timelines, cards and comparisons.
-7. **Safety and systems engineering**: fault trees, bow-ties, Goal Structuring Notation (GSN), N² charts, Integration Definition for Function Modelling (IDEF0), value streams and structograms.
+7. **Safety and systems engineering**: fault trees, bow-ties, Goal Structuring Notation (GSN), N² charts, Integration Definition for Function Modelling (IDEF0), value streams, structograms and BPMN process diagrams.
 8. **Concept shapes**: pyramids, stacks, rings, icebergs and cut-aways.
 9. **Electronics, embedded and code**: circuits, timing, wiring, pinouts, instruments, memory, logic and code.
 10. **Science, maths, music and games**: equations, astronomy, physics, chemistry, biology, music and chess.

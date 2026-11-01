@@ -216,7 +216,10 @@ def run_check(argv: list[str]) -> int:
             {f.resolve() for name in project.own_documents for f in _sources(project, name) if f.exists()} - generated
         )
         if files:
-            linter = DocLinter(config=project.lint, runtime=lambda: connect(project.runtime), engine=args.engine)
+            linter = DocLinter(
+                config=project.lint, runtime=lambda: connect(project.runtime), engine=args.engine,
+                bpmn_runtime=lambda: connect(project.runtime, build_image=False),
+            )  # fmt: skip
             try:
                 report = linter.lint_paths(files)
             except (LintTargetError, ConversionError) as exc:

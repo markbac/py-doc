@@ -43,6 +43,19 @@ RUN sh /tmp/build/fetch.sh pandoc /tmp/pandoc.deb \
  && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 --exclude CHANGELOG.md --exclude LICENSE --exclude README.md \
  && rm -f /tmp/pandoc.deb /tmp/vale.tar.gz /tmp/structurizr-cli.zip /tmp/node.tar.xz
 
+# bpmn-text, for ```bpmnt fences: built from the commit in tools.lock as its own Dockerfile builds it, and drawing
+# with the image's Chromium rather than a browser of Playwright's own.
+RUN sh /tmp/build/fetch.sh bpmn-text /tmp/bpmn-text.tar.gz \
+ && mkdir /tmp/bpmn-text \
+ && tar -xzf /tmp/bpmn-text.tar.gz -C /tmp/bpmn-text --strip-components=1 \
+ && cd /tmp/bpmn-text \
+ && npm ci --no-audit --no-fund \
+ && npm run build \
+ && npm run release:pack -- --cli-only \
+ && npm install -g --no-audit --no-fund ./release/bpmn-text-*.tgz \
+ && cd / && rm -rf /tmp/bpmn-text /tmp/bpmn-text.tar.gz /root/.npm
+ENV BPMN_TEXT_CHROMIUM=/usr/bin/chromium
+
 # Python and Node diagram and API documentation tools, at the versions pinned beside this file.
 # mermaid-cli 12 needs Node 22.13 or later and puppeteer 25. package.json pins the Mermaid it draws with in
 # "overrides", as mermaid-cli asks for ^12.

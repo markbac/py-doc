@@ -126,7 +126,7 @@ py-doc diagram --list                               # every type it draws
 py-doc diagram --help-type gauge                    # the syntax of one, with an example
 ```
 
-The type comes from `--type`, or from the extension: `.mmd`, `.puml`, `.dot`, `.ditaa`, `.edn`, `.pikchr`, `.railroad`, `.vl.json`, `.vg.json` and `.wavedrom.json`. `--options` holds a block's options, as they would follow its fence name. From a Markdown file, each picture is named after the file, its place and its caption or title, such as `poster-01-messages-a-day.svg`. `--format` chooses the format of all of them.
+The type comes from `--type`, or from the extension: `.mmd`, `.puml`, `.dot`, `.ditaa`, `.edn`, `.pikchr`, `.railroad`, `.vl.json`, `.vg.json`, `.wavedrom.json` and `.bpmnt`. `--options` holds a block's options, as they would follow its fence name. From a Markdown file, each picture is named after the file, its place and its caption or title, such as `poster-01-messages-a-day.svg`. `--format` chooses the format of all of them.
 
 The output's extension chooses the format:
 
@@ -235,6 +235,7 @@ Alice -> Bob : hello
 | `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`, `packetdiag`, `rackdiag` | The blockdiag family |
 | `wavedrom`, `bytefield-svg`, `pikchr`, `railroad`, `wireviz` | Drawn as SVG |
 | `vega`, `vega-lite` | Vega, drawn as SVG |
+| `bpmnt` | BPMN 2.0 process diagrams in the [bpmn-text](https://github.com/markbac/bpmn-text) notation, laid out and drawn by bpmn-text. `py-doc lint` reports its mistakes |
 | `circuit`, `chess`, `music` (or `abc`) | Specialist libraries in the tool image, from a written form. See [Circuits, chess and science](#circuits-chess-and-science) |
 | `molecule`, `phylogeny`, `ternary`, `seq-logo`, `upset`, `smith`, `plasmid`, `gene-locus`, `cie`, `sun-path`, `thermo-cycle` | Scientific libraries in the optional science image |
 

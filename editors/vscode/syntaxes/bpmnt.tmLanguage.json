@@ -1,0 +1,163 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "bpmn-text",
+  "scopeName": "source.bpmnt",
+  "fileTypes": [
+    "bpmnt"
+  ],
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#doc"
+    },
+    {
+      "include": "#statement"
+    },
+    {
+      "include": "#branch-label"
+    },
+    {
+      "include": "#line"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.number-sign.bpmnt",
+      "match": "(?:^|(?<=\\s))#.*$"
+    },
+    "doc": {
+      "comment": "doc text is raw to the end of the line",
+      "match": "^\\s*(doc)\\b(.*)$",
+      "captures": {
+        "1": {
+          "name": "keyword.control.bpmnt"
+        },
+        "2": {
+          "name": "string.unquoted.doc.bpmnt"
+        }
+      }
+    },
+    "statement": {
+      "comment": "a keyword at the start of a line (or after a jump's -), and the event type of an event keyword",
+      "match": "^\\s*(?:(-)\\s+)?(start|end|catch|throw|wait|task|user|service|script|send|receive|manual|rule|call|xor|and|or|event|sub|fork|group|pool|lane|lanes|note|doc|data|store|title|option|on|else)\\b(?:\\s+(message|timer|signal|conditional|error|escalation|compensation|terminate|link)\\b)?",
+      "captures": {
+        "1": {
+          "name": "keyword.operator.bpmnt"
+        },
+        "2": {
+          "name": "keyword.control.bpmnt"
+        },
+        "3": {
+          "name": "storage.type.event.bpmnt"
+        }
+      }
+    },
+    "branch-label": {
+      "comment": "a branch of a gateway: text up to a : that ends the line",
+      "match": "^\\s*(?!(?:start|end|catch|throw|wait|task|user|service|script|send|receive|manual|rule|call|xor|and|or|event|sub|fork|group|pool|lane|lanes|note|doc|data|store|title|option|on|else)\\b)([^:\\[\\]\"@#]+?)(:)\\s*(?=#|$)",
+      "captures": {
+        "1": {
+          "name": "entity.name.label.bpmnt"
+        },
+        "2": {
+          "name": "punctuation.separator.bpmnt"
+        }
+      }
+    },
+    "line": {
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "comment": "a labelled flow: -(label)-> or ~(label)~>",
+          "match": "(-\\(|~\\()([^)]*)(\\)->|\\)~>)",
+          "captures": {
+            "1": {
+              "name": "keyword.operator.flow.bpmnt"
+            },
+            "2": {
+              "name": "entity.name.label.bpmnt"
+            },
+            "3": {
+              "name": "keyword.operator.flow.bpmnt"
+            }
+          }
+        },
+        {
+          "comment": "an element declared inline, after an arrow",
+          "match": "(->|~>)\\s*(start|end|catch|throw|wait|task|user|service|script|send|receive|manual|rule|call)\\b(?:\\s+(message|timer|signal|conditional|error|escalation|compensation|terminate|link)\\b)?",
+          "captures": {
+            "1": {
+              "name": "keyword.operator.flow.bpmnt"
+            },
+            "2": {
+              "name": "keyword.control.bpmnt"
+            },
+            "3": {
+              "name": "storage.type.event.bpmnt"
+            }
+          }
+        },
+        {
+          "name": "keyword.operator.flow.bpmnt",
+          "match": "->|~>"
+        },
+        {
+          "name": "variable.other.id.bpmnt",
+          "match": "@[A-Za-z_][\\w.-]*"
+        },
+        {
+          "include": "#attributes"
+        }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.double.bpmnt",
+      "begin": "\"",
+      "end": "\"|$",
+      "patterns": [
+        {
+          "name": "constant.character.escape.bpmnt",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "attributes": {
+      "begin": "\\[",
+      "end": "\\]",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.attributes.begin.bpmnt"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.attributes.end.bpmnt"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#string"
+        },
+        {
+          "name": "entity.other.attribute-name.bpmnt",
+          "match": "[\\w-]+(?=\\s*:)"
+        },
+        {
+          "name": "entity.other.attribute-name.bpmnt",
+          "match": "\\b(?:loop|parallel|sequential|collapsed|non-interrupting|collection|fit)\\b"
+        },
+        {
+          "name": "punctuation.separator.bpmnt",
+          "match": "[,:]"
+        }
+      ]
+    }
+  }
+}

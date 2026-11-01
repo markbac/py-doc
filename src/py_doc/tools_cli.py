@@ -29,6 +29,7 @@ VERSION_PROBES = (
     ("plantuml", ["java", "-jar", "/opt/plantuml.jar", "-version"]),
     ("graphviz", ["dot", "-V"]),
     ("mermaid", ["mmdc", "--version"]),
+    ("bpmn-text", ["bpmn-text", "--version"]),
     ("inkscape", ["inkscape", "--version"]),
     ("python", ["python3", "--version"]),
 )

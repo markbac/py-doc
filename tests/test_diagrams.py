@@ -26,6 +26,7 @@ from py_doc.diagrams.scan import find_blocks
 from py_doc.runtime import Runtime
 
 needs_dot = pytest.mark.skipif(shutil.which("dot") is None, reason="graphviz is not installed")
+needs_bpmn_text = pytest.mark.skipif(shutil.which("bpmn-text") is None, reason="bpmn-text is not installed")
 needs_pandoc = pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc is not installed")
 
 # Every fence createdocs understood.
@@ -121,6 +122,13 @@ class TestRegistry:
         assert [c[0] for c in wavedrom.commands(self.job("png"))] == ["wavedrom-cli", "sh"]
         assert [c[0] for c in wavedrom.commands(self.job("svg"))] == ["wavedrom-cli"]
 
+    def test_bpmnt_is_drawn_by_bpmn_text_as_svg_or_png_at_192_dpi(self):
+        (svg,) = BY_FENCE["bpmnt"].commands(self.job("svg"))
+        (png,) = BY_FENCE["bpmnt"].commands(self.job("png"))
+        assert svg[:2] == ["bpmn-text", "build"] and svg[svg.index("-f") + 1] == "svg" and "--scale" not in svg
+        assert png[png.index("-f") + 1] == "png" and png[png.index("--scale") + 1] == "2"
+        assert str(png[png.index("-o") + 1]).endswith("diagram.png")
+
     def test_mermaid_is_wider_on_a_landscape_page(self):
         portrait = BY_FENCE["mermaid"].commands(self.job())[0]
         landscape = BY_FENCE["mermaid"].commands(self.job(landscape=True))[0]
@@ -161,6 +169,24 @@ class TestRegistry:
 
 def part(tmp_path, text: str, name="doc.md"):
     return [(tmp_path / name, text)]
+
+
+@needs_bpmn_text
+class TestBpmnText:
+    SOURCE = "pool Shop\n  start Order placed\n  task Pack order\n  end Shipped"
+
+    def test_html_gets_the_svg_bpmn_js_draws(self, tmp_path, host):
+        _, runtime = host
+        rendered = render_parts(part(tmp_path, f"```bpmnt\n{self.SOURCE}\n```\n"), "html", runtime)
+        ((name, path),) = rendered.pictures.items()
+        assert name.endswith(".svg") and "Pack order" in path.read_text(encoding="utf-8")
+        assert "![bpmnt diagram](" + name + ")" in rendered.markdown
+
+    def test_a_mistake_names_the_line_of_the_fence_and_the_bpmn_text_code(self, tmp_path, host):
+        _, runtime = host
+        with pytest.raises(DiagramError) as caught:
+            render_parts(part(tmp_path, "text\n\n```bpmnt\npool Shop\n  task A -> Nowhere\n```\n"), "docx", runtime)
+        assert ":3: bpmnt diagram failed" in str(caught.value) and "BT" in str(caught.value)
 
 
 @needs_dot

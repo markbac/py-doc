@@ -38,7 +38,7 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 | `py-doc.yml` | Five documents, output defaults, per-document variables and conditions, file naming, the build report, C4, lint and site settings. Every setting has a comment |
 | `site/` | The MkDocs site project: `mkdocs.yml` (yours to change) and `py-doc-nav.yml` (written by `py-doc site`) |
 | `docs/guide/` | The guide, in five files: front matter and document properties, variables, conditions, nested includes, every callout style, all heading levels, block quotes, captions, lists, task lists, footnotes, definition lists, maths, code includes, a landscape section, page breaks, an appendix with a shifted heading level, links between chapters. `DRAFT.md` is listed with `include: false` |
-| `docs/guide/05_diagram_types.md` | One example of every other diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega and vega-lite. Graphviz, Mermaid and PlantUML are in `docs/guide/02_design.md` |
+| `docs/guide/05_diagram_types.md` | One example of every other diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega, vega-lite and bpmnt (BPMN, drawn by bpmn-text). Graphviz, Mermaid and PlantUML are in `docs/guide/02_design.md` |
 | `docs/datasheet.md` | A short datasheet that includes the diagram chapter, to try the datasheet template (`@@` placeholders) and the LaTeX template |
 | `docs/release-notes.md` | A short document whose version comes from Git (`version: git`) |
 | `docs/interfaces.md` | Interface specifications for a sample library system (OpenAPI, AsyncAPI, gRPC and GraphQL), each included from its own file in `docs/includes/apis/`, and a PlantUML use case diagram |
@@ -56,7 +56,7 @@ What needs Docker: Word, PowerPoint, PDF and HTML output, every diagram type, dr
 | `structure-rules.yaml`, `vale-rules.yml`, `.markdownlint.yaml` | Rule files used by `py-doc lint` |
 | `word/design_review.docx` | A Word file to try `py-doc import` on |
 
-The diagram chapter is part of the guide (`docs/guide/05_diagram_types.md`) and of the datasheet, so `py-doc build guide` draws every diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega, vega-lite, Graphviz, Mermaid and PlantUML. All of them are installed in the tool image. `graphviz` and `puml` are accepted as other names for `dot` and `plantuml`. See the Writing chapter of the user guide (`docs/guide/03_writing.md`).
+The diagram chapter is part of the guide (`docs/guide/05_diagram_types.md`) and of the datasheet, so `py-doc build guide` draws every diagram type: blockdiag, actdiag, seqdiag, nwdiag, packetdiag, ditaa, wavedrom, bytefield-svg, wireviz, railroad, pikchr, vega, vega-lite, bpmnt, Graphviz, Mermaid and PlantUML. All of them are installed in the tool image. `graphviz` and `puml` are accepted as other names for `dot` and `plantuml`. See the Writing chapter of the user guide (`docs/guide/03_writing.md`).
 
 ## Quick start
 
