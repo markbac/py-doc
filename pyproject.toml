@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=84.0.0"]
+requires = ["setuptools>=84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -32,7 +32,7 @@ dependencies = [
     "Pillow>=12.3.0",
     "docxcompose>=2.2.0",
     "PyYAML>=6.0.3",
-    "segno>=1.5",  # QR codes on posters; pure Python, no dependencies
+    "segno>=1.6.6",  # QR codes on posters; pure Python, no dependencies
     "python-barcode>=0.16.1",  # the bar patterns of poster barcodes (Code 128, EAN, UPC, ITF-14); pure Python, MIT
     "latex2mathml>=3.81.1",  # poster maths ($...$) to MathML, so the page needs no script; pure Python, MIT
     # Pinned to a commit because py-logkit has no tagged release yet. Move to the first tag when there is one.
@@ -41,16 +41,16 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=9.1.1",
+    "pytest>=9.2.0",
     "pytest-timeout>=2.4.0",
-    "ruff>=0.17.1",
+    "ruff>=0.17.3",
     "build>=1.6.1",
     "twine>=7.0.0",
     "railroad-diagrams>=3.0.1",  # run by the railroad tool test
     "pypikchr>=0.2.0",  # run by the pikchr tool test
     "jsonschema>=4.26.0",  # checks the build report against its schema
-    "zxing-cpp>=2.3",  # reads back the QR codes of posters, to check what they encode
-    "playwright>=1.63.0",  # runs the poster page script in Chrome; no browser download
+    "zxing-cpp>=3.1.1",  # reads back the QR codes of posters, to check what they encode
+    "playwright>=1.64.1",  # runs the poster page script in Chrome; no browser download
 ]
 
 [project.scripts]
