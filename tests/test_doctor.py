@@ -22,11 +22,18 @@ def runtime_for(engine, ref: str = "py-doc-tools:test") -> Runtime:
 
 
 def test_doctor_passes_when_the_container_works(engine, capsys, monkeypatch):
-    engine.configure(stdout="pandoc 3.8.2.1\n")
+    engine.configure(stdout="pandoc 3.8.2.1\n<svg/>\n")
     monkeypatch.setattr(tools_cli, "make_runtime", lambda settings: runtime_for(engine, "tools:test"))
     assert main(["doctor"]) == 0
     out = capsys.readouterr().out
     assert "ok    docker" in out and "ok    engine" in out and "a trivial run works: pandoc 3.8.2.1" in out
+    assert "ok    bpmn-text" in out
+
+
+def test_doctor_fails_when_bpmn_text_draws_nothing(engine, monkeypatch):
+    engine.configure(stdout="pandoc 3.8.2.1\n")
+    checks = {check.name: check for check in diagnose(runtime_for(engine, "tools:test"))}
+    assert checks["container"].status == "ok" and checks["bpmn-text"].status == "FAIL"
 
 
 def test_doctor_reports_an_unbuilt_image_as_information(engine, capsys, monkeypatch):
@@ -63,7 +70,7 @@ def by_name(checks):
 
 def test_doctor_on_windows_reads_the_utf16_distro_list(engine, monkeypatch):
     monkeypatch.setenv("FAKE_WSL_DISTROS", "Ubuntu,Debian")
-    engine.configure(stdout="pandoc 3.8.2.1\n")
+    engine.configure(stdout="pandoc 3.8.2.1\n<svg/>\n")
     checks = by_name(diagnose(windows_runtime(engine, wsl_distro="Debian")))
     assert checks["wsl"].status == "ok" and "Debian (WSL 2)" in checks["wsl"].detail
     assert checks["container"].status == "ok"
