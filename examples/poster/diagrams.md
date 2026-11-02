@@ -310,6 +310,28 @@ architecture-beta
     node:R -- L:gateway
 ```
 
+## 25. Process: BPMN with bpmn-text
+
+```bpmnt
+pool Installer
+  start Install day
+  task Mount the node
+  send Scan the QR code ~> Register the node
+  receive Joined
+  end Installed
+
+pool Platform
+  start Node registered
+  receive Register the node
+  xor Known node?
+    yes:
+      task Send the configuration
+    no:
+      task Ask support to check it
+  send Confirm the join ~> Joined
+  end Node live
+```
+
 ## In short {.summary}
 
 Look here first: if a tool in the container draws it, write the diagram, not a new block.

@@ -86,7 +86,20 @@ def diagnose(runtime: Runtime) -> list[Check]:
         checks.append(Check("container", "ok", f"a trivial run works: {first}"))
     except (EnvironmentProblem, ToolFailed) as exc:
         checks.append(Check("container", "FAIL", str(exc)))
+        return checks
+
+    # bpmn-text drives the image's Chromium through Playwright, so draw one small diagram to see that it works
+    try:
+        svg = runtime.run(["sh", "-c", f"printf '{_BPMNT}' | bpmn-text build -f svg"]).stdout
+        if "<svg" not in svg:
+            raise ToolFailed("bpmn-text", 0, svg[:200], "it wrote no SVG")
+        checks.append(Check("bpmn-text", "ok", "draws a BPMN diagram with the image's Chromium"))
+    except (EnvironmentProblem, ToolFailed) as exc:
+        checks.append(Check("bpmn-text", "FAIL", str(exc), "bpmnt fences cannot be drawn until this works"))
     return checks
+
+
+_BPMNT = r"pool Check\n  start Begin\n  end Done\n"
 
 
 def _wsl_version(listing: str, distro: str) -> int | None:

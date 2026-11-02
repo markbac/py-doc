@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "comment": "```bpmnt fences in Markdown, highlighted as bpmn-text",
+  "scopeName": "markdown.bpmnt.codeblock",
+  "injectionSelector": "L:text.html.markdown",
+  "patterns": [
+    {
+      "include": "#bpmnt-code-block"
+    }
+  ],
+  "repository": {
+    "bpmnt-code-block": {
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(bpmnt)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+      "beginCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        },
+        "4": {
+          "name": "fenced_code.block.language.markdown"
+        },
+        "5": {
+          "name": "fenced_code.block.language.attributes.markdown"
+        }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.bpmnt",
+          "patterns": [
+            {
+              "include": "source.bpmnt"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

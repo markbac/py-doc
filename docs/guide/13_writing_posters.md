@@ -424,6 +424,7 @@ Before you reach for a picture or ask for a new block, look here. Each row is dr
 | Who does what, in lanes | `mermaid` with `swimlane-beta`, or PlantUML activity partitions | [Swimlanes](https://mermaid.js.org/syntax/swimlanes.html) |
 | Decisions and branches | `mermaid` with `flowchart` | [Flowchart](https://mermaid.js.org/syntax/flowchart.html) |
 | The bits of a header or register | `mermaid` with `packet-beta`, `packetdiag` or `bytefield-svg` | [Packet](https://mermaid.js.org/syntax/packet.html) |
+| A business process, with pools, lanes and messages | `bpmnt` | [bpmn-text notation](https://github.com/markbac/bpmn-text/blob/main/docs/notation.md) |
 | Digital signals over time | `wavedrom` | [WaveDrom](https://wavedrom.com/tutorial.html) |
 | Task or state changes over time | `plantuml` timing diagram | [Timing](https://plantuml.com/timing-diagram) |
 | Messages with delays and lost packets | `plantuml` sequence with `!pragma teoz true`, `->(10)` and `->x` | [Sequence](https://plantuml.com/sequence-diagram) |

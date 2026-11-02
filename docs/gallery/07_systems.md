@@ -1,6 +1,6 @@
 # Safety and systems engineering
 
-The notations of safety cases, reliability and systems engineering, drawn with their own symbols.
+The notations of safety cases, reliability, systems engineering and business processes, drawn with their own symbols.
 
 ## `fault-tree`
 
@@ -278,4 +278,58 @@ case Battery level
   else
     Send the low-battery alarm
 Sleep
+```
+
+## `bpmnt`
+
+A Business Process Model and Notation (BPMN) 2.0 diagram, written in the [bpmn-text](https://github.com/markbac/bpmn-text) notation and drawn by bpmn-text in the tool container. Steps are written in the order they happen, under the `pool` and `lane` they belong to; flows, joins and the layout follow from that. `~>` is a message to another pool.
+
+````markdown
+```bpmnt
+pool Customer
+  start Need product
+  send Place order ~> Receive order
+  receive Confirmation
+  end Done
+
+pool Company
+  lane Sales
+  receive Receive order
+  task Check credit
+  xor Credit OK?
+    yes:
+      lane Warehouse
+      task Pick items
+    no:
+      task Request prepayment
+      receive Payment received
+  lane Warehouse
+  task Ship parcel
+  send Send confirmation ~> Confirmation
+  end Shipped
+```
+````
+
+```bpmnt
+pool Customer
+  start Need product
+  send Place order ~> Receive order
+  receive Confirmation
+  end Done
+
+pool Company
+  lane Sales
+  receive Receive order
+  task Check credit
+  xor Credit OK?
+    yes:
+      lane Warehouse
+      task Pick items
+    no:
+      task Request prepayment
+      receive Payment received
+  lane Warehouse
+  task Ship parcel
+  send Send confirmation ~> Confirmation
+  end Shipped
 ```

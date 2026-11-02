@@ -101,6 +101,11 @@ def _dot(job: Job) -> list[Command]:
     return [command + [f"-Gdpi={DPI}"] if job.kind == "png" else command]
 
 
+def _bpmnt(job: Job) -> list[Command]:
+    command = ["bpmn-text", "build", job.source, "-f", job.kind, "-o", job.output]
+    return [command + ["--scale", str(DPI // 96)] if job.kind == "png" else command]
+
+
 def _blockdiag(tool: str) -> Callable[[Job], list[Command]]:
     return lambda job: [[tool, "-T", "png", "-o", job.output, job.source]]
 
@@ -155,6 +160,7 @@ RENDERERS: tuple[Renderer, ...] = (
         ("svg",),
         lambda j: [["python3", TOOLS / "railroad_render.py", j.source, j.output]],
     ),  # fmt: skip
+    Renderer("bpmnt", ("bpmnt",), ".bpmnt", ("svg", "png"), _bpmnt),
     Renderer("wireviz", ("wireviz",), ".yml", ("svg",), lambda j: [["wireviz", "-f", "s", j.source]]),
     Renderer("vega-lite", ("vega-lite",), ".json", ("svg",), _vega("vl2svg")),
     Renderer("vega", ("vega",), ".json", ("svg",), _vega("vg2svg")),

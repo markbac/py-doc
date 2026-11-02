@@ -10,11 +10,11 @@ from collections.abc import Callable
 
 from py_doc import directives
 from py_doc.runtime import Runtime
-from py_doc.errors import ConversionError
+from py_doc.errors import ConversionError, EnvironmentProblem
 from py_doc.files import MARKDOWN_SUFFIXES, find_markdown
 from py_doc.markdown import ParseError, parse
 
-from . import rules, structure, vale
+from . import bpmn, rules, structure, vale
 from .config import (
     RULE_ACRONYM, RULE_BROKEN_LINK, RULE_DIRECTIVE, RULE_DUPLICATE_HEADING, RULE_GLOSSARY, RULE_HEADING_JUMP,
     RULE_HEADING_LENGTH, RULE_IMAGE_ALT, RULE_REDUNDANT, RULE_REQUIRED_SECTION, RULE_SENTENCE_LENGTH, RULE_TERMINOLOGY,
@@ -61,6 +61,7 @@ class DocLinter:
         runtime: Callable[[], Runtime] | None = None,
         engine: str = "auto",
         extra_checks: list[Callable[[], list[LintIssue]]] | None = None,
+        bpmn_runtime: Callable[[], Runtime] | None = None,
     ) -> None:
         """Args:
         glossary: Canonical terms and known misspellings. It replaces the built-in glossary.
@@ -68,8 +69,11 @@ class DocLinter:
         runtime: Returns the tool container, for markdownlint and Vale. It is called only when one of them needs it.
         engine: ``builtin`` (no Vale), ``vale`` (Vale in place of the DOC001 to DOC003 text rules) or ``auto``
             (both, when Vale is installed).
+        bpmn_runtime: Returns the tool container for bpmn-text's check of ```bpmnt fences. When it is None, or
+            raises EnvironmentProblem (the image is not built, say), the fences are not checked.
         """
         self.runtime = runtime
+        self.bpmn_runtime = bpmn_runtime
         self.engine = engine
         self.extra_checks = list(
             extra_checks or []
@@ -221,6 +225,7 @@ class DocLinter:
         self._required_sections(report)
         self._terminology(report)
         self._markdownlint(report)
+        self._bpmn(report)
         try:
             base = Path(os.path.commonpath(folders))
         except ValueError:  # on different drives (Windows)
@@ -290,6 +295,21 @@ class DocLinter:
             raise ConversionError("lint.markdownlint needs the tool container, but no runtime was given")
         files = [result.file for result in report.results if result.error is None]
         report.add(run_markdownlint(files, settings, self.runtime))
+
+    def _bpmn(self, report: LintReport) -> None:
+        found = bpmn.fences([result.file for result in report.results if result.error is None])
+        if not found or self.bpmn_runtime is None:
+            return
+        try:
+            runtime = self.bpmn_runtime()
+        except EnvironmentProblem as exc:
+            logger.warning("The bpmnt fences were not checked: %s", exc)
+            return
+        report.add([
+            LintIssue(i.file, i.line, i.rule, i.category, i.message, self.config.severities.get(i.rule, i.severity),
+                      column=i.column)
+            for i in bpmn.check(found, runtime) if i.rule not in self.config.disabled_rules
+        ])  # fmt: skip
 
     def find_files(self, directory: Path) -> list[Path]:
         """Markdown files below ``directory``, skipping hidden and vendor directories, sorted by path."""

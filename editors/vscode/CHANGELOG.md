@@ -1,5 +1,9 @@
 # Changes
 
+## 2.1.0
+
+- Highlighting of the [bpmn-text](https://github.com/markbac/bpmn-text) notation, in `.bpmnt` files and in ```` ```bpmnt ```` fences of Markdown files, with `#` comments toggled by `Ctrl+/`.
+
 ## 2.0.0
 
 - The preview is the live preview only: py-doc's own output from `--watch`, beside the editor. The instant preview inside VS Code's Markdown preview (a markdown-it plugin and its styles) is removed, because it re-implemented py-doc's blocks in JavaScript and drifted from the build.
