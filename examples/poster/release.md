@@ -71,10 +71,10 @@ sequenceDiagram
   Note right of N: Write the spare copy, check the hash
   Note right of N: Restart into 2.1, self-test
   alt Self-test passes
-    N->>B: Running 2.1
+    N-->>B: Running 2.1
   else Self-test fails
     Note right of N: Restart into 2.0
-    N->>B: Update failed, still 2.0
+    N-->>B: Update failed, still 2.0
   end
 ```
 

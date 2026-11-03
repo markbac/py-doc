@@ -63,8 +63,8 @@ sequenceDiagram
   B-->>-G: CONNACK
   G-->>-N: Join accept, session keys
   loop Every 15 minutes
-    N->>G: Reading (CoAP NON)
-    G->>B: PUBLISH sn100/leeds/42/temp
+    N-)G: Reading (CoAP NON)
+    G-)B: PUBLISH sn100/leeds/42/temp
     B-)D: Push the reading
   end
   alt Battery below 2.4 V
@@ -89,8 +89,8 @@ sequenceDiagram
   B-->>-G: CONNACK
   G-->>-N: Join accept, session keys
   loop Every 15 minutes
-    N->>G: Reading (CoAP NON)
-    G->>B: PUBLISH sn100/leeds/42/temp
+    N-)G: Reading (CoAP NON)
+    G-)B: PUBLISH sn100/leeds/42/temp
     B-)D: Push the reading
   end
   alt Battery below 2.4 V
