@@ -26,7 +26,7 @@ A source with `structurizr:` is replaced by Markdown files before anything else 
 
 ## 3. Joining
 
-`pandoc/source.py` reads each included source and expands its directives (`directives.py`: includes, conditions, variables). The same pass turns each `[[LISTTABLE]]` into a pandoc grid table in a Div, and each `[[BLOCK:]]` into a Div of its own (`listtable.py`), so their warnings name the file and line even inside an included file. It splits off the front matter, applies the title and heading offset, and puts a page break block before sources that ask for one. The metadata of the document is merged from the configuration, the first source's front matter and its first heading (`build.py`). Headings are found line by line outside code fences, so a `#` in a code block is never mistaken for one.
+`pandoc/source.py` reads each included source and expands its directives (`directives.py`: includes, conditions, variables). The same pass turns each `[[LISTTABLE]]` into a pandoc grid table in a Div, and each `[[BLOCK:]]` into a Div of its own (`listtable.py`). Done here, their warnings name the file and line, even inside an included file. It splits off the front matter, applies the title and heading offset, and puts a page break block before sources that ask for one. The metadata of the document is merged from the configuration, the first source's front matter and its first heading (`build.py`). Headings are found line by line outside code fences, so a `#` in a code block is never mistaken for one.
 
 ## 4. Diagrams
 
