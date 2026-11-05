@@ -144,7 +144,10 @@ def expand(
 
     With ``tables``, ``[[LISTTABLE]]`` tables become grid tables and ``[[BLOCK:]]`` definitions Divs.
     """
-    lines = _expand(text, Path(file), variables or {}, conditions or {}, (), 0, tables)
+    shared = listtable.Shared.of(str(file)) if tables else None
+    lines = _expand(text, Path(file), variables or {}, conditions or {}, (), 0, shared)
+    for where, number, message in shared.problems() if shared else []:
+        logger.warning(f"{where}:{number}: {message}")
     return "\n".join(lines) + ("\n" if lines and text.endswith("\n") else "")
 
 
@@ -156,7 +159,11 @@ def _substituted(line: str, variables, file: Path, number: int) -> str:
     return line
 
 
-def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], depth: int, tables: bool) -> list[str]:
+def _expand(
+    text, file: Path, variables, conditions, parents: tuple[Path, ...], depth: int, shared: listtable.Shared | None
+) -> list[str]:
+    """The lines of ``text``. ``shared`` holds the blocks of the source being expanded, or is None for no tables."""
+
     def fail(number: int, message: str) -> DirectiveError:
         return DirectiveError(f"{file}:{number}: {message}")
 
@@ -165,7 +172,7 @@ def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], 
     out: list[str] = []
     fence = Fence()
     blocks: list[tuple[bool, int]] = []  # (condition held, line of the [[IF:]])
-    rich = listtable.Tables(str(file))
+    rich = listtable.Tables(str(file), shared or listtable.Shared.of(str(file)))
     for number, line in enumerate(text.splitlines(), start=1):
         if rich.table is not None:
             if listtable.ROW.match(line):
@@ -190,7 +197,7 @@ def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], 
             continue
         if not all(held for held, _ in blocks):
             continue
-        if tables and (replaced := rich.directive(number, line)) is not None:
+        if shared and (replaced := rich.directive(number, line)) is not None:
             out += replaced
             continue
         if _PAGEBREAK.match(line):
@@ -207,7 +214,7 @@ def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], 
                 raise fail(number, f"{target.name} includes itself, directly or through other files")
             logger.debug(f"Including {target} from {file}:{number}")
             fragment = target.read_text(encoding="utf-8-sig")
-            out += _expand(fragment, target, variables, conditions, (*parents, file.resolve()), depth + 1, tables)
+            out += _expand(fragment, target, variables, conditions, (*parents, file.resolve()), depth + 1, shared)
             continue
         out.append(_substituted(line, variables, file, number))
     if blocks:
@@ -231,7 +238,8 @@ def check(text: str, file: Path) -> list[Problem]:
     problems: list[Problem] = []
     fence = Fence()
     open_lines: list[int] = []
-    rich = listtable.Tables(str(file))
+    shared = listtable.Shared.of(str(file))
+    rich = listtable.Tables(str(file), shared)
     for number, line in enumerate(text.splitlines(), start=1):
         if rich.table is not None:
             if listtable.ROW.match(line):
@@ -255,5 +263,28 @@ def check(text: str, file: Path) -> list[Problem]:
                 problems.append(Problem(number, f"included file not found: {match['path']}"))
     problems += [Problem(n, "[[IF:]] or [[NOT:]] is never closed with [[ENDIF]]") for n in open_lines]
     rich.close()
+    _block_names(text, Path(file), shared, (Path(file).resolve(),))
     problems += [Problem(number, message) for number, message in rich.problems + rich.errors]
+    problems += [Problem(number, message) for where, number, message in shared.problems() if where == str(file)]
     return sorted(problems, key=lambda p: p.line)
+
+
+_SLOT = re.compile(r"\[\[BLOCK:\s*(?P<name>[\w-]+)\s*\]\]")
+
+
+def _block_names(text: str, file: Path, shared: listtable.Shared, seen: tuple[Path, ...]) -> None:
+    """Add the blocks the files ``file`` includes define and use to ``shared``, so a block may be in either."""
+    fence = Fence()
+    for number, line in enumerate(text.splitlines(), start=1):
+        if fence.inside(line):
+            continue
+        if seen[1:]:  # an included file: its own definitions and uses
+            if match := listtable.BLOCK.match(line):
+                shared.defined.setdefault(match["name"], (str(file), number))
+            elif listtable.ROW.match(line):
+                for slot in _SLOT.finditer(line):
+                    shared.used.setdefault(slot["name"], (str(file), number))
+        if match := _INCLUDE.match(line):
+            target = (file.parent / match["path"]).resolve()
+            if target.is_file() and target not in seen:
+                _block_names(target.read_text(encoding="utf-8-sig"), target, shared, (*seen, target))

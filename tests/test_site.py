@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 
 import pytest
@@ -589,3 +590,33 @@ def test_site_decks_must_be_decks(tmp_path):
     (tmp_path / "py-doc.yml").write_text("site: {engine: mkdocs, decks: [nope]}\n", encoding="utf-8")
     with pytest.raises(ConfigError, match="site.decks names 'nope', which is not under documents"):
         load_config(tmp_path / "py-doc.yml")
+
+
+RICH_TABLE = """
+[[LISTTABLE: header]]
+| Part | Notes |
+| Board | {bg=FFF2CC} Fitted first<br>- then wired |
+| ^ | [[BLOCK: board]] |
+| Spare | < |
+
+[[BLOCK: board]]
+![The board](images/board.png)
+[[ENDBLOCK]]
+"""
+
+
+@needs_sh
+@pytest.mark.parametrize("engine_name", ["mkdocs", "starlight"])
+def test_a_rich_table_keeps_its_merges_colours_lists_and_picture_on_a_site(project, pandoc_runtime, engine_name):
+    overview = project / "docs" / "01_overview.md"
+    overview.write_text(overview.read_text(encoding="utf-8") + RICH_TABLE, encoding="utf-8")
+    config, runtime = _site(project, engine_name, pandoc_runtime)
+    generate_site(config, runtime)
+    folder = project / "site" / ("docs" if engine_name == "mkdocs" else "src/content/docs") / "guide"
+    page = (folder / "01-overview.md").read_text(encoding="utf-8")
+    table = page[page.index("<table") : page.index("</table>")]
+    assert 'rowspan="2"' in table and 'colspan="2"' in table
+    assert "background-color: #FFF2CC" in table and "<li>then wired</li>" in table
+    (picture,) = [p for p in (folder / "media").iterdir() if p.name.endswith("-board.png")]
+    assert re.search(rf'<img src="[^"]*{re.escape(picture.name)}"', table), "the picture is in its cell"
+    assert "§" not in page and "listtable" not in page

@@ -23,12 +23,13 @@ from contextlib import contextmanager
 
 from docx import Document
 from docx.enum.section import WD_ORIENT
-from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.oxml import OxmlElement
+from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import nsmap as _DOCX_NSMAP
-from docx.oxml.ns import qn
+from docx.oxml.ns import nsdecls, qn
 from docx.shape import InlineShape
+from docx.table import Table
 from docx.shared import Cm, RGBColor
 from docx.text.paragraph import Paragraph
 
@@ -513,23 +514,91 @@ def has_header_row(tbl) -> bool:
     return first is not None and first.find(f"{qn('w:trPr')}/{qn('w:tblHeader')}") is not None
 
 
+_TCPR_ORDER = [  # the order the schema wants the children of <w:tcPr> in
+    "cnfStyle", "tcW", "gridSpan", "hMerge", "vMerge", "tcBorders", "shd", "noWrap", "tcMar", "textDirection",
+    "tcFitText", "vAlign", "hideMark",
+]  # fmt: skip
+
+
+def _order_tcPr(tcPr) -> None:
+    """Put the children of a ``<w:tcPr>`` in schema order, after one was appended."""
+    rank = {qn(f"w:{name}"): index for index, name in enumerate(_TCPR_ORDER)}
+    children = sorted(tcPr, key=lambda child: rank.get(child.tag, len(rank)))
+    for child in children:
+        tcPr.append(child)
+
+
 RICH_TABLE_MARK = "_PyDocRichTable"  # the bookmark listtable.lua puts before a [[LISTTABLE]]
 _CELL_MARGINS = 2 * 68580  # Word's default left and right cell margins, 0.075 inch each, in EMU
 
 
-def take_rich_table_marks(doc: Document) -> set:
-    """The ``<w:tbl>`` of each ``[[LISTTABLE]]``, found by the bookmark before it, which is taken out."""
-    rich = set()
-    marks = [m for m in doc.element.body.iter(qn("w:bookmarkStart")) if m.get(qn("w:name")) == RICH_TABLE_MARK]
+OWN_TABLE_MARK = "_PyDocTable"  # the bookmark before each table of the Markdown, while it joins the template
+
+
+def mark_tables(doc: Document) -> None:
+    """Put a hidden bookmark before each table of ``doc``, so they are told from the template's own."""
+    for table in doc.element.body.findall(qn("w:tbl")):
+        table.addprevious(parse_xml(f'<w:bookmarkStart {nsdecls("w")} w:id="0" w:name="{OWN_TABLE_MARK}"/>'))
+        table.addprevious(parse_xml(f'<w:bookmarkEnd {nsdecls("w")} w:id="0"/>'))
+
+
+def take_rich_table_marks(doc: Document, name: str = RICH_TABLE_MARK) -> set:
+    """The ``<w:tbl>`` after each bookmark called ``name``, which is taken out with its end.
+
+    By default those of the ``[[LISTTABLE]]`` tables, which ``listtable.lua`` marks; with
+    :data:`OWN_TABLE_MARK` those :func:`mark_tables` marked.
+    """
+    found = set()
+    marks = [m for m in doc.element.body.iter(qn("w:bookmarkStart")) if m.get(qn("w:name")) == name]
     for mark in marks:
         end = mark.getnext()
         if end is not None and end.tag == qn("w:bookmarkEnd"):  # its own end: docxcompose renumbers only the start
             end.getparent().remove(end)
         table = mark.getnext()
+        while table is not None and table.tag in (qn("w:bookmarkStart"), qn("w:bookmarkEnd")):  # another mark
+            table = table.getnext()
         if table is not None and table.tag == qn("w:tbl"):
-            rich.add(table)
+            found.add(table)
         mark.getparent().remove(mark)
-    return rich
+    return found
+
+
+CELL_MARK = "_PyDocCell_"  # listtable.lua's bookmark in a styled cell: _PyDocCell_<RRGGBB or none>_<valign or none>
+
+
+def _shade(tcPr, fill: str) -> None:
+    shd = tcPr.find(qn("w:shd"))
+    if shd is None:
+        shd = OxmlElement("w:shd")
+        tcPr.append(shd)
+        _order_tcPr(tcPr)
+    shd.set(qn("w:val"), "clear")
+    shd.set(qn("w:color"), "auto")
+    shd.set(qn("w:fill"), fill)
+
+
+def apply_cell_marks(doc: Document) -> int:
+    """Give each cell with a ``[[LISTTABLE]]`` cell style its shading and vertical alignment.
+
+    ``listtable.lua`` leaves a bookmark in the cell, named for the colour and the alignment, which is
+    taken out here. Returns how many cells were styled.
+    """
+    marks = [m for m in doc.element.body.iter(qn("w:bookmarkStart")) if m.get(qn("w:name"), "").startswith(CELL_MARK)]
+    for mark in marks:
+        fill, _, valign = mark.get(qn("w:name"))[len(CELL_MARK) :].partition("_")
+        cell = next(mark.iterancestors(qn("w:tc")), None)
+        if cell is not None:
+            tcPr = cell.get_or_add_tcPr()
+            if fill != "none":
+                _shade(tcPr, fill)
+            if valign != "none":
+                tcPr.vAlign_val = {"top": WD_CELL_VERTICAL_ALIGNMENT.TOP, "center": WD_CELL_VERTICAL_ALIGNMENT.CENTER,
+                                   "bottom": WD_CELL_VERTICAL_ALIGNMENT.BOTTOM}[valign]  # fmt: skip
+        end = mark.getnext()
+        if end is not None and end.tag == qn("w:bookmarkEnd"):
+            end.getparent().remove(end)
+        mark.getparent().remove(mark)
+    return len(marks)
 
 
 def _text_width_at(doc: Document, element) -> int:
@@ -550,27 +619,69 @@ def _text_width_at(doc: Document, element) -> int:
     return section.page_width - section.left_margin - section.right_margin
 
 
-def _fit_pictures_to_cells(tbl, text_width: int) -> None:
-    """Make each picture in a cell of ``tbl`` (a fixed layout table) no wider than its cell."""
-    columns = [int(c.get(qn("w:w"), "0")) for c in tbl._tbl.tblGrid.findall(qn("w:gridCol"))]
-    total = sum(columns) or 1
+def _cell_width(tc, table_width: int) -> int:
+    """The width (EMU) inside the cell ``tc`` of a table ``table_width`` wide: its share of the grid."""
+    tbl = tc.getparent().getparent()
+    columns = [int(c.get(qn("w:w"), "0")) for c in tbl.findall(f"{qn('w:tblGrid')}/{qn('w:gridCol')}")]
+    first = sum(other.grid_span for other in tc.itersiblings(qn("w:tc"), preceding=True))
+    share = sum(columns[first : first + tc.grid_span]) / (sum(columns) or 1)
+    return int(table_width * share) - _CELL_MARGINS
+
+
+def _table_width(doc: Document, tbl) -> int:
+    """The width (EMU) a table ``<w:tbl>`` fills: the text width, or for a table in a cell that cell's."""
+    cell = next(tbl.iterancestors(qn("w:tc")), None)
+    if cell is None:
+        return _text_width_at(doc, tbl)
+    return _cell_width(cell, _table_width(doc, cell.getparent().getparent()))
+
+
+def _fit_pictures_to_cells(doc: Document, tbl) -> None:
+    """Make each picture in a cell of ``tbl`` no wider than its column's share of the table.
+
+    In a fixed layout that is the cell's width. An autofit table may still widen a column, but the
+    picture then fits the column pandoc planned, not the whole page.
+    """
+    width = _table_width(doc, tbl._tbl)
     for tr in tbl._tbl.findall(qn("w:tr")):
-        column = 0
         for tc in tr.findall(qn("w:tc")):
-            room = int(text_width * sum(columns[column : column + tc.grid_span]) / total) - _CELL_MARGINS
+            room = _cell_width(tc, width)
             for inline in tc.iter(qn("wp:inline")):
                 picture = InlineShape(inline)
                 if room > 0 and picture.width and picture.width > room:
                     picture.height = int(picture.height * room / picture.width)
                     picture.width = room
-            column += tc.grid_span
 
 
-def _format_header_row(row) -> None:
-    """Row 1 as the header: repeated on each page, kept with the next row, in bold white."""
+HEADER_FILL = "1F3864"  # navy, behind the white header text when the table style has no header colour
+
+
+def _header_fill(style) -> str:
+    """The header row colour of a table style (or the styles it is based on), else :data:`HEADER_FILL`."""
+    for _ in range(5):
+        if style is None:
+            break
+        fill = style.element.xpath("w:tblStylePr[@w:type='firstRow']/w:tcPr/w:shd/@w:fill")
+        if fill and fill[0].lower() != "auto":
+            return fill[0]
+        style = style.base_style
+    return HEADER_FILL
+
+
+def _format_header_row(row, fill: str) -> None:
+    """Row 1 as the header: repeated on each page, kept with the next row, in bold white on ``fill``.
+
+    The colour is set on each cell as well as the text: a table style's own header colour is not shown by
+    every program (LibreOffice and Google Docs skip it), and py-doc's ``Table Grid`` has none, so white text
+    alone could be invisible.
+    """
     trPr = row._tr.get_or_add_trPr()
     if trPr.find(qn("w:tblHeader")) is None:
         trPr.append(OxmlElement("w:tblHeader"))
+    for tc in row._tr.findall(qn("w:tc")):
+        tcPr = tc.get_or_add_tcPr()
+        if tcPr.find(qn("w:shd")) is None:  # a colour the cell was given itself stays
+            _shade(tcPr, fill)
     for cell in row.cells:
         for p in cell.paragraphs:
             p.paragraph_format.keep_with_next = True
@@ -594,6 +705,7 @@ def format_all_tables(
     prevent_row_split: bool = True,
     autofit: bool = True,
     rich: set | frozenset = frozenset(),
+    own: set | None = None,
 ) -> None:
     """
     Apply a consistent appearance to every table in *doc*.
@@ -608,23 +720,35 @@ def format_all_tables(
       tables don't end up a mix of auto-width/left-aligned and
       full-width/left-aligned depending on how Pandoc happened to emit them.
     * Enables autofit and removes fixed cell widths.
-    * Marks the first row as a repeating header.
+    * Marks the first row as a repeating header, in bold white on the table style's header colour (or
+      navy), set on the cells themselves.
     * Prevents rows from splitting across pages.
+    * Makes each picture in a cell no wider than its column.
+    * Does the same for tables inside table cells.
+
+    With ``own``, only those tables (the Markdown's, see :func:`mark_tables`) and the tables inside them
+    are formatted: a template's own tables keep the look the template gives them.
 
     A ``[[LISTTABLE]]`` (its ``<w:tbl>`` is in ``rich``, see :func:`take_rich_table_marks`) and a table
     without a header row (see :func:`has_header_row`) keep the column widths pandoc wrote, in a fixed
     layout, and their rows may break across pages, so a tall row does not leave a gap by moving whole to
-    the next page. A picture in one of their cells is made no wider than its cell. Only a header row, if
-    there is one, is formatted and repeated as a header, and kept on one page.
+    the next page. Only a header row, if there is one, is formatted and repeated as a header, and kept on
+    one page.
     """
     try:
-        _ = doc.styles[style_name]
+        fill = _header_fill(doc.styles[style_name])
         style_ok = True
     except KeyError:
         log.warning("Table style '%s' not found in document — skipping", style_name)
         style_ok = False
+        fill = HEADER_FILL
 
-    for tbl in doc.tables:
+    elements = [
+        element
+        for element in doc.element.body.iter(qn("w:tbl"))  # nested ones too
+        if own is None or element in own or any(outer in own for outer in element.iterancestors(qn("w:tbl")))
+    ]
+    for tbl in [Table(element, doc._body) for element in elements]:
         if style_ok:
             tbl.style = style_name
 
@@ -641,11 +765,11 @@ def format_all_tables(
         if tbl._tbl in rich or not header:
             tbl.autofit = False  # a fixed layout, on the column widths pandoc wrote
             if header and repeat_header and tbl.rows:
-                _format_header_row(tbl.rows[0])
+                _format_header_row(tbl.rows[0], fill)
                 trPr = tbl.rows[0]._tr.get_or_add_trPr()
                 if trPr.find(qn("w:cantSplit")) is None:
                     trPr.append(OxmlElement("w:cantSplit"))
-            _fit_pictures_to_cells(tbl, _text_width_at(doc, tbl._tbl))
+            _fit_pictures_to_cells(doc, tbl)
             continue
 
         if autofit:
@@ -661,7 +785,8 @@ def format_all_tables(
                         tcPr.remove(tcW)
 
         if repeat_header and tbl.rows:
-            _format_header_row(tbl.rows[0])
+            _format_header_row(tbl.rows[0], fill)
+        _fit_pictures_to_cells(doc, tbl)
 
         if prevent_row_split:
             for row in tbl.rows:

@@ -11,7 +11,8 @@ from pathlib import Path
 
 import pytest
 from docx import Document
-from docx.oxml.ns import qn
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls, qn
 from docx.shared import Cm
 from PIL import Image
 
@@ -184,8 +185,11 @@ class TestBlocks:
     def test_a_block_used_but_not_defined_or_defined_but_not_used_is_a_warning(self, caplog):
         with caplog.at_level(logging.WARNING):
             convert("[[LISTTABLE]]\n| a | [[BLOCK: gone]] |\n\n[[BLOCK: spare]]\nx\n[[ENDBLOCK]]\n")
-        assert "t.md:2: [[BLOCK: gone]] is used in a table, but this file does not define it" in caplog.text
-        assert "t.md:4: [[BLOCK: spare]] is defined, but no table in this file uses it" in caplog.text
+        assert (
+            "t.md:2: [[BLOCK: gone]] is used in a table, but neither this file nor its includes define it"
+            in caplog.text
+        )
+        assert "t.md:4: [[BLOCK: spare]] is defined, but no table uses it" in caplog.text
 
     def test_an_unclosed_block_or_a_stray_end_stops_the_build(self):
         with pytest.raises(DirectiveError, match="t.md:1: \\[\\[BLOCK: a\\]\\] is never closed"):
@@ -279,7 +283,9 @@ def test_lint_reads_each_cell_paragraph_as_prose_of_its_own():
     from py_doc.lint.text import segments
     from py_doc.markdown import parse
 
-    found = [s.text.strip() for s in segments(parse("[[LISTTABLE]]\n| 1 | One.<br>- Two |\n| 2 | Three |\n"))]
+    found = [
+        s.text.strip() for s in segments(parse("[[LISTTABLE]]\n| 1 | One.<br>- Two |\n| 2 | {bg=E8F5E9} Three |\n"))
+    ]
     assert found == ["1", "One.", "- Two", "2", "Three"]
 
 
@@ -346,3 +352,176 @@ def test_each_list_in_a_cell_keeps_its_own_bullets_or_numbers_with_a_template(co
     table = document.tables[-1]  # after the template's own
     assert [format_of(p) for p in table.cell(0, 1).paragraphs] == ["bullet", "bullet"]
     assert [format_of(p) for p in table.cell(1, 1).paragraphs] == ["decimal", "decimal"]
+
+
+class TestLongLinks:
+    LINK = "https://example.com/a/very/long/path/that/does/not/fit/in/the/column/at/all"
+
+    def test_a_link_too_long_for_its_column_becomes_a_reference_after_the_table(self):
+        out = convert(f'[[LISTTABLE]]\n| a | See [the page]({self.LINK} "Title") and ![x](short.png){{width=50%}} |\n')
+        label = re.search(r"\[the page\]\[(\w+-1)\]", out)[1]
+        assert f'\n[{label}]: {self.LINK} "Title"\n' in out
+        assert "![x](short.png){width=50%}" in out, "a link that fits is left as written"
+        assert len({len(line) for line in grid(out.replace("\n\n", "\n"))}) == 1
+
+    def test_labels_differ_between_tables_and_files(self, tmp_path):
+        (tmp_path / "part.md").write_text(f"[[LISTTABLE]]\n| a | [x]({self.LINK}) |\n", encoding="utf-8")
+        main = tmp_path / "main.md"
+        main.write_text(f"[[LISTTABLE]]\n| a | [x]({self.LINK}) |\n\n[[INCLUDE: part.md]]\n", encoding="utf-8")
+        out = expand(main.read_text(encoding="utf-8"), main, tables=True)
+        assert len(set(re.findall(r"^\[(\w+-\d+)\]: ", out, re.M))) == 2
+
+    @needs_pandoc
+    def test_pandoc_links_the_reference(self):
+        html = subprocess.run(
+            ["pandoc", "-f", "markdown", "-t", "html"], input=convert(f"[[LISTTABLE]]\n| a | [x]({self.LINK}) |\n"),
+            capture_output=True, text=True, check=True,
+        ).stdout  # fmt: skip
+        assert re.search(rf'<a\s+href="{re.escape(self.LINK)}">x</a>', html)
+
+
+class TestBlocksAcrossIncludes:
+    def test_a_table_may_use_a_block_of_a_file_it_includes_or_of_the_file_that_includes_it(self, tmp_path, caplog):
+        (tmp_path / "part.md").write_text(
+            "[[BLOCK: inner]]\nIn the part.\n[[ENDBLOCK]]\n\n[[LISTTABLE]]\n| b | [[BLOCK: outer]] |\n",
+            encoding="utf-8",
+        )
+        main = tmp_path / "main.md"
+        main.write_text(
+            "[[LISTTABLE]]\n| a | [[BLOCK: inner]] |\n\n[[INCLUDE: part.md]]\n\n[[BLOCK: outer]]\nIn main.\n[[ENDBLOCK]]\n",
+            encoding="utf-8",
+        )
+        with caplog.at_level(logging.WARNING):
+            out = expand(main.read_text(encoding="utf-8"), main, tables=True)
+        assert "[[BLOCK" not in caplog.text
+        keys = re.findall(r'blocks="(\S+)"', out)
+        assert {key.split("-", 1)[1] for key in keys} == {"inner", "outer"}
+        assert len({key.split("-", 1)[0] for key in keys}) == 1, "one scope for the source and its includes"
+
+    def test_a_block_defined_twice_across_files_stops_the_build(self, tmp_path):
+        (tmp_path / "part.md").write_text("[[BLOCK: a]]\nx\n[[ENDBLOCK]]\n", encoding="utf-8")
+        main = tmp_path / "main.md"
+        main.write_text("[[BLOCK: a]]\ny\n[[ENDBLOCK]]\n\n[[INCLUDE: part.md]]\n", encoding="utf-8")
+        with pytest.raises(
+            DirectiveError, match=r"part.md:1: \[\[BLOCK: a\]\] is defined twice: it is also at .*main.md:1"
+        ):
+            expand(main.read_text(encoding="utf-8"), main, tables=True)
+
+    def test_check_looks_in_the_included_files(self, tmp_path):
+        (tmp_path / "part.md").write_text("[[BLOCK: inner]]\nx\n[[ENDBLOCK]]\n", encoding="utf-8")
+        main = tmp_path / "main.md"
+        main.write_text("[[LISTTABLE]]\n| a | [[BLOCK: inner]] |\n| b | [[BLOCK: gone]] |\n\n[[INCLUDE: part.md]]\n")
+        assert [(p.line, p.message[:20]) for p in check(main.read_text(), main)] == [(3, "[[BLOCK: gone]] is u")]
+
+
+class TestCellStyles:
+    def test_a_cell_style_is_taken_off_the_text_and_given_by_position(self):
+        out = convert(
+            "[[LISTTABLE: header]]\n| A | B |\n| {bg=#fff2cc valign=middle} a | < |\n| b | {valign=top} c |\n"
+        )
+        assert 'cells="1.0:bg=FFF2CC,valign=middle 2.1:valign=top"' in out
+        assert "{bg" not in "".join(grid(out)) and "| a " in out
+
+    def test_a_cell_style_counts_only_the_cells_pandoc_has_in_the_row(self):
+        out = convert("[[LISTTABLE]]\n| a | b |\n| ^ | {bg=000000} c |\n")
+        assert 'cells="1.0:bg=000000"' in out  # the merged cell is not in row 1 of pandoc's table
+
+    def test_a_cell_style_that_is_not_understood_stays_as_text_with_a_warning(self, caplog):
+        with caplog.at_level(logging.WARNING):
+            out = convert("[[LISTTABLE]]\n| {bg=yellow} a | {.class} b |\n")
+        assert "'bg=yellow' is not bg=RRGGBB or valign=top, middle or bottom" in caplog.text
+        assert "{bg=yellow} a" in out and "{.class} b" in out and "cells=" not in out
+
+    @needs_pandoc
+    def test_html_has_the_style_and_pdf_the_colour_and_a_nested_tabular(self):
+        text = convert(
+            "[[LISTTABLE]]\n| {bg=FFF2CC valign=middle} a | [[BLOCK: inner]] |\n\n"
+            "[[BLOCK: inner]]\n| P | Q |\n|---|---|\n| p | q |\n[[ENDBLOCK]]\n"
+        )
+
+        def to(fmt):
+            return subprocess.run(
+                ["pandoc", "-f", "markdown", "-t", fmt, "--lua-filter", str(LUA)], input=text, capture_output=True,
+                text=True, check=True,
+            ).stdout  # fmt: skip
+
+        assert '<td style="background-color: #FFF2CC; vertical-align: middle">a</td>' in to("html")
+        latex = to("latex")
+        assert "\\cellcolor[HTML]{FFF2CC}a" in latex
+        assert latex.count("\\begin{longtable}") == 1 and "\\begin{tabular}" in latex, "LaTeX cannot nest longtables"
+        assert latex.index("p & q") < latex.index("\\bottomrule\\noalign{}\n\\end{tabular}")
+
+
+NESTED = """# T
+
+[[LISTTABLE: header]]
+| Part | Detail |
+| {bg=FFF2CC valign=middle} Board | [[BLOCK: pins]] |
+
+[[BLOCK: pins]]
+| Pin | Use |
+|---|---|
+| 1 | Power |
+[[ENDBLOCK]]
+
+| Name | Picture |
+|---|---|
+| a | ![](wide.png) |
+"""
+
+
+@pytest.fixture
+def nested_docx(tmp_path, convert_text):
+    Image.new("RGB", (2000, 800), "red").save(tmp_path / "wide.png")
+    template = Path(__file__).parent.parent / "examples" / "templates" / "sensor.docx"
+    return Document(str(convert_text(NESTED, template)))
+
+
+def _cells(table) -> list:
+    return [tc for tr in table.findall(qn("w:tr")) for tc in tr.findall(qn("w:tc"))]
+
+
+def test_a_table_in_a_block_is_a_table_in_its_cell_and_formatted_like_one(nested_docx):
+    outer = next(t for t in nested_docx.tables if t.cell(0, 0).text == "Part")._tbl
+    (inner,) = _cells(outer)[3].findall(qn("w:tbl"))
+    assert inner.tblPr.find(qn("w:tblStyle")) is not None
+    assert inner.xpath("w:tr[1]/w:trPr/w:tblHeader") and inner.xpath("w:tr[1]//w:color[@w:val='FFFFFF']")
+
+
+def test_a_cell_style_gives_word_shading_and_alignment(nested_docx):
+    outer = next(t for t in nested_docx.tables if t.cell(0, 0).text == "Part")._tbl
+    board = _cells(outer)[2]
+    assert board.xpath("w:tcPr/w:shd/@w:fill") == ["FFF2CC"] and board.xpath("w:tcPr/w:vAlign/@w:val") == ["center"]
+    assert not nested_docx.element.body.xpath('.//w:bookmarkStart[starts-with(@w:name, "_PyDoc")]')
+
+
+def test_header_cells_are_shaded_so_their_white_text_shows(nested_docx):
+    pins = next(t for t in nested_docx.tables if t.cell(0, 0).text == "Name")._tbl
+    assert pins.xpath("w:tr[1]/w:tc/w:tcPr/w:shd/@w:fill") == ["1F3864", "1F3864"]
+
+
+def test_the_templates_own_tables_keep_their_look(nested_docx):
+    facts = next(t for t in nested_docx.tables if t.cell(0, 0).text == "Document number")._tbl
+    assert not facts.xpath(".//w:tblHeader") and not facts.xpath(".//w:shd") and not facts.xpath(".//w:cantSplit")
+    assert not facts.xpath(".//w:color[@w:val='FFFFFF']")
+
+
+def test_a_picture_in_an_ordinary_table_fits_its_column(nested_docx):
+    pins = next(t for t in nested_docx.tables if t.cell(0, 0).text == "Name")._tbl
+    (picture,) = pins.xpath(".//wp:inline/wp:extent/@cx")
+    section = nested_docx.sections[0]
+    assert int(picture) < (section.page_width - section.left_margin - section.right_margin) * 0.75
+
+
+def test_a_header_takes_the_colour_of_its_table_style():
+    from py_doc.pandoc.docx_post import HEADER_FILL, _header_fill
+
+    style = Document().styles["Table Grid"]
+    assert _header_fill(style) == HEADER_FILL, "py-doc's own Table Grid has no header colour"
+    style.element.append(
+        parse_xml(
+            f'<w:tblStylePr {nsdecls("w")} w:type="firstRow"><w:tcPr>'
+            '<w:shd w:val="clear" w:color="auto" w:fill="C00000"/></w:tcPr></w:tblStylePr>'
+        )
+    )
+    assert _header_fill(style) == "C00000"

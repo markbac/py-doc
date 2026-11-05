@@ -218,6 +218,12 @@ def test_the_guide_shows_the_word_features(examples, pandoc_runtime):
     assert 'w:rStyle w:val="HighlightYellow"' in rich._tbl.xml
     assert rich._tbl.xpath(".//w:vMerge") and rich._tbl.xpath(".//w:gridSpan[@w:val='2']"), "merged cells"
     assert rich._tbl.findall(qn("w:tr"))[3].xpath(".//wp:inline"), "the diagram is in its cell"
+    assert rich._tbl.xpath(".//w:tcPr/w:shd[@w:fill='E8F5E9']") and rich._tbl.xpath(".//w:vAlign[@w:val='center']")
+    assert rich._tbl.findall(qn("w:tr"))[4].xpath(".//w:tbl"), "a table in a cell"
+    assert (
+        "terminal-wiring-sheet.pdf"
+        in document.part.rels[rich._tbl.findall(qn("w:tr"))[4].xpath(".//w:hyperlink/@r:id")[0]].target_ref
+    ), "a link too long for its column"
     with zipfile.ZipFile(examples / "build" / "guide-v1.0.docx") as archive:
         core = archive.read("docProps/core.xml").decode("utf-8")
     assert "Integrating the SN-100" in core and "Technical documentation" in core and "IoT, sensor, MQTT" in core

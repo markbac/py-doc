@@ -118,10 +118,15 @@ def highlight_styles(document) -> None:
             document.styles.add_style(name, WD_STYLE_TYPE.CHARACTER).font.highlight_color = colour
 
 
+def remove_sample(document) -> None:
+    """Take out pandoc's sample text and sample table, which its reference document starts with."""
+    for block in [*document.paragraphs, *document.tables]:
+        block._element.getparent().remove(block._element)
+
+
 def title_page(document) -> None:
     """Logo, title, description and a table of document facts, all filled in from the front matter."""
-    for paragraph in list(document.paragraphs):
-        paragraph._element.getparent().remove(paragraph._element)  # pandoc's sample text
+    remove_sample(document)
     styles = document.styles
     logo = document.add_paragraph(style=find(styles, "Normal"))
     logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -184,8 +189,7 @@ def datasheet_docx() -> None:
     ``py-doc.yml`` names them with ``placeholder_prefix`` and ``marker``."""
     document = Document(io.BytesIO(pandoc_file("reference.docx")))
     set_styles(document)
-    for paragraph in list(document.paragraphs):
-        paragraph._element.getparent().remove(paragraph._element)
+    remove_sample(document)
     document.add_paragraph("@@Title", style="Title")
     document.add_paragraph("@@Description", style="Lead Paragraph")
     document.add_paragraph("Version @@Version, @@Date", style="Normal")
