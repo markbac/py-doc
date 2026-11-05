@@ -4,11 +4,15 @@
  * The preview (src/watch.js) runs `py-doc docx|slides|poster --watch` on the open file and shows the page it
  * serves beside the editor, rebuilt on each save. It is py-doc's own output, so every block, diagram and theme
  * looks as it will in the build. The command for a file is chosen from its content (src/detect.js).
+ *
+ * The highlighting of py-doc Markdown is in syntaxes/ and the snippets in snippets/, both declared in package.json.
+ * Folding for py-doc's blocks ([[IF:]] to [[ENDIF]] and the like) is src/folding.js.
  */
 
 'use strict';
 
 const { detectFormat, detectDocumentFormat } = require('./src/detect');
+const { foldingRanges } = require('./src/folding');
 
 let vscode;
 try { vscode = require('vscode'); } catch (e) { vscode = null; }  // absent when the tests run in Node
@@ -64,6 +68,16 @@ function activate(context) {
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor && follows(editor.document)) preview(null, editor.document);
     }),
+    // py-doc's blocks fold, beside VS Code's own folding of headings and lists
+    vscode.languages.registerFoldingRangeProvider(
+      { language: 'markdown' },
+      {
+        provideFoldingRanges: (doc) =>
+          foldingRanges(doc.getText().split(/\r?\n/)).map(
+            ({ start, end }) => new vscode.FoldingRange(start, end, vscode.FoldingRangeKind.Region)
+          )
+      }
+    ),
     live
   );
 }

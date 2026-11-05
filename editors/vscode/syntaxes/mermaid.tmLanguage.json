@@ -1,0 +1,91 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "comment": "Mermaid in py-doc fences: diagram types, keywords, arrows, labels, styles and %% comments",
+  "scopeName": "source.pydoc.mermaid",
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#directive"
+    },
+    {
+      "include": "#diagram"
+    },
+    {
+      "include": "#keyword"
+    },
+    {
+      "include": "#string"
+    },
+    {
+      "include": "#arrow"
+    },
+    {
+      "include": "#label"
+    },
+    {
+      "include": "#style"
+    },
+    {
+      "include": "#number"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.percentage.mermaid",
+      "match": "%%(?!\\{).*$"
+    },
+    "directive": {
+      "name": "meta.directive.mermaid",
+      "begin": "%%\\{",
+      "end": "\\}%%"
+    },
+    "diagram": {
+      "name": "storage.type.diagram.mermaid",
+      "match": "^\\s*(flowchart|graph|sequenceDiagram|classDiagram(-v2)?|stateDiagram(-v2)?|erDiagram|gantt|pie|journey|gitGraph|mindmap|timeline|quadrantChart|requirementDiagram|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|sankey-beta|xychart-beta|block-beta|packet-beta|kanban|architecture-beta|radar-beta|treemap-beta)\\b"
+    },
+    "keyword": {
+      "name": "keyword.control.mermaid",
+      "match": "\\b(subgraph|end|direction|participant|actor|note|Note|over|left of|right of|loop|alt|else|opt|par|and|critical|break|rect|activate|deactivate|autonumber|box|title|section|dateFormat|axisFormat|excludes|class|classDef|style|linkStyle|click|state|as|commit|branch|checkout|merge|cherry-pick|showData|accTitle|accDescr|TB|TD|BT|LR|RL|x-axis|y-axis|quadrant-[1-4]|service|junction|in)\\b"
+    },
+    "string": {
+      "name": "string.quoted.double.mermaid",
+      "match": "\"[^\"]*\""
+    },
+    "arrow": {
+      "name": "keyword.operator.arrow.mermaid",
+      "match": "(?:<\\|?|[*o}|]{1,2})?(?:-{2,}|={2,}|\\.{2,}|-\\.+-)(?:>>|>|\\|>|x\\b|o\\b|\\)|[{|]{1,2})?|-(?:>>|>|x\\b|\\))"
+    },
+    "label": {
+      "match": "(\\|)([^|]*)(\\|)",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.label.mermaid"
+        },
+        "2": {
+          "name": "string.unquoted.label.mermaid"
+        },
+        "3": {
+          "name": "punctuation.definition.label.mermaid"
+        }
+      }
+    },
+    "style": {
+      "patterns": [
+        {
+          "name": "constant.other.color.mermaid",
+          "match": "#[0-9A-Fa-f]{3,8}\\b"
+        },
+        {
+          "name": "entity.other.attribute-name.class.mermaid",
+          "match": ":::[\\w-]+"
+        }
+      ]
+    },
+    "number": {
+      "name": "constant.numeric.mermaid",
+      "match": "(?<![\\w.])-?\\d+(\\.\\d+)?\\b"
+    }
+  }
+}

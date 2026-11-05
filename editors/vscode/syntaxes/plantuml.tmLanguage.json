@@ -1,0 +1,89 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "comment": "PlantUML in py-doc fences: @start and @end lines, keywords, arrows, stereotypes, colours and comments",
+  "scopeName": "source.pydoc.plantuml",
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#startend"
+    },
+    {
+      "include": "#preprocessor"
+    },
+    {
+      "include": "#keyword"
+    },
+    {
+      "include": "#string"
+    },
+    {
+      "include": "#stereotype"
+    },
+    {
+      "include": "#arrow"
+    },
+    {
+      "include": "#colour"
+    },
+    {
+      "include": "#number"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "patterns": [
+        {
+          "name": "comment.line.apostrophe.plantuml",
+          "match": "^\\s*'.*$"
+        },
+        {
+          "name": "comment.block.plantuml",
+          "begin": "/'",
+          "end": "'/"
+        }
+      ]
+    },
+    "startend": {
+      "name": "keyword.control.startend.plantuml",
+      "match": "^\\s*@(start|end)\\w*\\b.*$"
+    },
+    "preprocessor": {
+      "name": "keyword.control.preprocessor.plantuml",
+      "match": "^\\s*!\\w+"
+    },
+    "keyword": {
+      "patterns": [
+        {
+          "name": "storage.type.element.plantuml",
+          "match": "\\b(actor|participant|boundary|control|entity|database|collections|queue|usecase|class|interface|abstract|enum|annotation|component|node|package|folder|frame|cloud|rectangle|artifact|card|file|storage|state|object|map|json|person|system|container|agent|stack|hexagon|label|port|portin|portout)\\b"
+        },
+        {
+          "name": "keyword.control.plantuml",
+          "match": "\\b(skinparam|title|header|footer|legend|endlegend|caption|note|end note|ref over|over|of|left|right|top|bottom|as|alt|else|opt|loop|par|break|critical|group|end|activate|deactivate|destroy|create|return|autonumber|box|newpage|start|stop|if|then|elseif|endif|while|endwhile|repeat|fork|endfork|split|endsplit|partition|together|hide|show|left to right direction|top to bottom direction|namespace|extends|implements)\\b"
+        }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.double.plantuml",
+      "match": "\"[^\"]*\""
+    },
+    "stereotype": {
+      "name": "entity.other.attribute-name.stereotype.plantuml",
+      "match": "<<[^>]*>>"
+    },
+    "arrow": {
+      "name": "keyword.operator.arrow.plantuml",
+      "match": "(?:<\\|?|<{1,2}|[*o])?(?:[-.=]+\\[[^\\]]*\\][-.=]*|[-.=]{2,}(?:(?:left|right|up|down|le|ri|do)[-.=]+)?)(?:>{1,2}|\\|>|[*o])?|->|<-"
+    },
+    "colour": {
+      "name": "constant.other.color.plantuml",
+      "match": "#[0-9A-Fa-f]{3,8}\\b|#[A-Za-z]+\\b"
+    },
+    "number": {
+      "name": "constant.numeric.plantuml",
+      "match": "(?<![\\w.])-?\\d+(\\.\\d+)?\\b"
+    }
+  }
+}

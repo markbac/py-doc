@@ -1,0 +1,228 @@
+{
+  "Rich table": {
+    "prefix": "listtable",
+    "body": [
+      "[[CAPTION:Table]] ${1:Caption}",
+      "",
+      "[[LISTTABLE: header, widths=${2:30,70}]]",
+      "| ${3:Heading} | ${4:Heading} |",
+      "| ${5:Cell} | ${6:First paragraph<br>- a bullet<br>- another} |",
+      "$0"
+    ],
+    "description": "A [[LISTTABLE]] with a header row: <br> starts a paragraph, - a bullet, 1. a numbered item, < and ^ merge cells"
+  },
+  "Block in a table cell": {
+    "prefix": "block",
+    "body": [
+      "[[BLOCK: ${1:name}]]",
+      "$0",
+      "[[ENDBLOCK]]"
+    ],
+    "description": "What a [[BLOCK: name]] cell of a [[LISTTABLE]] holds: a diagram, a picture, code or a table"
+  },
+  "Cell style": {
+    "prefix": "cellstyle",
+    "body": [
+      "{bg=${1:E8F5E9} valign=${2|middle,top,bottom|}} "
+    ],
+    "description": "A [[LISTTABLE]] cell's colour and vertical alignment, at the start of the cell"
+  },
+  "Callout: note": {
+    "prefix": "note",
+    "body": [
+      "> [!NOTE]",
+      "> ${1:Text}",
+      "$0"
+    ],
+    "description": "A note callout box"
+  },
+  "Callout: tip": {
+    "prefix": "tip",
+    "body": [
+      "> [!TIP]",
+      "> ${1:Text}",
+      "$0"
+    ],
+    "description": "A tip callout box"
+  },
+  "Callout: important": {
+    "prefix": "important",
+    "body": [
+      "> [!IMPORTANT]",
+      "> ${1:Text}",
+      "$0"
+    ],
+    "description": "A important callout box"
+  },
+  "Callout: warning": {
+    "prefix": "warning",
+    "body": [
+      "> [!WARNING]",
+      "> ${1:Text}",
+      "$0"
+    ],
+    "description": "A warning callout box"
+  },
+  "Callout: caution": {
+    "prefix": "caution",
+    "body": [
+      "> [!CAUTION]",
+      "> ${1:Text}",
+      "$0"
+    ],
+    "description": "A caution callout box"
+  },
+  "Figure caption": {
+    "prefix": "caption-figure",
+    "body": [
+      "[[CAPTION:Figure]] ${1:Caption}"
+    ],
+    "description": "A numbered caption for the picture, diagram or code block on the next line"
+  },
+  "Table caption": {
+    "prefix": "caption-table",
+    "body": [
+      "[[CAPTION:Table]] ${1:Caption}"
+    ],
+    "description": "A numbered caption for the table on the next line"
+  },
+  "Include a file": {
+    "prefix": "include",
+    "body": [
+      "[[INCLUDE: ${1:file.md}]]"
+    ],
+    "description": "Put another Markdown file here"
+  },
+  "Include code": {
+    "prefix": "include-code",
+    "body": [
+      "[[INCLUDE-CODE: ${1:file.py}]]"
+    ],
+    "description": "Put a file here as a code block"
+  },
+  "Condition": {
+    "prefix": "if",
+    "body": [
+      "[[IF: ${1:key}]]",
+      "$0",
+      "[[ENDIF]]"
+    ],
+    "description": "Keep the lines for builds where the condition holds"
+  },
+  "Negative condition": {
+    "prefix": "not",
+    "body": [
+      "[[NOT: ${1:key}]]",
+      "$0",
+      "[[ENDIF]]"
+    ],
+    "description": "Keep the lines for builds where the condition does not hold"
+  },
+  "Page break": {
+    "prefix": "pagebreak",
+    "body": [
+      "[[PAGEBREAK]]"
+    ],
+    "description": "A page break, or a new slide in a deck"
+  },
+  "Landscape section": {
+    "prefix": "landscape",
+    "body": [
+      "[[LANDSCAPE]]",
+      "",
+      "$0",
+      "",
+      "[[PORTRAIT]]"
+    ],
+    "description": "A landscape section in Word, and wider pictures elsewhere"
+  },
+  "Word style": {
+    "prefix": "style",
+    "body": [
+      "[[STYLE:${1:Lead Paragraph}]] ${2:Text}"
+    ],
+    "description": "The paragraph in a named Word style"
+  },
+  "Variable": {
+    "prefix": "var",
+    "body": [
+      "{{${1:name}}}"
+    ],
+    "description": "The value of a variable from py-doc.yml or the command line"
+  },
+  "Mermaid diagram": {
+    "prefix": "mermaid",
+    "body": [
+      "```mermaid",
+      "flowchart LR",
+      "  ${1:A[Start]} --> ${2:B[End]}",
+      "```"
+    ],
+    "description": "A Mermaid diagram"
+  },
+  "Graphviz diagram": {
+    "prefix": "dot",
+    "body": [
+      "```dot",
+      "digraph ${1:g} {",
+      "  rankdir=LR;",
+      "  ${2:a} -> ${3:b};",
+      "}",
+      "```"
+    ],
+    "description": "A Graphviz (DOT) diagram"
+  },
+  "PlantUML diagram": {
+    "prefix": "plantuml",
+    "body": [
+      "```plantuml",
+      "@startuml",
+      "${1:Alice -> Bob : hello}",
+      "@enduml",
+      "```"
+    ],
+    "description": "A PlantUML diagram"
+  },
+  "Chart block": {
+    "prefix": "chart",
+    "body": [
+      "```chart type=${1|column,bar,line,pie|} title=\"${2:Title}\"",
+      "series: ${3:2025, 2026}",
+      "${4:Label} | ${5:1} | ${6:2}",
+      "```"
+    ],
+    "description": "A chart poster block, drawn in documents and posters"
+  },
+  "Cards block": {
+    "prefix": "cards",
+    "body": [
+      "```cards cols=${1:3}",
+      "${2:Title} | ${3:Text} | icon=${4:tabler:star}",
+      "```"
+    ],
+    "description": "A cards poster block"
+  },
+  "Speaker notes": {
+    "prefix": "notes",
+    "body": [
+      "::: notes",
+      "${1:What to say}",
+      ":::"
+    ],
+    "description": "Speaker notes for a slide"
+  },
+  "Columns": {
+    "prefix": "columns",
+    "body": [
+      ":::: columns",
+      "::: column",
+      "${1:Left}",
+      ":::",
+      "::: column",
+      "${2:Right}",
+      ":::",
+      "::::"
+    ],
+    "description": "Two columns on a slide"
+  }
+}

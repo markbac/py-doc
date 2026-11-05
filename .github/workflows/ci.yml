@@ -141,6 +141,12 @@ jobs:
       - run: npm ci --ignore-scripts  # the runner's own Node
       - run: npm run lint
       - run: npm test
+      - name: The highlighting against VS Code's own Markdown grammar (a pinned release, checked)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/markdown.tmLanguage.json" \
+            https://raw.githubusercontent.com/microsoft/vscode/1.105.0/extensions/markdown-basics/syntaxes/markdown.tmLanguage.json
+          echo "ff4c245072aa0628b298481de17a1c8026b1587410bbb8ab74f3c29cc0f19b9e  $RUNNER_TEMP/markdown.tmLanguage.json" | sha256sum -c -
+          PYDOC_MARKDOWN_GRAMMAR="$RUNNER_TEMP/markdown.tmLanguage.json" node --test test/highlight.test.js
 
   gate:
     name: CI gate
