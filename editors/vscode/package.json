@@ -2,7 +2,7 @@
   "name": "vscode-py-doc-preview",
   "displayName": "py-doc Live Preview",
   "description": "Live preview of py-doc documents, slide decks and posters in VS Code, and highlighting of py-doc Markdown: directives, rich tables, callouts, every diagram fence and poster block, and bpmn-text (.bpmnt) files. Folding for py-doc's blocks, and snippets.",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "publisher": "py-doc",
   "license": "MIT",
   "icon": "images/icon.png",

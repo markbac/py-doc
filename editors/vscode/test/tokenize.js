@@ -14,7 +14,7 @@ const oniguruma = require('vscode-oniguruma');
 const root = path.join(__dirname, '..');
 const manifest = require('../package.json');
 const stub = (scopeName) => ({ scopeName, patterns: [], repository: { inline: { patterns: [] } } });
-const BUILT_IN = ['text.html.markdown', 'source.json', 'source.js', 'source.yaml', 'source.clojure'];
+const BUILT_IN = ['text.html.markdown', 'source.json', 'source.js', 'source.yaml', 'source.clojure', 'text.xml'];
 
 let registry;
 

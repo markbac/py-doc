@@ -198,8 +198,8 @@
       ]
     },
     "fenced-div": {
-      "comment": "::: {.class key=value}, ::: name and the closing :::",
-      "begin": "^(:{3,})(?=\\s*(?:\\{[^}]*\\}|[\\w-]+)?\\s*$)",
+      "comment": "::: {.class key=value}, ::: name and the closing :::. A diagram written :::mermaid ... ::: is pydoc-fences.markdown.tmLanguage.json's",
+      "begin": "^(:{3,})(?!\\s*(?i:bpmnt|bytefield\\-svg|thermo\\-cycle|gene\\-locus|packetdiag|blockdiag|phylogeny|vega\\-lite|graphviz|molecule|plantuml|rackdiag|railroad|seq\\-logo|sun\\-path|wavedrom|actdiag|circuit|mermaid|plasmid|seqdiag|ternary|wireviz|nwdiag|pikchr|chess|ditaa|music|smith|upset|puml|vega|abc|cie|dot)\\s*$)(?=\\s*(?:\\{[^}]*\\}|[\\w-]+)?\\s*$)",
       "beginCaptures": {
         "1": {
           "name": "punctuation.definition.div.pydoc"

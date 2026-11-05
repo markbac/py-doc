@@ -1,5 +1,9 @@
 # Changes
 
+## 2.3.1
+
+- Diagrams written in the `:::mermaid` ... `:::` form, which py-doc also draws, are highlighted in their language like a backtick fence, for every diagram language.
+
 ## 2.3.0
 
 - Highlighting inside every diagram fence and poster block py-doc draws: Mermaid, Graphviz (and the blockdiag family) and PlantUML with grammars of the extension's own, and Vega, WaveDrom, WireViz and bytefield with VS Code's JSON, JavaScript, YAML and Clojure grammars. Poster blocks, `plot` and the written-form fences show their `key:` lines, `key=value` options, cells, icons and numbers. The attributes on a fence line are highlighted too.

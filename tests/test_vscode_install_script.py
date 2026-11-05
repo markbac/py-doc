@@ -20,7 +20,10 @@ SCRIPT = ROOT / "scripts" / "install-vscode-extension.ps1"
 POWERSHELL = shutil.which("pwsh") or (shutil.which("powershell") if os.name == "nt" else None)
 VERSION = json.loads((ROOT / "editors" / "vscode" / "package.json").read_text(encoding="utf-8"))["version"]
 
-pytestmark = pytest.mark.skipif(not POWERSHELL or not shutil.which("npm"), reason="needs PowerShell and Node.js (npm)")
+pytestmark = [
+    pytest.mark.skipif(not POWERSHELL or not shutil.which("npm"), reason="needs PowerShell and Node.js (npm)"),
+    pytest.mark.timeout(900),  # each install builds the extension (npm ci, vsce): minutes on a Windows runner
+]
 
 FAKE = """
 import os, sys

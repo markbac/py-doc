@@ -105,7 +105,7 @@ Bold, italic, links and the rest of Markdown inside a cell keep their usual colo
 
 ### Diagram fences and poster blocks
 
-The inside of every fence py-doc draws is highlighted in the language of the fence. The attributes on the fence line, such as `width="100%"` or `cols=3`, are highlighted too.
+The inside of every fence py-doc draws is highlighted in the language of the fence. The attributes on the fence line, such as `width="100%"` or `cols=3`, are highlighted too. A diagram written `:::mermaid` … `:::`, the form py-doc also accepts for every diagram language, is highlighted the same way.
 
 | Fences | Highlighted as |
 |:---|:---|
@@ -183,6 +183,7 @@ VS Code does not suggest words as you type in Markdown, so snippets wait for `Ct
 - **Nothing is highlighted**: check that the file's language, shown at the right of the status bar, is **Markdown**. After installing or updating the extension, run **Developer: Reload Window**.
 - **A colour is missing**: some themes give no colour to some kinds of text. Run **Developer: Inspect Editor Tokens and Scopes** with the cursor on the text: if the scope ends in `.pydoc`, the extension found it, and the theme decides its colour.
 - **A fence is not highlighted inside**: check the fence name against the table under [Diagram fences and poster blocks](#diagram-fences-and-poster-blocks). A name py-doc does not draw is shown as plain code.
+- **Ordinary words are coloured, such as `and`, `end` inside `pending`, or `participant`**, and code blocks below lose their colours: another extension's grammar has taken over that part of the file. A Mermaid extension that reads `:::mermaid` blocks is a likely one. Inspect a coloured word as above: when no scope ends in `.pydoc`, disable the other extension for the workspace (in the Extensions view, the gear on its card, then **Disable (Workspace)**).
 - **Snippets are not offered**: press `Ctrl+Space` after the prefix, or turn on suggestions in Markdown as shown under [Snippets](#snippets).
 
 ## In the repository
