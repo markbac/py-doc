@@ -1,0 +1,63 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "comment": "Graphviz DOT, and the blockdiag family (blockdiag, seqdiag, actdiag, nwdiag, packetdiag, rackdiag) that shares its shape, in py-doc fences",
+  "scopeName": "source.pydoc.dot",
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#html-label" },
+    { "include": "#string" },
+    { "include": "#keyword" },
+    { "include": "#attribute" },
+    { "include": "#edge" },
+    { "include": "#number" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comment": {
+      "patterns": [
+        { "name": "comment.line.double-slash.dot", "match": "//.*$" },
+        { "name": "comment.line.number-sign.dot", "match": "^\\s*#.*$" },
+        { "name": "comment.block.dot", "begin": "/\\*", "end": "\\*/" }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.double.dot",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [{ "name": "constant.character.escape.dot", "match": "\\\\." }]
+    },
+    "html-label": {
+      "name": "string.unquoted.html-label.dot",
+      "begin": "(?<==)\\s*<",
+      "end": ">(?=\\s*[,\\];])"
+    },
+    "keyword": {
+      "patterns": [
+        {
+          "name": "storage.type.graph.dot",
+          "match": "(?i)\\b(strict|graph|digraph|subgraph|blockdiag|seqdiag|actdiag|nwdiag|packetdiag|rackdiag)\\b"
+        },
+        {
+          "name": "keyword.other.dot",
+          "match": "(?i)\\b(node|edge|network|group|lane|rack|class|default_shape)\\b"
+        }
+      ]
+    },
+    "attribute": {
+      "match": "\\b([A-Za-z_][\\w-]*)\\s*(=)",
+      "captures": {
+        "1": { "name": "entity.other.attribute-name.dot" },
+        "2": { "name": "keyword.operator.assignment.dot" }
+      }
+    },
+    "edge": { "name": "keyword.operator.edge.dot", "match": "<?(-{1,2}>|->|<-|--|>>|->>)" },
+    "number": { "name": "constant.numeric.dot", "match": "(?<![\\w.])-?\\d+(\\.\\d+)?\\b" },
+    "punctuation": {
+      "patterns": [
+        { "name": "punctuation.section.braces.dot", "match": "[{}]" },
+        { "name": "punctuation.section.brackets.dot", "match": "[\\[\\]]" },
+        { "name": "punctuation.separator.dot", "match": "[;,]" }
+      ]
+    }
+  }
+}

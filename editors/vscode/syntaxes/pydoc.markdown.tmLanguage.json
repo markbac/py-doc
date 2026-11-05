@@ -1,11 +1,23 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "comment": "py-doc directives such as [[INCLUDE: a.md]] and [[LISTTABLE: header]], and {{variables}}, in Markdown outside code",
+  "comment": "py-doc in Markdown outside code: directives such as [[INCLUDE: a.md]], [[LISTTABLE]] tables and their cells, callouts, fenced divs, attribute blocks and {{variables}}",
   "scopeName": "markdown.pydoc.directives",
   "injectionSelector": "L:text.html.markdown -markup.fenced_code -markup.inline.raw",
   "patterns": [
     {
+      "include": "#listtable"
+    },
+    {
       "include": "#directive"
+    },
+    {
+      "include": "#callout"
+    },
+    {
+      "include": "#fenced-div"
+    },
+    {
+      "include": "#attributes"
     },
     {
       "include": "#variable"
@@ -35,6 +47,262 @@
     "variable": {
       "match": "\\{\\{\\s*[A-Za-z_][A-Za-z0-9_]*\\s*\\}\\}",
       "name": "variable.other.pydoc"
+    },
+    "listtable": {
+      "comment": "A [[LISTTABLE]] marker and the | ... | rows straight after it",
+      "name": "meta.table.listtable.pydoc",
+      "begin": "^(\\[\\[)(LISTTABLE)(?:(:)\\s*([^\\]]*))?(\\]\\])\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.pydoc"
+        },
+        "2": {
+          "name": "keyword.control.directive.pydoc"
+        },
+        "3": {
+          "name": "punctuation.separator.key-value.pydoc"
+        },
+        "4": {
+          "name": "string.unquoted.argument.pydoc"
+        },
+        "5": {
+          "name": "punctuation.definition.tag.end.pydoc"
+        }
+      },
+      "while": "^(?=\\|)",
+      "patterns": [
+        {
+          "include": "#cell-style"
+        },
+        {
+          "include": "#merge"
+        },
+        {
+          "include": "#slot"
+        },
+        {
+          "include": "#break"
+        },
+        {
+          "include": "#cell-item"
+        },
+        {
+          "match": "(?<!\\\\)\\|",
+          "name": "punctuation.separator.table.cell.pydoc"
+        },
+        {
+          "include": "#variable"
+        },
+        {
+          "include": "#attributes"
+        },
+        {
+          "include": "text.html.markdown#inline"
+        }
+      ]
+    },
+    "cell-style": {
+      "comment": "{bg=E8F5E9 valign=middle} at the start of a cell",
+      "match": "(?<=\\|)\\s*(\\{)((?:\\s*(?:bg|valign)=[^\\s}]+)+)\\s*(\\})",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.attributes.pydoc"
+        },
+        "2": {
+          "patterns": [
+            {
+              "match": "(bg|valign)(=)(#?[0-9A-Fa-f]{6}\\b|top|middle|bottom)?",
+              "captures": {
+                "1": {
+                  "name": "entity.other.attribute-name.pydoc"
+                },
+                "2": {
+                  "name": "keyword.operator.assignment.pydoc"
+                },
+                "3": {
+                  "name": "constant.other.color.pydoc"
+                }
+              }
+            }
+          ]
+        },
+        "3": {
+          "name": "punctuation.definition.attributes.pydoc"
+        }
+      }
+    },
+    "merge": {
+      "comment": "A cell of only < (joined to its left) or ^ (joined to the cell above)",
+      "match": "(?<=\\|)\\s*([<^])\\s*(?=\\|)",
+      "captures": {
+        "1": {
+          "name": "keyword.operator.merge.pydoc"
+        }
+      }
+    },
+    "slot": {
+      "match": "(\\[\\[)(BLOCK)(:)\\s*([\\w-]+)\\s*(\\]\\])",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.pydoc"
+        },
+        "2": {
+          "name": "keyword.control.directive.pydoc"
+        },
+        "3": {
+          "name": "punctuation.separator.key-value.pydoc"
+        },
+        "4": {
+          "name": "string.unquoted.argument.pydoc"
+        },
+        "5": {
+          "name": "punctuation.definition.tag.end.pydoc"
+        }
+      }
+    },
+    "break": {
+      "match": "<br\\s*/?>",
+      "name": "entity.name.tag.break.pydoc"
+    },
+    "cell-item": {
+      "comment": "A bullet or numbered item at the start of a cell paragraph",
+      "match": "(?:(?<=<br>)|(?<=<br/>)|(?<=<br />)|(?<=\\|))(\\s*)(-|\\d+\\.)(?=\\s)",
+      "captures": {
+        "2": {
+          "name": "punctuation.definition.list.begin.markdown"
+        }
+      }
+    },
+    "callout": {
+      "patterns": [
+        {
+          "comment": "> [!NOTE] and the other kinds",
+          "match": "(?i)(\\[!)(note|tip|important|warning|caution)(\\])",
+          "captures": {
+            "1": {
+              "name": "punctuation.definition.tag.begin.pydoc"
+            },
+            "2": {
+              "name": "keyword.other.callout.pydoc"
+            },
+            "3": {
+              "name": "punctuation.definition.tag.end.pydoc"
+            }
+          }
+        },
+        {
+          "comment": "> **Note:** and the other kinds",
+          "match": "(?<=^>\\s|^>)\\*\\*(Note|Tip|Important|Warning|Caution):\\*\\*",
+          "name": "keyword.other.callout.pydoc"
+        }
+      ]
+    },
+    "fenced-div": {
+      "comment": "::: {.class key=value}, ::: name and the closing :::",
+      "begin": "^(:{3,})(?=\\s*(?:\\{[^}]*\\}|[\\w-]+)?\\s*$)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.div.pydoc"
+        }
+      },
+      "end": "$",
+      "patterns": [
+        {
+          "begin": "\\{",
+          "end": "\\}",
+          "name": "meta.attributes.pydoc",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.attributes.pydoc"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.attributes.pydoc"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#attribute-parts"
+            }
+          ]
+        },
+        {
+          "match": "[\\w-]+",
+          "name": "entity.other.attribute-name.class.pydoc"
+        }
+      ]
+    },
+    "attributes": {
+      "comment": "{#id .class key=value} after a ], ) or ` (spans, links, pictures, code), and {#id} or {.class} at the end of a heading",
+      "patterns": [
+        {
+          "begin": "(?<=[\\])`])\\{(?!\\{)(?=[^{}\\n]*\\}(?!\\}))",
+          "end": "\\}",
+          "name": "meta.attributes.pydoc",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.attributes.pydoc"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.attributes.pydoc"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#attribute-parts"
+            }
+          ]
+        },
+        {
+          "begin": "(?<=\\s)\\{(?=[#.][^{}\\n]*\\}\\s*$)",
+          "end": "\\}",
+          "name": "meta.attributes.pydoc",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.attributes.pydoc"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.attributes.pydoc"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#attribute-parts"
+            }
+          ]
+        }
+      ]
+    },
+    "attribute-parts": {
+      "patterns": [
+        {
+          "match": "#[\\w-]+",
+          "name": "entity.other.attribute-name.id.pydoc"
+        },
+        {
+          "match": "\\.[\\w-]+",
+          "name": "entity.other.attribute-name.class.pydoc"
+        },
+        {
+          "match": "([\\w-]+)(=)(\"[^\"]*\"|[^\\s}]+)",
+          "captures": {
+            "1": {
+              "name": "entity.other.attribute-name.pydoc"
+            },
+            "2": {
+              "name": "keyword.operator.assignment.pydoc"
+            },
+            "3": {
+              "name": "string.unquoted.value.pydoc"
+            }
+          }
+        }
+      ]
     }
   }
 }

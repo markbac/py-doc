@@ -1,0 +1,389 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "comment": "py-doc's diagram fences and poster blocks in Markdown, each highlighted with the grammar of its language. Every fence py-doc draws is listed: tests/test_editor_grammar.py checks it against py-doc's own list",
+  "scopeName": "markdown.pydoc.fences",
+  "injectionSelector": "L:text.html.markdown",
+  "patterns": [
+    {
+      "include": "#dot-fence"
+    },
+    {
+      "include": "#mermaid-fence"
+    },
+    {
+      "include": "#plantuml-fence"
+    },
+    {
+      "include": "#json-fence"
+    },
+    {
+      "include": "#javascript-fence"
+    },
+    {
+      "include": "#yaml-fence"
+    },
+    {
+      "include": "#clojure-fence"
+    },
+    {
+      "include": "#block-fence"
+    },
+    {
+      "include": "#plain-fence"
+    }
+  ],
+  "repository": {
+    "dot-fence": {
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(packetdiag|blockdiag|graphviz|rackdiag|actdiag|seqdiag|nwdiag|dot)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+      "beginCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        },
+        "4": {
+          "name": "fenced_code.block.language.markdown"
+        },
+        "5": {
+          "name": "fenced_code.block.language.attributes.markdown",
+          "patterns": [
+            {
+              "include": "#info-attribute"
+            }
+          ]
+        }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.pydoc-dot",
+          "patterns": [
+            {
+              "include": "source.pydoc.dot"
+            }
+          ]
+        }
+      ]
+    },
+    "mermaid-fence": {
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(mermaid)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+      "beginCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        },
+        "4": {
+          "name": "fenced_code.block.language.markdown"
+        },
+        "5": {
+          "name": "fenced_code.block.language.attributes.markdown",
+          "patterns": [
+            {
+              "include": "#info-attribute"
+            }
+          ]
+        }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.pydoc-mermaid",
+          "patterns": [
+            {
+              "include": "source.pydoc.mermaid"
+            }
+          ]
+        }
+      ]
+    },
+    "plantuml-fence": {
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(plantuml|puml)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+      "beginCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        },
+        "4": {
+          "name": "fenced_code.block.language.markdown"
+        },
+        "5": {
+          "name": "fenced_code.block.language.attributes.markdown",
+          "patterns": [
+            {
+              "include": "#info-attribute"
+            }
+          ]
+        }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.pydoc-plantuml",
+          "patterns": [
+            {
+              "include": "source.pydoc.plantuml"
+            }
+          ]
+        }
+      ]
+    },
+    "json-fence": {
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(vega\\-lite|vega)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+      "beginCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        },
+        "4": {
+          "name": "fenced_code.block.language.markdown"
+        },
+        "5": {
+          "name": "fenced_code.block.language.attributes.markdown",
+          "patterns": [
+            {
+              "include": "#info-attribute"
+            }
+          ]
+        }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.pydoc-json",
+          "patterns": [
+            {
+              "include": "source.json"
+            }
+          ]
+        }
+      ]
+    },
+    "javascript-fence": {
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(wavedrom)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+      "beginCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        },
+        "4": {
+          "name": "fenced_code.block.language.markdown"
+        },
+        "5": {
+          "name": "fenced_code.block.language.attributes.markdown",
+          "patterns": [
+            {
+              "include": "#info-attribute"
+            }
+          ]
+        }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.pydoc-javascript",
+          "patterns": [
+            {
+              "include": "source.js"
+            }
+          ]
+        }
+      ]
+    },
+    "yaml-fence": {
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(wireviz)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+      "beginCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        },
+        "4": {
+          "name": "fenced_code.block.language.markdown"
+        },
+        "5": {
+          "name": "fenced_code.block.language.attributes.markdown",
+          "patterns": [
+            {
+              "include": "#info-attribute"
+            }
+          ]
+        }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.pydoc-yaml",
+          "patterns": [
+            {
+              "include": "source.yaml"
+            }
+          ]
+        }
+      ]
+    },
+    "clojure-fence": {
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(bytefield\\-svg)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+      "beginCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        },
+        "4": {
+          "name": "fenced_code.block.language.markdown"
+        },
+        "5": {
+          "name": "fenced_code.block.language.attributes.markdown",
+          "patterns": [
+            {
+              "include": "#info-attribute"
+            }
+          ]
+        }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.pydoc-clojure",
+          "patterns": [
+            {
+              "include": "source.clojure"
+            }
+          ]
+        }
+      ]
+    },
+    "block-fence": {
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(gradient\\-scale|standard\\-model|syntax\\-anatomy|energy\\-levels|interferometer|nuclide\\-chart|code\\-compare|thermo\\-cycle|hex\\-dissect|fault\\-tree|gene\\-locus|plc\\-ladder|structogram|uncertainty|zoom\\-chain|instrument|annotated|checklist|highlight|phylogeny|seq\\-logo|spacetime|sun\\-path|threshold|elements|equation|glossary|logscale|molecule|progress|proscons|railroad|segments|spectrum|terminal|timeline|balance|barcode|buckets|circuit|compare|cutaway|feynman|gallery|iceberg|plasmid|pyramid|ternary|vessels|bowtie|dial24|figure|funnel|memory|optics|orbits|people|pikchr|pinout|rating|target|cards|chart|chess|cycle|gauge|idef0|lanes|music|onion|sizes|smith|stack|steps|upset|atom|cone|flow|kmap|plot|ring|tape|abc|cie|gsn|lcd|vsm|n2|qr)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+      "beginCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        },
+        "4": {
+          "name": "fenced_code.block.language.markdown"
+        },
+        "5": {
+          "name": "fenced_code.block.language.attributes.markdown",
+          "patterns": [
+            {
+              "include": "#info-attribute"
+            }
+          ]
+        }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.pydoc-block",
+          "patterns": [
+            {
+              "include": "source.pydoc.block"
+            }
+          ]
+        }
+      ]
+    },
+    "plain-fence": {
+      "begin": "(^|\\G)(\\s*)(`{3,}|~{3,})\\s*(?i:(ditaa)((\\s+|:|,|\\{|\\?)[^`]*)?$)",
+      "beginCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        },
+        "4": {
+          "name": "fenced_code.block.language.markdown"
+        },
+        "5": {
+          "name": "fenced_code.block.language.attributes.markdown",
+          "patterns": [
+            {
+              "include": "#info-attribute"
+            }
+          ]
+        }
+      },
+      "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+      "endCaptures": {
+        "3": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "patterns": [
+        {
+          "begin": "(^|\\G)(\\s*)(.*)",
+          "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+          "contentName": "meta.embedded.block.pydoc-plain",
+          "patterns": []
+        }
+      ]
+    },
+    "info-attribute": {
+      "match": "([A-Za-z_][\\w-]*)(=)(\"[^\"]*\"|'[^']*'|[^\\s}]+)",
+      "captures": {
+        "1": {
+          "name": "entity.other.attribute-name.pydoc"
+        },
+        "2": {
+          "name": "keyword.operator.assignment.pydoc"
+        },
+        "3": {
+          "name": "string.unquoted.value.pydoc"
+        }
+      }
+    }
+  }
+}

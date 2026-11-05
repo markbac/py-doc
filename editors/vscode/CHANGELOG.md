@@ -1,5 +1,13 @@
 # Changes
 
+## 2.3.0
+
+- Highlighting inside every diagram fence and poster block py-doc draws: Mermaid, Graphviz (and the blockdiag family) and PlantUML with grammars of the extension's own, and Vega, WaveDrom, WireViz and bytefield with VS Code's JSON, JavaScript, YAML and Clojure grammars. Poster blocks, `plot` and the written-form fences show their `key:` lines, `key=value` options, cells, icons and numbers. The attributes on a fence line are highlighted too.
+- Highlighting of rich tables cell by cell (`<br>`, list items, `<` and `^` merges, `{bg=... valign=...}`, `[[BLOCK:]]`), callouts, fenced divs and pandoc attribute blocks.
+- Folding of `[[IF:]]`/`[[NOT:]]` to `[[ENDIF]]`, `[[BLOCK:]]` to `[[ENDBLOCK]]`, `[[LANDSCAPE]]` to `[[PORTRAIT]]`, rich tables and fenced divs.
+- Snippets for rich tables, blocks, callouts, captions, includes, conditions, page breaks, landscape sections, styles, variables, diagrams, poster blocks, speaker notes and columns.
+- The README is a full guide: installing, the preview, what is highlighted, folding, snippets, settings and troubleshooting.
+
 ## 2.2.0
 
 - Highlighting of py-doc directives in Markdown, such as `[[INCLUDE: a.md]]`, `[[LISTTABLE: header]]` and `[[BLOCK: name]]`, and of `{{variables}}`. Code is left alone.
