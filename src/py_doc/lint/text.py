@@ -77,6 +77,7 @@ def _mask(text: str) -> str:
 
 _LISTTABLE = re.compile(r"\[\[LISTTABLE\b")
 _BR = re.compile(r"<br\s*/?>", re.IGNORECASE)
+_CELL_STYLE = re.compile(r"^\s*\{[^}]*=[^}]*\}")
 
 
 def _listtable_segments(paragraph: n.Paragraph) -> list[Segment]:
@@ -102,6 +103,7 @@ def _listtable_segments(paragraph: n.Paragraph) -> list[Segment]:
             for index, text in enumerate(node.text.split("|")):
                 if index:
                     close(node.line)
+                    text = _CELL_STYLE.sub(lambda m: " " * len(m[0]), text)  # {bg=... valign=...} is not prose
                 builder.add(text, node.line)
         else:
             builder.inlines([node])

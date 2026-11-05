@@ -87,6 +87,7 @@ def finish_docx(body_path: Path, template: Path | None, metadata: Metadata, opti
         post.replace_placeholders(base, replacements)
         index = post.find_and_remove_marker(base, options.get("marker", DEFAULT_MARKER))
         body = Document(str(body_path))
+        post.mark_tables(body)  # so the template's own tables keep their look
         if present:
             _drop_title_block(body)
         if index is not None:
@@ -119,8 +120,10 @@ def finish_docx(body_path: Path, template: Path | None, metadata: Metadata, opti
     post.apply_layout_fixes(document)
     post.rescale_landscape_images(document)
     post.apply_explicit_styles(document)
+    post.apply_cell_marks(document)
+    own = post.take_rich_table_marks(document, post.OWN_TABLE_MARK) if template is not None else None
     rich = post.take_rich_table_marks(document)
-    post.format_all_tables(document, rich=rich)
+    post.format_all_tables(document, rich=rich, own=own)
     post.keep_captions_with_tables(document, rich)  # after the [[CAPTION:]] lines are captions
     post.update_core_properties(
         document,

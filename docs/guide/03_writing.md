@@ -191,19 +191,26 @@ Word uses the `Div.note` to `Div.caution` paragraph styles. The built-in referen
 
 ## Rich table cells
 
-A pipe table holds one line of text in each cell. For cells of several paragraphs, lists, merged cells or a diagram, put `[[LISTTABLE]]` on the line before the rows, and leave out the `|---|` line:
+A pipe table holds one line of text in each cell. For cells of several paragraphs, lists, merged cells, colours, a diagram or another table, put `[[LISTTABLE]]` on the line before the rows, and leave out the `|---|` line:
 
 ````markdown
 [[LISTTABLE: header, widths=8,52,40]]
 | Step | What to do | Check |
-| 1 | [Prepare the node:]{.underline}<br>Fit the batteries.<br>Before you go to site:<br>- The firmware is version {{version}}<br>- The node is registered<br>  - with its own certificate | The light flashes green. |
+| 1 | [Prepare the node:]{.underline}<br>Fit the batteries.<br>Before you go to site:<br>- The firmware is version {{version}}<br>- The node is registered<br>  - with its own certificate | {bg=E8F5E9 valign=middle} The light flashes green. |
 | 2 | Pair the node:<br>1. Hold the button for five seconds.<br>2. Choose the node in the app. | ^ |
 | 3 | The first reading goes this way:<br>[[BLOCK: reading]] | < |
+| 4 | Wire the terminals:<br>[[BLOCK: terminals]] | See the [sheet](https://example.com/sn-100/installation/terminal-wiring.pdf). |
 
 [[BLOCK: reading]]
 ```dot
 digraph reading { rankdir=LR; Sensor -> Gateway -> Broker; }
 ```
+[[ENDBLOCK]]
+
+[[BLOCK: terminals]]
+| Terminal | Wire |
+|---|---|
+| V+ | Red |
 [[ENDBLOCK]]
 ````
 
@@ -212,18 +219,20 @@ digraph reading { rankdir=LR; Sensor -> Gateway -> Broker; }
 - **Widths**: `widths=8,52,40` gives the relative widths of the columns. Without it the columns are the same width.
 - **Paragraphs and lists**: `<br>` starts a new paragraph in a cell. A paragraph that starts with `- ` is a bullet and one that starts with `1. ` a numbered item, and items next to each other make one list. Two spaces before the `- ` or `1. ` put the item inside the one above.
 - **Merged cells**: a cell of only `<` joins the cell on its left, and a cell of only `^` the cell above. Merged cells must make a rectangle, and a body cell cannot join the header row. `\<` and `\^` are the characters themselves.
-- **Blocks**: a cell paragraph `[[BLOCK: name]]` is replaced by the lines between `[[BLOCK: name]]` and `[[ENDBLOCK]]` elsewhere in the same file. A block can hold a diagram, a picture, code or a callout. A picture or diagram in a cell has no caption of its own: caption the table. Plain pictures also work inline, as `![alt](picture.png)`.
+- **Colour and alignment**: a cell that starts with `{bg=E8F5E9}` has that background colour, as six hex digits. `{valign=middle}` puts its text in the middle of the row, and `top` and `bottom` work too. Both can go in one `{...}`. In PDF a colour covers the first row of a cell merged down, and the alignment is not used.
+- **Blocks**: a cell paragraph `[[BLOCK: name]]` is replaced by the lines between `[[BLOCK: name]]` and `[[ENDBLOCK]]`, written elsewhere in the same file or in a file it includes, or the file that includes it. A block can hold a diagram, a picture, code, a callout or a table, including another `[[LISTTABLE]]`. A picture or diagram in a cell has no caption of its own: caption the table. Plain pictures also work inline, as `![alt](picture.png)`.
+- **Long links**: a link or picture too long for its column is written as a reference after the table, so it keeps the table readable. It is still the same link.
 - **Formatting**: bold, italic, links, `[text]{.underline}` and `[text]{custom-style="Name"}` work as anywhere else. A `custom-style` is a character style of the Word template. Pandoc makes one with no formatting if the template has none of that name, so add the styles you use to the template.
 
-py-doc turns the table into a pandoc grid table after includes, conditions and variables, so rich tables work in included files and take `{{variables}}`. A marker in a code block is left alone. In Word the columns keep the widths given, the rows may break across pages, and a picture is made no wider than its cell. Only a header row is repeated on each page and printed as a header. HTML, PDF and sites show the same table. On a slide pandoc shows merged cells as separate cells, bullets as plain lines and no pictures.
+py-doc turns the table into a pandoc grid table after includes, conditions and variables, so rich tables work in included files and take `{{variables}}`. A marker in a code block is left alone. In Word the columns keep the widths given, the rows may break across pages, and a picture is made no wider than its cell. Only a header row is repeated on each page and printed as a header. A table in a cell is formatted like any other. HTML, PDF and sites show the same table. On a slide pandoc shows merged cells as separate cells, bullets as plain lines and no pictures, colours or tables in cells.
 
 The build warns about a row with too many or too few cells, which is padded or cut. It warns about a merge that cannot be made, which is left empty, and a marker with no rows, which is left as written. It also warns about a block that is used but not defined, or defined but not used. A `[[BLOCK:]]` that is never closed with `[[ENDBLOCK]]` stops the build. `py-doc lint` and `py-doc check` report all of these with their line.
 
 Known limits:
 
-- A word wider than its column breaks the table, and the build says so. Widen the column or shorten the word.
+- A word wider than its column breaks the table, and the build says so. Widen the column or shorten the word. Links and pictures are shortened for you, but not a long bare address such as `<https://...>`.
 - Includes and conditions cannot go inside a cell, only around the whole table or inside a block.
-- A block belongs to its file: a table cannot use a block defined in another file.
+- A block is shared by a source file and the files it includes, not by the other sources of a document.
 
 ## Includes, conditions and variables
 
