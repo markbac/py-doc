@@ -102,3 +102,13 @@ test(
     }
   }
 );
+
+test('a diagram written :::mermaid ... ::: is highlighted as Mermaid, and the text after it as Markdown again', async () => {
+  const t = await tokenize(':::mermaid\nsequenceDiagram\n    participant GS\n    GS->>MMS: RequestMessage\n:::\n\nThe meter sends a status and depends on it.');
+  has(scopesOf(t, 0, 'mermaid'), 'fenced_code.block.language.markdown');
+  has(scopesOf(t, 1, 'sequenceDiagram'), 'storage.type.diagram.mermaid');
+  has(scopesOf(t, 3, '->>'), 'keyword.operator.arrow.mermaid');
+  assert.ok(!t[6].some(([, scopes]) => scopes.some((s) => s.includes('mermaid') || s.includes('embedded'))), JSON.stringify(t[6]));
+  const div = await tokenize('::: notes\nSaid aloud.\n:::');
+  has(scopesOf(div, 0, 'notes'), 'entity.other.attribute-name.class.pydoc');
+});

@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "comment": "py-doc's diagram fences and poster blocks in Markdown, each highlighted with the grammar of its language. Every fence py-doc draws is listed: tests/test_editor_grammar.py checks it against py-doc's own list",
+  "comment": "py-doc's diagram fences and poster blocks in Markdown, each highlighted with the grammar of its language, and the :::name ... ::: form py-doc also draws for the diagram languages. Every fence py-doc draws is listed: tests/test_editor_grammar.py checks it against py-doc's own list",
   "scopeName": "markdown.pydoc.fences",
   "injectionSelector": "L:text.html.markdown",
   "patterns": [
@@ -30,6 +30,36 @@
     },
     {
       "include": "#plain-fence"
+    },
+    {
+      "include": "#dot-div"
+    },
+    {
+      "include": "#mermaid-div"
+    },
+    {
+      "include": "#plantuml-div"
+    },
+    {
+      "include": "#json-div"
+    },
+    {
+      "include": "#javascript-div"
+    },
+    {
+      "include": "#yaml-div"
+    },
+    {
+      "include": "#clojure-div"
+    },
+    {
+      "include": "#block-div"
+    },
+    {
+      "include": "#plain-div"
+    },
+    {
+      "include": "#bpmnt-div"
     }
   ],
   "repository": {
@@ -384,6 +414,252 @@
           "name": "string.unquoted.value.pydoc"
         }
       }
+    },
+    "dot-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(packetdiag|blockdiag|graphviz|rackdiag|actdiag|seqdiag|nwdiag|dot))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.pydoc-dot",
+      "patterns": [
+        {
+          "include": "source.pydoc.dot"
+        }
+      ]
+    },
+    "mermaid-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(mermaid))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.pydoc-mermaid",
+      "patterns": [
+        {
+          "include": "source.pydoc.mermaid"
+        }
+      ]
+    },
+    "plantuml-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(plantuml|puml))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.pydoc-plantuml",
+      "patterns": [
+        {
+          "include": "source.pydoc.plantuml"
+        }
+      ]
+    },
+    "json-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(vega\\-lite|vega))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.pydoc-json",
+      "patterns": [
+        {
+          "include": "source.json"
+        }
+      ]
+    },
+    "javascript-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(wavedrom))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.pydoc-javascript",
+      "patterns": [
+        {
+          "include": "source.js"
+        }
+      ]
+    },
+    "yaml-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(wireviz))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.pydoc-yaml",
+      "patterns": [
+        {
+          "include": "source.yaml"
+        }
+      ]
+    },
+    "clojure-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(bytefield\\-svg))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.pydoc-clojure",
+      "patterns": [
+        {
+          "include": "source.clojure"
+        }
+      ]
+    },
+    "block-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(thermo\\-cycle|gene\\-locus|phylogeny|molecule|railroad|seq\\-logo|sun\\-path|circuit|plasmid|ternary|pikchr|chess|music|smith|upset|abc|cie))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.pydoc-block",
+      "patterns": [
+        {
+          "include": "source.pydoc.block"
+        }
+      ]
+    },
+    "plain-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(ditaa))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.pydoc-plain",
+      "patterns": []
+    },
+    "bpmnt-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(bpmnt))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.bpmnt",
+      "patterns": [
+        {
+          "include": "source.bpmnt"
+        }
+      ]
     }
   }
 }
