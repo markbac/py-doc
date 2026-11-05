@@ -9,7 +9,15 @@ Writing tools for documents, slide decks and posters written for [markbac/py-doc
 
 ## Install
 
-The extension is not on the Marketplace yet, so you build it once and install the file. You need [Node.js](https://nodejs.org/) 18 or later and VS Code 1.75 or later.
+The extension is not on the Marketplace yet, so it is built from this repository. You need [Node.js](https://nodejs.org/) 18 or later and VS Code 1.75 or later.
+
+On Windows, `scripts\update.ps1` at the root of the repository does it for you. When VS Code is installed, the script builds the extension and installs it, then installs it again after a pull that changed it. To do only that step:
+
+```powershell
+.\scripts\install-vscode-extension.ps1
+```
+
+By hand, on any platform, build the file and install it:
 
 ```bash
 cd editors/vscode

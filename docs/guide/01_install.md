@@ -81,10 +81,13 @@ After a pull, a change of dependencies or the tool image takes effect only after
 | Python | py-doc's own virtual environment, `.venv` in the repository, made from Python 3.10 or later when it is missing or broken. `-RecreateVenv` makes it again; `-System` uses the Python on the `PATH` and `-Python` another one instead |
 | Packages | `pip install -e .` (with `-Dev`, `.[dev]`) and `pip check`, so a new dependency is installed. In `.venv`, `pip check` sees only py-doc's packages |
 | Command | `py-doc` starts, and the `py-doc` on the `PATH` is this one. Its folder, `.venv\Scripts`, is put first on your user `PATH` when it is not already, so a new terminal runs it; `-NoPath` leaves the `PATH` alone. An older install found first is named, with the command that removes it |
+| VS Code | When VS Code is installed, py-doc's [extension](../../editors/vscode/README.md) is built and installed into it. It is installed again when its version or any of its files changed, and left alone otherwise. Building it needs Node.js. A failure here is reported, and the update goes on. `-NoVSCode` skips the step, and `-Code` names VS Code's `code.cmd` when it is not on the `PATH` |
 | Docker | The container engine answers. `py-doc setup` installs it when it does not |
 | Tool image | Built when its definition changed, every layer again with `-Rebuild`, and older images removed unless `-KeepOldImages`. `-CaFile` passes a proxy's certificate to the build |
 | Doctor | `py-doc doctor` |
 | Tests | With `-Test`, the test suite and `py-doc lint docs --strict` |
+
+`scripts/install-vscode-extension.ps1` does the VS Code step on its own, and `-Force` installs the extension even when it is up to date.
 
 If Windows refuses to run the script, run it once with `powershell -ExecutionPolicy Bypass -File scripts\update.ps1`, or allow local scripts with `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`. On Linux the same steps are `git pull`, `pip install -e .`, `py-doc tools build` and `py-doc doctor`.
 

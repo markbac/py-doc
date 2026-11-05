@@ -50,7 +50,7 @@ py-doc doctor               # check that everything works
 
 A few scientific fences (`molecule`, `smith`, `plasmid` and others) are drawn in an optional second image, the science image. It is built the first time a document uses one, or ahead of time with `py-doc tools build --science`.
 
-On Windows, `.\scripts\update.ps1` does all of that in a virtual environment of py-doc's own (`.venv`). Run `.\scripts\update.ps1` after every pull: it installs any new dependencies, rebuilds the tool image when it changed, and checks that everything works.
+On Windows, `.\scripts\update.ps1` does all of that in a virtual environment of py-doc's own (`.venv`). Run `.\scripts\update.ps1` after every pull: it installs any new dependencies, rebuilds the tool image when it changed, and checks that everything works. When VS Code is there, it also installs or updates the [VS Code extension](editors/vscode/README.md).
 
 Linux and Windows are supported. See [Installation](docs/guide/01_install.md) for the tool container, proxies and offline machines.
 
