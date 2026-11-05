@@ -75,11 +75,48 @@ def _mask(text: str) -> str:
     return text
 
 
+_LISTTABLE = re.compile(r"\[\[LISTTABLE\b")
+_BR = re.compile(r"<br\s*/?>", re.IGNORECASE)
+
+
+def _listtable_segments(paragraph: n.Paragraph) -> list[Segment]:
+    """A ``[[LISTTABLE]]`` and its rows, read as one paragraph, as a segment per cell paragraph.
+
+    A row is a line, a cell ends at a ``|``, and ``<br>`` starts a new paragraph in a cell. The parser has
+    already turned an escaped ``\\|`` into ``|``, so a cell holding one is read as two: harmless for prose rules.
+    """
+    found: list[Segment] = []
+    builder = _Builder(paragraph.line)
+
+    def close(line: int) -> None:
+        nonlocal builder
+        segment = builder.segment()
+        if segment.text.strip():
+            found.append(segment)
+        builder = _Builder(line)
+
+    for node in paragraph.children:
+        if isinstance(node, n.SoftBreak) or (isinstance(node, n.HtmlInline) and _BR.fullmatch(node.text.strip())):
+            close(node.line)
+        elif isinstance(node, n.Text):
+            for index, text in enumerate(node.text.split("|")):
+                if index:
+                    close(node.line)
+                builder.add(text, node.line)
+        else:
+            builder.inlines([node])
+    close(paragraph.line)
+    return found
+
+
 def segments(document: n.Document) -> list[Segment]:
     """The prose of ``document`` in source order."""
     found: list[Segment] = []
     for node in n.walk(document):
-        if isinstance(node, (n.Heading, n.Paragraph, n.TableCell)):
+        first = node.children[0] if isinstance(node, n.Paragraph) and node.children else None
+        if isinstance(first, n.Text) and _LISTTABLE.match(first.text):
+            found += _listtable_segments(node)
+        elif isinstance(node, (n.Heading, n.Paragraph, n.TableCell)):
             builder = _Builder(node.line)
             builder.inlines(node.children)
             segment = builder.segment()

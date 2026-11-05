@@ -10,6 +10,9 @@
     A page break (a new slide in a deck), the same as a ``::: {.pagebreak}`` block.
 ``{{name}}``
     Replace with the value of a variable.
+``[[LISTTABLE]]``, ``[[BLOCK: name]]`` ... ``[[ENDBLOCK]]``
+    A table whose cells hold paragraphs, lists, merged cells and blocks: see :mod:`py_doc.listtable`.
+    Only when ``expand`` is asked for tables, as a document build does.
 
 Directives on their own line, and ``{{name}}`` in running text, are the only forms recognised. Anything in
 a fenced code block or an inline code span is left alone, so a document can show the syntax. Paths are
@@ -26,6 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from . import listtable
 from .errors import ConversionError
 
 logger = logging.getLogger(__name__)
@@ -134,13 +138,25 @@ def expand(
     file: Path,
     variables: dict[str, Any] | None = None,
     conditions: dict[str, Any] | None = None,
+    tables: bool = False,
 ) -> str:
-    """Apply every directive in ``text``, which was read from ``file``. Raises :class:`DirectiveError`."""
-    lines = _expand(text, Path(file), variables or {}, conditions or {}, (), 0)
+    """Apply every directive in ``text``, which was read from ``file``. Raises :class:`DirectiveError`.
+
+    With ``tables``, ``[[LISTTABLE]]`` tables become grid tables and ``[[BLOCK:]]`` definitions Divs.
+    """
+    lines = _expand(text, Path(file), variables or {}, conditions or {}, (), 0, tables)
     return "\n".join(lines) + ("\n" if lines and text.endswith("\n") else "")
 
 
-def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], depth: int) -> list[str]:
+def _substituted(line: str, variables, file: Path, number: int) -> str:
+    undefined: list[str] = []
+    line = _substitute(line, variables, undefined)
+    for name in dict.fromkeys(undefined):
+        logger.warning(f"{file}:{number}: variable '{name}' is not defined, so '{{{{{name}}}}}' is left as written")
+    return line
+
+
+def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], depth: int, tables: bool) -> list[str]:
     def fail(number: int, message: str) -> DirectiveError:
         return DirectiveError(f"{file}:{number}: {message}")
 
@@ -149,7 +165,13 @@ def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], 
     out: list[str] = []
     fence = Fence()
     blocks: list[tuple[bool, int]] = []  # (condition held, line of the [[IF:]])
+    rich = listtable.Tables(str(file))
     for number, line in enumerate(text.splitlines(), start=1):
+        if rich.table is not None:
+            if listtable.ROW.match(line):
+                rich.table.add(number, _substituted(line, variables, file, number))
+                continue
+            out += rich.flush()
         if fence.inside(line):
             if all(held for held, _ in blocks):
                 out.append(line)
@@ -168,6 +190,9 @@ def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], 
             continue
         if not all(held for held, _ in blocks):
             continue
+        if tables and (replaced := rich.directive(number, line)) is not None:
+            out += replaced
+            continue
         if _PAGEBREAK.match(line):
             out += ["", "::: {.pagebreak}", ":::", ""]
             continue
@@ -182,27 +207,40 @@ def _expand(text, file: Path, variables, conditions, parents: tuple[Path, ...], 
                 raise fail(number, f"{target.name} includes itself, directly or through other files")
             logger.debug(f"Including {target} from {file}:{number}")
             fragment = target.read_text(encoding="utf-8-sig")
-            out += _expand(fragment, target, variables, conditions, (*parents, file.resolve()), depth + 1)
+            out += _expand(fragment, target, variables, conditions, (*parents, file.resolve()), depth + 1, tables)
             continue
-        undefined: list[str] = []
-        out.append(_substitute(line, variables, undefined))
-        for name in dict.fromkeys(undefined):
-            logger.warning(f"{file}:{number}: variable '{name}' is not defined, so '{{{{{name}}}}}' is left as written")
+        out.append(_substituted(line, variables, file, number))
     if blocks:
         raise fail(blocks[-1][1], "[[IF:]] or [[NOT:]] is never closed with [[ENDIF]]")
+    out += rich.close()
+    for number, message in rich.problems:
+        logger.warning(f"{file}:{number}: {message}")
+    if rich.errors:
+        raise fail(*rich.errors[0])
+    if rich.count:
+        logger.info(f"{file}: {rich.count} [[LISTTABLE]] table(s) converted")
     return out
 
 
 def check(text: str, file: Path) -> list[Problem]:
     """Mistakes in the directives of one file that do not need variables or conditions to find.
 
-    That is: an [[ENDIF]] with nothing open, a block never closed, and an include whose file is missing.
+    That is: an [[ENDIF]] with nothing open, a block never closed, an include whose file is missing, and
+    the mistakes of [[LISTTABLE]] tables and their [[BLOCK:]]s.
     """
     problems: list[Problem] = []
     fence = Fence()
     open_lines: list[int] = []
+    rich = listtable.Tables(str(file))
     for number, line in enumerate(text.splitlines(), start=1):
+        if rich.table is not None:
+            if listtable.ROW.match(line):
+                rich.table.add(number, line)
+                continue
+            rich.flush()
         if fence.inside(line):
+            continue
+        if rich.directive(number, line) is not None:
             continue
         if _IF.match(line):
             open_lines.append(number)
@@ -216,4 +254,6 @@ def check(text: str, file: Path) -> list[Problem]:
             if not target.is_file():
                 problems.append(Problem(number, f"included file not found: {match['path']}"))
     problems += [Problem(n, "[[IF:]] or [[NOT:]] is never closed with [[ENDIF]]") for n in open_lines]
+    rich.close()
+    problems += [Problem(number, message) for number, message in rich.problems + rich.errors]
     return sorted(problems, key=lambda p: p.line)

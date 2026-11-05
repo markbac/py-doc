@@ -193,7 +193,7 @@ The old commands `py-doc2docx`, `py-doc2slides` and `py-doclint` still work and 
 `py-doc build --report build.json`, or `reports: {path: build.json}` in `py-doc.yml`, writes a JSON report of the build:
 
 - the py-doc version, the image tag and id, and the version of each tool used;
-- each document with its sources (words, sentences, paragraphs) and its outputs (size and SHA-256);
+- each document with its sources (words, sentences, paragraphs and `[[LISTTABLE]]` tables) and its outputs (size and SHA-256);
 - the icons each poster uses, with their pack and licence;
 - every diagram: type, file, line, and whether the cache served it;
 - template problems, and every warning with file and line.

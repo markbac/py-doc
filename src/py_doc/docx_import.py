@@ -24,6 +24,7 @@ from docx.text.paragraph import Paragraph
 from lxml import etree
 
 from .errors import ConversionError, EnvironmentProblem, ToolFailed
+from .pandoc.docx_post import has_header_row
 from .runtime import Mount, Runtime, connect
 
 logger = logging.getLogger(__name__)
@@ -342,33 +343,58 @@ class _Importer:
     # -- tables ---------------------------------------------------------------------------------
 
     def _table(self, tbl) -> None:
+        """A pipe table, or a ``[[LISTTABLE]]`` when a cell has several paragraphs or a list, cells are
+        merged, or the table has no header row: those a pipe table cannot hold."""
         self._close_list()
-        rows: list[list[str]] = []
+        rows: list[list[str]] = []  # the cells as a pipe table has them: the paragraphs joined, merges empty
+        rich_rows: list[list[str]] = []  # the cells as a [[LISTTABLE]] has them
+        header = has_header_row(tbl)
+        rich = not header
         for tr in tbl.findall(qn("w:tr")):
             cells: list[str] = []
+            rich_cells: list[str] = []
             for tc in tr.findall(qn("w:tc")):
                 props = tc.find(qn("w:tcPr"))
                 span = props.find(qn("w:gridSpan")) if props is not None else None
                 merge = props.find(qn("w:vMerge")) if props is not None else None
                 width = int(span.get(W_VAL)) if span is not None and span.get(W_VAL, "").isdigit() else 1
+                rich = rich or width > 1
                 if merge is not None and merge.get(W_VAL, "continue") == "continue":
-                    text = ""
-                else:
-                    paragraphs = [self._render(self._tokens(p)).strip() for p in tc.iter(W_P)]
-                    text = " ".join(x for x in paragraphs if x).replace("|", "\\|")
-                    text = re.sub(r"\s*\\\n\s*", " ", text)
-                cells.extend([text] + [""] * (width - 1))
-            rows.append(cells)
-        rows = [r for r in rows if r]
+                    rich = True
+                    cells.extend([""] * width)
+                    rich_cells.extend(["^"] * width)
+                    continue
+                paragraphs = []
+                for p in tc.iter(W_P):
+                    text = re.sub(r"\s*\\\n\s*", " ", self._render(self._tokens(p)).strip()).replace("|", "\\|")
+                    if text:
+                        item = self._list_info(p, self._style_name(p).lower())
+                        paragraphs.append(f"{'  ' * item[0]}{item[1]} {text}" if item else text)
+                        rich = rich or item is not None
+                rich = rich or len(paragraphs) > 1
+                cells.extend([" ".join(paragraphs)] + [""] * (width - 1))
+                rich_cells.extend(["<br>".join(paragraphs)] + ["<"] * (width - 1))
+            if cells:
+                rows.append(cells)
+                rich_rows.append(rich_cells)
         if not rows:
             return
         columns = max(len(r) for r in rows)
         rows = [r + [""] * (columns - len(r)) for r in rows]
+        rich_rows = [r + [""] * (columns - len(r)) for r in rich_rows]
 
         def line(cells: list[str]) -> str:
             return "|" + "|".join(f" {c} " if c else " " for c in cells) + "|"
 
-        self._add("table", [line(rows[0]), line(["---"] * columns), *(line(r) for r in rows[1:])])
+        if not rich:
+            self._add("table", [line(rows[0]), line(["---"] * columns), *(line(r) for r in rows[1:])])
+            return
+        grid = [int(c.get(qn("w:w"), "0")) for c in tbl.findall(f"{qn('w:tblGrid')}/{qn('w:gridCol')}")]
+        options = ["header"] if header else []
+        if len(grid) == columns and sum(grid) and len(set(grid)) > 1:
+            options.append("widths=" + ",".join(str(max(1, round(100 * w / sum(grid)))) for w in grid))
+        marker = f"[[LISTTABLE: {', '.join(options)}]]" if options else "[[LISTTABLE]]"
+        self._add("table", [marker, *(line(r) for r in rich_rows)])
 
     # -- inline content -------------------------------------------------------------------------
 

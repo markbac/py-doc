@@ -28,8 +28,11 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import nsmap as _DOCX_NSMAP
 from docx.oxml.ns import qn
+from docx.shape import InlineShape
 from docx.shared import Cm, RGBColor
 from docx.text.paragraph import Paragraph
+
+from .reference import DEFAULT_TEXT_WIDTH_CM
 from lxml import etree
 
 
@@ -493,12 +496,104 @@ def apply_explicit_styles(doc: Document) -> None:
 # ---------------------------------------------------------------------------
 
 
+def has_header_row(tbl) -> bool:
+    """True when the table ``<w:tbl>`` says its first row is a header.
+
+    That is the ``firstRow`` of its ``w:tblLook`` (or the same bit of the older ``w:val`` form), and when
+    the table has no ``w:tblLook``, a ``w:tblHeader`` on its first row. Pandoc writes ``firstRow="0"`` for a
+    table without a header, such as a ``[[LISTTABLE]]``.
+    """
+    look = tbl.tblPr.find(qn("w:tblLook")) if tbl.tblPr is not None else None
+    if look is not None:
+        if look.get(qn("w:firstRow")) is not None:
+            return look.get(qn("w:firstRow")) in ("1", "true", "on")
+        if look.get(qn("w:val")) is not None:
+            return bool(int(look.get(qn("w:val")), 16) & 0x0020)
+    first = tbl.find(qn("w:tr"))
+    return first is not None and first.find(f"{qn('w:trPr')}/{qn('w:tblHeader')}") is not None
+
+
+RICH_TABLE_MARK = "_PyDocRichTable"  # the bookmark listtable.lua puts before a [[LISTTABLE]]
+_CELL_MARGINS = 2 * 68580  # Word's default left and right cell margins, 0.075 inch each, in EMU
+
+
+def take_rich_table_marks(doc: Document) -> set:
+    """The ``<w:tbl>`` of each ``[[LISTTABLE]]``, found by the bookmark before it, which is taken out."""
+    rich = set()
+    marks = [m for m in doc.element.body.iter(qn("w:bookmarkStart")) if m.get(qn("w:name")) == RICH_TABLE_MARK]
+    for mark in marks:
+        end = mark.getnext()
+        if end is not None and end.tag == qn("w:bookmarkEnd"):  # its own end: docxcompose renumbers only the start
+            end.getparent().remove(end)
+        table = mark.getnext()
+        if table is not None and table.tag == qn("w:tbl"):
+            rich.add(table)
+        mark.getparent().remove(mark)
+    return rich
+
+
+def _text_width_at(doc: Document, element) -> int:
+    """The text-area width (EMU) of the section that holds ``element``, a child of the body.
+
+    A section without a page size (pandoc's own reference document has none) has pandoc's default width.
+    """
+    sections = list(doc.sections)
+    index = 0
+    for child in doc.element.body.iterchildren():
+        if child is element:
+            break
+        if child.tag == qn("w:p") and child.find(f"{qn('w:pPr')}/{qn('w:sectPr')}") is not None:
+            index += 1
+    section = sections[min(index, len(sections) - 1)]
+    if None in (section.page_width, section.left_margin, section.right_margin):
+        return Cm(DEFAULT_TEXT_WIDTH_CM)
+    return section.page_width - section.left_margin - section.right_margin
+
+
+def _fit_pictures_to_cells(tbl, text_width: int) -> None:
+    """Make each picture in a cell of ``tbl`` (a fixed layout table) no wider than its cell."""
+    columns = [int(c.get(qn("w:w"), "0")) for c in tbl._tbl.tblGrid.findall(qn("w:gridCol"))]
+    total = sum(columns) or 1
+    for tr in tbl._tbl.findall(qn("w:tr")):
+        column = 0
+        for tc in tr.findall(qn("w:tc")):
+            room = int(text_width * sum(columns[column : column + tc.grid_span]) / total) - _CELL_MARGINS
+            for inline in tc.iter(qn("wp:inline")):
+                picture = InlineShape(inline)
+                if room > 0 and picture.width and picture.width > room:
+                    picture.height = int(picture.height * room / picture.width)
+                    picture.width = room
+            column += tc.grid_span
+
+
+def _format_header_row(row) -> None:
+    """Row 1 as the header: repeated on each page, kept with the next row, in bold white."""
+    trPr = row._tr.get_or_add_trPr()
+    if trPr.find(qn("w:tblHeader")) is None:
+        trPr.append(OxmlElement("w:tblHeader"))
+    for cell in row.cells:
+        for p in cell.paragraphs:
+            p.paragraph_format.keep_with_next = True
+            p.paragraph_format.keep_together = True
+            # Direct run formatting, not reliance on the table
+            # style's conditional "first row" formatting alone:
+            # whatever paragraph style Pandoc assigned to this cell
+            # (commonly "Compact", which inherits Normal's explicit
+            # navy colour) outranks the table style's white-on-navy
+            # override in Word's precedence, silently making header
+            # text invisible. Direct formatting always wins.
+            for run in p.runs:
+                run.font.bold = True
+                run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+
+
 def format_all_tables(
     doc: Document,
     style_name: str = "Table Grid",
     repeat_header: bool = True,
     prevent_row_split: bool = True,
     autofit: bool = True,
+    rich: set | frozenset = frozenset(),
 ) -> None:
     """
     Apply a consistent appearance to every table in *doc*.
@@ -515,6 +610,12 @@ def format_all_tables(
     * Enables autofit and removes fixed cell widths.
     * Marks the first row as a repeating header.
     * Prevents rows from splitting across pages.
+
+    A ``[[LISTTABLE]]`` (its ``<w:tbl>`` is in ``rich``, see :func:`take_rich_table_marks`) and a table
+    without a header row (see :func:`has_header_row`) keep the column widths pandoc wrote, in a fixed
+    layout, and their rows may break across pages, so a tall row does not leave a gap by moving whole to
+    the next page. A picture in one of their cells is made no wider than its cell. Only a header row, if
+    there is one, is formatted and repeated as a header, and kept on one page.
     """
     try:
         _ = doc.styles[style_name]
@@ -536,6 +637,17 @@ def format_all_tables(
         tblW.set(qn("w:type"), "pct")
         tblW.set(qn("w:w"), "5000")  # 5000 = 100% in Word's fiftieths-of-a-percent units
 
+        header = has_header_row(tbl._tbl)
+        if tbl._tbl in rich or not header:
+            tbl.autofit = False  # a fixed layout, on the column widths pandoc wrote
+            if header and repeat_header and tbl.rows:
+                _format_header_row(tbl.rows[0])
+                trPr = tbl.rows[0]._tr.get_or_add_trPr()
+                if trPr.find(qn("w:cantSplit")) is None:
+                    trPr.append(OxmlElement("w:cantSplit"))
+            _fit_pictures_to_cells(tbl, _text_width_at(doc, tbl._tbl))
+            continue
+
         if autofit:
             try:
                 tbl.autofit = True
@@ -549,24 +661,7 @@ def format_all_tables(
                         tcPr.remove(tcW)
 
         if repeat_header and tbl.rows:
-            hdr = tbl.rows[0]
-            trPr = hdr._tr.get_or_add_trPr()
-            if trPr.find(qn("w:tblHeader")) is None:
-                trPr.append(OxmlElement("w:tblHeader"))
-            for cell in hdr.cells:
-                for p in cell.paragraphs:
-                    p.paragraph_format.keep_with_next = True
-                    p.paragraph_format.keep_together = True
-                    # Direct run formatting, not reliance on the table
-                    # style's conditional "first row" formatting alone:
-                    # whatever paragraph style Pandoc assigned to this cell
-                    # (commonly "Compact", which inherits Normal's explicit
-                    # navy colour) outranks the table style's white-on-navy
-                    # override in Word's precedence, silently making header
-                    # text invisible. Direct formatting always wins.
-                    for run in p.runs:
-                        run.font.bold = True
-                        run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+            _format_header_row(tbl.rows[0])
 
         if prevent_row_split:
             for row in tbl.rows:
@@ -701,12 +796,15 @@ def _keep_with_next(paragraph) -> None:
     Paragraph(paragraph, None).paragraph_format.keep_with_next = True  # in the order the schema wants
 
 
-def keep_captions_with_tables(doc: Document) -> None:
+def keep_captions_with_tables(doc: Document, rich: set | frozenset = frozenset()) -> None:
     """A table caption stays on the page of its table.
 
     Word has no "keep with previous", so a caption below a table is held by keeping the table's last
-    row (which may not split) with the next paragraph. A caption above a table is kept with the table.
-    A caption between two tables is the next one's, as in the other formats (markers.lua).
+    row (which may not split) with the next paragraph. In a ``[[LISTTABLE]]`` (``rich``) or a table without
+    a header row the last row may still split, so only the last paragraph of each of its cells is kept
+    with the caption. A caption above
+    a table is kept with the table. A caption between two tables is the next one's, as in the other
+    formats (markers.lua).
     """
     style_names = {style.style_id: style.name for style in doc.styles}
     held = 0
@@ -714,7 +812,13 @@ def keep_captions_with_tables(doc: Document) -> None:
         before, after = table.getprevious(), table.getnext()
         rows = table.findall(qn("w:tr"))
         below = _is_caption(after, style_names) and (after.getnext() is None or after.getnext().tag != qn("w:tbl"))
-        if rows and below:
+        if rows and below and (table in rich or not has_header_row(table)):
+            for cell in rows[-1].iter(qn("w:tc")):  # the row may still split: only its end is held
+                paragraphs = cell.findall(qn("w:p"))
+                if paragraphs:
+                    _keep_with_next(paragraphs[-1])
+            held += 1
+        elif rows and below:
             trPr = rows[-1].get_or_add_trPr()
             if trPr.find(qn("w:cantSplit")) is None:
                 trPr.append(OxmlElement("w:cantSplit"))

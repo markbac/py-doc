@@ -1,0 +1,40 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "comment": "py-doc directives such as [[INCLUDE: a.md]] and [[LISTTABLE: header]], and {{variables}}, in Markdown outside code",
+  "scopeName": "markdown.pydoc.directives",
+  "injectionSelector": "L:text.html.markdown -markup.fenced_code -markup.inline.raw",
+  "patterns": [
+    {
+      "include": "#directive"
+    },
+    {
+      "include": "#variable"
+    }
+  ],
+  "repository": {
+    "directive": {
+      "match": "^(\\[\\[)([A-Z][A-Z-]*)(?:(:)\\s*([^\\]]*))?(\\]\\])",
+      "captures": {
+        "1": {
+          "name": "punctuation.definition.tag.begin.pydoc"
+        },
+        "2": {
+          "name": "keyword.control.directive.pydoc"
+        },
+        "3": {
+          "name": "punctuation.separator.key-value.pydoc"
+        },
+        "4": {
+          "name": "string.unquoted.argument.pydoc"
+        },
+        "5": {
+          "name": "punctuation.definition.tag.end.pydoc"
+        }
+      }
+    },
+    "variable": {
+      "match": "\\{\\{\\s*[A-Za-z_][A-Za-z0-9_]*\\s*\\}\\}",
+      "name": "variable.other.pydoc"
+    }
+  }
+}

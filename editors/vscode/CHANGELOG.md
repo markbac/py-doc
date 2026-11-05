@@ -1,5 +1,9 @@
 # Changes
 
+## 2.2.0
+
+- Highlighting of py-doc directives in Markdown, such as `[[INCLUDE: a.md]]`, `[[LISTTABLE: header]]` and `[[BLOCK: name]]`, and of `{{variables}}`. Code is left alone.
+
 ## 2.1.0
 
 - Highlighting of the [bpmn-text](https://github.com/markbac/bpmn-text) notation, in `.bpmnt` files and in ```` ```bpmnt ```` fences of Markdown files, with `#` comments toggled by `Ctrl+/`.

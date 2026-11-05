@@ -35,6 +35,7 @@ title: Functional requirements
 | FR-026 | Fenced blocks of Mermaid, PlantUML, Graphviz, ditaa, the blockdiag family, WaveDrom, bytefield-svg, Pikchr, railroad, WireViz, Vega and Vega-Lite shall become pictures in every output. | Must | Met |
 | FR-027 | A diagram that cannot be drawn shall stop the build with the file, the line and the tool's message. `--keep-going` shall list every failure. | Must | Met |
 | FR-028 | `diagrams.mermaid` in `py-doc.yml` shall give every Mermaid diagram of documents, sites and posters the same Mermaid settings, under the diagram's own. | Could | Met |
+| FR-029 | `[[LISTTABLE]]` followed by `\| ... \|` rows shall make a table with an optional header row and relative column widths. Its cells shall hold several paragraphs (`<br>`), bullet and numbered lists (`- `, `1. `) nested by indentation, cells merged across (`<`) and down (`^`), and blocks such as diagrams (`[[BLOCK:]]`). In Word its body rows may break across pages, only a header row shall be formatted and repeated as one, and a picture shall fit its cell. These mistakes shall be warnings that name the file and line: a wrong number of cells, an impossible merge, a marker with no rows, an undefined block. A block never closed shall be an error. | Should | Met |
 
 ## Outputs
 
@@ -59,6 +60,7 @@ title: Functional requirements
 | FR-061 | `py-doc import` shall turn a PowerPoint deck into Markdown that `py-doc slides` builds into the same slides. It keeps the title slide, headings, nested bullets, columns, tables, pictures with captions, code, callouts and speaker notes. | Should | Met |
 | FR-062 | What an import cannot carry over shall be counted in a warning, never dropped quietly. | Must | Met |
 | FR-063 | An import shall not replace an existing Markdown file unless told to. | Must | Met |
+| FR-064 | A Word table with several paragraphs or a list in a cell, merged cells or no header row shall import as a `[[LISTTABLE]]`, with its column widths. | Should | Met |
 
 ## C4 architecture
 

@@ -1,6 +1,6 @@
 'use strict';
 
-// bpmn-text highlighting: .bpmnt files, and ```bpmnt fences in Markdown.
+// Highlighting: .bpmnt files, ```bpmnt fences in Markdown, and py-doc's directives and variables in Markdown.
 
 const { test } = require('node:test');
 const assert = require('node:assert');
@@ -36,4 +36,17 @@ test('the keywords are the statement keywords of the bpmn-text notation', () => 
     assert.match(`  ${word} Something`, new RegExp(statement), word);
   }
   assert.doesNotMatch('  Ship parcel', new RegExp(statement));
+});
+
+test('py-doc directives and variables are highlighted in Markdown', () => {
+  const grammar = read('syntaxes/pydoc.markdown.tmLanguage.json');
+  const directive = new RegExp(grammar.repository.directive.match);
+  for (const line of ['[[LISTTABLE: header, widths=5,95]]', '[[BLOCK: wiring]]', '[[ENDBLOCK]]', '[[INCLUDE: a.md]]', '[[CAPTION:Table]] Sizes']) {
+    assert.match(line, directive, line);
+  }
+  assert.strictEqual('[[LISTTABLE: header]]'.match(directive)[2], 'LISTTABLE');
+  assert.doesNotMatch('[[not a directive]]', directive);
+  assert.doesNotMatch('text [[INCLUDE: a.md]]', directive);
+  assert.match('Version {{ version }}', new RegExp(grammar.repository.variable.match));
+  assert.match(grammar.injectionSelector, /-markup\.fenced_code/);
 });

@@ -14,7 +14,7 @@ title: Traceability
 | FR-020 to FR-025 | `directives.py`, `pandoc/resources/*.lua`, `pandoc/docx_post.py` | `test_directives.py`, `test_pandoc.py`, `test_word_control.py`, `test_word_layout.py` |
 | FR-026, FR-027, QR-080 | `diagrams/` | `test_diagrams.py` |
 | FR-040 to FR-049 | `pandoc/engine.py`, `pandoc/reference.py`, `pandoc/docx_finish.py`, `pandoc/pptx_finish.py`, `naming.py`, `report.py`, `template_check.py`, `convert.py`, `_cli.py` | `test_pandoc.py`, `test_pptx_pandoc.py`, `test_report.py`, `test_template_check.py`, `test_cli.py`, `test_slides_cli.py`, `test_convert.py`, `test_examples.py`, `test_heading_numbers.py` |
-| FR-060, FR-062, FR-063 | `docx_import.py`, `import_cli.py` | `test_docx_import.py` |
+| FR-060, FR-062 to FR-064 | `docx_import.py`, `import_cli.py` | `test_docx_import.py` |
 | FR-061 | `pptx_import.py` | `test_pptx_import.py` |
 | FR-080 to FR-086, QR-081 | `c4/` | `test_c4.py` |
 | FR-100 to FR-106 | `lint/`, `markdown/` | `test_lint.py`, `test_lint_cli.py`, `test_structure.py`, `test_vale.py`, `test_markdownlint.py`, `test_markdown_ast.py` |
@@ -23,6 +23,7 @@ title: Traceability
 | FR-161 | `_cli.py`, `convert.py`, `watch.py`, `deck.py`, `pandoc/engine.py`, `pandoc/resources/preview.css` | `test_cli.py`, `test_slides_cli.py`, `test_convert.py`, `test_preview_cases.py` |
 | FR-162 | `editors/vscode/extension.js`, `editors/vscode/src/` | `editors/vscode/test/`, `test_preview_cases.py` |
 | FR-028 | `diagrams/render.py`, `config.py` | `test_diagrams.py` |
+| FR-029 | `listtable.py`, `directives.py`, `pandoc/resources/listtable.lua`, `pandoc/docx_post.py`, `pandoc/docx_finish.py`, `lint/text.py`, `lint/structure.py`, `report.py` | `test_listtable.py`, `test_structure.py`, `test_examples.py` |
 | FR-167, FR-168 | `diagrams/blocks.py`, `diagrams/render.py`, `diagrams/scan.py`, `diagrams/registry.py`, `diagrams/tools/block_png.js`, `poster_blocks.py`, `config.py`, `runtime/definition/package.json` | `test_document_blocks.py`, `test_poster_diagrams.py`, `test_diagrams.py` |
 | FR-169 | `diagram_cli.py`, `diagram_api.py`, `diagrams/tools/block_png.js`, `app.py`, `__init__.py` | `test_diagram_cli.py` |
 | FR-171 | `icons.py`, `icons_cli.py`, `poster_blocks.py`, `poster.py`, `poster_settings.py`, `report.py`, `report.schema.json` | `test_icons.py` |

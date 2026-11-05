@@ -25,7 +25,8 @@ A file that is not a Word document or deck exits with status 2. The file's prope
 ## Word documents
 
 - Headings are moved up so that the first one is `#`. Title and Subtitle paragraphs become front matter.
-- Lists keep their nesting, tables become pipe tables (merged cells are flattened to empty cells), consecutive `Code` paragraphs become one fenced block, and `Quote` becomes a block quote.
+- Tables become pipe tables, or [rich tables](03_writing.md#rich-table-cells) (`[[LISTTABLE]]`) when a cell has several paragraphs or a list, cells are merged, or the table has no header row.
+- Lists keep their nesting, consecutive `Code` paragraphs become one fenced block, and `Quote` becomes a block quote.
 - `Note`, `Tip`, `Important`, `Warning` and `Caution` styles become `> [!NOTE]` callouts, and captions become `[[CAPTION:Figure]]` lines before their picture or table.
 - Tracked changes are accepted: insertions are kept and deletions dropped. The contents table is left out.
 - Pictures are saved as PNG in the order the document uses them. EMF, WMF and SVG go through Inkscape in the tool container. A picture that cannot be converted is named in a warning and shows as `(image not imported)`.
