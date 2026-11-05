@@ -493,6 +493,23 @@ def apply_explicit_styles(doc: Document) -> None:
 # ---------------------------------------------------------------------------
 
 
+def has_header_row(tbl) -> bool:
+    """True when the table ``<w:tbl>`` says its first row is a header.
+
+    That is the ``firstRow`` of its ``w:tblLook`` (or the same bit of the older ``w:val`` form), and when
+    the table has no ``w:tblLook``, a ``w:tblHeader`` on its first row. Pandoc writes ``firstRow="0"`` for a
+    table without a header, such as a ``[[LISTTABLE]]``.
+    """
+    look = tbl.tblPr.find(qn("w:tblLook")) if tbl.tblPr is not None else None
+    if look is not None:
+        if look.get(qn("w:firstRow")) is not None:
+            return look.get(qn("w:firstRow")) in ("1", "true", "on")
+        if look.get(qn("w:val")) is not None:
+            return bool(int(look.get(qn("w:val")), 16) & 0x0020)
+    first = tbl.find(qn("w:tr"))
+    return first is not None and first.find(f"{qn('w:trPr')}/{qn('w:tblHeader')}") is not None
+
+
 def format_all_tables(
     doc: Document,
     style_name: str = "Table Grid",
@@ -515,6 +532,10 @@ def format_all_tables(
     * Enables autofit and removes fixed cell widths.
     * Marks the first row as a repeating header.
     * Prevents rows from splitting across pages.
+
+    A table without a header row (see :func:`has_header_row`), such as a ``[[LISTTABLE]]``, gets only the
+    style, centring and width. It keeps the column widths pandoc wrote in a fixed layout, and its rows may
+    break across pages, so a tall row does not leave a gap by moving whole to the next page.
     """
     try:
         _ = doc.styles[style_name]
@@ -535,6 +556,10 @@ def format_all_tables(
             tblPr.append(tblW)
         tblW.set(qn("w:type"), "pct")
         tblW.set(qn("w:w"), "5000")  # 5000 = 100% in Word's fiftieths-of-a-percent units
+
+        if not has_header_row(tbl._tbl):
+            tbl.autofit = False  # a fixed layout, on the column widths pandoc wrote
+            continue
 
         if autofit:
             try:
@@ -705,8 +730,10 @@ def keep_captions_with_tables(doc: Document) -> None:
     """A table caption stays on the page of its table.
 
     Word has no "keep with previous", so a caption below a table is held by keeping the table's last
-    row (which may not split) with the next paragraph. A caption above a table is kept with the table.
-    A caption between two tables is the next one's, as in the other formats (markers.lua).
+    row (which may not split) with the next paragraph. In a table without a header row the last row may
+    still split, so only the last paragraph of each of its cells is kept with the caption. A caption above
+    a table is kept with the table. A caption between two tables is the next one's, as in the other
+    formats (markers.lua).
     """
     style_names = {style.style_id: style.name for style in doc.styles}
     held = 0
@@ -714,7 +741,13 @@ def keep_captions_with_tables(doc: Document) -> None:
         before, after = table.getprevious(), table.getnext()
         rows = table.findall(qn("w:tr"))
         below = _is_caption(after, style_names) and (after.getnext() is None or after.getnext().tag != qn("w:tbl"))
-        if rows and below:
+        if rows and below and not has_header_row(table):
+            for cell in rows[-1].iter(qn("w:tc")):  # the row may still split: only its end is held
+                paragraphs = cell.findall(qn("w:p"))
+                if paragraphs:
+                    _keep_with_next(paragraphs[-1])
+            held += 1
+        elif rows and below:
             trPr = rows[-1].get_or_add_trPr()
             if trPr.find(qn("w:cantSplit")) is None:
                 trPr.append(OxmlElement("w:cantSplit"))

@@ -23,6 +23,7 @@ title: Traceability
 | FR-161 | `_cli.py`, `convert.py`, `watch.py`, `deck.py`, `pandoc/engine.py`, `pandoc/resources/preview.css` | `test_cli.py`, `test_slides_cli.py`, `test_convert.py`, `test_preview_cases.py` |
 | FR-162 | `editors/vscode/extension.js`, `editors/vscode/src/` | `editors/vscode/test/`, `test_preview_cases.py` |
 | FR-028 | `diagrams/render.py`, `config.py` | `test_diagrams.py` |
+| FR-029 | `listtable.py`, `pandoc/source.py`, `pandoc/docx_post.py`, `lint/text.py` | `test_listtable.py` |
 | FR-167, FR-168 | `diagrams/blocks.py`, `diagrams/render.py`, `diagrams/scan.py`, `diagrams/registry.py`, `diagrams/tools/block_png.js`, `poster_blocks.py`, `config.py`, `runtime/definition/package.json` | `test_document_blocks.py`, `test_poster_diagrams.py`, `test_diagrams.py` |
 | FR-169 | `diagram_cli.py`, `diagram_api.py`, `diagrams/tools/block_png.js`, `app.py`, `__init__.py` | `test_diagram_cli.py` |
 | FR-171 | `icons.py`, `icons_cli.py`, `poster_blocks.py`, `poster.py`, `poster_settings.py`, `report.py`, `report.schema.json` | `test_icons.py` |

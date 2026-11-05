@@ -182,6 +182,7 @@ def load_rules(path: Path) -> list[StructureRule]:
 _BACKTICKS = re.compile(r"`+[^`]*`+")
 _URL = re.compile(r"^[a-z][a-z0-9+.-]*:", re.IGNORECASE)
 _TABLE_ROW = re.compile(r"^\s*\|.*\|\s*$")
+_LISTTABLE = re.compile(r"^\[\[LISTTABLE\b[^\]]*\]\]\s*$")
 _IMAGE = re.compile(r"!\[[^\]]*\]\([^)]+\)")
 _DIV = re.compile(r"^(:{3,})\s*\{?\.?([A-Za-z0-9_-]*)")
 _CODE = re.compile(r"^ {0,3}(`{3,}|~{3,})\s*([^\s`{]*)")
@@ -348,7 +349,7 @@ def _captions(file: Path, lines: list[str], rules: list[StructureRule]) -> list[
             i = end + 1
             continue
         if table and _TABLE_ROW.match(line):
-            first = i
+            first = i - 1 if i and _LISTTABLE.match(lines[i - 1]) else i  # a caption goes before the marker
             while i < count and _TABLE_ROW.match(lines[i]):
                 i += 1
             if not captioned(i, table, first):

@@ -97,6 +97,10 @@ class TestOtherTypes:
         assert found("[[CAPTION:Table]] a\n| a |\n|---|\n| 1 |\n", self.CAPTION) == []
         assert found("text\n\n![x](a.png)\n", image) == [(3, "r/img", "warning")]
 
+    def test_a_caption_before_a_listtable_marker_counts(self):
+        assert found("[[CAPTION:Table]] a\n\n[[LISTTABLE]]\n| a | b |\n", self.CAPTION) == []
+        assert found("text\n\n[[LISTTABLE]]\n| a | b |\n", self.CAPTION) == [(4, "r/cap", "warning")]
+
     def test_front_matter_is_not_checked_as_text(self):
         rule = {"id": "r/rule", "type": "regex-line", "severity": "warning", "pattern": r"^---\s*$", "message": "m"}
         assert found("---\ntitle: x\n---\n\ntext\n\n---\n", rule) == [(7, "r/rule", "warning")]

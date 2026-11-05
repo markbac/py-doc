@@ -17,6 +17,7 @@ Pandoc reads the Markdown: its own flavour, with fenced divs, raw HTML, table ca
 | `[[CAPTION:Figure]] text` | A numbered caption for the picture, diagram or table that follows |
 | `[[LANDSCAPE]]`, `[[PORTRAIT]]` | A section of that orientation (Word), and picture widths in the other formats |
 | `[[STYLE:Name]] text` | The paragraph in that Word style |
+| `[[LISTTABLE]]` and `\| ... \|` rows | A table whose cells hold several paragraphs and bullet lists: see [Rich table cells](#rich-table-cells) |
 | `[[PAGEBREAK]]`, or `::: {.pagebreak}` and `:::` | A page break, or a new slide |
 | Fenced diagram blocks | A picture: see [Diagrams](#diagrams) |
 | Raw HTML | Kept in HTML and sites, dropped elsewhere by pandoc |
@@ -187,6 +188,31 @@ Word uses the `Div.note` to `Div.caution` paragraph styles. The built-in referen
 - **Orientation**: `[[LANDSCAPE]]` and `[[PORTRAIT]]` start a Word section of that orientation, and widen or narrow pictures in the other formats.
 - **Styles**: `[[STYLE:Name]] text` applies a named Word paragraph style, and warns once if the template has none of that name. Other formats keep the text.
 - **Page breaks**: `[[PAGEBREAK]]` on its own line, `::: {.pagebreak}` followed by `:::`, or `page_break: true` on a source. In a deck it starts a new slide, and on a site it is left out.
+
+## Rich table cells
+
+A pipe table holds one line of text in each cell. For cells of several paragraphs and bullet lists, put `[[LISTTABLE]]` on the line before the rows, and leave out the header row and the `|---|` line:
+
+```markdown
+[[LISTTABLE: widths=5,95]]
+| 1 | [Meter installation:]{.underline}<br>The installer attends the premises.<br>Meter default settings:<br>- Mode = PAYG (prepayment)<br>- Meter balance = 15 m3 |
+| 2 | Inform the network operator:<br>The installer notifies the operator's system. |
+| 3 | The message holds these fields:<br>- Supply point<br>- [Address details (postcode is required)]{custom-style="Highlight Yellow"} |
+```
+
+- **Rows**: each row is one line that starts and ends with `|`, straight after the marker. Every row is body text: a rich table has no header row. `\|` is a pipe in the text.
+- **Paragraphs and bullets**: `<br>` starts a new paragraph in a cell. A paragraph that starts with `- ` is a bullet, and bullets next to each other make one list.
+- **Widths**: `widths=5,95` gives the relative widths of the columns. Without it the columns are the same width.
+- **Formatting**: bold, italic, links, `[text]{.underline}` and `[text]{custom-style="Name"}` work as anywhere else. A `custom-style` is a character style of the Word template. Pandoc makes one with no formatting if the template has none of that name, so add the styles you use to the template.
+
+py-doc turns the table into a pandoc grid table after includes, conditions and variables, so rich tables work in included files and take `{{variables}}`. A marker in a code block is left alone. In Word the table has no header row: its first row is not repeated on each page or printed white on the header colour, its rows may break across pages, and the columns keep the widths given. HTML, PDF and sites show an ordinary table with the same paragraphs and lists. On a slide pandoc keeps the paragraphs but shows the bullets as plain lines. The build warns about a row with too many or too few cells (it is padded or cut), and about a marker with no rows after it (it is left as written).
+
+Known limits:
+
+- Bullets cannot be nested, and there are no numbered lists: only `- ` bullets.
+- A wrapped line that starts with `- ` is read as a bullet. Avoid spaced dashes in running text.
+- A word wider than its column breaks the table, and the build says so. Widen the column or shorten the word.
+- Diagrams, includes and conditions cannot go inside a cell. Put them around the whole table.
 
 ## Includes, conditions and variables
 

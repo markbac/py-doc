@@ -96,6 +96,14 @@ Use a table to compare things or to look them up, with a caption on the line bef
 
 Keep tables narrow enough for the page: four or five columns in portrait. A wider table belongs in a landscape section (below) or split in two.
 
+When a cell needs more than one line, such as the steps of a procedure with the details of each, use a [rich table](03_writing.md#rich-table-cells). `<br>` starts a paragraph in a cell and `- ` a bullet:
+
+```markdown
+[[LISTTABLE: widths=8,92]]
+| 1 | Fit the controller.<br>Check before you start:<br>- The supply is isolated<br>- The enclosure is dry |
+| 2 | Connect the sensor cable to terminal S1. |
+```
+
 ## Pictures and diagrams
 
 Put a picture with its caption on the line before it:

@@ -35,6 +35,7 @@ title: Functional requirements
 | FR-026 | Fenced blocks of Mermaid, PlantUML, Graphviz, ditaa, the blockdiag family, WaveDrom, bytefield-svg, Pikchr, railroad, WireViz, Vega and Vega-Lite shall become pictures in every output. | Must | Met |
 | FR-027 | A diagram that cannot be drawn shall stop the build with the file, the line and the tool's message. `--keep-going` shall list every failure. | Must | Met |
 | FR-028 | `diagrams.mermaid` in `py-doc.yml` shall give every Mermaid diagram of documents, sites and posters the same Mermaid settings, under the diagram's own. | Could | Met |
+| FR-029 | `[[LISTTABLE]]` followed by `\| ... \|` rows shall make a table without a header row whose cells hold several paragraphs (`<br>`) and bullet lists (`- `), with optional relative column widths. In Word its rows may break across pages and its first row shall not be formatted or repeated as a header. A row with the wrong number of cells, or a marker with no rows, shall be a warning that names the file and line. | Should | Met |
 
 ## Outputs
 

@@ -26,7 +26,7 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX
 from docx.oxml import parse_xml as parse_word_xml
 from docx.oxml.ns import nsdecls as word_ns
 from docx.shared import Cm, Pt, RGBColor
@@ -103,10 +103,19 @@ def set_styles(document) -> None:
         lead.base_style = find(styles, "Normal")
         lead.font.size, lead.font.color.rgb = Pt(13), GREY
         lead.paragraph_format.space_after = Pt(10)
+    highlight_styles(document)
     for section in document.sections:
         section.page_width, section.page_height = Cm(21.0), Cm(29.7)
         section.left_margin = section.right_margin = Cm(2.4)
         section.top_margin = section.bottom_margin = Cm(2.4)
+
+
+def highlight_styles(document) -> None:
+    """The character styles that ``[text]{custom-style="Highlight Yellow"}`` uses, in a [[LISTTABLE]] or anywhere."""
+    names = {s.name for s in document.styles}
+    for name, colour in (("Highlight Yellow", WD_COLOR_INDEX.YELLOW), ("Highlight Grey", WD_COLOR_INDEX.GRAY_25)):
+        if name not in names:
+            document.styles.add_style(name, WD_STYLE_TYPE.CHARACTER).font.highlight_color = colour
 
 
 def title_page(document) -> None:
