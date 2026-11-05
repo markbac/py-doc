@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 
 MANIFEST = ".py-doc-site.json"
 DOWNLOAD_LABELS = {"pdf": "PDF", "docx": "Word", "pptx": "PowerPoint", "html": "HTML"}
-FILTERS = ("admonitions.lua", "pagebreak.lua", "markers.lua", "site.lua")
+FILTERS = ("listtable.lua", "admonitions.lua", "pagebreak.lua", "markers.lua", "site.lua")
 OUTPUT_FORMAT = "gfm"  # pipe tables, task lists and raw HTML. site.lua writes the maths
 TIMEOUT = 900
 _LINK = re.compile(r"(?P<lead>!?\[(?:[^\]\\]|\\.)*\]\()(?P<target><[^>]*>|[^)\s]+)(?P<rest>[^)]*\))")

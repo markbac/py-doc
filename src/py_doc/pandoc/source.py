@@ -11,7 +11,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from py_doc import directives, listtable
+from py_doc import directives
 from py_doc.directives import Fence
 from py_doc.errors import ConversionError
 from py_doc.markdown import FrontMatterError, Metadata, ParseError, parse, read_metadata
@@ -174,7 +174,7 @@ def join_sources(sources, variables: dict, conditions: dict, doc_id: str) -> Joi
             text = source.file.read_text(encoding="utf-8-sig")
         except UnicodeDecodeError as exc:
             raise ConversionError(f"Cannot read '{source.file}': it is not valid UTF-8 ({exc.reason})") from exc
-        text = listtable.convert(directives.expand(text, source.file, variables, conditions), str(source.file))
+        text = directives.expand(text, source.file, variables, conditions, tables=True)
         warn_unclosed_fence(text, str(source.file))
         front, body = split_front_matter(text)
         metadata = read_front_matter(front, source.file)

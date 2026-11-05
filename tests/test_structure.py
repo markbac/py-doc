@@ -97,6 +97,10 @@ class TestOtherTypes:
         assert found("[[CAPTION:Table]] a\n| a |\n|---|\n| 1 |\n", self.CAPTION) == []
         assert found("text\n\n![x](a.png)\n", image) == [(3, "r/img", "warning")]
 
+    def test_a_picture_or_diagram_in_a_listtable_block_needs_no_caption(self):
+        image = {**self.CAPTION, "id": "r/img", "block": "image", "required_pattern": r"\[\[CAPTION:Figure\]\]"}
+        assert found("[[BLOCK: a]]\n![x](a.png)\n[[ENDBLOCK]]\n\n![x](b.png)\n", image) == [(5, "r/img", "warning")]
+
     def test_a_caption_before_a_listtable_marker_counts(self):
         assert found("[[CAPTION:Table]] a\n\n[[LISTTABLE]]\n| a | b |\n", self.CAPTION) == []
         assert found("text\n\n[[LISTTABLE]]\n| a | b |\n", self.CAPTION) == [(4, "r/cap", "warning")]

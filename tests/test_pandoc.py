@@ -259,7 +259,7 @@ def test_the_command_mounts_resources_read_only_and_translates_paths(tmp_path, m
     assert any("py-doc-" in m and not m.endswith("readonly") for m in mounts)
     resource_path = next(w for w in run if w.startswith("--resource-path=")).replace("\\", "/")
     assert tmp_path.as_posix() in resource_path
-    assert run.count("--lua-filter") == 3 and "--embed-resources" in run
+    assert run.count("--lua-filter") == 4 and "--embed-resources" in run
 
 
 def test_pdf_and_html_need_a_runtime(tmp_path):

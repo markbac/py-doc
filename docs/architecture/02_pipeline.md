@@ -26,7 +26,7 @@ A source with `structurizr:` is replaced by Markdown files before anything else 
 
 ## 3. Joining
 
-`pandoc/source.py` reads each included source and expands its directives (`directives.py`: includes, conditions, variables). It splits off the front matter, applies the title and heading offset, and puts a page break block before sources that ask for one. The metadata of the document is merged from the configuration, the first source's front matter and its first heading (`build.py`). Headings are found line by line outside code fences, so a `#` in a code block is never mistaken for one.
+`pandoc/source.py` reads each included source and expands its directives (`directives.py`: includes, conditions, variables). The same pass turns each `[[LISTTABLE]]` into a pandoc grid table in a Div, and each `[[BLOCK:]]` into a Div of its own (`listtable.py`), so their warnings name the file and line even inside an included file. It splits off the front matter, applies the title and heading offset, and puts a page break block before sources that ask for one. The metadata of the document is merged from the configuration, the first source's front matter and its first heading (`build.py`). Headings are found line by line outside code fences, so a `#` in a code block is never mistaken for one.
 
 ## 4. Diagrams
 
@@ -38,13 +38,14 @@ A source with `structurizr:` is replaced by Markdown files before anything else 
 
 | Filter | Job | Formats |
 |---|---|---|
+| `listtable.lua` | The blocks of `[[LISTTABLE]]` cells move into their cells, without captions. In Word a hidden bookmark marks the table for the finishing | all, and site pages |
 | `admonitions.lua` | Callouts in both spellings become a box of their kind | all |
 | `pagebreak.lua` | Page break blocks become a page break, or a new slide | all |
 | `markers.lua` | `[[CAPTION:]]`, `[[STYLE:]]` and orientation markers. On slides the caption also becomes the alt text pandoc prints under a picture | PowerPoint, HTML, PDF |
 | `center-div.lua` | Centring divs become LaTeX centring | PDF |
 | `site.lua` | Admonitions or asides, figures as picture and caption, no repeated title | site pages |
 
-Word handles the markers itself after pandoc (`pandoc/docx_post.py`), because they become Word fields, sections and styles. `pandoc/docx_finish.py` merges the result into the template, fills the placeholders and applies the layout. `pandoc/pptx_finish.py` keeps embedded fonts, fills the version token and the footer, and warns about crowded slides. The finished file is moved to its output path, and the build report records it with its checksum.
+Word handles the markers itself after pandoc (`pandoc/docx_post.py`), because they become Word fields, sections and styles. `pandoc/docx_finish.py` merges the result into the template, fills the placeholders and applies the layout. It merges with docxcompose one list at a time, because docxcompose gives every list in one table the same numbering. Tables get the template's table style, centred at full width. An ordinary table with a header row is autofit, its header repeated and its rows kept whole. A `[[LISTTABLE]]` (found by its bookmark) or a table without a header keeps pandoc's column widths in a fixed layout. Its body rows may break across pages, and its pictures are made no wider than their cells. `pandoc/pptx_finish.py` keeps embedded fonts, fills the version token and the footer, and warns about crowded slides. The finished file is moved to its output path, and the build report records it with its checksum.
 
 ## Around the documents
 

@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from docx import Document
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
 
 from py_doc.markdown import Metadata
 
@@ -21,7 +23,20 @@ def _composer():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         from docxcompose.composer import Composer
-    return Composer
+        from docxcompose.utils import xpath
+
+    class OneListAtATime(Composer):
+        """docxcompose gives every list of one body element the same new number, so the lists in the cells
+        of a table (a [[LISTTABLE]]) would all share the first one's bullets or numbers. Each list is
+        added on its own first, so each gets a number of its own; then the element's references follow."""
+
+        def add_numberings(self, doc, element):
+            for num_id in sorted({int(n) for n in xpath(element, ".//w:numId/@w:val")}):
+                one = f'<w:p {nsdecls("w")}><w:pPr><w:numPr><w:numId w:val="{num_id}"/></w:numPr></w:pPr></w:p>'
+                super().add_numberings(doc, parse_xml(one))
+            super().add_numberings(doc, element)
+
+    return OneListAtATime
 
 
 DEFAULT_PREFIX = "Replace-with-"
@@ -104,8 +119,9 @@ def finish_docx(body_path: Path, template: Path | None, metadata: Metadata, opti
     post.apply_layout_fixes(document)
     post.rescale_landscape_images(document)
     post.apply_explicit_styles(document)
-    post.format_all_tables(document)
-    post.keep_captions_with_tables(document)  # after the [[CAPTION:]] lines are captions
+    rich = post.take_rich_table_marks(document)
+    post.format_all_tables(document, rich=rich)
+    post.keep_captions_with_tables(document, rich)  # after the [[CAPTION:]] lines are captions
     post.update_core_properties(
         document,
         title=text(metadata.title),

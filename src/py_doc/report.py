@@ -23,6 +23,7 @@ _LOCATION = re.compile(r"^(?P<file>(?:[A-Za-z]:)?[^:\n]+?):(?P<line>\d+):\s*(?P<
 _VERSION_FLAGS = {"dot": ["-V"], "java": ["-version"], "plantuml": ["-version"]}
 _WORDS = re.compile(r"\w+(?:['’-]\w+)*")
 _SENTENCE_END = re.compile(r"[.!?]+(?:\s|$)")
+_RICH_TABLE = re.compile(r"^::: \{\.listtable[ }]", re.M)  # the Div py-doc puts each [[LISTTABLE]] in
 
 
 def counts(text: str) -> dict[str, int]:
@@ -107,7 +108,10 @@ class BuildReport:
         return entry
 
     def sources(self, doc_id: str, parts: list[tuple[Path, str]]) -> None:
-        self.document(doc_id)["sources"] = [{"file": self.shown(file), **counts(text)} for file, text in parts]
+        self.document(doc_id)["sources"] = [
+            {"file": self.shown(file), **counts(text), "rich_tables": len(_RICH_TABLE.findall(text))}
+            for file, text in parts
+        ]
 
     def output(self, doc_id: str, fmt: str, path: Path) -> None:
         data = Path(path).read_bytes()

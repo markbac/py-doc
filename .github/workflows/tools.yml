@@ -1,8 +1,9 @@
 name: Tool image
 
 # Builds the tool container and draws with it, which the main CI cannot: its tests run the tools on the
-# host. Runs when the image definition or the diagram tools change, once a week (a tool can break without
-# a change here, through a Debian package), and by hand. The image takes 5 to 30 minutes to build.
+# host. Runs when the image definition, the diagram tools or the pandoc finishing change, once a week (a
+# tool can break without a change here, through a Debian package), and by hand. The image takes 5 to 30
+# minutes to build.
 on:
   pull_request:
     paths:
@@ -12,6 +13,8 @@ on:
       - "src/py_doc/deck.py"
       - "src/py_doc/diagram_api.py"
       - "src/py_doc/icons.py"
+      - "src/py_doc/listtable.py"
+      - "src/py_doc/pandoc/**"
       - ".github/workflows/tools.yml"
   schedule:
     - cron: "17 5 * * 1"  # Mondays
@@ -42,6 +45,22 @@ jobs:
       - name: Every diagram type, through the container (the guide has one of each)
         working-directory: examples
         run: py-doc build guide -f html -f docx --keep-going
+      - name: The guide's [[LISTTABLE]] in Word, with the pandoc of the image
+        working-directory: examples
+        run: |
+          python - <<'PY'
+          from docx import Document
+          from docx.oxml.ns import qn
+          document = Document("build/guide-v1.0.docx")
+          table = next(t for t in document.tables if t.cell(0, 0).text == "Step")._tbl
+          rows = table.findall(qn("w:tr"))
+          assert table.tblPr.find(qn("w:tblLayout")).get(qn("w:type")) == "fixed", "a fixed layout"
+          assert all(r.find(f"{qn('w:trPr')}/{qn('w:cantSplit')}") is None for r in rows[1:]), "body rows may split"
+          assert table.xpath(".//w:vMerge") and table.xpath(".//w:gridSpan[@w:val='2']"), "merged cells"
+          assert table.xpath(".//wp:inline"), "the diagram in its cell"
+          assert table.xpath(".//w:rStyle[@w:val='HighlightYellow']"), "the highlight style"
+          print(f"{len(rows)} rows, fixed layout, merges, a diagram and the highlight style")
+          PY
       - name: The posters and their PDFs, through the container
         working-directory: examples
         run: py-doc poster --pdf

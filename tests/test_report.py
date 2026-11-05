@@ -63,7 +63,7 @@ def test_a_good_build_is_described(tmp_path, run):
     data = load(tmp_path / "out" / "r.json")
     assert (data["status"], data["error"]) == ("ok", None)
     (document,) = data["documents"]
-    assert document["sources"] == [{"file": "a.md", "words": 3, "sentences": 2, "paragraphs": 1}]
+    assert document["sources"] == [{"file": "a.md", "words": 3, "sentences": 2, "paragraphs": 1, "rich_tables": 0}]
     (output,) = document["outputs"]
     built = tmp_path / "build" / "a.docx"
     assert output["path"] == "build/a.docx" and output["bytes"] == built.stat().st_size

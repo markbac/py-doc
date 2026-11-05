@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 from docx import Document
+from docx.oxml.ns import qn
 from pptx import Presentation
 
 from py_doc.app import main
@@ -212,9 +213,11 @@ def test_the_guide_shows_the_word_features(examples, pandoc_runtime):
     assert "footnoteReference" in xml
     assert 'w:orient="landscape"' in xml, "a landscape section"
     assert "SEQ" in xml, "captions are numbered with fields"
-    rich = next(t for t in document.tables if t.cell(0, 1).text.startswith("Prepare the node:"))
-    assert "The firmware is version 1.0" in rich.cell(0, 1).text, "a [[LISTTABLE]] takes variables"
+    rich = next(t for t in document.tables if t.cell(0, 0).text == "Step")
+    assert "The firmware is version 1.0" in rich.cell(1, 1).text, "a [[LISTTABLE]] takes variables"
     assert 'w:rStyle w:val="HighlightYellow"' in rich._tbl.xml
+    assert rich._tbl.xpath(".//w:vMerge") and rich._tbl.xpath(".//w:gridSpan[@w:val='2']"), "merged cells"
+    assert rich._tbl.findall(qn("w:tr"))[3].xpath(".//wp:inline"), "the diagram is in its cell"
     with zipfile.ZipFile(examples / "build" / "guide-v1.0.docx") as archive:
         core = archive.read("docProps/core.xml").decode("utf-8")
     assert "Integrating the SN-100" in core and "Technical documentation" in core and "IoT, sensor, MQTT" in core

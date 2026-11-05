@@ -11,7 +11,7 @@ from docx import Document
 from docx.enum.style import WD_STYLE_TYPE
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from docx.oxml import parse_xml
-from docx.oxml.ns import nsdecls
+from docx.oxml.ns import nsdecls, qn
 from PIL import Image
 
 from py_doc.app import main
@@ -119,7 +119,7 @@ def test_the_structure_is_kept(sample, tmp_path):
     assert "Plain **bold** and *italic* with a_b\\* star.[a link](https://example.com)" in text
     assert "- one\n  - child\n- two\n" in text
     assert "1. first\n1. second" in text
-    assert "| A | B | C |\n| --- | --- | --- |\n| wide \\| cell | | x |\n| 1 | | |" in text
+    assert "[[LISTTABLE: header]]\n| A | B | C |\n| wide \\| cell | < | x |\n| 1 | | |" in text  # a merged cell
     assert "```\nprint('hi')\nprint('there')\n```" in text
     assert "> [!NOTE]\n> Careful now." in text
     assert "> As they said." in text
@@ -259,3 +259,32 @@ def test_a_round_trip_keeps_headings_lists_tables_and_pictures(sample, tmp_path,
     assert sum("List" in s or s.startswith("Compact") for s in styles) >= 3
     assert len(back.tables) == 1
     assert len(back.inline_shapes) == 1
+
+
+def test_a_table_of_paragraphs_lists_and_merged_rows_imports_as_a_listtable(tmp_path):
+    doc = Document()
+    table = doc.add_table(rows=3, cols=2)
+    table.cell(0, 0).text, table.cell(0, 1).text = "Step", "What"
+    table.cell(1, 0).merge(table.cell(2, 0)).text = "1"
+    cell = table.cell(1, 1)
+    cell.text = "Fit the node."
+    cell.add_paragraph("Check:")
+    cell.add_paragraph("dry", style="List Bullet")
+    cell.add_paragraph("isolated", style="List Bullet 2")
+    table.cell(2, 1).text = "Done."
+    table._tbl.tblGrid.findall(qn("w:gridCol"))[0].set(qn("w:w"), "1134")
+    table._tbl.tblGrid.findall(qn("w:gridCol"))[1].set(qn("w:w"), "7938")
+    doc.save(tmp_path / "t.docx")
+    text = read(import_docx(tmp_path / "t.docx", tmp_path / "out"))
+    assert (
+        "[[LISTTABLE: header, widths=12,88]]\n| Step | What |\n"
+        "| 1 | Fit the node.<br>Check:<br>- dry<br>  - isolated |\n| ^ | Done. |"
+    ) in text
+
+
+def test_a_simple_table_stays_a_pipe_table(tmp_path):
+    doc = Document()
+    table = doc.add_table(rows=2, cols=2)
+    table.cell(0, 0).text, table.cell(0, 1).text, table.cell(1, 0).text, table.cell(1, 1).text = "a", "b", "1", "2"
+    doc.save(tmp_path / "t.docx")
+    assert "| a | b |\n| --- | --- |\n| 1 | 2 |" in read(import_docx(tmp_path / "t.docx", tmp_path / "out"))

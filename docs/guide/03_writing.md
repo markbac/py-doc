@@ -17,7 +17,7 @@ Pandoc reads the Markdown: its own flavour, with fenced divs, raw HTML, table ca
 | `[[CAPTION:Figure]] text` | A numbered caption for the picture, diagram or table that follows |
 | `[[LANDSCAPE]]`, `[[PORTRAIT]]` | A section of that orientation (Word), and picture widths in the other formats |
 | `[[STYLE:Name]] text` | The paragraph in that Word style |
-| `[[LISTTABLE]]` and `\| ... \|` rows | A table whose cells hold several paragraphs and bullet lists: see [Rich table cells](#rich-table-cells) |
+| `[[LISTTABLE]]` and `\| ... \|` rows | A table whose cells hold paragraphs, lists, merged cells and diagrams: see [Rich table cells](#rich-table-cells) |
 | `[[PAGEBREAK]]`, or `::: {.pagebreak}` and `:::` | A page break, or a new slide |
 | Fenced diagram blocks | A picture: see [Diagrams](#diagrams) |
 | Raw HTML | Kept in HTML and sites, dropped elsewhere by pandoc |
@@ -191,28 +191,37 @@ Word uses the `Div.note` to `Div.caution` paragraph styles. The built-in referen
 
 ## Rich table cells
 
-A pipe table holds one line of text in each cell. For cells of several paragraphs and bullet lists, put `[[LISTTABLE]]` on the line before the rows, and leave out the header row and the `|---|` line:
+A pipe table holds one line of text in each cell. For cells of several paragraphs, lists, merged cells or a diagram, put `[[LISTTABLE]]` on the line before the rows, and leave out the `|---|` line:
 
-```markdown
-[[LISTTABLE: widths=5,95]]
-| 1 | [Meter installation:]{.underline}<br>The installer attends the premises.<br>Meter default settings:<br>- Mode = PAYG (prepayment)<br>- Meter balance = 15 m3 |
-| 2 | Inform the network operator:<br>The installer notifies the operator's system. |
-| 3 | The message holds these fields:<br>- Supply point<br>- [Address details (postcode is required)]{custom-style="Highlight Yellow"} |
+````markdown
+[[LISTTABLE: header, widths=8,52,40]]
+| Step | What to do | Check |
+| 1 | [Prepare the node:]{.underline}<br>Fit the batteries.<br>Before you go to site:<br>- The firmware is version {{version}}<br>- The node is registered<br>  - with its own certificate | The light flashes green. |
+| 2 | Pair the node:<br>1. Hold the button for five seconds.<br>2. Choose the node in the app. | ^ |
+| 3 | The first reading goes this way:<br>[[BLOCK: reading]] | < |
+
+[[BLOCK: reading]]
+```dot
+digraph reading { rankdir=LR; Sensor -> Gateway -> Broker; }
 ```
+[[ENDBLOCK]]
+````
 
-- **Rows**: each row is one line that starts and ends with `|`, straight after the marker. Every row is body text: a rich table has no header row. `\|` is a pipe in the text.
-- **Paragraphs and bullets**: `<br>` starts a new paragraph in a cell. A paragraph that starts with `- ` is a bullet, and bullets next to each other make one list.
-- **Widths**: `widths=5,95` gives the relative widths of the columns. Without it the columns are the same width.
+- **Rows**: each row is one line that starts and ends with `|`, straight after the marker. `\|` is a pipe in the text.
+- **Header**: `header` makes the first row the header row. Without it every row is body text.
+- **Widths**: `widths=8,52,40` gives the relative widths of the columns. Without it the columns are the same width.
+- **Paragraphs and lists**: `<br>` starts a new paragraph in a cell. A paragraph that starts with `- ` is a bullet and one that starts with `1. ` a numbered item, and items next to each other make one list. Two spaces before the `- ` or `1. ` put the item inside the one above.
+- **Merged cells**: a cell of only `<` joins the cell on its left, and a cell of only `^` the cell above. Merged cells must make a rectangle, and a body cell cannot join the header row. `\<` and `\^` are the characters themselves.
+- **Blocks**: `[[BLOCK: name]]` as a paragraph of a cell is replaced by what is between `[[BLOCK: name]]` and `[[ENDBLOCK]]` on lines of their own elsewhere in the same file: a diagram, a picture, code or a callout. A picture or diagram in a cell has no caption of its own: caption the table. Plain pictures also work inline, as `![alt](picture.png)`.
 - **Formatting**: bold, italic, links, `[text]{.underline}` and `[text]{custom-style="Name"}` work as anywhere else. A `custom-style` is a character style of the Word template. Pandoc makes one with no formatting if the template has none of that name, so add the styles you use to the template.
 
-py-doc turns the table into a pandoc grid table after includes, conditions and variables, so rich tables work in included files and take `{{variables}}`. A marker in a code block is left alone. In Word the table has no header row: its first row is not repeated on each page or printed white on the header colour, its rows may break across pages, and the columns keep the widths given. HTML, PDF and sites show an ordinary table with the same paragraphs and lists. On a slide pandoc keeps the paragraphs but shows the bullets as plain lines. The build warns about a row with too many or too few cells (it is padded or cut), and about a marker with no rows after it (it is left as written).
+py-doc turns the table into a pandoc grid table after includes, conditions and variables, so rich tables work in included files and take `{{variables}}`. A marker in a code block is left alone. In Word the columns keep the widths given, the rows may break across pages, and a picture is made no wider than its cell. Only a header row is repeated on each page and printed as a header. HTML, PDF and sites show the same table. On a slide pandoc shows merged cells as separate cells, bullets as plain lines and no pictures. The build warns about a row with too many or too few cells (it is padded or cut), a merge that cannot be made (the cell is left empty) and a marker with no rows after it (it is left as written). It also warns about a block that is used but not defined, or defined but not used. A `[[BLOCK:]]` that is never closed with `[[ENDBLOCK]]` stops the build. `py-doc lint` and `py-doc check` report all of these with their line.
 
 Known limits:
 
-- Bullets cannot be nested, and there are no numbered lists: only `- ` bullets.
-- A wrapped line that starts with `- ` is read as a bullet. Avoid spaced dashes in running text.
 - A word wider than its column breaks the table, and the build says so. Widen the column or shorten the word.
-- Diagrams, includes and conditions cannot go inside a cell. Put them around the whole table.
+- Includes and conditions cannot go inside a cell, only around the whole table or inside a block.
+- A block belongs to its file: a table cannot use a block defined in another file.
 
 ## Includes, conditions and variables
 

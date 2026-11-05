@@ -34,6 +34,12 @@ VS Code's own Markdown preview (`Ctrl+Shift+V`) still works, but shows plain Mar
 
 ---
 
+## Directive highlighting
+
+py-doc's directives at the start of a line in Markdown, such as `[[INCLUDE: a.md]]`, `[[CAPTION:Table]]`, `[[LISTTABLE: header]]` and `[[BLOCK: name]]`, are highlighted as keywords with their arguments, and `{{variables}}` as variables. Code blocks and inline code are left alone.
+
+---
+
 ## Install
 
 The extension is not on the Marketplace yet. Build it and install the file:
@@ -70,7 +76,7 @@ editors/vscode/
 │   ├── frontmatter.js # front matter (js-yaml)
 │   ├── text.js        # front matter values as text
 │   └── watch.js       # the live preview process
-├── syntaxes/          # bpmn-text highlighting: .bpmnt files and ```bpmnt fences
+├── syntaxes/          # highlighting: .bpmnt files, ```bpmnt fences, and py-doc directives in Markdown
 ├── images/icon.png
 ├── examples/          # a document, a deck and a poster to try it on
 └── test/

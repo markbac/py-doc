@@ -17,7 +17,7 @@ The site package keeps what all site generators share in `site/pages.py`, and wh
 
 ## Imports
 
-`docx_import.py` walks the Word body in order: paragraphs, tables and content controls. It keeps tracked insertions, drops deletions, and renders blocks to Markdown. `pptx_import.py` walks each slide's shapes in reading order, including those pandoc wraps in `mc:AlternateContent`. It writes the conventions the slides converter reads, so a deck makes a round trip to the same slides.
+`docx_import.py` walks the Word body in order: paragraphs, tables and content controls. It keeps tracked insertions, drops deletions, and renders blocks to Markdown. A table that a pipe table cannot hold (paragraphs or lists in a cell, merged cells, no header row) becomes a `[[LISTTABLE]]`. `pptx_import.py` walks each slide's shapes in reading order, including those pandoc wraps in `mc:AlternateContent`. It writes the conventions the slides converter reads, so a deck makes a round trip to the same slides.
 
 Both importers share picture conversion (Pillow for bitmaps, Inkscape in the container for EMF, WMF and SVG), escaping and the reading of document properties. Both count what they cannot carry over.
 
