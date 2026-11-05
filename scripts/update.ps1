@@ -15,11 +15,14 @@
                       sees only py-doc's own packages because the environment is py-doc's alone
       4. Command      py-doc runs, and the py-doc on the PATH is this one: its folder is put first on your
                       user PATH when it is not already (-NoPath leaves the PATH alone)
-      5. Docker       the container engine answers (py-doc setup installs it when it does not)
-      6. Tool image   built when its definition changed (every layer again with -Rebuild),
+      5. VS Code      when VS Code is there, py-doc's extension is installed into it, and installed again
+                      when it changed (install-vscode-extension.ps1, which needs Node.js). A failure here
+                      is reported but does not stop the update. -NoVSCode skips it
+      6. Docker       the container engine answers (py-doc setup installs it when it does not)
+      7. Tool image   built when its definition changed (every layer again with -Rebuild),
                       and the images of earlier versions removed unless -KeepOldImages
-      7. Doctor       py-doc doctor: the container runs the tools
-      8. Tests        with -Test: the test suite and the documentation lint
+      8. Doctor       py-doc doctor: the container runs the tools
+      9. Tests        with -Test: the test suite and the documentation lint
 
 .PARAMETER NoPull
     Do not pull: use the code as it is.
@@ -53,6 +56,13 @@
 .PARAMETER AddToPath
     No longer needed: the PATH is updated by default. Kept so older instructions still work.
 
+.PARAMETER NoVSCode
+    Do not install or update py-doc's VS Code extension.
+
+.PARAMETER Code
+    VS Code's command line, when it is not on the PATH or in its usual place, such as
+    "C:\Program Files\Microsoft VS Code\bin\code.cmd".
+
 .PARAMETER CaFile
     An extra certificate for image builds behind a TLS-inspecting proxy (passed to py-doc tools build).
 
@@ -62,6 +72,8 @@
     .\scripts\update.ps1 -Dev -Test
 .EXAMPLE
     .\scripts\update.ps1 -NoPull -Rebuild -RecreateVenv
+.EXAMPLE
+    .\scripts\update.ps1 -NoVSCode
 #>
 [CmdletBinding()]
 param(
@@ -75,6 +87,8 @@ param(
     [switch]$RecreateVenv,
     [switch]$NoPath,
     [switch]$AddToPath,
+    [switch]$NoVSCode,
+    [string]$Code,
     [string]$CaFile
 )
 
@@ -239,7 +253,20 @@ try {
         Write-Note "run without -NoPath to put $scripts first, or use $scripts\py-doc.exe"
     }
 
-    # 5. Docker ----------------------------------------------------------------------------------
+    # 5. VS Code ---------------------------------------------------------------------------------
+    Write-Step "VS Code extension"
+    if ($NoVSCode) {
+        Write-Note "not installed or updated (-NoVSCode)"
+    } else {
+        $extensionArgs = @{}
+        if ($Code) { $extensionArgs['Code'] = $Code }
+        & (Join-Path $PSScriptRoot 'install-vscode-extension.ps1') @extensionArgs
+        if ($LASTEXITCODE -ne 0) {
+            Write-Note "the extension is left as it was, and the update goes on. Run scripts\install-vscode-extension.ps1 after fixing it"
+        }
+    }
+
+    # 6. Docker ----------------------------------------------------------------------------------
     Write-Step "Docker"
     $status = Invoke-PyDoc @('tools', 'status') 2>&1 | ForEach-Object { "$_" }
     $exit = $LASTEXITCODE
@@ -250,7 +277,7 @@ try {
     }
     Write-Ok "the container engine answers"
 
-    # 6. Tool image ------------------------------------------------------------------------------
+    # 7. Tool image ------------------------------------------------------------------------------
     Write-Step "Tool image"
     $tag = ($imageLine -split '\s+')[1]
     $built = $imageLine -notmatch 'not built'
@@ -273,12 +300,12 @@ try {
         if ($LASTEXITCODE -ne 0) { Write-Note "could not remove older images: $removed" } else { Write-Ok "$removed" }
     }
 
-    # 7. Doctor ----------------------------------------------------------------------------------
+    # 8. Doctor ----------------------------------------------------------------------------------
     Write-Step "Doctor"
     Invoke-Checked "py-doc doctor" "Each failing check above says what to do" $script:PythonExe ($script:PythonArgs + @('-m', 'py_doc', 'doctor'))
     Write-Ok "the tools run in the container"
 
-    # 8. Tests -----------------------------------------------------------------------------------
+    # 9. Tests -----------------------------------------------------------------------------------
     if ($Test) {
         Write-Step "Tests"
         Invoke-Checked "the test suite" "A failing test above names what broke" $script:PythonExe ($script:PythonArgs + @('-m', 'pytest', '-q', '-p', 'no:cacheprovider'))
