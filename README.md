@@ -34,6 +34,7 @@ The user guide, requirements and architecture are published at **<https://markba
 | `py-doc template` | Check and list the styles of a Word or PowerPoint template |
 | `py-doc tools`, `doctor`, `setup` | Build and check the tool container, and install Docker Engine |
 | `py-doc migrate` | Create `py-doc.yml` from legacy `createdocs` build files |
+| `py-doc web` | Serve py-doc in the browser: a project explorer with drag-and-drop upload, an editor with live preview, and convert, build and lint jobs. See [deploy/web](deploy/web/README.md) for running it on a Docker server of your own |
 
 The old commands `py-doc2docx`, `py-doc2slides`, `py-doclint` and `py-c4-exporter` still work and print a one-line note naming their replacement.
 

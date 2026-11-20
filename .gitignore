@@ -8,3 +8,4 @@ build/
 .structurizr/
 .venv/
 node_modules/
+deploy/web/.env

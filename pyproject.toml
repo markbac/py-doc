@@ -51,6 +51,16 @@ dev = [
     "jsonschema>=4.26.0",  # checks the build report against its schema
     "zxing-cpp>=3.1.1",  # reads back the QR codes of posters, to check what they encode
     "playwright>=1.64.1",  # runs the poster page script in Chrome; no browser download
+    "httpx2>=2.16.2",  # the test client of py-doc web (Starlette's TestClient)
+    "fastapi>=0.165.0",  # py-doc web, as in the web extra
+    "uvicorn>=0.54.0",
+    "python-multipart>=0.0.34",
+]
+
+web = [
+    "fastapi>=0.165.0",
+    "uvicorn>=0.54.0",
+    "python-multipart>=0.0.34",  # the files dropped on the page
 ]
 
 [project.scripts]
@@ -67,7 +77,7 @@ version = {attr = "py_doc.__version__"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-py_doc = ["runtime/definition/*", "runtime/definition/extra-ca/*", "pandoc/resources/*", "diagrams/tools/*", "report.schema.json", "lint/examples/*", "lint/vale_styles/PyDoc/*", "lint/vale.schema.json"]
+py_doc = ["runtime/definition/*", "runtime/definition/extra-ca/*", "pandoc/resources/*", "diagrams/tools/*", "report.schema.json", "lint/examples/*", "lint/vale_styles/PyDoc/*", "lint/vale.schema.json", "web/static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

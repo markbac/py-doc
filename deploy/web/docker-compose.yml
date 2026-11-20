@@ -1,0 +1,34 @@
+# py-doc web on a Docker server of your own. Settings are in .env beside this file (deploy.sh writes it).
+#
+# Why the data folder is mounted at the same path inside and out: py-doc runs each tool in a fresh
+# container of the tool image, through the host's Docker, and hands it folders by their path. The host's
+# Docker must find those folders at the same paths, so the workspace, the temporary folder and a copy of
+# py-doc itself live in PYDOC_DATA, which is the same path on the host and in this container.
+
+services:
+  py-doc-web:
+    build:
+      context: ../..
+      dockerfile: deploy/web/Dockerfile
+    image: py-doc-web:latest
+    container_name: py-doc-web
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    group_add:
+      - "${DOCKER_GID:?set DOCKER_GID in .env: the group of /var/run/docker.sock}"
+    environment:
+      PYDOC_DATA: ${PYDOC_DATA}          # the entrypoint runs py-doc from a copy here (see entrypoint.sh)
+      PYDOC_WEB_ROOT: ${PYDOC_DATA:?set PYDOC_DATA in .env}/workspace
+      PYDOC_WEB_HOST: 0.0.0.0
+      PYDOC_WEB_PORT: "8080"
+      PYDOC_WEB_PASSWORD: ${PYDOC_WEB_PASSWORD:-}
+      PYDOC_WEB_WORKERS: ${PYDOC_WEB_WORKERS:-1}
+      PYDOC_WEB_TIMEOUT: ${PYDOC_WEB_TIMEOUT:-1800}
+      TMPDIR: ${PYDOC_DATA}/tmp          # tool runs are handed temporary folders: they must be on the shared path
+      HOME: ${PYDOC_DATA}/home           # caches such as the icon packs
+      NO_COLOR: "1"
+    ports:
+      - "${PYDOC_WEB_BIND:-0.0.0.0}:${PYDOC_WEB_PORT:-8080}:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${PYDOC_DATA}:${PYDOC_DATA}
