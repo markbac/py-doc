@@ -30,7 +30,7 @@ SAMPLES = (
         "py-doc's own documentation",
         "The user guide, requirements, architecture (with C4 from Structurizr) and the gallery of every diagram "
         "and poster block, with the py-doc.yml that builds them.",
-        (("py-doc.yml", "py-doc.yml"), ("docs", "docs")),
+        (("py-doc.yml", "py-doc.yml"), ("c4-images.lock", "c4-images.lock"), ("docs", "docs")),
     ),
     Sample(
         "sensor-node-examples",
