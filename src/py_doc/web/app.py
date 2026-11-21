@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from starlette.background import BackgroundTask
 
 from .. import __version__
+from . import samples
 from .jobs import Job, JobManager, py_doc_command
 from .preview import KINDS as PREVIEW_KINDS
 from .preview import PreviewManager
@@ -41,6 +42,19 @@ if(m){var y=+m[1];var go=function(){window.scrollTo(0,y);};go();addEventListener
 addEventListener('load',function(){parent.postMessage({pydocLoaded:document.title},'*');});
 var t;addEventListener('scroll',function(){clearTimeout(t);t=setTimeout(function(){
 parent.postMessage({pydocScroll:Math.round(window.scrollY)},'*');},100);});})();</script>"""
+# Added to a preview page too: a dark rendering, for when the explorer is dark. The page is inverted and turned
+# back round the colour wheel, so its colours keep their hue; pictures and diagrams are turned back again, so
+# they show as they will be printed. The explorer says which with #t=dark, and by message when it changes.
+DARK = """<style>html.pydoc-dark{filter:invert(.9) hue-rotate(180deg);background:#fff}
+html.pydoc-dark img,html.pydoc-dark video,html.pydoc-dark canvas,html.pydoc-dark picture,html.pydoc-dark iframe,
+html.pydoc-dark svg:not(svg svg),html.pydoc-dark [style*="background-image"]{filter:invert(1) hue-rotate(180deg)}</style>
+<script>(function(){function set(d){document.documentElement.classList.toggle('pydoc-dark',d);}
+set(/[#&]t=dark/.test(location.hash));
+addEventListener('message',function(e){if(e.source===parent&&e.data&&typeof e.data.pydocDark==='boolean'){
+set(e.data.pydocDark);}});})();</script>"""
+WAITING = """<!doctype html><meta name="color-scheme" content="light dark">
+<p style="font:15px sans-serif;color:#888;padding:1em">Building the preview...</p>
+<script>if(/[#&]t=dark/.test(location.hash))document.documentElement.style.background='#1c2027';</script>"""
 
 
 @dataclass
@@ -65,6 +79,10 @@ class PathBody(BaseModel):
 class MoveBody(BaseModel):
     source: str
     target: str
+
+
+class SampleBody(BaseModel):
+    name: str
 
 
 class ProjectBody(BaseModel):
@@ -152,6 +170,27 @@ def create_app(settings: Settings, jobs: JobManager | None = None, previews: Pre
     @app.get("/api/projects")
     def projects():
         return workspace.projects()
+
+    @app.get("/api/samples")
+    def list_samples():
+        return [
+            {"name": s.name, "title": s.title, "description": s.description,
+             "installed": workspace.resolve(s.name).exists()}
+            for s in samples.available()
+        ]  # fmt: skip
+
+    @app.post("/api/samples")
+    def add_sample(body: SampleBody):
+        sample = next((s for s in samples.available() if s.name == body.name), None)
+        if sample is None:
+            raise WorkspaceError(f"No example project {body.name}", 404)
+        name = sample.name
+        for number in range(2, 100):  # a second copy is name-2, so an edited one is never overwritten
+            if not workspace.resolve(name).exists():
+                break
+            name = f"{sample.name}-{number}"
+        copied = samples.install(sample, workspace.resolve(name))
+        return {"name": name, "files": len(copied)}
 
     @app.post("/api/projects")
     def new_project(body: ProjectBody):
@@ -351,10 +390,10 @@ def create_app(settings: Settings, jobs: JobManager | None = None, previews: Pre
     def preview_page(preview_id: str):
         preview = previews.get(preview_id)
         if preview is None or not preview.output.is_file():
-            return HTMLResponse("<!doctype html><p style='font:15px sans-serif;color:#777;padding:1em'>Building the "
-                                "preview...</p>", headers=_no_store())  # fmt: skip
+            return HTMLResponse(WAITING, headers=_no_store())
         page = preview.output.read_text(encoding="utf-8", errors="replace")
-        page = page.replace("</body>", SCROLL + "</body>", 1) if "</body>" in page else page + SCROLL
+        added = SCROLL + DARK
+        page = page.replace("</body>", added + "</body>", 1) if "</body>" in page else page + added
         # The page is the user's Markdown made HTML, so it runs in a sandbox of its own, away from this site
         headers = {**_no_store(), "Content-Security-Policy": "sandbox allow-scripts allow-popups allow-modals"}
         return HTMLResponse(page, headers=headers)

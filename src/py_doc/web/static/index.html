@@ -22,6 +22,7 @@
     <div class="sidebar-bar">
       <strong>Projects</strong>
       <div class="spacer"></div>
+      <button class="icon" id="add-examples" title="Add example projects: py-doc's documentation, examples and posters">📚</button>
       <button class="icon" id="new-project" title="New project">＋</button>
       <button class="icon" id="refresh" title="Refresh">⟳</button>
     </div>
@@ -71,7 +72,10 @@
       <button data-side="jobs">Jobs</button>
     </div>
     <div class="side-body" data-body="preview">
-      <div class="preview-state" id="preview-state">Choose a preview for a Markdown file.</div>
+      <div class="preview-bar">
+        <div class="preview-state" id="preview-state">Choose a preview for a Markdown file.</div>
+        <button class="ghost small" id="preview-page" title="The preview page: Auto is dark for documents when this page is dark, and as built for slides and posters">Page: Auto</button>
+      </div>
       <div class="preview-error" id="preview-error" hidden></div>
       <!-- The server sends the preview with a sandbox CSP header, so it runs in an origin of its own -->
       <iframe id="preview-frame" title="Preview"></iframe>
@@ -125,6 +129,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/gfm/gfm.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/overlay.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml-frontmatter/yaml-frontmatter.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>

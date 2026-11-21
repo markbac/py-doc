@@ -360,3 +360,53 @@ def test_the_default_port_is_8888(monkeypatch, tmp_path):
     monkeypatch.setattr("uvicorn.run", lambda app, host, port, log_level: seen.update(host=host, port=port))
     assert web_cli.run_web(["--root", str(tmp_path / "ws"), "-q"]) == 0
     assert seen == {"host": "127.0.0.1", "port": 8888}
+
+
+# --- example projects and the dark preview --------------------------------------------------------------
+
+
+def test_example_projects_are_offered_and_copied(client, root):
+    offered = {s["name"]: s for s in client.get("/api/samples").json()}
+    assert set(offered) == {"py-doc-docs", "sensor-node-examples", "poster-examples"}
+    assert not offered["poster-examples"]["installed"]
+
+    first = client.post("/api/samples", json={"name": "poster-examples"}).json()
+    assert first["name"] == "poster-examples" and first["files"] > 5
+    assert (root / "poster-examples" / "poster.md").is_file()
+    assert not (root / "poster-examples" / "build").exists()  # outputs are not copied
+    assert client.get("/api/samples").json()[2]["installed"]
+
+    second = client.post("/api/samples", json={"name": "poster-examples"}).json()
+    assert second["name"] == "poster-examples-2"  # an edited first copy is never overwritten
+    assert client.post("/api/samples", json={"name": "nothing"}).status_code == 404
+
+
+def test_the_documentation_sample_builds_from_its_own_config(client, root):
+    client.post("/api/samples", json={"name": "py-doc-docs"})
+    project = root / "py-doc-docs"
+    assert (project / "py-doc.yml").is_file() and (project / "docs" / "guide" / "00_introduction.md").is_file()
+    from py_doc.config import load_config
+
+    config = load_config(project / "py-doc.yml")
+    files = [project / s.file for d in config.documents.values() for s in d.sources if s.file]
+    assert len(files) > 20 and all(path.is_file() for path in files)
+
+
+def test_example_projects_are_git_repositories_when_git_is_there(client, root):
+    import shutil
+
+    if shutil.which("git") is None:
+        pytest.skip("no git")
+    client.post("/api/samples", json={"name": "poster-examples"})
+    assert (root / "poster-examples" / ".git").is_dir()
+    tree = client.get("/api/tree", params={"path": "poster-examples"}).json()
+    assert ".git" not in [c["name"] for c in tree["children"]]
+
+
+def test_previews_can_be_shown_dark(client):
+    status = client.post("/api/preview", json={"path": "demo/guide.md", "kind": "document"}).json()
+    waiting = client.get(f"/preview/{status['id']}")
+    assert "Building the preview" in waiting.text and "t=dark" in waiting.text
+    wait_preview(client, status["id"], 1)
+    page = client.get(f"/preview/{status['id']}").text
+    assert "pydoc-dark" in page and "pydocDark" in page and "invert(1)" in page
