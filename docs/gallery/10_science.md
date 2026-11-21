@@ -806,6 +806,20 @@ NLS | 4600..4700 | + | #2e7d32
 Terminator | 4800..4950 | + | #555555
 ```
 
+## `helix`
+
+The DNA double helix seen from the side, drawn from the bases of one strand: each 10 make a turn. The backbones wind round each other in the theme's colours, the base pairs sit between them with adenine and thymine, cytosine and guanine in their teaching colours, and the labels name the backbone, a base pair, the minor and major grooves, one turn and the width. `labels=no` draws the helix alone, `letters=no` leaves out the letters, and `strands=` chooses the backbones' colours.
+
+````markdown
+```helix
+sequence: ATGCGTACCGATTGCAGTCATG
+```
+````
+
+```helix
+sequence: ATGCGTACCGATTGCAGTCATG
+```
+
 ## `gene-locus`
 
 Genes along a locus, on their strands.
