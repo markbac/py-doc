@@ -20,7 +20,15 @@ columns: 2
 
 DNA stores the instructions; proteins do the work. A cell copies a gene into messenger RNA, carries it out of the nucleus, and a ribosome reads it three bases at a time, joining one amino acid for each codon. This poster follows one short gene from DNA to protein.
 
-## 1. The molecule: DNA
+## 1. The double helix
+
+```helix
+sequence: ATGGCTAAATGGTAAC
+```
+
+Two strands of sugar and phosphate wind round each other, joined by pairs of bases: adenine always with thymine, cytosine always with guanine. Because each base fixes its partner, either strand is enough to rebuild the other, which is how a cell copies its DNA. Watson and Crick worked out this shape in 1953 from Rosalind Franklin's X-ray photograph.
+
+## 2. The molecule: DNA
 
 ```cards cols=2 style=top
 Bases | Adenine pairs with thymine, cytosine with guanine | brand
@@ -37,7 +45,7 @@ Strands | Two | One
 Lives | In the nucleus | Nucleus and cytoplasm
 ```
 
-## 2. The steps: gene to protein
+## 3. The steps: gene to protein
 
 ```flow
 [DNA|brand] -transcription-> [mRNA|second] -leaves the nucleus-> [Ribosome|grey] -translation-> [Protein|brand]
@@ -52,7 +60,7 @@ Translate | A ribosome reads it codon by codon | brand
 Fold | The chain folds into a working protein | brand
 ```
 
-## 3. Words: a glossary
+## 4. Words: a glossary
 
 ```glossary cols=2
 Codon | Three mRNA bases that stand for one amino acid
@@ -63,7 +71,7 @@ Promoter | Where RNA polymerase starts to read
 Mutation | A change in the DNA sequence
 ```
 
-## 4. The code: three bases, one amino acid
+## 5. The code: three bases, one amino acid
 
 ```tape
 cells: A U G G C U A A A U G G U A A
@@ -85,7 +93,7 @@ Silent | 14
 Other | 5
 ```
 
-## 5. A cell cycle: when DNA is copied
+## 6. A cell cycle: when DNA is copied
 
 ```cycle
 G1 | The cell grows | second
@@ -94,7 +102,7 @@ G2 | Checks for errors | grey
 Mitosis | The cell divides | spark
 ```
 
-## 6. Where the genome goes {.wide}
+## 7. Where the genome goes
 
 ```chart type=bar title="The human genome, by what it does" unit=" %" height=230
 Repeats: transposons and copies | 45

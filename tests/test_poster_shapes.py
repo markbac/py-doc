@@ -13,7 +13,7 @@ from py_doc.poster_themes import Theme
 
 SHAPES = (
     "pyramid", "cone", "funnel", "stack", "target", "onion", "cutaway", "sizes", "vessels",
-    "memory", "tape", "ring", "cycle", "balance", "iceberg",
+    "memory", "tape", "ring", "cycle", "balance", "iceberg", "helix",
 )  # fmt: skip
 
 
@@ -135,3 +135,27 @@ def test_a_balance_tips_to_the_heavier_side():
 def test_an_iceberg_puts_items_above_and_below_its_waterline():
     svg = draw("iceberg", "above: App\nbelow: Security", 'waterline="Seen"').svg
     assert ">App<" in svg and ">Security<" in svg and ">Seen<" in svg
+
+
+def test_a_helix_pairs_each_base_with_its_partner():
+    svg = draw("helix", "sequence: ATGCAT GCATGCAT").svg  # spaces in the sequence are left out: 14 bases
+    assert svg.count('stroke-width="9"') == 28  # each base pair is two half rungs
+    for name in ("Minor groove", "Major groove", "Base pair", "Sugar-phosphate backbone", "One turn: 3.4 nm"):
+        assert name in svg
+    short = draw("helix", "sequence: ATGCATGCAT").svg  # one turn: no room for the major groove
+    assert "Minor groove" in short and "Major groove" not in short
+    bare = draw("helix", "sequence: ATGCATGCAT", "labels=no letters=no").svg
+    assert "Minor groove" not in bare and "Adenine" not in bare and ">A<" not in bare
+
+
+@pytest.mark.parametrize(
+    ("code", "message"),
+    [
+        ("sequence: ATGXAT", "made of A, T, C and G"),
+        ("sequence: ATG", "6 to 60 bases"),
+        ("bases: ATGCAT", "sequence: line"),
+    ],
+)
+def test_a_helix_says_what_is_wrong_with_its_sequence(code, message):
+    with pytest.raises(PosterError, match=message):
+        draw("helix", code)

@@ -876,3 +876,159 @@ block(
     "As target: ring | detail | colour lines from the core outwards",
     "Core | The kernel | navy\nShell | The commands | blue",
 )(lambda code, opts, ctx: target_html(code, opts, ctx))
+
+
+# ---------------------------------------------------------------------------
+# helix: the DNA double helix
+# ---------------------------------------------------------------------------
+
+HELIX_PAIRS = {"A": "T", "T": "A", "C": "G", "G": "C"}
+HELIX_NAMES = {"A": "Adenine", "T": "Thymine", "C": "Cytosine", "G": "Guanine"}
+HELIX_COLOURS = {"A": "green", "T": "red", "C": "blue", "G": "amber"}  # the usual teaching colours, from the palette
+
+
+@block(
+    "helix",
+    "A sequence: line of the bases of one strand, such as ATGC... (10 bases make one turn). Options: labels=no, "
+    "letters=no, strands=colour,colour",
+    "sequence: ATGCGTACCGATTGCAGTCATG",
+)
+def helix_html(code, opts, ctx):
+    """The DNA double helix seen from the side: two backbones winding round each other, the base pairs between
+    them in their colours, and labels for the backbone, a base pair, the major and minor grooves, one turn and the
+    width. The second strand lags the first by 0.39 of a turn, which is what makes the grooves unequal."""
+    sequence = "ATGCGTACCGATTGCAGTCATG"
+    for line in _lines(code):
+        key, _, value = line.partition(":")
+        if key.strip().lower() != "sequence":
+            raise PosterError(f"{ctx.where}: a helix takes a sequence: line, not '{line}'")
+        sequence = re.sub(r"\s", "", value).upper()
+    if not sequence or set(sequence) - set(HELIX_PAIRS):
+        raise PosterError(f"{ctx.where}: a helix sequence is made of A, T, C and G, such as ATGCGTAC")
+    if not 6 <= len(sequence) <= 60:
+        raise PosterError(f"{ctx.where}: a helix sequence has 6 to 60 bases (10 make a turn)")
+    labels = str(opts.get("labels", "yes")).lower() != "no"
+    letters = str(opts.get("letters", "yes")).lower() != "no"
+    strand_names = [c.strip() for c in str(opts.get("strands", "")).split(",") if c.strip()]
+    strands = (
+        ctx.theme.colour(strand_names[0] if strand_names else None, "primary"),
+        ctx.theme.colour(strand_names[1] if len(strand_names) > 1 else None, "accent"),
+    )
+    base_colour = {b: ctx.theme.colour(c) for b, c in HELIX_COLOURS.items()}
+
+    step, turn = 40, 400  # pixels a base pair and a turn (10 base pairs, 3.4 nm)
+    lag = 0.78 * math.pi  # the second strand behind the first
+    left, top_room = 60, (110 if labels else 20)
+    length = len(sequence) * step
+    mid, amp = top_room + 92, 92
+    right = left + length
+    width = max(WIDTH, right + (110 if labels else 50))
+    height = mid + amp + (150 if labels else 30)
+
+    def angle(x, s):
+        return 2 * math.pi * (x - left) / turn + (lag if s else 0)
+
+    def y(x, s):
+        return mid + amp * math.sin(angle(x, s))
+
+    def front(x, s):
+        return math.cos(angle(x, s)) >= 0
+
+    def runs(s, near):
+        found, run = [], []
+        for i in range(0, length + 1, 3):
+            x = left + i
+            if front(x, s) == near:
+                run.append(f"{x:.1f},{y(x, s):.1f}")
+            elif run:
+                found.append(run)
+                run = []
+        return found + ([run] if run else [])
+
+    out = []
+    for s in (0, 1):  # the far side of both strands, faded
+        out += [
+            f'<polyline points="{" ".join(r)}" fill="none" stroke="{strands[s]}" stroke-opacity=".35" '
+            'stroke-width="13" stroke-linecap="round"/>'
+            for r in runs(s, False)
+        ]
+    for k, base in enumerate(sequence):  # the base pairs, half in each base's colour
+        x = left + step * (k + 0.5)
+        y0, y1 = y(x, 0), y(x, 1)
+        ym, other = (y0 + y1) / 2, HELIX_PAIRS[base]
+        fade = "1" if math.cos(angle(x, 0)) + math.cos(angle(x, 1)) > -0.4 else ".55"
+        for ya, yz, b in ((y0, ym, base), (ym, y1, other)):
+            out.append(
+                f'<line x1="{x:.1f}" y1="{ya:.1f}" x2="{x:.1f}" y2="{yz:.1f}" stroke="{base_colour[b]}" '
+                f'stroke-width="9" opacity="{fade}"/>'
+            )
+        if letters and abs(y1 - y0) > 70:
+            for yy, letter in ((y0 + (ym - y0) * 0.45, base), (ym + (y1 - ym) * 0.55, other)):
+                out.append(f'<circle cx="{x:.1f}" cy="{yy:.1f}" r="11" fill="#fff" opacity="{fade}"/>')
+                out.append(
+                    label(
+                        x,
+                        yy + 5,
+                        letter,
+                        14,
+                        "middle",
+                        f'fill="{base_colour[letter]}" font-weight="700" opacity="{fade}"',
+                    )
+                )
+    for s in (0, 1):  # the near side, with a phosphate at each base pair
+        out += [
+            f'<polyline points="{" ".join(r)}" fill="none" stroke="{strands[s]}" stroke-width="15" stroke-linecap="round"/>'
+            for r in runs(s, True)
+        ]
+        for k in range(len(sequence)):
+            x = left + step * (k + 0.5)
+            if front(x, s):
+                out.append(f'<circle cx="{x:.1f}" cy="{y(x, s):.1f}" r="4.5" fill="#fff" opacity=".85"/>')
+    for s, (a, b) in ((0, ("5′", "3′")), (1, ("3′", "5′"))):  # the strands run opposite ways
+        out.append(label(left - 32, y(left, s) + 6, a, 16, "middle", f'fill="{strands[s]}" font-weight="700"'))
+        out.append(label(right + 14, y(right, s) + 6, b, 16, "start", f'fill="{strands[s]}" font-weight="700"'))
+
+    if labels:
+        ink = 'stroke="currentColor" stroke-width="1.5"'
+
+        def note(x0, y0, x1, y1, head, detail):
+            end = y1 + 30 if y1 < y0 else y1 - 14  # under a label above, over a label below: never through it
+            out.append(f'<path d="M{x0:.1f},{y0:.1f} L{x1 + 24:.1f},{end:.1f}" {ink} fill="none"/>')
+            out.append(f'<circle cx="{x0:.1f}" cy="{y0:.1f}" r="4" fill="currentColor"/>')
+            out.append(label(x1, y1 + 4, head, 15, "start", 'font-weight="700"'))
+            out.append(label(x1, y1 + 22, detail, 13))
+
+        # Along the top edge the peaks of the two strands alternate: strand 2 peaks 0.39 of a turn before strand 1,
+        # so the gap from a strand-2 peak to the next strand-1 peak is the minor groove, and the rest the major
+        lagged = lag / (2 * math.pi)
+        peak1, peak2 = left + turn * 0.75, left + turn * (0.75 - lagged)
+
+        def notch(a, b):  # where the strands cross between two peaks: the bottom of the notch of a groove
+            x = min(range(int(a), int(b)), key=lambda x: abs(y(x, 0) - y(x, 1)))
+            return x, min(y(x, 0), y(x, 1)) - 36
+
+        slots = [left, left + (width - left) / 3, left + 2 * (width - left) / 3]
+        note(*notch(peak2, peak1), slots[0], 22, "Minor groove", "The narrow gap")
+        if peak2 + turn < right:  # its notch is on the helix: a sequence of about 14 bases or more
+            note(*notch(peak1, peak2 + turn), slots[1], 22, "Major groove", "Where proteins read the bases")
+        xr = left + step * (len(sequence) - 0.5)
+        note(xr + 5, (y(xr, 0) + y(xr, 1)) / 2, slots[2], 22, "Base pair", "A with T, C with G")
+        xb = left + turn * 0.125
+        note(xb, y(xb, 0) + 8, left, mid + amp + 66, "Sugar-phosphate backbone", "Deoxyribose and phosphate")
+        if length >= turn:
+            t1 = right - step / 2
+            t0, yb = t1 - turn, mid + amp + 44
+            out.append(f'<path d="M{t0:.1f},{yb - 8} V{yb} H{t1:.1f} V{yb - 8}" {ink} fill="none"/>')
+            out.append(
+                label((t0 + t1) / 2, yb + 22, "One turn: 3.4 nm, 10 base pairs", 15, "middle", 'font-weight="700"')
+            )
+        xw = right + 52
+        out.append(f'<path d="M{xw - 8},{mid - amp} H{xw} V{mid + amp} H{xw - 8}" {ink} fill="none"/>')
+        out.append(label(xw + 6, mid + 5, "2 nm", 15, "start", 'font-weight="700"'))
+        for n, base in enumerate("ATCG"):  # the key
+            x = left + n * (width - left) / 4
+            out.append(
+                f'<rect x="{x:.1f}" y="{height - 26}" width="16" height="16" rx="3" fill="{base_colour[base]}"/>'
+            )
+            out.append(label(x + 24, height - 13, HELIX_NAMES[base], 14))
+    return _fig(opts, svg(width, height, "".join(out), opts.get("title", "DNA double helix"), "chart"))

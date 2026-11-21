@@ -382,6 +382,7 @@ const DATA = {
   "gradient-scale": "pydoc-block",
   "graphviz": "pydoc-dot",
   "gsn": "pydoc-block",
+  "helix": "pydoc-block",
   "hex-dissect": "pydoc-block",
   "highlight": "pydoc-block",
   "iceberg": "pydoc-block",

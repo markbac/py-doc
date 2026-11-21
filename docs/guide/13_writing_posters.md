@@ -160,6 +160,7 @@ A section is ordinary Markdown with py-doc's blocks in it. Pick the block by wha
 | Atomic transitions | `energy-levels` | The Balmer lines of hydrogen |
 | Particle interactions | `feynman`, `standard-model` | Beta decay, the particles |
 | Elements and isotopes | `elements`, `nuclide-chart` | What stars make, the light nuclides |
+| The structure of DNA | `helix` | A gene's double helix, its grooves and base pairs |
 | Proportions that narrow or widen | `pyramid`, `cone`, `funnel` | The test pyramid, a filtering funnel |
 | Layers in order | `stack` | A protocol stack |
 | Layers that wrap a core | `target`, `cutaway` | Clean architecture, the inside of the Sun |

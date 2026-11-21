@@ -773,7 +773,10 @@ def chart_html(code, opts, ctx):
     text = 'font-size="13" fill="currentColor"'
     out = []
     if kind == "bar":
-        left, top, right, bottom = 140, 8 + legend, 60, 8 + (20 if axis else 0)
+        # The labels' margin is as wide as the widest label, and the chart wider with it, so no label is cut
+        left = max(140, int(max(text_width(label, 13) for label, _ in rows)) + 16)
+        width = max(width, left + 420)
+        top, right, bottom = 8 + legend, 60, 8 + (20 if axis else 0)
         plot_w, band = width - left - right, (height - top - bottom) / len(rows)
         x_of = Linear(low, high, left, left + plot_w)
         x0 = x_of(0)
