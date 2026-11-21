@@ -209,7 +209,7 @@ def test_a_windows_run_goes_through_wsl_with_the_distro_and_translated_mounts(en
     runtime = windows(engine, wsl_distro="Ubuntu")
     runtime.run(["pandoc", PureWindowsPath(r"D:\my docs\a.md")], mounts=[Mount(PureWindowsPath(r"D:\my docs"))])
     first = engine.wsl_calls()
-    assert ["-d", "Ubuntu", "--exec", "wslpath", "-a", "-u", r"D:\my docs"] in [c for c in first]
+    assert ["-d", "Ubuntu", "--exec", "wslpath", "-a", "-u", "D:\\"] in [c for c in first]  # once for the drive
     (run,) = engine.runs()
     assert "type=bind,source=/mnt/d/my docs,target=/mnt/d/my docs,readonly" in options(run, "--mount")
     assert options(run, "--user") == ["1000:1000"]
@@ -222,6 +222,31 @@ def test_translated_paths_are_cached(engine):
     for _ in range(3):
         runtime.container_path(r"C:\x")
     assert len([c for c in engine.wsl_calls() if "wslpath" in c]) == 1
+
+
+def test_wsl_is_asked_once_per_drive_not_per_path(engine):
+    """Each wslpath call starts WSL, about a quarter of a second, and a build hands the tools dozens of paths."""
+    runtime = windows(engine)
+    paths = [rf"C:\Users\me\Temp\py-doc-{n}\combined.md" for n in range(20)] + [r"D:\proj\a.md", r"D:\proj"]
+    converted = [runtime.container_path(p) for p in paths]
+    assert converted[0] == "/mnt/c/Users/me/Temp/py-doc-0/combined.md"
+    assert converted[-2:] == ["/mnt/d/proj/a.md", "/mnt/d/proj"]
+    asked = [c[-1] for c in engine.wsl_calls() if "wslpath" in c]
+    assert asked == ["C:\\", "D:\\"]
+
+
+def test_a_drive_mounted_elsewhere_is_followed(engine):
+    """/etc/wsl.conf can move the drives (root = /): wslpath says where once, and every path follows."""
+    runtime = windows(engine)
+    real = runtime._execute
+    runtime._execute = lambda args, **kw: (0, b"/c/\n", b"") if args[0] == "wslpath" else real(args, **kw)
+    assert runtime.container_path(r"C:\x\y.md") == "/c/x/y.md"
+
+
+def test_paths_with_dot_dot_are_left_to_wslpath(engine):
+    runtime = windows(engine)
+    runtime.container_path(r"C:\a\..\b")
+    assert r"C:\a\..\b" in [c[-1] for c in engine.wsl_calls() if "wslpath" in c]
 
 
 def test_wsl_listings_are_utf16():

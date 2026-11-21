@@ -99,6 +99,7 @@ class Runtime:
         self.wsl_exe = _command(wsl_exe)
         self.cache_volume = cache_volume
         self._paths: dict[str, str] = {}
+        self._drives: dict[str, str] = {}  # a drive letter and where WSL mounts it, such as /mnt/d
         self._ids: tuple[int, int] | None = None
 
     # --- reaching the engine -----------------------------------------------------------------
@@ -239,24 +240,37 @@ class Runtime:
         text = os.fspath(path)
         if text in self._paths:
             return self._paths[text]
-        if self.windows:
-            code, out, err = self._execute(["wslpath", "-a", "-u", text], timeout=30)
-            converted = out.decode("utf-8", errors="replace").strip()
-            if code != 0 or not converted:
-                converted = _drive_path(text)  # some distros cannot start wslpath ("Exec format error")
-                if converted is None:
-                    raise EnvironmentProblem(
-                        f"WSL cannot see '{text}': {err.decode('utf-8', errors='replace').strip()}"
-                    )
-                logger.debug(
-                    "wslpath failed (%s), so '%s' is taken as %s",
-                    err.decode("utf-8", errors="replace").strip(),
-                    text,
-                    converted,
-                )
+        drive = re.match(r"^([A-Za-z]):[\\/]", text) if self.windows else None
+        if drive and not re.search(r"[\\/]\.\.?(?:[\\/]|$)", text):
+            # A path on a drive: WSL is asked once where it mounts the drive (usually /mnt/d), and the rest of
+            # the path is joined on here. Each wslpath call starts WSL, about a quarter of a second, and a
+            # build hands the tools dozens of paths, most of them new temporary folders.
+            letter = drive.group(1).lower()
+            if letter not in self._drives:
+                self._drives[letter] = self._wslpath(f"{letter.upper()}:\\").rstrip("/")
+            converted = self._drives[letter] + "/" + text[3:].replace("\\", "/")
+            converted = converted.rstrip("/") if len(text) > 3 else converted
+        elif self.windows:
+            converted = self._wslpath(text)
         else:
             converted = Path(text).resolve().as_posix()
         self._paths[text] = converted
+        return converted
+
+    def _wslpath(self, text: str) -> str:
+        """``text`` as WSL sees it, by asking ``wslpath``."""
+        code, out, err = self._execute(["wslpath", "-a", "-u", text], timeout=30)
+        converted = out.decode("utf-8", errors="replace").strip()
+        if code != 0 or not converted:
+            converted = _drive_path(text)  # some distros cannot start wslpath ("Exec format error")
+            if converted is None:
+                raise EnvironmentProblem(f"WSL cannot see '{text}': {err.decode('utf-8', errors='replace').strip()}")
+            logger.debug(
+                "wslpath failed (%s), so '%s' is taken as %s",
+                err.decode("utf-8", errors="replace").strip(),
+                text,
+                converted,
+            )
         return converted
 
     def user(self) -> str:

@@ -10,7 +10,9 @@ import re
 import shutil
 import sys
 import tempfile
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,6 +29,18 @@ from .scan import Block, find_blocks
 logger = logging.getLogger(__name__)
 
 TIMEOUT = 300
+_SCIENCE_LOCK = threading.Lock()  # one thread builds the science image; the others wait for it
+
+
+def workers() -> int:
+    """How many diagrams are drawn at the same time: ``PY_DOC_DIAGRAM_WORKERS``, else up to 4. Each is a
+    container of its own, so this is how many run at once."""
+    value = os.environ.get("PY_DOC_DIAGRAM_WORKERS", "")
+    if value.isdigit() and int(value) > 0:
+        return int(value)
+    return max(1, min(4, os.cpu_count() or 1))
+
+
 MAX_WIDTH_PX = {"portrait": 1200, "landscape": 1800}
 DPI = 192
 _ORIENTATION = re.compile(r"^\s*\[\[(LANDSCAPE|PORTRAIT)\]\]\s*$", re.MULTILINE)
@@ -92,7 +106,10 @@ def _draw(runtime: Runtime, renderer: Renderer, job_text: str, kind: str, landsc
             mounts.append(Mount(source_dir))
             if renderer.environment:
                 env.update(renderer.environment(runtime.container_path(source_dir)))
-        image = runtime_image.ensure_science(runtime) if renderer.image == "science" else None
+        image = None
+        if renderer.image == "science":
+            with _SCIENCE_LOCK:
+                image = runtime_image.ensure_science(runtime)
         for command in renderer.commands(job):
             runtime.run(command, mounts=mounts, workdir=work, env=env, timeout=TIMEOUT, image=image)
         picture = work / f"diagram.{kind}"
@@ -131,7 +148,7 @@ def draw_cached(
         folder = Path(tempfile.mkdtemp(prefix="py-doc-diagram-out-"))
         cached = folder / f"{key}.{kind}"
     folder.mkdir(parents=True, exist_ok=True)
-    partial = cached.with_suffix(cached.suffix + f".{os.getpid()}.part")
+    partial = cached.with_suffix(cached.suffix + f".{os.getpid()}-{threading.get_ident()}.part")
     partial.write_bytes(picture)
     try:
         os.replace(partial, cached)
@@ -222,25 +239,24 @@ def render_parts(
 
     natives = poster_blocks.names() | {"plot"}
     block_theme = None
-    pictures: dict[str, Path] = {}
-    failures: list[str] = []
     landscape = False
-    out: list[str] = []
+    # First every diagram is found and prepared, in order: its tool, its text and how it is placed
+    documents: list[tuple[list[str], list]] = []  # each part: its lines, and its pieces (lines, or a diagram)
+    diagrams: list[dict] = []
     for file, text in parts:
         lines = text.splitlines()
-        replaced: list[str] = []
+        pieces: list = []
         cursor = 0
         orientation = [(m.start(), m.group(1)) for m in _ORIENTATION.finditer(text)]
         offsets = [0]
         for line in lines:
             offsets.append(offsets[-1] + len(line) + 1)
         for block in find_blocks(text, natives):
-            replaced += lines[cursor : block.start]
+            pieces.append(lines[cursor : block.start])
             cursor = block.end + 1
             for position, name in orientation:
                 if position < offsets[block.start]:
                     landscape = name == "LANDSCAPE"
-            started = time.monotonic()
             if block.fence in BY_FENCE:
                 renderer = BY_FENCE[block.fence]
                 body = with_mermaid_config(block.body, mermaid) if renderer.name == "mermaid" else block.body
@@ -265,23 +281,64 @@ def render_parts(
             event: dict = {"type": renderer.name, "file": str(file), "line": block.line, "kind": kind}
             if block.fence not in BY_FENCE:
                 event["type"] = block.fence
-            try:
-                picture = draw_cached(runtime(), renderer, body, kind, landscape, file.parent, event)
-                event.update(status="ok", seconds=round(time.monotonic() - started, 3))
-                if events is not None:
-                    events.append(event)
-            except (ToolFailed, DiagramError) as exc:
-                message = f"{file}:{block.line}: {block.fence} diagram failed: {_reason(exc)}"
-                event.update(
-                    status="failed", cached=False, seconds=round(time.monotonic() - started, 3), error=_reason(exc)
-                )
-                if events is not None:
-                    events.append(event)
-                if not keep_going:
-                    raise DiagramError(message) from exc
-                failures.append(message)
-                replaced += lines[block.start : cursor]
+            diagram = {"file": file, "block": block, "renderer": renderer, "body": body, "kind": kind,
+                       "landscape": landscape, "event": event, "source": lines[block.start : block.end + 1]}  # fmt: skip
+            diagrams.append(diagram)
+            pieces.append(diagram)
+        pieces.append(lines[cursor:])
+        for position, name in orientation:
+            landscape = name == "LANDSCAPE"
+        documents.append((lines, pieces))
+
+    # Then they are drawn, several at once: each new one is a container run, and the cached ones are quick
+    def draw(diagram: dict) -> None:
+        started = time.monotonic()
+        try:
+            diagram["picture"] = draw_cached(
+                runtime(), diagram["renderer"], diagram["body"], diagram["kind"], diagram["landscape"],
+                diagram["file"].parent, diagram["event"],
+            )  # fmt: skip
+            diagram["event"].update(status="ok")
+        except (ToolFailed, DiagramError) as exc:
+            diagram["error"] = exc
+            diagram["event"].update(status="failed", cached=False, error=_reason(exc))
+        diagram["event"]["seconds"] = round(time.monotonic() - started, 3)
+
+    if diagrams:
+        runtime()  # connected once, before the threads share it
+        count = min(workers(), len(diagrams))
+        if count == 1:
+            for diagram in diagrams:
+                draw(diagram)
+                if "error" in diagram and not keep_going:
+                    break
+        else:
+            with ThreadPoolExecutor(count, thread_name_prefix="diagram") as pool:
+                list(pool.map(draw, diagrams))
+
+    # Last the document is put back together in order, with the first failure, or every one with keep_going
+    pictures: dict[str, Path] = {}
+    failures: list[str] = []
+    out: list[str] = []
+    for lines, pieces in documents:
+        replaced: list[str] = []
+        for piece in pieces:
+            if isinstance(piece, list):
+                replaced += piece
                 continue
+            diagram, block, renderer = piece, piece["block"], piece["renderer"]
+            if "picture" not in diagram and "error" not in diagram:
+                continue  # not drawn: an earlier one failed and the build stops there
+            if events is not None:
+                events.append(diagram["event"])
+            if "error" in diagram:
+                message = f"{diagram['file']}:{block.line}: {block.fence} diagram failed: {_reason(diagram['error'])}"
+                if not keep_going:
+                    raise DiagramError(message) from diagram["error"]
+                failures.append(message)
+                replaced += diagram["source"]
+                continue
+            picture = diagram["picture"]
             name = f"diagrams/{picture.name}"
             pictures[name] = picture
             picture_line = f"![{_alt_text(block, renderer)}]({name})"
@@ -290,7 +347,9 @@ def render_parts(
                 width = None  # a block's own width in pixels, such as a barcode's, which the block has drawn to
             if width:
                 if not _WIDTH.match(width):
-                    raise DiagramError(f'{file}:{block.line}: width="{width}" is not a size such as 100%, 12cm or 4in')
+                    raise DiagramError(
+                        f'{diagram["file"]}:{block.line}: width="{width}" is not a size such as 100%, 12cm or 4in'
+                    )
                 picture_line += f"{{width={width}}}"
             if fmt == "docx" and _captioned(lines, block):
                 picture_line += "\\ "  # a no-break space: not alone in its paragraph, so pandoc adds no caption
@@ -298,9 +357,6 @@ def render_parts(
                 replaced += ["", picture_line, ""]
             else:
                 replaced += ["", '::: {style="text-align:center;"}', picture_line, ":::", ""]
-        replaced += lines[cursor:]
-        for position, name in orientation:
-            landscape = name == "LANDSCAPE"
         out.append("\n".join(replaced) + "\n")
     if failures:
         raise DiagramError(f"{len(failures)} diagram(s) failed:\n" + "\n".join(failures))

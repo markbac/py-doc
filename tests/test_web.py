@@ -410,3 +410,58 @@ def test_previews_can_be_shown_dark(client):
     wait_preview(client, status["id"], 1)
     page = client.get(f"/preview/{status['id']}").text
     assert "pydoc-dark" in page and "pydocDark" in page and "invert(1)" in page
+
+
+# --- previews in their project, and the preview worker ---------------------------------------------------
+
+
+def test_a_file_is_previewed_with_its_documents_settings(tmp_path):
+    """slides.md has [[IF: internal]]: the condition is set by the deck document in py-doc.yml, not the file."""
+    import shutil
+
+    from py_doc.web.render import context
+
+    project = tmp_path / "examples"
+    shutil.copytree(ROOT / "examples", project, ignore=shutil.ignore_patterns("build", ".py-doc"))
+    found = context(project / "docs" / "deck" / "slides.md")
+    assert found.conditions == {"internal": False} and found.variables == {"version": "1.0"}
+    poster = context(project / "poster" / "landscape.md")  # commissioning: branded in py-doc.yml
+    assert poster.poster and "theme" in poster.poster
+    loose = context(project / "docs" / "includes" / "audience.md")  # only included: every document's settings
+    assert "internal" in loose.conditions and "audience" in loose.conditions
+
+
+def test_a_file_outside_any_project_has_no_settings(tmp_path):
+    from py_doc.web.render import context
+
+    (tmp_path / "a.md").write_text("# A\n", encoding="utf-8")
+    found = context(tmp_path / "a.md")
+    assert found.variables == {} and found.conditions == {} and found.poster is None
+
+
+def test_the_worker_answers_each_request_and_keeps_going():
+    from py_doc.web.render import REPLY, serve
+
+    def build(kind, source, output):
+        if "bad" in str(source):
+            raise ValueError("the diagram on line 3 did not draw")
+        print("drawing", kind)
+        logging.getLogger("py_doc.test").info("Running pandoc")
+        return output
+
+    import io
+    import logging
+
+    requests = io.StringIO(
+        json.dumps({"kind": "preview-deck", "source": "good.md", "output": "a.html"})
+        + "\n\n"
+        + json.dumps({"kind": "preview-deck", "source": "bad.md", "output": "b.html"})
+        + "\nnot json\n"
+    )
+    replies = io.StringIO()
+    logging.getLogger().setLevel(logging.INFO)
+    assert serve(requests, replies, build) == 0
+    answers = [json.loads(line[len(REPLY) :]) for line in replies.getvalue().splitlines()]
+    assert [a["ok"] for a in answers] == [True, False, False]
+    assert "drawing preview-deck" in answers[0]["log"] and "Running pandoc" in answers[0]["log"]
+    assert "did not draw" in answers[1]["log"]

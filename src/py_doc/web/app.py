@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import hmac
 import json
 import mimetypes
@@ -117,7 +118,13 @@ def create_app(settings: Settings, jobs: JobManager | None = None, previews: Pre
     workspace = Workspace(settings.root)
     jobs = jobs or JobManager(settings.workers, settings.timeout)
     previews = previews or PreviewManager()
-    app = FastAPI(title="py-doc web", version=__version__, docs_url=None, redoc_url=None)
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_app):
+        yield
+        previews.close()  # the preview worker stops with the server
+
+    app = FastAPI(title="py-doc web", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
     app.state.workspace, app.state.jobs, app.state.previews = workspace, jobs, previews
 
     # --- sign-in -------------------------------------------------------------------------------
