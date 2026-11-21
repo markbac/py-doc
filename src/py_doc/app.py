@@ -168,6 +168,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-site", dest="site", action="store_false", help="Do not build the site, whatever build.site says"
     )
     build.add_argument("--no-generate", action="store_true", help="Do not run content.generators first")
+    build.add_argument(
+        "--combine", metavar="FILE",
+        help="Also join the PDF of every document into FILE, one bookmark each, in py-doc.yml order (implies -f pdf)",
+    )  # fmt: skip
     noise = build.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -283,6 +287,12 @@ def _build(args: argparse.Namespace) -> int:
     report = BuildReport(config.root, args.timestamps) if report_path else None
     names = [n for n in args.documents if n in config.documents] if args.documents else list(config.documents)
     posters = [n for n in args.documents if n in config.posters] if args.documents else list(config.posters)
+    if getattr(args, "combine", None):  # one PDF of the whole project: every document as PDF, then joined
+        if args.format and set(args.format) != {"pdf"}:
+            _error("--combine joins PDFs: leave out -f, or use -f pdf")
+            return 1
+        args.format = ["pdf"]
+        posters = []
     if args.format:  # -f poster is the posters' format; any other leaves them out
         names = names if any(f != "poster" for f in args.format) else []
         posters = posters if "poster" in args.format else []
@@ -339,9 +349,10 @@ def _pipeline(
     failed = 0
     status = 0
     written: list[Path] = []
+    by_document: dict[str, list[Path]] = {}
     for name in names:
         try:
-            written += (
+            by_document[name] = (
                 build_document(
                     config,
                     config.documents[name],
@@ -354,6 +365,7 @@ def _pipeline(
                 )
                 or []
             )
+            written += by_document[name]
         except (FileNotFoundError, ConversionError) as exc:
             _error(f"{name}: {exc}")
             failed += 1
@@ -407,7 +419,30 @@ def _pipeline(
     for path in missing:
         _error(f"{_shown(path)} was not written, or is empty")
     step("verify", "failed" if missing else "ok", f"{len(written) - len(missing)} of {len(written)} output(s)")
-    return 1 if missing else 0
+    if missing:
+        return 1
+
+    # 7. with --combine, the documents' PDFs joined into one, in the order of py-doc.yml
+    if getattr(args, "combine", None):
+        from .pdf_combine import combine
+
+        parts = []
+        for name in names:
+            if config.documents[name].bundle:
+                continue  # a bundle repeats its documents
+            for path in by_document.get(name, []):
+                if path.suffix.lower() == ".pdf":
+                    parts.append((config.documents[name].metadata().title, path))  # None: the PDF's own title
+        target = Path(args.combine).resolve()
+        try:
+            pages = combine(parts, target, title=config.name)
+        except (OSError, ValueError) as exc:
+            _error(f"Cannot join the PDFs into {_shown(target)}: {exc}")
+            step("combine", "failed", str(exc))
+            return 1
+        logger.info(f"Wrote {_shown(target)}: {len(parts)} document(s), {pages} pages")
+        step("combine", "ok", f"{len(parts)} document(s)")
+    return 0
 
 
 def _build_posters(

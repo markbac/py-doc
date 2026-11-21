@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="64" viewBox="0 0 300 64">
+  <circle cx="40" cy="20" r="10" fill="#fb8c00"/>
+  <path d="M6 54l12-22h28l12 22z" fill="#1b5e20"/>
+  <path d="M15 43h34M22 32l-5 22M32 32v22M42 32l5 22" stroke="#a5d6a7" stroke-width="2"/>
+  <text x="68" y="41" font-family="Barlow, Arial, sans-serif" font-size="27" font-weight="700" fill="#1b5e20">Sunfield<tspan fill="#fb8c00"> Energy</tspan></text>
+</svg>

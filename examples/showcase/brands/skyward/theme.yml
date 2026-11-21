@@ -1,0 +1,35 @@
+# Skyward Instruments: weather stations. A clear sky and the sun.
+# A made-up brand, for py-doc's showcase posters. Copy it as a start for your own.
+extends: default
+
+colours:
+  backdrop: "#dceaf5"
+  page: "#f8fbfe"
+  border: "#cfe1f0"
+  text: "#10283d"
+  muted: "#4a6275"
+  header: "#ffffff"
+  header-text: "#0f4c81"
+  subtitle: "#f5b700"
+  byline: "#4a6275"
+  accent: "#f5b700"
+  accent-text: "#f5b700"
+  primary: "#1e78b4"
+  strong: "#1e78b4"
+  secondary: "#5aa9e6"
+  highlight: "#fde9a6"
+  callout: "#fff6d9"
+  callout-border: "#f5b700"
+  diagram-fill: "#fff6d9"
+
+palette:
+  brand: "#1e78b4"
+  second: "#5aa9e6"
+  spark: "#f5b700"
+
+fonts:
+  heading: "'Poppins', Arial, sans-serif"
+  body: "'Source Sans 3', Arial, sans-serif"
+  stylesheet: "https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Source+Sans+3:wght@400;600;700&display=swap"
+
+logo: logo.svg

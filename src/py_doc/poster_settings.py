@@ -13,7 +13,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-TEXT = ("title", "subtitle", "byline", "orientation", "paper", "version", "document_number")
+TEXT = ("title", "subtitle", "byline", "orientation", "paper", "version", "document_number", "fill")
 NUMBERS = ("width", "columns")
 MAPPINGS = ("colours", "palette", "fonts", "header", "footer", "variables", "conditions")
 KEYS = (*TEXT, *NUMBERS, "split", "theme", "logo", "icons", "pdf", "embed_fonts", *MAPPINGS)

@@ -367,14 +367,14 @@ def test_the_default_port_is_8888(monkeypatch, tmp_path):
 
 def test_example_projects_are_offered_and_copied(client, root):
     offered = {s["name"]: s for s in client.get("/api/samples").json()}
-    assert set(offered) == {"py-doc-docs", "sensor-node-examples", "poster-examples"}
+    assert set(offered) == {"py-doc-docs", "sensor-node-examples", "poster-showcase", "poster-examples"}
     assert not offered["poster-examples"]["installed"]
 
     first = client.post("/api/samples", json={"name": "poster-examples"}).json()
     assert first["name"] == "poster-examples" and first["files"] > 5
     assert (root / "poster-examples" / "poster.md").is_file()
     assert not (root / "poster-examples" / "build").exists()  # outputs are not copied
-    assert client.get("/api/samples").json()[2]["installed"]
+    assert {s["name"]: s for s in client.get("/api/samples").json()}["poster-examples"]["installed"]
 
     second = client.post("/api/samples", json={"name": "poster-examples"}).json()
     assert second["name"] == "poster-examples-2"  # an edited first copy is never overwritten
@@ -390,6 +390,15 @@ def test_the_documentation_sample_builds_from_its_own_config(client, root):
     config = load_config(project / "py-doc.yml")
     files = [project / s.file for d in config.documents.values() for s in d.sources if s.file]
     assert len(files) > 20 and all(path.is_file() for path in files)
+
+
+def test_the_showcase_is_its_own_project_not_part_of_the_examples(client, root):
+    client.post("/api/samples", json={"name": "sensor-node-examples"})
+    client.post("/api/samples", json={"name": "poster-showcase"})
+    assert not (root / "sensor-node-examples" / "showcase").exists()
+    assert (root / "poster-showcase" / "py-doc.yml").is_file()
+    assert (root / "poster-showcase" / "brands" / "nimbus" / "logo.svg").is_file()
+    assert not (root / "poster-showcase" / "build").exists()
 
 
 def test_example_projects_are_git_repositories_when_git_is_there(client, root):
@@ -410,3 +419,68 @@ def test_previews_can_be_shown_dark(client):
     wait_preview(client, status["id"], 1)
     page = client.get(f"/preview/{status['id']}").text
     assert "pydoc-dark" in page and "pydocDark" in page and "invert(1)" in page
+
+
+# --- previews in their project, and the preview worker ---------------------------------------------------
+
+
+def test_a_file_is_previewed_with_its_documents_settings(tmp_path):
+    """slides.md has [[IF: internal]]: the condition is set by the deck document in py-doc.yml, not the file."""
+    import shutil
+
+    from py_doc.web.render import context
+
+    project = tmp_path / "examples"
+    shutil.copytree(ROOT / "examples", project, ignore=shutil.ignore_patterns("build", ".py-doc"))
+    found = context(project / "docs" / "deck" / "slides.md")
+    assert found.conditions == {"internal": False} and found.variables == {"version": "1.0"}
+    poster = context(project / "poster" / "landscape.md")  # commissioning: branded in py-doc.yml
+    assert poster.poster and "theme" in poster.poster
+    (project / "docs" / "notes.md").write_text("# Notes\n", encoding="utf-8")
+    loose = context(project / "docs" / "notes.md")  # in no document: the settings of every document
+    assert "internal" in loose.conditions and "audience" in loose.conditions
+
+
+def test_a_file_outside_any_project_has_no_settings(tmp_path):
+    from py_doc.web.render import context
+
+    (tmp_path / "a.md").write_text("# A\n", encoding="utf-8")
+    found = context(tmp_path / "a.md")
+    assert found.variables == {} and found.conditions == {} and found.poster is None
+
+
+def test_the_worker_answers_each_request_and_keeps_going():
+    from py_doc.web.render import REPLY, serve
+
+    def build(kind, source, output):
+        if "bad" in str(source):
+            raise ValueError("the diagram on line 3 did not draw")
+        print("drawing", kind)
+        logging.getLogger("py_doc.test").info("Running pandoc")
+        return output
+
+    import io
+    import logging
+
+    requests = io.StringIO(
+        json.dumps({"kind": "preview-deck", "source": "good.md", "output": "a.html"})
+        + "\n\n"
+        + json.dumps({"kind": "preview-deck", "source": "bad.md", "output": "b.html"})
+        + "\nnot json\n"
+    )
+    replies = io.StringIO()
+    logging.getLogger().setLevel(logging.INFO)
+    assert serve(requests, replies, build) == 0
+    answers = [json.loads(line[len(REPLY) :]) for line in replies.getvalue().splitlines()]
+    assert [a["ok"] for a in answers] == [True, False, False]
+    assert "drawing preview-deck" in answers[0]["log"] and "Running pandoc" in answers[0]["log"]
+    assert "did not draw" in answers[1]["log"]
+
+
+def test_a_project_is_exported_as_one_pdf(client, root):
+    (root / "demo" / "py-doc.yml").write_text("documents:\n  guide:\n    sources: [guide.md]\n", encoding="utf-8")
+    job = client.post("/api/build", json={"project": "demo", "combine": True}).json()
+    command = client.app.state.jobs.get(job["id"]).command
+    assert job["title"] == "demo as one PDF"
+    assert command[command.index("--combine") + 1] == str(root / "demo" / "out" / "demo.pdf")
+    assert "-f" not in command

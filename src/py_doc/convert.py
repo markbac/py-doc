@@ -30,9 +30,14 @@ class _Converter:
         template_path: Path | None = None,
         allow_missing_template: bool = False,
         runtime: Callable[[], Runtime] | None = None,
+        variables: dict | None = None,
+        conditions: dict | None = None,
+        mermaid: dict | None = None,
         **options,
     ) -> None:
-        """``runtime`` returns the tool container runtime. By default one is connected on first use."""
+        """``runtime`` returns the tool container runtime. By default one is connected on first use.
+        ``variables``, ``conditions`` and ``mermaid`` are those of the document in py-doc.yml, when there is one."""
+        self.variables, self.conditions, self.mermaid = variables or {}, conditions or {}, mermaid
         self.template_path = Path(template_path) if template_path else None
         self.options = {"allow_missing_template": allow_missing_template, **options}
         self._runtime = runtime
@@ -77,7 +82,7 @@ class _Converter:
         md_path = Path(md_path).resolve()
         if not md_path.is_file():
             raise FileNotFoundError(f"Markdown file not found: {md_path}")
-        joined = join_sources([Source(md_path)], {}, {}, md_path.name)
+        joined = join_sources([Source(md_path)], self.variables, self.conditions, md_path.name)
         if self.fmt == "pptx" and fmt == "html" and not options.get("deck"):  # notes written as comments, as notes
             from .pandoc.pptx_finish import notes_to_divs
 
@@ -87,7 +92,7 @@ class _Converter:
             metadata = replace(metadata, title=joined.first_heading or md_path.stem)
         return render_output(
             fmt, joined, metadata, Path(output_path), md_path.name, [md_path.parent], template,
-            options, self.runtime, keep_going=False,
+            options, self.runtime, keep_going=False, mermaid=self.mermaid,
         )  # fmt: skip
 
 

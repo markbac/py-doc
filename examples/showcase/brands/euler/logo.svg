@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="290" height="64" viewBox="0 0 290 64">
+  <rect x="6" y="8" width="48" height="48" rx="8" fill="#7a1f12"/>
+  <text x="30" y="44" text-anchor="middle" font-family="Merriweather, Georgia, serif" font-size="32" font-weight="900" fill="#fffaf0">∫</text>
+  <text x="66" y="40" font-family="Merriweather, Georgia, serif" font-size="24" font-weight="900" fill="#7a1f12">Euler<tspan fill="#c0392b" font-weight="700"> Academy</tspan></text>
+</svg>

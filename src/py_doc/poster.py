@@ -67,6 +67,8 @@ main{padding:24px 40px 28px;display:flex;flex-direction:column;gap:20px;flex:1}
 .cols{display:flex;gap:28px;align-items:flex-start}
 section.continued h2::after{content:" (continued)";font-weight:400;opacity:.8}
 .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:22px}
+.fill-spread main>.cols{flex:1 0 auto;align-items:stretch}
+.fill-spread .col{justify-content:space-between}
 section h2{margin:0 0 10px;background:var(--c,var(--primary));color:var(--on-primary);font-family:var(--font-heading);padding:10px 16px;font-size:25px;line-height:1.2}
 section h2 span{color:var(--highlight);font-weight:600}
 .body{font-size:16px;line-height:1.45}
@@ -702,6 +704,7 @@ def build(
         raise PosterError(f"{md_path}: no sections found (expected '## Heading' blocks)")
 
     orientation = _choice(meta, "orientation", ("portrait", "landscape"), md_path)
+    fill_mode = _choice(meta, "fill", ("none", "spread"), md_path)  # spread: no column ends short of the others
     count = number(meta, "columns", COLUMNS[orientation], md_path)
 
     def look(attrs, *classes):
@@ -808,7 +811,7 @@ def build(
 <style>{faces}{css}</style>
 </head>
 <body>
-<div class="poster {orientation}">
+<div class="poster {orientation}{" fill-spread" if fill_mode == "spread" else ""}">
 {header_html(meta, title, ctx, md_path)}
 <main>
 {middle}

@@ -1,0 +1,35 @@
+# Sentinel Cyber: incident response. Slate calm, and red for the alarm.
+# A made-up brand, for py-doc's showcase posters. Copy it as a start for your own.
+extends: default
+
+colours:
+  backdrop: "#e3e7ea"
+  page: "#f9fafb"
+  border: "#d5dbe0"
+  text: "#1d262c"
+  muted: "#52606b"
+  header: "#1d262c"
+  header-text: "#ffffff"
+  subtitle: "#ff8a80"
+  byline: "#b0bec5"
+  accent: "#e53935"
+  accent-text: "#e53935"
+  primary: "#263238"
+  strong: "#263238"
+  secondary: "#455a64"
+  highlight: "#ffcdd2"
+  callout: "#fdecea"
+  callout-border: "#e53935"
+  diagram-fill: "#fdecea"
+
+palette:
+  brand: "#263238"
+  second: "#455a64"
+  spark: "#e53935"
+
+fonts:
+  heading: "'Rajdhani', Arial, sans-serif"
+  body: "'Roboto', Arial, sans-serif"
+  stylesheet: "https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Roboto:wght@400;500;700&display=swap"
+
+logo: logo.svg

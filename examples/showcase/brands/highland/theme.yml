@@ -1,0 +1,35 @@
+# Highland Geography Society: field geography. Glacier teal and meltwater blue.
+# A made-up brand, for py-doc's showcase posters. Copy it as a start for your own.
+extends: default
+
+colours:
+  backdrop: "#dfeeee"
+  page: "#f5fbfb"
+  border: "#cfe3e3"
+  text: "#14302f"
+  muted: "#4a6564"
+  header: "#0d3b3a"
+  header-text: "#ffffff"
+  subtitle: "#a8dadc"
+  byline: "#cfe3e3"
+  accent: "#3a86c8"
+  accent-text: "#3a86c8"
+  primary: "#1f6f6d"
+  strong: "#1f6f6d"
+  secondary: "#2a9d8f"
+  highlight: "#a8dadc"
+  callout: "#e6f4f4"
+  callout-border: "#3a86c8"
+  diagram-fill: "#e6f4f4"
+
+palette:
+  brand: "#1f6f6d"
+  second: "#2a9d8f"
+  spark: "#3a86c8"
+
+fonts:
+  heading: "'Montserrat', Arial, sans-serif"
+  body: "'Nunito Sans', Arial, sans-serif"
+  stylesheet: "https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Nunito+Sans:wght@400;600;700&display=swap"
+
+logo: logo.svg

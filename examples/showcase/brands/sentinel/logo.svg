@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="310" height="64" viewBox="0 0 310 64">
+  <path d="M32 6l22 8v16c0 14-9 24-22 28-13-4-22-14-22-28V14z" fill="#455a64"/>
+  <path d="M32 14l14 5v11c0 9-6 16-14 19z" fill="#e53935"/>
+  <circle cx="32" cy="30" r="5" fill="#ffffff"/>
+  <text x="66" y="41" font-family="Rajdhani, Arial, sans-serif" font-size="29" font-weight="700" fill="#ffffff">SENTINEL<tspan fill="#e53935"> CYBER</tspan></text>
+</svg>

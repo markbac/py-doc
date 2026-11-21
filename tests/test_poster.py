@@ -361,6 +361,14 @@ def test_columns_and_split_choose_the_sections_of_each_column(tmp_path, drawn):
     assert columns(page) == [2, 4]
 
 
+def test_fill_spread_makes_every_column_end_level(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\nfill: spread\n---\n" + SECTIONS), lambda: object())
+    assert 'class="poster portrait fill-spread"' in page
+    assert ".fill-spread .col{justify-content:space-between}" in page
+    plain, _ = build(write(tmp_path, SECTIONS), lambda: object())
+    assert 'class="poster portrait"' in plain  # the default leaves the layout as it was
+
+
 def test_there_are_never_more_columns_than_sections(tmp_path, drawn):
     page, _ = build(write(tmp_path, "---\ncolumns: 4\n---\n## A\n\nOne.\n\n## B\n\nTwo.\n"), lambda: object())
     assert columns(page) == [1, 1]
@@ -375,6 +383,7 @@ def test_there_are_never_more_columns_than_sections(tmp_path, drawn):
         ("split: 1, 2", "split needs 1 number"),
         ("split: 6", "leaving at least one"),
         ("width: 100", "width must be at least 400"),
+        ("fill: stretch", "fill must be none or spread"),
     ],
 )
 def test_a_layout_mistake_is_an_error(tmp_path, front, message):
@@ -1710,3 +1719,17 @@ def test_a_flow_draws_each_box_once_with_branches_under_and_loops_over():
     assert boxes["Measure"][1] < boxes["Count the skip"][1]  # the branch goes under the box it leaves
     assert boxes["Asleep"][1] == boxes["Measure"][1] == boxes["Send"][1]  # the first line along the top
     assert re.search(r'<path d="M[\d.]+,[\d.]+ C', picture)  # the arrow back to Asleep is a curve over the top
+
+
+@pytest.mark.parametrize(
+    ("width", "style"),
+    [("100%", ' style="width:100%;max-width:100%"'), ("900", ' style="width:900px;max-width:100%"'),
+     ("640px", ' style="width:640px;max-width:100%"'), ("", ""), ("wide", "")],
+)  # fmt: skip
+def test_a_diagram_can_be_drawn_at_a_width(width, style):
+    """width= on a diagram fence of a poster, as in a document: a full-width section's diagram spans the page."""
+    from types import SimpleNamespace
+
+    from py_doc.poster_blocks import _width_style
+
+    assert _width_style({"width": width} if width else {}, SimpleNamespace(where="p.md:3")) == style

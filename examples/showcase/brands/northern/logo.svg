@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="64" viewBox="0 0 360 64">
+  <path d="M8 52a24 24 0 0 1 48 0z" fill="#1f3c88"/>
+  <rect x="29" y="20" width="6" height="20" rx="2" fill="#f2c14e" transform="rotate(-35 32 40)"/>
+  <path d="M46 10l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#f2c14e"/>
+  <circle cx="18" cy="14" r="1.8" fill="#f2c14e"/><circle cx="56" cy="30" r="1.4" fill="#f2c14e"/>
+  <text x="68" y="41" font-family="Cinzel, Georgia, serif" font-size="23" font-weight="700" fill="#f2c14e">Northern Observatory</text>
+</svg>

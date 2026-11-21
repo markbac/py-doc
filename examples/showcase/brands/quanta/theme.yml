@@ -1,0 +1,35 @@
+# Quanta Institute: quantum physics outreach. Violet and a cyan glow, on night.
+# A made-up brand, for py-doc's showcase posters. Copy it as a start for your own.
+extends: dark
+
+colours:
+  backdrop: "#07061a"
+  page: "#110f2a"
+  border: "#2a2650"
+  text: "#e9e6ff"
+  muted: "#a7a2d6"
+  header: "#0b0a1f"
+  header-text: "#ffffff"
+  subtitle: "#00e5ff"
+  byline: "#a7a2d6"
+  accent: "#00e5ff"
+  accent-text: "#00e5ff"
+  primary: "#7c4dff"
+  strong: "#7c4dff"
+  secondary: "#4d3bb8"
+  highlight: "#5ef2ff"
+  callout: "#1b1840"
+  callout-border: "#00e5ff"
+  diagram-fill: "#1b1840"
+
+palette:
+  brand: "#7c4dff"
+  second: "#4d3bb8"
+  spark: "#00e5ff"
+
+fonts:
+  heading: "'Space Grotesk', Arial, sans-serif"
+  body: "'IBM Plex Sans', Arial, sans-serif"
+  stylesheet: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;600&display=swap"
+
+logo: logo.svg

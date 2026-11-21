@@ -427,6 +427,7 @@ class TestOtherTools:
 
     def test_the_orientation_marker_chooses_the_mermaid_width(self, tmp_path, host, monkeypatch):
         _, runtime = host
+        monkeypatch.setenv("PY_DOC_DIAGRAM_WORKERS", "1")  # the log is read in the order the diagrams were drawn
         monkeypatch.setenv("STUB_LOG", str(tmp_path / "stub.log"))
         png_bytes = png(tmp_path / "x.png").read_bytes()
         stub(
@@ -442,6 +443,27 @@ class TestOtherTools:
             for c in map(json.loads, (tmp_path / "stub.log").read_text(encoding="utf-8").splitlines())
         ]
         assert widths == ["1200", "1800", "1200"]
+
+    def test_diagrams_drawn_at_the_same_time_come_out_in_document_order(self, tmp_path, host, monkeypatch):
+        _, runtime = host
+        monkeypatch.setenv("STUB_LOG", str(tmp_path / "stub.log"))
+        png_bytes = png(tmp_path / "x.png").read_bytes()
+        stub(
+            tmp_path,
+            monkeypatch,
+            "mmdc",
+            PNG_STUB + f"open(sys.argv[sys.argv.index('-o') + 1], 'wb').write({png_bytes!r})",
+        )
+        text = "".join(f"```mermaid\ngraph TD;A-->N{n}\n```\n\npara {n}\n\n" for n in range(6))
+        monkeypatch.setenv("PY_DOC_DIAGRAM_WORKERS", "1")
+        monkeypatch.setenv("PY_DOC_CACHE", str(tmp_path / "cache-one"))
+        one = render_parts(part(tmp_path, text), "docx", runtime)
+        monkeypatch.setenv("PY_DOC_DIAGRAM_WORKERS", "4")
+        monkeypatch.setenv("PY_DOC_CACHE", str(tmp_path / "cache-four"))
+        events: list[dict] = []
+        four = render_parts(part(tmp_path, text), "docx", runtime, events=events)
+        assert four.markdown == one.markdown  # the same pictures in the same places
+        assert [e["status"] for e in events] == ["ok"] * 6 and not any(e["cached"] for e in events)
 
     def test_the_container_runs_diagram_tools_without_a_network(self, tmp_path, monkeypatch):
         engine = install(tmp_path, monkeypatch)
