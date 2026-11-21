@@ -330,6 +330,7 @@ function contextMenu(event, node, project) {
         { text: "Build posters only", run: () => build(path, "poster") },
         { text: "Build with lint first", run: () => build(path, null, true) },
         { text: "Build the web site too", run: () => build(path, null, false, true) },
+        { text: "Export as one PDF", run: () => exportPdf(path) },
         { text: "Check (no build)", run: () => runJob("/api/check", { path }) }, "-");
     }
     items.push({ text: "Lint the project", run: () => lint(path) }, "-");
@@ -780,6 +781,14 @@ async function build(project, format = null, lintFirst = false, site = false) {
   const job = await api("POST", "/api/build", { project, format, lint: lintFirst, site });
   watchJob(job.id, true);
   showSide("jobs");
+}
+
+async function exportPdf(project) {
+  await saveAll(project);
+  const job = await api("POST", "/api/build", { project, combine: true });
+  watchJob(job.id, true);
+  showSide("jobs");
+  toast(`Building every document of ${project} as PDF, then joining them`);
 }
 
 async function runJob(url, body) {

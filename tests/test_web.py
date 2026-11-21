@@ -465,3 +465,12 @@ def test_the_worker_answers_each_request_and_keeps_going():
     assert [a["ok"] for a in answers] == [True, False, False]
     assert "drawing preview-deck" in answers[0]["log"] and "Running pandoc" in answers[0]["log"]
     assert "did not draw" in answers[1]["log"]
+
+
+def test_a_project_is_exported_as_one_pdf(client, root):
+    (root / "demo" / "py-doc.yml").write_text("documents:\n  guide:\n    sources: [guide.md]\n", encoding="utf-8")
+    job = client.post("/api/build", json={"project": "demo", "combine": True}).json()
+    command = client.app.state.jobs.get(job["id"]).command
+    assert job["title"] == "demo as one PDF"
+    assert command[command.index("--combine") + 1] == str(root / "demo" / "out" / "demo.pdf")
+    assert "-f" not in command

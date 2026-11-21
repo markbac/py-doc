@@ -141,7 +141,7 @@ class BuildReport:
         )
 
     def step(self, name: str, status: str, detail: str = "") -> None:
-        """A stage of the build pipeline: generate, lint, documents, posters, site or verify."""
+        """A stage of the build pipeline: generate, lint, documents, posters, site, verify or combine."""
         self.steps.append({"step": name, "status": status, **({"detail": detail} if detail else {})})
 
     def failed(self, doc_id: str, error: BaseException) -> None:

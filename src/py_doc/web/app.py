@@ -103,6 +103,7 @@ class BuildBody(BaseModel):
     documents: list[str] = []
     lint: bool = False
     site: bool = False
+    combine: bool = False  # every document as PDF, joined into out/<project>.pdf
 
 
 class LintBody(BaseModel):
@@ -320,7 +321,10 @@ def create_app(settings: Settings, jobs: JobManager | None = None, previews: Pre
         if not (project / "py-doc.yml").is_file():
             raise WorkspaceError(f"{project.name} has no py-doc.yml, so convert its files one at a time instead")
         args = ["build", *body.documents]
-        if body.format:
+        combined = project / settings.output_dir / f"{project.name}.pdf"
+        if body.combine:
+            args += ["--combine", str(combined)]
+        elif body.format:
             if body.format not in BUILD_FORMATS:
                 raise WorkspaceError(f"Build one of {', '.join(BUILD_FORMATS)}")
             args += ["-f", body.format]
@@ -328,7 +332,14 @@ def create_app(settings: Settings, jobs: JobManager | None = None, previews: Pre
             args.append("--lint")
         args.append("--site" if body.site else "--no-site")
         title = f"Build {project.name}" + (f" ({body.format})" if body.format else "")
-        return jobs.start(title, project.name, py_doc_command(*args), project).summary()
+
+        def found(job: Job) -> None:
+            if body.combine and combined.is_file() and job.state == "ok":
+                job.result = {"outputs": [workspace.relative(combined)]}
+
+        if body.combine:
+            title = f"{project.name} as one PDF"
+        return jobs.start(title, project.name, py_doc_command(*args), project, after=found).summary()
 
     @app.post("/api/check")
     def check(body: PathBody):
