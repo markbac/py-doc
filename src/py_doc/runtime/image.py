@@ -30,16 +30,30 @@ BUILD_TIMEOUT = 3 * 3600.0
 _PROXY_VARIABLES = ("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy")
 
 
+def _files(folder: Path) -> list[Path]:
+    """The files of ``folder``, in the order of their relative names as text.
+
+    Sorting the ``Path`` objects themselves would not do: Windows compares them without case, so a
+    ``Dockerfile`` comes in a different place there, and the same folder would hash differently.
+    """
+    found = [p for p in folder.rglob("*") if p.is_file() and "__pycache__" not in p.parts]
+    return sorted(found, key=lambda p: p.relative_to(folder).as_posix())
+
+
 def _definition_files() -> list[Path]:
-    return sorted(p for p in IMAGE_DIR.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
+    return _files(IMAGE_DIR)
+
+
+def _hash_folder(digest, folder: Path) -> None:
+    for path in _files(folder):
+        digest.update(path.relative_to(folder).as_posix().encode("utf-8") + b"\0")
+        digest.update(path.read_bytes().replace(b"\r\n", b"\n") + b"\0")  # the same hash after a Windows checkout
 
 
 def content_hash() -> str:
-    """A short hash of every file in the image folder: names and bytes, in a fixed order."""
+    """A short hash of every file in the image folder: names and bytes, in a fixed order on every system."""
     digest = hashlib.sha256()
-    for path in _definition_files():
-        digest.update(path.relative_to(IMAGE_DIR).as_posix().encode("utf-8") + b"\0")
-        digest.update(path.read_bytes().replace(b"\r\n", b"\n") + b"\0")  # the same hash after a Windows checkout
+    _hash_folder(digest, IMAGE_DIR)
     return digest.hexdigest()[:12]
 
 
@@ -56,9 +70,7 @@ SCIENCE_DIR = Path(__file__).parent / "science"
 def science_ref() -> str:
     """The science image's tag: a hash of its folder and of the tool image's, so a change to either rebuilds it."""
     digest = hashlib.sha256(content_hash().encode("utf-8"))
-    for path in sorted(p for p in SCIENCE_DIR.rglob("*") if p.is_file() and "__pycache__" not in p.parts):
-        digest.update(path.relative_to(SCIENCE_DIR).as_posix().encode("utf-8") + b"\0")
-        digest.update(path.read_bytes().replace(b"\r\n", b"\n") + b"\0")
+    _hash_folder(digest, SCIENCE_DIR)
     return f"{SCIENCE_NAME}:{digest.hexdigest()[:12]}"
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 from pathlib import Path
@@ -101,6 +102,21 @@ def test_the_tag_is_the_same_after_a_windows_checkout(definition):
     path = definition / "fetch.sh"
     path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
     assert image.content_hash() == first
+
+
+def test_the_tag_is_the_same_on_every_system(tmp_path, monkeypatch):
+    """Names are hashed in the order of their text, capitals first, as Linux sorts them. Windows sorts
+    paths without case, which once gave the same folder a different tag there than on Linux."""
+    folder = tmp_path / "definition"
+    (folder / "sub").mkdir(parents=True)
+    files = {"Dockerfile": b"FROM x\n", "asyncapi.js": b"a\n", "Zeta.txt": b"z\n", "sub/b.txt": b"b\n"}
+    for name, data in files.items():
+        (folder / name).write_bytes(data)
+    monkeypatch.setattr(image, "IMAGE_DIR", folder)
+    expected = hashlib.sha256()
+    for name in ["Dockerfile", "Zeta.txt", "asyncapi.js", "sub/b.txt"]:
+        expected.update(name.encode("utf-8") + b"\0" + files[name] + b"\0")
+    assert image.content_hash() == expected.hexdigest()[:12]
 
 
 # --- tools.lock ----------------------------------------------------------------------------------
