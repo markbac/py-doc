@@ -1719,3 +1719,17 @@ def test_a_flow_draws_each_box_once_with_branches_under_and_loops_over():
     assert boxes["Measure"][1] < boxes["Count the skip"][1]  # the branch goes under the box it leaves
     assert boxes["Asleep"][1] == boxes["Measure"][1] == boxes["Send"][1]  # the first line along the top
     assert re.search(r'<path d="M[\d.]+,[\d.]+ C', picture)  # the arrow back to Asleep is a curve over the top
+
+
+@pytest.mark.parametrize(
+    ("width", "style"),
+    [("100%", ' style="width:100%;max-width:100%"'), ("900", ' style="width:900px;max-width:100%"'),
+     ("640px", ' style="width:640px;max-width:100%"'), ("", ""), ("wide", "")],
+)  # fmt: skip
+def test_a_diagram_can_be_drawn_at_a_width(width, style):
+    """width= on a diagram fence of a poster, as in a document: a full-width section's diagram spans the page."""
+    from types import SimpleNamespace
+
+    from py_doc.poster_blocks import _width_style
+
+    assert _width_style({"width": width} if width else {}, SimpleNamespace(where="p.md:3")) == style

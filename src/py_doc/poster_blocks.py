@@ -330,6 +330,19 @@ def render_diagram(lang, code, ctx):
     return draw_cached(ctx.runtime(), renderer, code, kind, False, ctx.base)
 
 
+def _width_style(opts, ctx) -> str:
+    """width=100% (or 80%, or 900px) on a diagram fence: drawn at that width, as in a document, rather than
+    at the size the tool drew it. A full-width section's diagram then spans the page."""
+    width = str(opts.get("width", "")).strip()
+    if not width:
+        return ""
+    match = re.fullmatch(r"(\d+(?:\.\d+)?)(%|px)?", width)
+    if not match:
+        logger.warning(f"{ctx.where}: width={width} is not a size such as 100% or 900px, so it is ignored")
+        return ""
+    return f' style="width:{match.group(1)}{match.group(2) or "px"};max-width:100%"'
+
+
 def diagram_html(lang, code, opts, ctx):
     try:
         path = render_diagram(lang, code, ctx)
@@ -338,7 +351,7 @@ def diagram_html(lang, code, opts, ctx):
         if mime == "image/svg+xml":
             picture = sized_svg(picture)
         data = base64.b64encode(picture).decode()
-        return f'<img alt="{esc(opts.get("alt", lang + " diagram"))}" src="data:{mime};base64,{data}">'
+        return f'<img alt="{esc(opts.get("alt", lang + " diagram"))}"{_width_style(opts, ctx)} src="data:{mime};base64,{data}">'
     except (ToolFailed, DiagramError) as exc:  # a broken diagram must not stop the poster
         ctx.failed += 1
         lines = (getattr(exc, "output", None) or str(exc) or type(exc).__name__).strip().splitlines()
