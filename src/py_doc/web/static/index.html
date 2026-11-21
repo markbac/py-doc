@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>py-doc</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%232f6fdf'/%3E%3Cpath d='M9 7h9l6 6v12H9z' fill='%23fff'/%3E%3Cpath d='M18 7v6h6' fill='%23b8cdf5'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.css">
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo"></span>py-doc <span class="muted" id="version"></span></div>
+  <div class="spacer"></div>
+  <button class="ghost" id="jobs-badge" title="Jobs">Jobs <span class="count" id="jobs-running" hidden>0</span></button>
+  <button class="ghost" id="theme-toggle" title="Light or dark">◐</button>
+</header>
+
+<main class="layout" id="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-bar">
+      <strong>Projects</strong>
+      <div class="spacer"></div>
+      <button class="icon" id="new-project" title="New project">＋</button>
+      <button class="icon" id="refresh" title="Refresh">⟳</button>
+    </div>
+    <div class="tree" id="tree" tabindex="0"></div>
+    <div class="drop-hint" id="drop-hint">Drop files or folders on a project or folder.<br>Drop a folder here to make it a new project.</div>
+  </aside>
+  <div class="splitter" data-split="sidebar"></div>
+
+  <section class="editor-pane">
+    <div class="tabs" id="tabs"></div>
+    <div class="editor-bar" id="editor-bar" hidden>
+      <span class="path" id="file-path"></span>
+      <span class="save-state" id="save-state"></span>
+      <div class="spacer"></div>
+      <label class="check"><input type="checkbox" id="autosave" checked> Autosave</label>
+      <select id="preview-kind" title="Live preview">
+        <option value="">No preview</option>
+        <option value="document">Preview: document</option>
+        <option value="deck">Preview: slides</option>
+        <option value="poster">Preview: poster</option>
+      </select>
+      <div class="menu-wrap">
+        <button id="convert-button">Convert ▾</button>
+        <div class="menu" id="convert-menu" hidden></div>
+      </div>
+      <button id="lint-file">Lint</button>
+    </div>
+    <div class="editor-host" id="editor-host">
+      <div class="welcome" id="welcome">
+        <h1>py-doc</h1>
+        <p>Open a file from the explorer, or drop files and folders onto it.</p>
+        <ul>
+          <li><b>Projects</b> are the folders of the workspace. A project with a <code>py-doc.yml</code> builds as a whole.</li>
+          <li><b>Right-click</b> a project, folder or file for what you can do with it.</li>
+          <li><b>Preview</b> rebuilds as you type. <b>Convert</b> writes Word, PowerPoint, PDF, HTML, a deck or a poster into the project's <code>out</code> folder.</li>
+        </ul>
+      </div>
+      <div class="viewer" id="viewer" hidden></div>
+    </div>
+  </section>
+  <div class="splitter" data-split="side"></div>
+
+  <section class="side-pane" id="side-pane">
+    <div class="side-tabs">
+      <button data-side="preview" class="active">Preview</button>
+      <button data-side="lint">Lint</button>
+      <button data-side="jobs">Jobs</button>
+    </div>
+    <div class="side-body" data-body="preview">
+      <div class="preview-state" id="preview-state">Choose a preview for a Markdown file.</div>
+      <div class="preview-error" id="preview-error" hidden></div>
+      <!-- The server sends the preview with a sandbox CSP header, so it runs in an origin of its own -->
+      <iframe id="preview-frame" title="Preview"></iframe>
+    </div>
+    <div class="side-body" data-body="lint" hidden>
+      <div class="lint-summary" id="lint-summary">Lint a file, a folder or a project to see its issues here.</div>
+      <div class="lint-list" id="lint-list"></div>
+    </div>
+    <div class="side-body" data-body="jobs" hidden>
+      <div class="jobs" id="jobs"></div>
+    </div>
+  </section>
+</main>
+
+<div class="context" id="context" hidden></div>
+<div class="toast" id="toast" hidden></div>
+<div class="modal-back" id="modal" hidden>
+  <form class="modal" id="modal-form">
+    <h2 id="modal-title"></h2>
+    <div id="modal-body"></div>
+    <div class="modal-buttons">
+      <button type="button" class="ghost" id="modal-cancel">Cancel</button>
+      <button type="submit" class="primary" id="modal-ok">OK</button>
+    </div>
+  </form>
+</div>
+<input type="file" id="file-input" multiple hidden>
+<input type="file" id="folder-input" webkitdirectory hidden>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/meta.min.js"></script>
+<!-- The languages of fenced code blocks, found by the name after the fence (```python) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/powershell/powershell.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/go/go.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/rust/rust.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/toml/toml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/properties/properties.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/dockerfile/dockerfile.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/lua/lua.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/diff/diff.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clojure/clojure.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/ruby/ruby.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/stex/stex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/gfm/gfm.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/overlay.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/dialog/dialog.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/search.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/continuelist.min.js"></script>
+<script src="/static/diagram-modes.js"></script>
+<script src="/static/pydoc-mode.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

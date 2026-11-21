@@ -63,7 +63,17 @@ _DELEGATES = {
     "icons": ("Download, list and search the icon packs of poster blocks", run_icons),
     "doctor": ("Check that the tool container works", run_doctor),
     "setup": ("Install Docker Engine for the tool runner", run_setup),
+    "web": (
+        "Serve py-doc in the browser: explore, edit, preview, convert, build and lint",
+        lambda argv: _run_web(argv),
+    ),
 }
+
+
+def _run_web(argv: list[str]) -> int:
+    from .web.cli import run_web  # imported when used: the web server is an extra
+
+    return run_web(argv)
 
 
 BUILD_EXAMPLES = """examples:
