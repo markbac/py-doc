@@ -20,7 +20,7 @@ services:
       PYDOC_DATA: ${PYDOC_DATA}          # the entrypoint runs py-doc from a copy here (see entrypoint.sh)
       PYDOC_WEB_ROOT: ${PYDOC_DATA:?set PYDOC_DATA in .env}/workspace
       PYDOC_WEB_HOST: 0.0.0.0
-      PYDOC_WEB_PORT: "8080"
+      PYDOC_WEB_PORT: "8888"
       PYDOC_WEB_PASSWORD: ${PYDOC_WEB_PASSWORD:-}
       PYDOC_WEB_WORKERS: ${PYDOC_WEB_WORKERS:-1}
       PYDOC_WEB_TIMEOUT: ${PYDOC_WEB_TIMEOUT:-1800}
@@ -28,7 +28,7 @@ services:
       HOME: ${PYDOC_DATA}/home           # caches such as the icon packs
       NO_COLOR: "1"
     ports:
-      - "${PYDOC_WEB_BIND:-0.0.0.0}:${PYDOC_WEB_PORT:-8080}:8080"
+      - "${PYDOC_WEB_BIND:-0.0.0.0}:${PYDOC_WEB_PORT:-8888}:8888"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${PYDOC_DATA}:${PYDOC_DATA}

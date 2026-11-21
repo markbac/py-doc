@@ -48,11 +48,20 @@
     state.queue.push([match[5], "pydoc-bracket"]);
   }
 
+  // A line of a fenced code block: Markdown's mode colours the code by its language, and this only gives
+  // the line a background. Combined, so the code's own colours stay.
+  // (CodeMirror's overlay reads combineTokens from the overlay's state, for the token just returned.)
+  function codeLine(state) {
+    state.combineTokens = true;
+    return "line-background-pydoc-code";
+  }
+
   const overlay = {
     startState: () => ({ fence: null, listtable: false, queue: [], inCode: 0 }),
     copyState: (s) => ({ fence: s.fence, listtable: s.listtable, queue: s.queue.slice(), inCode: s.inCode }),
     blankLine: (state) => { state.listtable = false; },
     token(stream, state) {
+      state.combineTokens = false;  // py-doc's styles replace Markdown's; codeLine() asks for both
       if (state.queue.length) {
         const [text, style] = state.queue.shift();
         for (let i = 0; i < text.length; i++) stream.next();
@@ -64,9 +73,9 @@
         if (state.fence) {
           if (fence && fence[1][0] === state.fence[0] && fence[1].length >= state.fence.length && /^\s*(`+|~+)\s*$/.test(line)) state.fence = null;
           stream.skipToEnd();
-          return null;
+          return codeLine(state);
         }
-        if (fence) { state.fence = fence[1]; stream.skipToEnd(); return null; }
+        if (fence) { state.fence = fence[1]; stream.skipToEnd(); return codeLine(state); }
         if (!line.startsWith("|")) state.listtable = false;
         const directive = DIRECTIVE.exec(line);
         if (directive && /^\s*$/.test(line.slice(directive[0].length))) {

@@ -3,7 +3,7 @@
 `py-doc web` is py-doc in the browser, for a server on your own network:
 
 - **Explorer.** Every folder of the workspace is a project. Drag files and whole folders from your computer onto a project or folder to upload them. Drop a folder on the empty space to make it a new project. Drag files inside the explorer to move them. Right-click anything for what you can do with it: new file or folder, upload, download (a folder as a zip), rename, delete.
-- **Editor.** Markdown, YAML, PlantUML and the rest, with tabs, autosave and Ctrl+S. py-doc's own syntax is highlighted as in the VS Code extension: directives such as `[[LANDSCAPE]]` and `[[INCLUDE: a.md]]` (hover one to see what it does; one py-doc does not know gets a wavy underline), `[[IF:]]` conditions, `{{variables}}`, callouts, `:::` divs, attributes and `[[LISTTABLE]]` cells.
+- **Editor.** Markdown, YAML, PlantUML and the rest, with tabs, autosave and Ctrl+S. Fenced code is coloured by its language: Python, shell, YAML, JSON, SQL, C and the like, and py-doc's diagram fences (Mermaid, PlantUML, Graphviz and its family, poster blocks, BPMN text) as the VS Code extension colours them. py-doc's own syntax is highlighted as in the VS Code extension: directives such as `[[LANDSCAPE]]` and `[[INCLUDE: a.md]]` (hover one to see what it does; one py-doc does not know gets a wavy underline), `[[IF:]]` conditions, `{{variables}}`, callouts, `:::` divs, attributes and `[[LISTTABLE]]` cells.
 - **Live preview.** A Markdown file as a document, slides or a poster, built again a moment after every save, with every diagram drawn. A build that fails keeps the last good page and shows why.
 - **Convert.** One file to Word, PowerPoint, PDF, an HTML page, an HTML deck or a poster, written to the project's `out` folder.
 - **Build.** A project with a `py-doc.yml` builds as a whole (`py-doc build`), or one format of it, with lint first or the site after.
@@ -27,7 +27,7 @@ nano .env              # check PYDOC_DATA, set PYDOC_WEB_PASSWORD
 ./deploy.sh            # builds both images, checks them, starts the service
 ```
 
-Then open `http://<server>:8080/`. Sign in with any user name and the password from `.env`.
+Then open `http://<server>:8888/`. Sign in with any user name and the password from `.env`.
 
 To update later, run `./update.sh`. It pulls, rebuilds the web image, rebuilds the tool image only if it changed, and restarts.
 
@@ -46,7 +46,7 @@ browser ──► py-doc-web container ──(Docker socket)──► docker run
 
 ## Behind Nginx Proxy Manager
 
-Add a proxy host such as `py-doc.lan`, forwarding to `http://<server>:8080`. Then either keep the app's password, or remove it and add an Access List in NPM.
+Add a proxy host such as `py-doc.lan`, forwarding to `http://<server>:8888`. Then either keep the app's password, or remove it and add an Access List in NPM.
 
 - If the proxy runs on the same server, set `PYDOC_WEB_BIND=127.0.0.1` so the port isn't reachable any other way.
 - Big uploads need a larger body size. In the proxy host's Advanced tab, add `client_max_body_size 512m;`.
@@ -67,7 +67,7 @@ The server runs py-doc on whatever is uploaded, and it can start containers on t
 | `PYDOC_DATA` | `/srv/py-doc` | The data folder, at the same path on the host and in the container |
 | `PUID`, `PGID` | your ids | The user the server runs as: the owner of `PYDOC_DATA` |
 | `DOCKER_GID` | the socket's group | The group that may use `/var/run/docker.sock` |
-| `PYDOC_WEB_PORT`, `PYDOC_WEB_BIND` | `8080`, `0.0.0.0` | Where it listens on the host |
+| `PYDOC_WEB_PORT`, `PYDOC_WEB_BIND` | `8888`, `0.0.0.0` | Where it listens on the host |
 | `PYDOC_WEB_PASSWORD` | empty | The page's password (any user name) |
 | `PYDOC_WEB_WORKERS` | `1` | Jobs that run at the same time |
 | `PYDOC_WEB_TIMEOUT` | `1800` | Seconds a job may take before it is stopped |
@@ -78,5 +78,5 @@ On any machine where py-doc already works, including a Windows PC with WSL:
 
 ```bash
 pip install -e ".[web]"
-py-doc web --root ~/py-doc-workspace          # http://127.0.0.1:8080, this computer only
+py-doc web --root ~/py-doc-workspace          # http://127.0.0.1:8888, this computer only
 ```

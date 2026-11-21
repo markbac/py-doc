@@ -335,3 +335,28 @@ def test_the_web_editor_knows_every_documented_directive():
         documented |= set(re.findall(r"^\[\[([A-Z][A-Z-]*)", path.read_text(encoding="utf-8"), re.M))
     known = set(re.findall(r'"([A-Z][A-Z-]*)"', MODE.split("const KNOWN", 1)[1].split(");", 1)[0]))
     assert documented and documented <= known, documented - known
+
+
+def test_the_diagram_modes_are_up_to_date_with_the_vscode_grammars():
+    """diagram-modes.js is written from the grammars by scripts/web_editor_modes.py: run it after a change."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("web_editor_modes", ROOT / "scripts" / "web_editor_modes.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    written = (ROOT / "src" / "py_doc" / "web" / "static" / "diagram-modes.js").read_text(encoding="utf-8")
+    assert written == module.render(), "run: python scripts/web_editor_modes.py"
+    fences = module.fence_names()
+    assert fences["mermaid"] == "pydoc-mermaid" and fences["puml"] == "pydoc-plantuml"
+    assert fences["vega-lite"] == "application/json" and fences["chart"] == "pydoc-block"
+    assert fences["bpmnt"] == "pydoc-bpmnt"
+
+
+def test_the_default_port_is_8888(monkeypatch, tmp_path):
+    import py_doc.web.cli as web_cli
+
+    seen = {}
+    monkeypatch.delenv("PYDOC_WEB_PORT", raising=False)
+    monkeypatch.setattr("uvicorn.run", lambda app, host, port, log_level: seen.update(host=host, port=port))
+    assert web_cli.run_web(["--root", str(tmp_path / "ws"), "-q"]) == 0
+    assert seen == {"host": "127.0.0.1", "port": 8888}

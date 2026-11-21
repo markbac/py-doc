@@ -10,8 +10,8 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 EXAMPLES = """examples:
-  py-doc web                                   serve ./workspace on http://127.0.0.1:8080
-  py-doc web --root /srv/py-doc/workspace --host 0.0.0.0 --port 8080
+  py-doc web                                   serve ./workspace on http://127.0.0.1:8888
+  py-doc web --root /srv/py-doc/workspace --host 0.0.0.0 --port 8888
   PYDOC_WEB_PASSWORD=secret py-doc web --host 0.0.0.0     ask for a password (any user name)
 
 Each folder of the workspace is a project. Keep the server on your own network: it runs py-doc on
@@ -31,7 +31,7 @@ def run_web(argv: list[str]) -> int:
     parser.add_argument("--root", default=env("PYDOC_WEB_ROOT", "workspace"), help="The workspace folder")
     parser.add_argument("--host", default=env("PYDOC_WEB_HOST", "127.0.0.1"),
                         help="The address to listen on; 0.0.0.0 for every one (default: this computer only)")  # fmt: skip
-    parser.add_argument("--port", type=int, default=int(env("PYDOC_WEB_PORT", "8080")))
+    parser.add_argument("--port", type=int, default=int(env("PYDOC_WEB_PORT", "8888")))
     parser.add_argument("--workers", type=int, default=int(env("PYDOC_WEB_WORKERS", "1")),
                         help="Jobs that run at the same time (default: 1)")  # fmt: skip
     parser.add_argument("--timeout", type=float, default=float(env("PYDOC_WEB_TIMEOUT", "1800")),

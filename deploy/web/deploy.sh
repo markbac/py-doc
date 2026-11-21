@@ -33,4 +33,4 @@ docker compose run --rm --no-deps py-doc-web py-doc doctor
 
 echo "== Starting"
 docker compose up -d
-echo "py-doc web is on http://$(hostname -I 2>/dev/null | awk '{print $1}'):${PYDOC_WEB_PORT:-8080}/"
+echo "py-doc web is on http://$(hostname -I 2>/dev/null | awk '{print $1}'):${PYDOC_WEB_PORT:-8888}/"
