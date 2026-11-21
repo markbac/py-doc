@@ -1,0 +1,88 @@
+# The showcase posters: one made-up organisation each, with its own theme, colours, fonts and logo.
+# py-doc poster builds them all into build/posters; py-doc poster iot-device builds one.
+project:
+  name: Poster showcase
+
+poster:                  # every poster here
+  fill: spread           # share any spare height in a column between its sections, so every column ends level
+  paper: a1
+
+posters:
+  iot-device:
+    source: iot-device.md
+    output: build/posters/iot-device.html
+    theme: brands/nimbus/theme.yml
+    header: {align: left, logo: left}
+    footer:
+      left: Nimbus Air, product sheet PS-104
+      right: nimbus.example/air
+      qr: https://nimbus.example/air
+      qr-label: Datasheet
+  weather-station:
+    source: weather-station.md
+    output: build/posters/weather-station.html
+    theme: brands/skyward/theme.yml
+    header: {align: left, logo: left}
+    footer:
+      left: Skyward WS-7, Cairn Hill station
+      right: Live data at skyward.example/cairn
+      qr: https://skyward.example/cairn
+      qr-label: Live readings
+  quantum:
+    source: quantum.md
+    output: build/posters/quantum.html
+    theme: brands/quanta/theme.yml
+    footer:
+      left: Quanta Institute public lectures
+      right: Lecture 3 of 8
+  hr-diagram:
+    source: hr-diagram.md
+    output: build/posters/hr-diagram.html
+    theme: brands/northern/theme.yml
+    footer:
+      left: Northern Observatory
+      right: Open nights every Thursday, 8 pm
+      qr: https://northern.example/open-nights
+      qr-label: Book a night
+  calculus:
+    source: calculus.md
+    output: build/posters/calculus.html
+    theme: brands/euler/theme.yml
+    header: {align: left, logo: left}
+    footer:
+      left: Euler Academy mathematics
+      right: Pure mathematics, unit 7
+  glaciation:
+    source: glaciation.md
+    output: build/posters/glaciation.html
+    theme: brands/highland/theme.yml
+    header: {align: left, logo: left}
+    footer:
+      left: Highland Geography Society field guides
+      right: Guide 4, Glen Coe and Rannoch Moor
+  solar-farm:
+    source: solar-farm.md
+    output: build/posters/solar-farm.html
+    theme: brands/sunfield/theme.yml
+    header: {align: left, logo: left}
+    footer:
+      left: Sunfield Energy Co-operative
+      right: Annual report to members, 2026
+      qr: https://sunfield.example/long-meadow
+      qr-label: The full accounts
+  incident-response:
+    source: incident-response.md
+    output: build/posters/incident-response.html
+    theme: brands/sentinel/theme.yml
+    header: {align: left, logo: left}
+    footer:
+      left: Sentinel Cyber
+      right: "Classification: internal"
+  genetics:
+    source: genetics.md
+    output: build/posters/genetics.html
+    theme: brands/helix/theme.yml
+    header: {align: left, logo: left}
+    footer:
+      left: Helix Biolabs teaching kit
+      right: Sheet 2, gene expression

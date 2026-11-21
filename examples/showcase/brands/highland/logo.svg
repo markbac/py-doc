@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="64" viewBox="0 0 400 64">
+  <path d="M4 54l18-34 9 14 9-22 20 42z" fill="#ffffff"/>
+  <path d="M22 20l5 9-5-2-4 4zM40 12l6 12-5-3-4 4z" fill="#a8dadc"/>
+  <path d="M4 54h56" stroke="#a8dadc" stroke-width="3"/>
+  <text x="70" y="40" font-family="Montserrat, Arial, sans-serif" font-size="21" font-weight="700" fill="#ffffff">Highland Geography Society</text>
+</svg>

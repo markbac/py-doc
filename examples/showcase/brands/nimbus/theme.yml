@@ -1,0 +1,35 @@
+# Nimbus Sensors: smart building sensors. Navy for trust, lime for the battery that lasts.
+# A made-up brand, for py-doc's showcase posters. Copy it as a start for your own.
+extends: default
+
+colours:
+  backdrop: "#e6edf3"
+  page: "#f7fafc"
+  border: "#d3dee8"
+  text: "#13233a"
+  muted: "#4b5d73"
+  header: "#12355b"
+  header-text: "#ffffff"
+  subtitle: "#c5e1a5"
+  byline: "#c5d3e3"
+  accent: "#7cb342"
+  accent-text: "#7cb342"
+  primary: "#12355b"
+  strong: "#12355b"
+  secondary: "#2f6f9f"
+  highlight: "#c5e1a5"
+  callout: "#eef6e6"
+  callout-border: "#7cb342"
+  diagram-fill: "#eef6e6"
+
+palette:
+  brand: "#12355b"
+  second: "#2f6f9f"
+  spark: "#7cb342"
+
+fonts:
+  heading: "'Inter', Arial, sans-serif"
+  body: "'Inter', Arial, sans-serif"
+  stylesheet: "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+
+logo: logo.svg

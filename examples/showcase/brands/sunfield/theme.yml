@@ -1,0 +1,35 @@
+# Sunfield Energy: community solar. Green fields and the afternoon sun.
+# A made-up brand, for py-doc's showcase posters. Copy it as a start for your own.
+extends: default
+
+colours:
+  backdrop: "#e7f0e3"
+  page: "#fbfdf9"
+  border: "#d7e6d0"
+  text: "#1b2a16"
+  muted: "#55664d"
+  header: "#ffffff"
+  header-text: "#1b5e20"
+  subtitle: "#fb8c00"
+  byline: "#55664d"
+  accent: "#fb8c00"
+  accent-text: "#fb8c00"
+  primary: "#2e7d32"
+  strong: "#2e7d32"
+  secondary: "#558b2f"
+  highlight: "#ffcc80"
+  callout: "#fff3e0"
+  callout-border: "#fb8c00"
+  diagram-fill: "#fff3e0"
+
+palette:
+  brand: "#2e7d32"
+  second: "#558b2f"
+  spark: "#fb8c00"
+
+fonts:
+  heading: "'Barlow', Arial, sans-serif"
+  body: "'Barlow', Arial, sans-serif"
+  stylesheet: "https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700&display=swap"
+
+logo: logo.svg

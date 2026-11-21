@@ -22,6 +22,7 @@ class Sample:
     title: str
     description: str
     parts: tuple[tuple[str, str], ...]  # (path in the repository, path in the project); "" is the project itself
+    skip: tuple[str, ...] = ()  # folders of the repository's part left out, as another sample has them
 
 
 SAMPLES = (
@@ -38,6 +39,15 @@ SAMPLES = (
         "A project that uses every feature: Word and PowerPoint templates, conditions and variables, generated "
         "API references, a deck, posters and a web site.",
         (("examples", ""),),
+        ("showcase",),
+    ),
+    Sample(
+        "poster-showcase",
+        "Branded poster showcase",
+        "Nine posters, each for a made-up organisation with its own colours, fonts and logo: an IoT sensor, a "
+        "weather station, quantum mechanics, the Hertzsprung-Russell diagram, calculus, glaciation, a solar farm, "
+        "an incident response and genetics. Every page is filled.",
+        (("examples/showcase", ""),),
     ),
     Sample(
         "poster-examples",
@@ -83,7 +93,8 @@ def install(sample: Sample, target: Path) -> list[str]:
             copied.append(destination)
             continue
         for folder, dirs, files in os.walk(src):
-            dirs[:] = sorted(d for d in dirs if d not in SKIPPED)
+            top = Path(folder) == src
+            dirs[:] = sorted(d for d in dirs if d not in SKIPPED and not (top and d in sample.skip))
             for name in sorted(files):
                 path = Path(folder, name)
                 if path.is_symlink():

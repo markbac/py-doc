@@ -361,6 +361,14 @@ def test_columns_and_split_choose_the_sections_of_each_column(tmp_path, drawn):
     assert columns(page) == [2, 4]
 
 
+def test_fill_spread_makes_every_column_end_level(tmp_path, drawn):
+    page, _ = build(write(tmp_path, "---\nfill: spread\n---\n" + SECTIONS), lambda: object())
+    assert 'class="poster portrait fill-spread"' in page
+    assert ".fill-spread .col{justify-content:space-between}" in page
+    plain, _ = build(write(tmp_path, SECTIONS), lambda: object())
+    assert 'class="poster portrait"' in plain  # the default leaves the layout as it was
+
+
 def test_there_are_never_more_columns_than_sections(tmp_path, drawn):
     page, _ = build(write(tmp_path, "---\ncolumns: 4\n---\n## A\n\nOne.\n\n## B\n\nTwo.\n"), lambda: object())
     assert columns(page) == [1, 1]
@@ -375,6 +383,7 @@ def test_there_are_never_more_columns_than_sections(tmp_path, drawn):
         ("split: 1, 2", "split needs 1 number"),
         ("split: 6", "leaving at least one"),
         ("width: 100", "width must be at least 400"),
+        ("fill: stretch", "fill must be none or spread"),
     ],
 )
 def test_a_layout_mistake_is_an_error(tmp_path, front, message):

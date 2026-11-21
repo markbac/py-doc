@@ -1,0 +1,35 @@
+# Northern Observatory: public astronomy. Starlight gold on the night sky.
+# A made-up brand, for py-doc's showcase posters. Copy it as a start for your own.
+extends: dark
+
+colours:
+  backdrop: "#050914"
+  page: "#0b1224"
+  border: "#1d2a4a"
+  text: "#e8edf7"
+  muted: "#9fb0cf"
+  header: "#060b19"
+  header-text: "#f2c14e"
+  subtitle: "#f2c14e"
+  byline: "#9fb0cf"
+  accent: "#f2c14e"
+  accent-text: "#f2c14e"
+  primary: "#2f55b0"
+  strong: "#f2c14e"
+  secondary: "#3f6cc4"
+  highlight: "#ffd97a"
+  callout: "#141f3d"
+  callout-border: "#f2c14e"
+  diagram-fill: "#141f3d"
+
+palette:
+  brand: "#1f3c88"
+  second: "#3f6cc4"
+  spark: "#f2c14e"
+
+fonts:
+  heading: "'Cinzel', Arial, sans-serif"
+  body: "'Lato', Arial, sans-serif"
+  stylesheet: "https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Lato:wght@400;700&display=swap"
+
+logo: logo.svg

@@ -1,0 +1,35 @@
+# Euler Academy: sixth-form mathematics. Ink, red pen and cream paper.
+# A made-up brand, for py-doc's showcase posters. Copy it as a start for your own.
+extends: print
+
+colours:
+  backdrop: "#efe6d6"
+  page: "#fffaf0"
+  border: "#e5d8c0"
+  text: "#2b2118"
+  muted: "#6b5a48"
+  header: "#fffaf0"
+  header-text: "#7a1f12"
+  subtitle: "#c0392b"
+  byline: "#6b5a48"
+  accent: "#c0392b"
+  accent-text: "#c0392b"
+  primary: "#a2321e"
+  strong: "#a2321e"
+  secondary: "#2c4a6e"
+  highlight: "#f6c8a8"
+  callout: "#fbeedd"
+  callout-border: "#c0392b"
+  diagram-fill: "#fbeedd"
+
+palette:
+  brand: "#a2321e"
+  second: "#2c4a6e"
+  spark: "#c0392b"
+
+fonts:
+  heading: "'Merriweather', Arial, sans-serif"
+  body: "'Fira Sans', Arial, sans-serif"
+  stylesheet: "https://fonts.googleapis.com/css2?family=Merriweather:wght@700;900&family=Fira+Sans:wght@400;600&display=swap"
+
+logo: logo.svg

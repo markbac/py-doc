@@ -1,0 +1,35 @@
+# Helix Biolabs: genetics teaching labs. Magenta and teal, the two strands.
+# A made-up brand, for py-doc's showcase posters. Copy it as a start for your own.
+extends: default
+
+colours:
+  backdrop: "#f3e5ef"
+  page: "#fdf9fc"
+  border: "#ecd6e4"
+  text: "#2a1424"
+  muted: "#6e5168"
+  header: "#ffffff"
+  header-text: "#880e4f"
+  subtitle: "#00897b"
+  byline: "#6e5168"
+  accent: "#00897b"
+  accent-text: "#00897b"
+  primary: "#ad1457"
+  strong: "#ad1457"
+  secondary: "#00897b"
+  highlight: "#b2dfdb"
+  callout: "#e0f2f1"
+  callout-border: "#00897b"
+  diagram-fill: "#e0f2f1"
+
+palette:
+  brand: "#ad1457"
+  second: "#00897b"
+  spark: "#00897b"
+
+fonts:
+  heading: "'Quicksand', Arial, sans-serif"
+  body: "'Open Sans', Arial, sans-serif"
+  stylesheet: "https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Open+Sans:wght@400;600&display=swap"
+
+logo: logo.svg

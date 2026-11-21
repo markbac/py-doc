@@ -97,6 +97,7 @@ A mistake in `py-doc.yml`, such as an unknown key or a mapping where a value sho
 | `document_number`, `version` | None | The document's number and version, shown small under the footer, unless `footer.document` or `footer.version` names others. `version: git` is the output of `git describe --tags --always`, as for a document |
 | `variables`, `conditions` | None | Values for `{{name}}` and `[[IF:]]`, as for documents |
 | `pdf` | `false` | `true` prints a one-page PDF beside the page, and a path prints it there. `--pdf` and `--no-pdf` win |
+| `fill` | `none` | `spread` shares the spare height of a shorter column between its sections, so every column of a band ends level and the page has no empty patches. A poster shorter than its paper grows to fill it too. `examples/showcase` uses it on every poster |
 | `embed_fonts` | `false` | `true` puts the theme's web fonts inside the page, so it looks the same offline (a PDF gets the fonts inside either way). A list of subsets, such as `[latin, latin-ext]`, puts in only those. See [Fonts inside the page](#fonts-inside-the-page). `--embed-fonts` and `--no-embed-fonts` win |
 
 `footer-left` and `footer-right` in the front matter still work, as `footer.left` and `footer.right`.

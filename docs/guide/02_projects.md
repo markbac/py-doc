@@ -133,9 +133,12 @@ py-doc build -f poster            # only the posters
 py-doc build --var version=2.1 --condition internal=true
 py-doc build --keep-going         # list every broken diagram, not just the first
 py-doc build --lint --site        # generate, lint, build the documents, then the site
+py-doc build --combine all.pdf    # every document as PDF, joined into one file
 ```
 
 `--var` and `--condition` win over the values in the file. A document that fails does not stop the others: each failure is named, a summary follows, and the exit status is `1`. The generators, lint and site steps around the documents are described in [the build pipeline](11_pipeline.md#the-build-pipeline).
+
+`--combine FILE` builds every document as a PDF, whatever formats it lists, and joins them into `FILE` in the order of `py-doc.yml`. Each document becomes a bookmark, with its own headings as bookmarks below it, and the file opens with the bookmarks showing. Each document keeps its own title page, contents and page numbers. Bundles are left out, as they repeat their documents. In py-doc web, a project's menu has the same as Export as one PDF.
 
 ## Converting single files
 
