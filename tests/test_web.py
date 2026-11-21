@@ -302,3 +302,36 @@ def test_render_rejects_unknown_kinds(capsys):
 def test_static_files_are_packaged():
     folder = Path(__file__).resolve().parents[1] / "src" / "py_doc" / "web" / "static"
     assert {p.name for p in folder.iterdir()} >= {"index.html", "app.js", "app.css"}
+
+
+# --- the editor's py-doc highlighting -----------------------------------------------------------------
+
+ROOT = Path(__file__).resolve().parents[1]
+MODE = (ROOT / "src" / "py_doc" / "web" / "static" / "pydoc-mode.js").read_text(encoding="utf-8")
+GRAMMAR = json.loads((ROOT / "editors" / "vscode" / "syntaxes" / "pydoc.markdown.tmLanguage.json").read_text("utf-8"))
+
+
+def js_pattern(name: str) -> str:
+    import re
+
+    found = re.search(rf"const {name} = /(.+)/i?;", MODE)
+    assert found, f"{name} is not in pydoc-mode.js"
+    return found.group(1)
+
+
+def test_the_web_editor_marks_what_the_vscode_grammar_marks():
+    repository = GRAMMAR["repository"]
+    assert js_pattern("DIRECTIVE") == repository["directive"]["match"]
+    assert js_pattern("VARIABLE") == repository["variable"]["match"]
+    assert js_pattern("SLOT") == repository["slot"]["match"]
+    assert js_pattern("CALLOUT") == repository["callout"]["patterns"][0]["match"].removeprefix("(?i)")
+
+
+def test_the_web_editor_knows_every_documented_directive():
+    import re
+
+    documented = set()
+    for path in (ROOT / "docs" / "guide").glob("*.md"):
+        documented |= set(re.findall(r"^\[\[([A-Z][A-Z-]*)", path.read_text(encoding="utf-8"), re.M))
+    known = set(re.findall(r'"([A-Z][A-Z-]*)"', MODE.split("const KNOWN", 1)[1].split(");", 1)[0]))
+    assert documented and documented <= known, documented - known

@@ -92,13 +92,32 @@ code { font-family: var(--mono); font-size: .92em; background: var(--panel-2); p
 .CodeMirror-linenumber { color: var(--muted); }
 .CodeMirror-cursor { border-left-color: var(--text); }
 .CodeMirror-selected, .CodeMirror-focused .CodeMirror-selected { background: var(--accent-soft) !important; }
-.cm-header { color: var(--accent); }
-.cm-header-1 { font-size: 1.25em; } .cm-header-2 { font-size: 1.12em; }
-.cm-comment { color: var(--ok); } .cm-link, .cm-url { color: var(--accent); } .cm-quote { color: var(--muted); }
-.cm-string { color: #b35c00; } .cm-atom, .cm-number { color: #7a3fb0; } .cm-keyword { color: #c2185b; }
+.CodeMirror .cm-header { color: var(--accent); }
+.CodeMirror .cm-header-1 { font-size: 1.25em; } .CodeMirror .cm-header-2 { font-size: 1.12em; }
+.CodeMirror .cm-comment { color: var(--ok); } .CodeMirror .cm-link, .CodeMirror .cm-url { color: var(--accent); } .CodeMirror .cm-quote { color: var(--muted); }
+.CodeMirror .cm-string { color: #b35c00; } .CodeMirror .cm-atom, .CodeMirror .cm-number { color: #7a3fb0; } .CodeMirror .cm-keyword { color: #c2185b; }
 :root[data-theme="dark"] .cm-string { color: #e8a96b; } :root[data-theme="dark"] .cm-atom, :root[data-theme="dark"] .cm-number { color: #c3a0f0; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .cm-string { color: #e8a96b; } :root:not([data-theme="light"]) .cm-atom { color: #c3a0f0; } }
 .lint-line { background: rgba(225, 160, 40, .16); }
+
+/* py-doc's own Markdown: directives, conditions, variables, callouts, divs and attributes (pydoc-mode.js) */
+:root { --pd-directive: #6f42c1; --pd-condition: #b4540a; --pd-variable: #0b7a75; --pd-callout: #1f6feb; --pd-chip: rgba(111, 66, 193, .10); }
+:root[data-theme="dark"] { --pd-directive: #c4a6ff; --pd-condition: #f0a35e; --pd-variable: #4fd1c5; --pd-callout: #7ab3ff; --pd-chip: rgba(196, 166, 255, .14); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --pd-directive: #c4a6ff; --pd-condition: #f0a35e; --pd-variable: #4fd1c5; --pd-callout: #7ab3ff; --pd-chip: rgba(196, 166, 255, .14); }
+}
+.cm-pydoc-bracket { color: var(--pd-directive); opacity: .7; background: var(--pd-chip); }
+.cm-pydoc-directive { color: var(--pd-directive); font-weight: 700; background: var(--pd-chip); cursor: help; }
+.cm-pydoc-condition { color: var(--pd-condition); font-weight: 700; background: var(--pd-chip); cursor: help; }
+.cm-pydoc-unknown { color: var(--pd-directive); background: var(--pd-chip); text-decoration: underline wavy var(--warn); cursor: help; }
+.cm-pydoc-argument { color: var(--pd-condition); background: var(--pd-chip); }
+.cm-pydoc-path { color: var(--accent); background: var(--pd-chip); text-decoration: underline; }
+.cm-pydoc-variable { color: var(--pd-variable); font-weight: 600; background: rgba(11, 122, 117, .10); border-radius: 3px; }
+.cm-pydoc-callout { color: var(--pd-callout); font-weight: 700; }
+.cm-pydoc-div, .cm-pydoc-div-name { color: var(--pd-directive); font-weight: 600; }
+.cm-pydoc-attributes { color: var(--muted); font-style: italic; }
+.cm-pydoc-cell { color: var(--pd-directive); font-weight: 700; }
+.cm-pydoc-merge { color: var(--pd-condition); font-weight: 700; }
 .welcome { padding: 32px 40px; max-width: 680px; color: var(--muted); }
 .welcome h1 { color: var(--text); margin: 0 0 8px; }
 .welcome li { margin: 6px 0; }

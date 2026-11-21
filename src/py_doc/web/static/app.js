@@ -438,6 +438,13 @@ function makeEditor() {
       },
     });
     editor.on("change", (_cm, change) => { if (change.origin !== "setValue") edited(); });
+    // Hover a directive to see what it does; one py-doc does not know says so
+    editor.getWrapperElement().addEventListener("mouseover", (event) => {
+      const span = event.target;
+      if (!span.className || !/cm-pydoc-(directive|condition|unknown)/.test(span.className)) return;
+      const tips = window.PYDOC_TOOLTIPS || {};
+      span.title = tips[span.textContent] || `[[${span.textContent}]] is not a py-doc directive`;
+    });
   } else {
     // The editor scripts come from a CDN; without them a plain text box still works
     const area = el("textarea", { class: "plain", spellcheck: "false" });
@@ -455,7 +462,9 @@ function makeEditor() {
 }
 
 function modeFor(path) {
-  if (isMarkdown(path)) return { name: "gfm", highlightFormatting: true, fencedCodeBlockHighlighting: true };
+  if (isMarkdown(path)) {
+    return CodeMirror.modes["pydoc-markdown"] ? "pydoc-markdown" : { name: "gfm", highlightFormatting: true, fencedCodeBlockHighlighting: true };
+  }
   if (/\.ya?ml$/i.test(path)) return "yaml";
   if (/\.(json|js)$/i.test(path)) return { name: "javascript", json: /\.json$/i.test(path) };
   if (/\.py$/i.test(path)) return "python";

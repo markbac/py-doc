@@ -3,7 +3,7 @@
 `py-doc web` is py-doc in the browser, for a server on your own network:
 
 - **Explorer.** Every folder of the workspace is a project. Drag files and whole folders from your computer onto a project or folder to upload them. Drop a folder on the empty space to make it a new project. Drag files inside the explorer to move them. Right-click anything for what you can do with it: new file or folder, upload, download (a folder as a zip), rename, delete.
-- **Editor.** Markdown, YAML, PlantUML and the rest, with tabs, autosave and Ctrl+S.
+- **Editor.** Markdown, YAML, PlantUML and the rest, with tabs, autosave and Ctrl+S. py-doc's own syntax is highlighted as in the VS Code extension: directives such as `[[LANDSCAPE]]` and `[[INCLUDE: a.md]]` (hover one to see what it does; one py-doc does not know gets a wavy underline), `[[IF:]]` conditions, `{{variables}}`, callouts, `:::` divs, attributes and `[[LISTTABLE]]` cells.
 - **Live preview.** A Markdown file as a document, slides or a poster, built again a moment after every save, with every diagram drawn. A build that fails keeps the last good page and shows why.
 - **Convert.** One file to Word, PowerPoint, PDF, an HTML page, an HTML deck or a poster, written to the project's `out` folder.
 - **Build.** A project with a `py-doc.yml` builds as a whole (`py-doc build`), or one format of it, with lint first or the site after.
