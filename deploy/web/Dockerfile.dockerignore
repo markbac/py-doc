@@ -4,5 +4,12 @@
 !LICENSE
 !src/**
 !deploy/web/entrypoint.sh
+!py-doc.yml
+!c4-images.lock
+!docs/**
+!examples/**
+**/build
+**/.py-doc
+**/node_modules
 **/__pycache__
 **/*.pyc

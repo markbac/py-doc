@@ -66,7 +66,7 @@ function dialog(title, fields, okLabel = "OK") {
       if (field.type === "check") {
         const input = el("input", { type: "checkbox", checked: !!field.value });
         inputs[field.name] = input;
-        body.append(el("label", { class: "check" }, input, " " + field.label));
+        body.append(el("label", { class: "check" }, input, el("span", {}, field.title ? el("b", {}, field.title + ". ") : null, field.label)));
       } else if (field.type === "text-only") {
         body.append(el("p", {}, field.label));
       } else {
@@ -133,7 +133,9 @@ function renderTree() {
   const scroll = tree.scrollTop;
   tree.replaceChildren();
   if (!state.projects.length) {
-    tree.append(el("div", { class: "welcome" }, el("p", {}, "No projects yet. Make one with ＋, or drop a folder here.")));
+    tree.append(el("div", { class: "welcome" },
+      el("p", {}, "No projects yet. Make one with ＋, or drop a folder here."),
+      el("button", { onclick: () => addExamples().catch(fail) }, "📚 Add example projects")));
   }
   for (const project of state.projects) {
     const open = state.open.has(project.name);
@@ -368,6 +370,24 @@ async function newProject() {
   const made = await api("POST", "/api/projects", { name: result.name, init: result.init, title: result.title || null });
   state.open.add(made.name); store.set("open", [...state.open]);
   if (made.job) { watchJob(made.job.id); showSide("jobs"); }
+  await loadProjects();
+}
+
+async function addExamples() {
+  const list = await api("GET", "/api/samples");
+  if (!list.length) return toast("The example projects are not installed with this py-doc", true);
+  const result = await dialog("Add example projects", list.map((s) => ({
+    type: "check", name: s.name, value: !s.installed,
+    title: s.title, label: (s.installed ? "Already added: a second copy is made. " : "") + s.description,
+  })), "Add");
+  if (!result) return;
+  const chosen = list.filter((s) => result[s.name]);
+  for (const sample of chosen) {
+    const added = await api("POST", "/api/samples", { name: sample.name });
+    state.open.add(added.name);
+    toast(`Added ${added.name}: ${added.files} files`);
+  }
+  store.set("open", [...state.open]);
   await loadProjects();
 }
 
@@ -617,6 +637,46 @@ $("#autosave").addEventListener("change", () => { store.set("autosave", $("#auto
 
 const preview = { id: null, version: -1, timer: null, path: null, scroll: 0 };
 
+// The preview page dark or light. Auto: dark for a document when this page is dark; slides and posters as
+// they are built, since their theme is part of the design.
+const PAGE_MODES = ["auto", "light", "dark"];
+let pageMode = store.get("preview-page", "auto");
+function appDark() {
+  const chosen = document.documentElement.dataset.theme;
+  return chosen ? chosen === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+}
+// Show a preview page. A different preview gets a new frame: moving one sandboxed frame from page to page
+// does not always load the new one.
+function showFrame(url, id) {
+  let frame = $("#preview-frame");
+  if (frame.dataset.preview !== id) {
+    const fresh = el("iframe", { id: "preview-frame", title: "Preview", "data-preview": id });
+    frame.replaceWith(fresh);
+    frame = fresh;
+  }
+  frame.src = url;
+}
+
+// The address of the preview page: the build, where to scroll to, and light or dark
+function previewUrl() {
+  return `/preview/${preview.id}?v=${preview.version}#y=${preview.scroll}&t=${previewDark() ? "dark" : "light"}`;
+}
+function previewDark() {
+  if (pageMode !== "auto") return pageMode === "dark";
+  return appDark() && $("#preview-kind").value === "document";
+}
+function applyPreviewTheme() {
+  $("#preview-page").textContent = "Page: " + pageMode[0].toUpperCase() + pageMode.slice(1);
+  const frame = $("#preview-frame");
+  if (frame.contentWindow) frame.contentWindow.postMessage({ pydocDark: previewDark() }, "*");
+}
+$("#preview-page").addEventListener("click", () => {
+  pageMode = PAGE_MODES[(PAGE_MODES.indexOf(pageMode) + 1) % PAGE_MODES.length];
+  store.set("preview-page", pageMode);
+  applyPreviewTheme();
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyPreviewTheme);
+
 $("#preview-kind").addEventListener("change", () => setPreview($("#preview-kind").value));
 
 function setPreview(kind) {
@@ -635,7 +695,7 @@ async function startPreview(path, kind) {
   try {
     const status = await api("POST", "/api/preview", { path, kind });
     if (preview.path !== path) return;
-    preview.id = status.id; preview.version = -1; preview.scroll = store.get("scroll:" + status.id, 0);
+    preview.id = status.id; preview.version = -1; preview.loaded = null; preview.scroll = store.get("scroll:" + status.id, 0);
     pollPreview();
   } catch (error) { showPreviewState(null, error.message); }
 }
@@ -658,7 +718,7 @@ async function pollPreview() {
     if (preview.id !== id) return;
     if (status.version !== preview.version && status.ready) {
       preview.version = status.version;
-      $("#preview-frame").src = `/preview/${id}?v=${status.version}#y=${preview.scroll}`;
+      showFrame(previewUrl(), id);
     }
     showPreviewState(status, status.error);
   } catch (error) {
@@ -681,7 +741,10 @@ function showPreviewState(status, error) {
 
 window.addEventListener("message", (event) => {
   if (event.source !== $("#preview-frame").contentWindow || !event.data) return;
-  if (typeof event.data.pydocLoaded === "string") preview.loaded = { version: preview.version, title: event.data.pydocLoaded };
+  if (typeof event.data.pydocLoaded === "string") {
+    preview.loaded = { version: preview.version, title: event.data.pydocLoaded };
+    applyPreviewTheme();
+  }
   if (typeof event.data.pydocScroll === "number") {
     preview.scroll = event.data.pydocScroll;
     if (preview.id) store.set("scroll:" + preview.id, preview.scroll);
@@ -871,12 +934,14 @@ function theme() {
     const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
     const next = dark ? "light" : "dark";
     store.set("theme", next); apply(next);
+    applyPreviewTheme();
   });
 }
 
 // --- start -----------------------------------------------------------------------------------
 
 $("#new-project").addEventListener("click", () => newProject().catch(fail));
+$("#add-examples").addEventListener("click", () => addExamples().catch(fail));
 $("#refresh").addEventListener("click", () => loadProjects().catch(fail));
 
 (async function start() {
@@ -888,6 +953,7 @@ $("#refresh").addEventListener("click", () => loadProjects().catch(fail));
     info = await api("GET", "/api/info");
     $("#version").textContent = "v" + info.version;
     buildConvertMenu();
+    applyPreviewTheme();
     await loadProjects();
     for (const path of store.get("tabs", [])) { try { await openFile(path); } catch { /* gone */ } }
     const active = store.get("active", null);

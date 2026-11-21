@@ -125,8 +125,11 @@
     },
   };
 
+  // GitHub Markdown, with the YAML front matter at the top of a file read as YAML
+  const gfm = { name: "gfm", highlightFormatting: true, fencedCodeBlockHighlighting: true };
+  const markdown = CodeMirror.modes["yaml-frontmatter"] ? { name: "yaml-frontmatter", base: gfm } : gfm;
   CodeMirror.defineMode("pydoc-markdown", (config) => CodeMirror.overlayMode(
     // Not combined: where py-doc marks text, its style replaces Markdown's (which reads [[...]] as a link)
-    CodeMirror.getMode(config, { name: "gfm", highlightFormatting: true, fencedCodeBlockHighlighting: true }), overlay, false));
+    CodeMirror.getMode(config, markdown), overlay, false));
   window.PYDOC_TOOLTIPS = TOOLTIPS;
 })();

@@ -24,6 +24,12 @@ COPY pyproject.toml README.md LICENSE ./
 COPY src ./src
 RUN pip install ".[web]" \
  && python -c "import uuid; print(uuid.uuid4().hex[:12])" > /opt/py-doc/build-id
+# The example projects the page offers: py-doc's own documentation, the examples and their posters
+COPY py-doc.yml /opt/py-doc/samples/py-doc.yml
+COPY c4-images.lock /opt/py-doc/samples/c4-images.lock
+COPY docs /opt/py-doc/samples/docs
+COPY examples /opt/py-doc/samples/examples
+ENV PYDOC_WEB_SAMPLES=/opt/py-doc/samples
 COPY deploy/web/entrypoint.sh /usr/local/bin/py-doc-entrypoint
 RUN chmod 755 /usr/local/bin/py-doc-entrypoint
 
