@@ -10,7 +10,7 @@ upsetplot==0.9.0
 python-ternary==1.0.8
 scikit-rf==1.8.0
 dna-features-viewer==3.1.5
-biopython==1.85
+biopython==1.88
 colour-science==0.4.7
 pvlib==0.13.1
 CoolProp==6.8.0
