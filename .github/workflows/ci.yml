@@ -64,8 +64,17 @@ jobs:
         run: |
           curl -fsSL https://github.com/errata-ai/vale/releases/download/v3.24.0/vale_3.24.0_Linux_64-bit.tar.gz | sudo tar -xz -C /usr/local/bin vale
       - name: Vale on Windows
+        # The same pinned release as Linux, from GitHub: choco took whatever was newest, and when its feed
+        # was down it installed nothing yet passed, so lint tests failed without Vale.
         if: runner.os == 'Windows'
-        run: choco install vale -y
+        run: |
+          $dir = Join-Path $env:RUNNER_TEMP 'vale'
+          $zip = Join-Path $env:RUNNER_TEMP 'vale.zip'
+          Invoke-WebRequest https://github.com/errata-ai/vale/releases/download/v3.24.0/vale_3.24.0_Windows_64-bit.zip -OutFile $zip
+          Expand-Archive $zip -DestinationPath $dir -Force
+          & (Join-Path $dir 'vale.exe') --version
+          if ($LASTEXITCODE -ne 0) { throw 'vale did not run' }
+          Add-Content $env:GITHUB_PATH $dir
       - name: structurizr-cli (for the end-to-end C4 test; the runner has Java 17)
         if: runner.os == 'Linux'
         run: |
