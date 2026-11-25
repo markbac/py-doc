@@ -3,6 +3,9 @@
 ## 2.4.0
 
 - Highlighting of the [arch-text](https://github.com/markbac/arch-text) notation, in `.archt` files and in ```` ```archt ```` and `:::archt` fences of Markdown files, with `#` comments toggled by `Ctrl+/`.
+- The preview runs `py-doc preview`, which writes nothing beside the Markdown: no `.docx` or `.pptx` on every save, and no `.py-doc/preview/`. Its page is in a temporary folder that goes when the preview stops. An older py-doc falls back to `--watch`.
+- Faster: the preview opens at once and fills in when built; switching to another Markdown file is one build in the same tab, not a new py-doc and a new tab; and it uses py-doc's diagram workers and the settings of py-doc.yml.
+- Closing the preview's tab stops the preview, so it no longer opens again when you switch to another Markdown file.
 
 ## 2.3.1
 

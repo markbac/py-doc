@@ -28,7 +28,7 @@ npx @vscode/vsce package
 That writes `vscode-py-doc-preview-<version>.vsix`. Install it from the command line:
 
 ```bash
-code --install-extension vscode-py-doc-preview-2.3.0.vsix
+code --install-extension vscode-py-doc-preview-2.4.0.vsix
 ```
 
 Or in VS Code: open the Extensions view (`Ctrl+Shift+X`), click **...** at its top, choose **Install from VSIX...** and pick the file. To update, build and install the new file the same way. To remove it, find **py-doc Live Preview** in the Extensions view and click **Uninstall**.
@@ -57,11 +57,13 @@ To recommend the extension to everyone who opens a project, add it to the projec
 
 Open a py-doc Markdown file and click the eye button in the editor title bar, or run **py-doc: Open Live Preview** from the Command Palette (`Ctrl+Shift+P`). The preview opens beside the editor and reloads each time you save.
 
-- **Documents** (`py-doc docx file.md --watch`): rebuilds `file.docx` on save and shows its HTML twin, with every diagram, MathML and page breaks shown as dashed lines. A `.docx` open in Word is left as it is, with a warning, and the preview still updates.
-- **Slide decks** (`py-doc slides deck.md --watch`): rebuilds `deck.pptx` and shows its HTML deck, split where PowerPoint splits it, with columns. Press `o` for every slide, and `p` for the presenter view with the speaker notes.
-- **Posters** (`py-doc poster poster.md --watch`): rebuilds the self-contained poster page.
+- **Documents**: the HTML twin of the Word document, with every diagram, MathML and page breaks shown as dashed lines.
+- **Slide decks**: the HTML deck, split where PowerPoint splits it, with columns. Press `o` for every slide, and `p` for the presenter view with the speaker notes.
+- **Posters**: the self-contained poster page.
 
-The twins are written to `.py-doc/preview/` below the file's folder, so no file of yours is overwritten. py-doc's output is in the **py-doc live preview** output channel (**View > Output**). When a save does not build, the preview keeps the last good page with the error across its top, and VS Code shows the error as a warning.
+The preview runs `py-doc preview` (a py-doc that has the `preview` command). It writes only the preview page, to a temporary folder that is removed when the preview stops: no `.docx`, `.pptx` or `.py-doc/preview/` beside your Markdown. Build the documents with `py-doc build` or `py-doc docx`. It uses the variables, conditions and Mermaid settings of your py-doc.yml. With an older py-doc, the preview falls back to `py-doc docx|slides|poster --watch`, which also writes the document beside the Markdown; the output channel says so.
+
+The address opens at once and the page fills in when the first build is done. Diagrams are drawn several at a time, and Python and the tool container stay connected between builds, so a save or a switch to another file is one build. py-doc's output is in the **py-doc live preview** output channel (**View > Output**). When a save does not build, the preview keeps the last good page with the error across its top, and VS Code shows the error as a warning.
 
 The eye button chooses the command from the file itself:
 
@@ -69,7 +71,7 @@ The eye button chooses the command from the file itself:
 - **Slides**: the front matter has `split_level` or a `format` of `slides`/`pptx`, or the body has `:::: columns`, `::: notes`, `::: incremental` or `<!-- notes: -->` outside code blocks.
 - **Word document**: anything else.
 
-To choose the format yourself, use **py-doc: Open Live Word Document / Presentation / Poster Preview**. One preview runs at a time: opening another stops the one already running, and **py-doc: Stop Live Preview Server** stops it. While a preview runs, switching to another Markdown file moves the preview to it (turn this off with `pydoc.watch.followActiveEditor`).
+To choose the format yourself, use **py-doc: Open Live Word Document / Presentation / Poster Preview**. One preview runs at a time, in one tab. Closing the preview's tab stops it, as does **py-doc: Stop Live Preview Server**, so it does not open again when you switch files. While the preview is open, switching to another Markdown file moves it to that file in the same tab (turn this off with `pydoc.watch.followActiveEditor`).
 
 VS Code's own Markdown preview (`Ctrl+Shift+V`) still works, but shows plain Markdown: py-doc's blocks and markers need the live preview.
 
@@ -224,7 +226,7 @@ npm test       # node --test
 ```
 
 - `test/detect.test.js`, `test/cases.test.js`: which command a file is for. The shared cases of `tests/fixtures/preview/cases.json` are also built by the Python tests (`tests/test_preview_cases.py`).
-- `test/watch.test.js`: the live preview against a fake `py-doc`: the address, the port, replacing and stopping a preview, and build errors.
+- `test/watch.test.js`: the live preview against a fake `py-doc`: the address, the port, moving to another file in the same tab, the fallback to `--watch`, stopping a preview, and build errors.
 - `test/highlight.test.js`: py-doc Markdown tokenized by the engine VS Code uses (`vscode-textmate` with Oniguruma). VS Code's Markdown grammar is not on npm, so the tests use a stand-in. To run them against the real one, as CI does, set `PYDOC_MARKDOWN_GRAMMAR` to a copy of `extensions/markdown-basics/syntaxes/markdown.tmLanguage.json` from the VS Code repository.
 - `test/grammar.test.js`, `test/folding.test.js`, `test/snippets.test.js`: the grammar files, what folds, and the snippets.
 - `tests/test_editor_grammar.py` (Python): the fence grammar names every fence and poster block py-doc draws, and no other.
