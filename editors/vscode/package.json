@@ -2,7 +2,7 @@
   "name": "vscode-py-doc-preview",
   "displayName": "py-doc Live Preview",
   "description": "Live preview of py-doc documents, slide decks and posters in VS Code, and highlighting of py-doc Markdown: directives, rich tables, callouts, every diagram fence and poster block, and bpmn-text (.bpmnt) and arch-text (.archt) files. Folding for py-doc's blocks, and snippets.",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "publisher": "py-doc",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -191,7 +191,7 @@
         "pydoc.watch.followActiveEditor": {
           "type": "boolean",
           "default": true,
-          "description": "Move a running live preview to another Markdown file when it becomes the active editor."
+          "description": "While the live preview is open, move it to another Markdown file when that becomes the active editor. Closing the preview stops it."
         }
       }
     },

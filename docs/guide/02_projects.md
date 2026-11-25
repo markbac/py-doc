@@ -181,7 +181,14 @@ A file that uses `[[IF:]]` needs its conditions defined, and only `py-doc build`
 - The twin shows page breaks as dashed lines, speaker notes in boxes and columns side by side. The twin of a deck shows each slide as a numbered 16:9 box, split as PowerPoint splits it.
 - The twin is a preview, not an output. Build HTML with `py-doc build` and `outputs: html`.
 
-The [VS Code extension](03_writing.md#vs-code-preview) starts `--watch` for the open file and shows the preview beside it.
+`py-doc preview FILE` is the preview without the outputs. It writes only the preview page, to a temporary folder that goes when it stops, so nothing is left beside the Markdown. `--kind` is `document` (the default), `deck` or `poster`. The address is printed at once, and the page reloads when the first build is done. It keeps Python and the tool container connection between builds, and it reads the variables, conditions and Mermaid settings of py-doc.yml as `py-doc build` does. With `--stdin`, each line of standard input such as `{"file": "deck.md", "kind": "deck"}` moves the preview to another file, and it stops when standard input closes. Editors use this.
+
+```bash
+py-doc preview guide.md                 # the guide as a document, in the browser
+py-doc preview deck.md --kind deck      # a slide deck
+```
+
+The [VS Code extension](03_writing.md#vs-code-preview) runs `py-doc preview` for the open file and shows the preview beside it.
 
 The old commands `py-doc2docx`, `py-doc2slides` and `py-doclint` still work and print a one-line note naming their replacement. `-q` hides the note.
 

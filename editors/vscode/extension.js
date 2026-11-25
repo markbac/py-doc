@@ -1,9 +1,10 @@
 /**
  * vscode-py-doc-preview: the live preview of py-doc Markdown in VS Code.
  *
- * The preview (src/watch.js) runs `py-doc docx|slides|poster --watch` on the open file and shows the page it
- * serves beside the editor, rebuilt on each save. It is py-doc's own output, so every block, diagram and theme
- * looks as it will in the build. The command for a file is chosen from its content (src/detect.js).
+ * The preview (src/watch.js) runs `py-doc preview` on the open file and shows the page it serves beside the
+ * editor, rebuilt on each save. It is py-doc's own output, so every block, diagram and theme looks as it will in
+ * the build, and it writes nothing beside the Markdown. The kind of a file is chosen from its content
+ * (src/detect.js). Closing the preview's tab stops it, so it does not come back on the next Markdown file.
  *
  * The highlighting of py-doc Markdown is in syntaxes/ and the snippets in snippets/, both declared in package.json.
  * Folding for py-doc's blocks ([[IF:]] to [[ENDIF]] and the like) is src/folding.js.
@@ -19,10 +20,23 @@ try { vscode = require('vscode'); } catch (e) { vscode = null; }  // absent when
 
 let live = null;
 
+// Whether a tab is VS Code's Simple Browser, where the preview is shown
+function isBrowserTab(tab) {
+  const input = tab && tab.input;
+  return Boolean(input && typeof input.viewType === 'string' && input.viewType.includes('simpleBrowser'));
+}
+
+function browserOpen() {
+  if (!vscode.window.tabGroups) return true;  // no tabs API: assume it is
+  return vscode.window.tabGroups.all.some((group) => group.tabs.some(isBrowserTab));
+}
+
 // Whether a switch to `doc` should move the running preview to it
 function follows(doc) {
   return (
     live.running &&
+    live.address &&
+    browserOpen() &&
     doc.languageId === 'markdown' &&
     !doc.isUntitled &&
     doc.uri.scheme === 'file' &&
@@ -68,6 +82,14 @@ function activate(context) {
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor && follows(editor.document)) preview(null, editor.document);
     }),
+    // Closing the preview's tab stops py-doc, so switching to another Markdown file does not open it again
+    ...(vscode.window.tabGroups
+      ? [
+        vscode.window.tabGroups.onDidChangeTabs((event) => {
+          if (live.running && live.address && event.closed.some(isBrowserTab) && !browserOpen()) live.stop();
+        }),
+      ]
+      : []),
     // py-doc's blocks fold, beside VS Code's own folding of headings and lists
     vscode.languages.registerFoldingRangeProvider(
       { language: 'markdown' },

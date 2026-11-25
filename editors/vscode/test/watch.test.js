@@ -38,14 +38,18 @@ function fakeVscode(settings = {}) {
   return vscode;
 }
 
-// A fake py-doc: prints what --watch prints, then keeps running (or fails, with FAIL set)
+// A fake py-doc: prints what `preview` (or --watch) prints, then keeps running (or fails, with FAIL set).
+// With FAKE_OLD it has no `preview`, as a py-doc before it. `preview` echoes each line of its standard input.
 const script = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pydoc-watch-')), 'fake-py-doc.js');
 fs.writeFileSync(script, `
 const args = process.argv.slice(2);
 if (process.env.FAKE_FAIL) { console.error('Error: pandoc failed'); process.exit(1); }
+if (process.env.FAKE_OLD && args[0] === 'preview') {
+  console.error("py-doc: error: argument command: invalid choice: 'preview'");
+  process.exit(2);
+}
 const port = args.includes('--port') ? args[args.indexOf('--port') + 1] : '54321';
 console.log('ARGS ' + JSON.stringify(args));
-console.log('wrote ' + args[1]);
 console.log('serving http://127.0.0.1:' + port + '/');
 if (process.env.FAKE_REBUILD_FAIL) {  // a save that does not build, twice, then one that does
   setTimeout(() => console.log('Error: no sections found'), 50);
@@ -53,8 +57,17 @@ if (process.env.FAKE_REBUILD_FAIL) {  // a save that does not build, twice, then
   setTimeout(() => console.log('built in 0.4 s, watching for changes (Ctrl+C stops)'), 150);
   setTimeout(() => console.log('Error: no sections found'), 200);
 }
-setInterval(() => {}, 1000);
+if (args[0] === 'preview') {
+  process.stdin.on('data', (d) => console.log('ASKED ' + d.toString().trim()));
+  process.stdin.on('end', () => { console.log('STDIN CLOSED'); process.exit(0); });
+} else {
+  setInterval(() => {}, 1000);
+}
 `);
+
+const lines = (vscode, prefix) =>
+  vscode.calls.output.join('').split('\n').filter((l) => l.startsWith(prefix)).map((l) => l.slice(prefix.length));
+const settle = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
 
 test('the serving line gives the address', () => {
   assert.strictEqual('built in 1.2 s\nserving http://127.0.0.1:61234/\n'.match(SERVING)[1], 'http://127.0.0.1:61234/');
@@ -75,18 +88,40 @@ test('a preview opens the address py-doc serves, and stops', async (t) => {
   assert.strictEqual(await live.stop(), false);
 });
 
-test('the port setting is passed on, and a new preview replaces the running one', async (t) => {
+test('the port setting is passed on, and the preview moves to another file in the same tab', async (t) => {
   const vscode = fakeVscode({ 'watch.port': 8899 });
   const live = new LiveWatch(vscode, { command: [process.execPath, script] });
   t.after(() => live.stop());
   await live.start('docx', path.join(os.tmpdir(), 'a.md'));
   const first = live.child;
-  await live.start('poster', path.join(os.tmpdir(), 'b.md'));
-  assert.ok(first.exitCode !== null || first.signalCode !== null, 'the first preview was stopped');
-  assert.deepStrictEqual(vscode.calls.browser.map((b) => b.address), ['http://127.0.0.1:8899/', 'http://127.0.0.1:8899/']);
-  const argsLine = vscode.calls.output.join('').split('\n').filter((l) => l.startsWith('ARGS ')).pop();
-  assert.deepStrictEqual(JSON.parse(argsLine.slice(5)), ['poster', path.join(os.tmpdir(), 'b.md'), '--watch', '--no-open', '--port', '8899']);
+  assert.deepStrictEqual(JSON.parse(lines(vscode, 'ARGS ').pop()),
+    ['preview', path.join(os.tmpdir(), 'a.md'), '--kind', 'docx', '--stdin', '--no-open', '--port', '8899']);
+  assert.strictEqual(await live.start('poster', path.join(os.tmpdir(), 'b.md')), 'http://127.0.0.1:8899/');
+  assert.strictEqual(await live.start('poster', path.join(os.tmpdir(), 'b.md')), 'http://127.0.0.1:8899/');  // no change
+  await settle();
+  assert.strictEqual(live.child, first, 'the same py-doc');
+  assert.strictEqual(live.filePath, path.join(os.tmpdir(), 'b.md'));
+  assert.strictEqual(vscode.calls.browser.length, 1, 'no second tab');
+  assert.deepStrictEqual(lines(vscode, 'ASKED ').map((l) => JSON.parse(l)), [{ file: path.join(os.tmpdir(), 'b.md'), kind: 'poster' }]);
   await live.stop();
+  assert.ok(lines(vscode, 'STDIN CLOSED').length === 1, 'stopped by closing its input');
+});
+
+test('a py-doc without `preview` is run with --watch', async (t) => {
+  process.env.FAKE_OLD = '1';
+  const vscode = fakeVscode();
+  const live = new LiveWatch(vscode, { command: [process.execPath, script] });
+  t.after(() => {
+    delete process.env.FAKE_OLD;
+    return live.stop();
+  });
+  assert.strictEqual(await live.start('slides', path.join(os.tmpdir(), 'deck.md')), 'http://127.0.0.1:54321/');
+  assert.deepStrictEqual(JSON.parse(lines(vscode, 'ARGS ').pop()), ['slides', path.join(os.tmpdir(), 'deck.md'), '--watch', '--no-open']);
+  assert.deepStrictEqual(vscode.calls.errors, []);
+  const first = live.child;
+  await live.start('docx', path.join(os.tmpdir(), 'other.md'));  // --watch cannot move: started again
+  assert.notStrictEqual(live.child, first);
+  assert.deepStrictEqual(JSON.parse(lines(vscode, 'ARGS ').pop()), ['docx', path.join(os.tmpdir(), 'other.md'), '--watch', '--no-open']);
 });
 
 test('a preview that fails says so, and opens nothing', async () => {

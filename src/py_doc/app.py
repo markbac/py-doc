@@ -35,6 +35,7 @@ from .new import run_new
 from .diagram_cli import run_diagram
 from .icons_cli import run_icons
 from .poster_cli import run_poster
+from .preview_cli import run_preview
 from .site.cli import run_site
 from .template_cli import run_template
 from .tools_cli import run_doctor, run_setup, run_tools
@@ -58,6 +59,7 @@ _DELEGATES = {
     "stats": ("Count the words, headings, tables, pictures and links of documents", run_stats),
     "diff": ("Compare two versions of documents section by section", run_diff),
     "poster": ("Build a self-contained HTML poster from a Markdown file", run_poster),
+    "preview": ("Live preview of one Markdown file, without writing its outputs (for editors)", run_preview),
     "diagram": ("Draw one diagram or poster block as an SVG or PNG file", run_diagram),
     "image": ("The same as diagram", run_diagram),
     "icons": ("Download, list and search the icon packs of poster blocks", run_icons),
