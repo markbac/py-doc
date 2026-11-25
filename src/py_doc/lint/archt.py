@@ -49,9 +49,10 @@ def check(found: list[tuple[Path, int, str]], runtime: Runtime) -> list[LintIssu
         for number, (_, _, body) in enumerate(found):
             names.append(f"{number}.archt")
             (work / names[-1]).write_text(body + "\n", encoding="utf-8", newline="\n")
+        # writable: arch-text build writes each scene beside its fence, here in a folder of py-doc's own
         result = runtime.run(
             ["arch-text", "build", *names],
-            mounts=[Mount(work)], workdir=work, env={"NO_COLOR": "1"}, timeout=TIMEOUT, check=False,
+            mounts=[Mount(work, writable=True)], workdir=work, env={"NO_COLOR": "1"}, timeout=TIMEOUT, check=False,
         )  # fmt: skip
     diagnostics = parse(result.stderr)
     # 1 is an error in an input; a 1 with no error printed is arch-text itself failing

@@ -104,6 +104,22 @@ def test_bpmnt_and_archt_fences_share_one_container(tmp_path, monkeypatch, doc):
     assert asked == [1]
 
 
+def test_the_fences_folder_is_writable_for_the_scenes_arch_text_writes(doc):
+    """arch-text build writes each .excalidraw beside its fence: a read-only mount fails every valid fence."""
+    from py_doc.lint import archt
+    from py_doc.runtime import ToolResult
+
+    seen = {}
+
+    class Recorder:
+        def run(self, argv, **options):
+            seen.update(options)
+            return ToolResult(0, "", "")
+
+    archt.check(archt.fences([doc]), Recorder())
+    assert [mount.writable for mount in seen["mounts"]] == [True]
+
+
 def test_a_file_without_fences_does_not_start_the_container(doc):
     doc.write_text("# Metering\n\nText.\n", encoding="utf-8")
 
