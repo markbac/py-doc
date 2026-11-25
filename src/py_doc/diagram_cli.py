@@ -41,7 +41,7 @@ EXTENSIONS = {
     ".mmd": "mermaid", ".mermaid": "mermaid", ".puml": "plantuml", ".plantuml": "plantuml", ".dot": "dot",
     ".gv": "dot", ".ditaa": "ditaa", ".edn": "bytefield-svg", ".pikchr": "pikchr", ".railroad": "railroad",
     ".vl.json": "vega-lite", ".vg.json": "vega", ".wavedrom.json": "wavedrom",
-    ".bpmnt": "bpmnt",
+    ".bpmnt": "bpmnt", ".archt": "archt",
 }  # fmt: skip
 
 

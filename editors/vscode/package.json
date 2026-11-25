@@ -1,7 +1,7 @@
 {
   "name": "vscode-py-doc-preview",
   "displayName": "py-doc Live Preview",
-  "description": "Live preview of py-doc documents, slide decks and posters in VS Code, and highlighting of py-doc Markdown: directives, rich tables, callouts, every diagram fence and poster block, and bpmn-text (.bpmnt) files. Folding for py-doc's blocks, and snippets.",
+  "description": "Live preview of py-doc documents, slide decks and posters in VS Code, and highlighting of py-doc Markdown: directives, rich tables, callouts, every diagram fence and poster block, and bpmn-text (.bpmnt) and arch-text (.archt) files. Folding for py-doc's blocks, and snippets.",
   "version": "2.3.1",
   "publisher": "py-doc",
   "license": "MIT",
@@ -32,6 +32,7 @@
     "posters",
     "live preview",
     "bpmn",
+    "architecture",
     "highlighting",
     "mermaid",
     "plantuml",
@@ -53,6 +54,17 @@
           ".bpmnt"
         ],
         "configuration": "./syntaxes/bpmnt.language-configuration.json"
+      },
+      {
+        "id": "archt",
+        "aliases": [
+          "arch-text",
+          "archt"
+        ],
+        "extensions": [
+          ".archt"
+        ],
+        "configuration": "./syntaxes/archt.language-configuration.json"
       }
     ],
     "grammars": [
@@ -69,6 +81,21 @@
         ],
         "embeddedLanguages": {
           "meta.embedded.block.bpmnt": "bpmnt"
+        }
+      },
+      {
+        "language": "archt",
+        "scopeName": "source.archt",
+        "path": "./syntaxes/archt.tmLanguage.json"
+      },
+      {
+        "scopeName": "markdown.archt.codeblock",
+        "path": "./syntaxes/archt.markdown.tmLanguage.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.archt": "archt"
         }
       },
       {

@@ -339,12 +339,76 @@ const DATA = {
     "flags": "",
     "style": "bracket"
    }
+  ],
+  "pydoc-archt": [
+   {
+    "match": "(?:^|(?<=\\s))#.*$",
+    "flags": "",
+    "style": "comment"
+   },
+   {
+    "match": "^\\s*(system|component|actor|datastore|boundary|group)\\b",
+    "flags": "",
+    "style": "keyword",
+    "captures": [
+     null,
+     "keyword"
+    ]
+   },
+   {
+    "match": "^\\s*(title|option|use|style)\\b(?:\\s+((?:\\.)?[\\w-]+))?",
+    "flags": "",
+    "style": "keyword",
+    "captures": [
+     null,
+     "keyword",
+     "def"
+    ]
+   },
+   {
+    "match": "(?:^|(?<=\\s))#.*$",
+    "flags": "",
+    "style": "comment"
+   },
+   {
+    "begin": "\"",
+    "end": "\"|$",
+    "flags": "",
+    "style": "string"
+   },
+   {
+    "match": "<->|->|\\.\\.>|--",
+    "flags": "",
+    "style": "operator"
+   },
+   {
+    "match": "(:)\\s*([^\\[#\"]*?)\\s*(?=\\[|\\s#|$)",
+    "flags": "",
+    "style": "bracket",
+    "captures": [
+     null,
+     "bracket",
+     "def"
+    ]
+   },
+   {
+    "match": "@[A-Za-z_][\\w-]*",
+    "flags": "",
+    "style": "variable-2"
+   },
+   {
+    "begin": "\\[",
+    "end": "\\]",
+    "flags": "",
+    "style": "bracket"
+   }
   ]
  },
  "fences": {
   "abc": "pydoc-block",
   "actdiag": "pydoc-dot",
   "annotated": "pydoc-block",
+  "archt": "pydoc-archt",
   "atom": "pydoc-block",
   "balance": "pydoc-block",
   "barcode": "pydoc-block",

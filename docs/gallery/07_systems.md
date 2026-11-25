@@ -333,3 +333,59 @@ pool Company
   send Send confirmation ~> Confirmation
   end Shipped
 ```
+
+## `archt`
+
+An architecture diagram, written in the [arch-text](https://github.com/markbac/arch-text) notation and drawn by arch-text in the tool container, in Excalidraw's hand-drawn style. Systems, components, actors, data stores and boundaries are declared by keyword, and indentation puts one inside another. Edges are `->`, `<->`, `--` and `..>`, with a label after `:`. arch-text lays it out with ELK; nothing in the fence sets a position. The SVG keeps the Excalidraw scene inside it, so it opens in Excalidraw for editing.
+
+````markdown
+```archt
+title "Smart metering"
+
+boundary Meter
+  component Firmware
+  component Comms module @comms
+  Firmware -> @comms: Meter data
+
+system HES
+system Platform
+  component Ingest
+  component Store
+  Ingest -> Store
+
+actor Operator
+actor Engineer
+datastore Readings
+
+@comms -> HES: DLMS/COSEM
+HES -> Ingest: Events
+Store -> Readings
+Engineer -> Meter: Site visit
+Operator ..> Platform: Alerts
+```
+````
+
+```archt
+title "Smart metering"
+
+boundary Meter
+  component Firmware
+  component Comms module @comms
+  Firmware -> @comms: Meter data
+
+system HES
+system Platform
+  component Ingest
+  component Store
+  Ingest -> Store
+
+actor Operator
+actor Engineer
+datastore Readings
+
+@comms -> HES: DLMS/COSEM
+HES -> Ingest: Events
+Store -> Readings
+Engineer -> Meter: Site visit
+Operator ..> Platform: Alerts
+```

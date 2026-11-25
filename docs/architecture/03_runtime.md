@@ -14,11 +14,11 @@ The files in `src/py_doc/runtime/definition` define the image:
 | `requirements.txt` | The Python diagram tools and MkDocs |
 | `package.json` | Mermaid, markdownlint, WaveDrom, bytefield-svg, Vega and Puppeteer, and for API documentation Redocly CLI, Widdershins, the AsyncAPI generator and its Markdown and HTML templates |
 | `asyncapi-docs.js` | Runs the AsyncAPI generator with the installed templates, so it needs no network |
-| `tools.lock` | Downloads with their SHA-256: pandoc, PlantUML, ditaa, Vale, `structurizr-cli`, Node.js, and the source of bpmn-text at a pinned commit |
+| `tools.lock` | Downloads with their SHA-256: pandoc, PlantUML, ditaa, Vale, `structurizr-cli`, Node.js, and the source of bpmn-text and arch-text, each at a pinned commit |
 | `fetch.sh` | Downloads one of them and checks it |
 | `export-diagrams.js` | Draws Structurizr views in Chromium |
 
-`requirements.txt` also has schemdraw and python-chess, and `package.json` abcjs, for the `circuit`, `chess` and `music` fences. bpmn-text, for the `bpmnt` fence, has no release on npm, so the image builds its command line from that source, as bpmn-text's own `Dockerfile` does. It draws with the image's Chromium (`BPMN_TEXT_CHROMIUM`) rather than a browser of Playwright's own.
+`requirements.txt` also has schemdraw and python-chess, and `package.json` abcjs, for the `circuit`, `chess` and `music` fences. bpmn-text, for the `bpmnt` fence, has no release on npm, so the image builds its command line from that source, as bpmn-text's own `Dockerfile` does. It draws with the image's Chromium (`BPMN_TEXT_CHROMIUM`) rather than a browser of Playwright's own. arch-text, for the `archt` fence, is built the same way, as its own `Dockerfile` builds it: the compiler, the export page with Excalidraw's fonts, and the package a release attaches. It compiles a fence to an Excalidraw scene and exports the scene with the same Chromium (`ARCH_TEXT_CHROMIUM`), with no network.
 
 The tag is a hash of the folder (`runtime/image.py`). A change to any of these files builds a new image, and a release that changes none of them reuses the old one. Node.js comes from nodejs.org rather than Debian, whose version is too old for the current Vega, markdownlint and Astro packages. The AsyncAPI generator needs Node.js 24.
 

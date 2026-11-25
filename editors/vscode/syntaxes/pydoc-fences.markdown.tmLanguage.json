@@ -60,6 +60,9 @@
     },
     {
       "include": "#bpmnt-div"
+    },
+    {
+      "include": "#archt-div"
     }
   ],
   "repository": {
@@ -658,6 +661,31 @@
       "patterns": [
         {
           "include": "source.bpmnt"
+        }
+      ]
+    },
+    "archt-div": {
+      "comment": "The Azure DevOps form py-doc also draws: :::name ... :::",
+      "begin": "^(:{3,})\\s*(?i:(archt))\\s*$",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        },
+        "2": {
+          "name": "fenced_code.block.language.markdown"
+        }
+      },
+      "end": "^(:{3,})\\s*$",
+      "endCaptures": {
+        "1": {
+          "name": "punctuation.definition.markdown"
+        }
+      },
+      "name": "markup.fenced_code.block.markdown",
+      "contentName": "meta.embedded.block.archt",
+      "patterns": [
+        {
+          "include": "source.archt"
         }
       ]
     }

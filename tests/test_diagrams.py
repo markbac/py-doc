@@ -129,6 +129,16 @@ class TestRegistry:
         assert png[png.index("-f") + 1] == "png" and png[png.index("--scale") + 1] == "2"
         assert str(png[png.index("-o") + 1]).endswith("diagram.png")
 
+    def test_archt_is_compiled_to_a_scene_then_exported_as_svg_or_png_at_192_dpi(self):
+        build, svg = BY_FENCE["archt"].commands(self.job("svg"))
+        _, png = BY_FENCE["archt"].commands(self.job("png"))
+        scene = build[build.index("-o") + 1]
+        assert build[:2] == ["arch-text", "build"] and str(scene).endswith("diagram.excalidraw")
+        assert svg[:3] == ["arch-text", "export", scene] and svg[svg.index("-f") + 1] == "svg"
+        assert "--scale" not in svg
+        assert png[png.index("-f") + 1] == "png" and png[png.index("--scale") + 1] == "2"
+        assert str(png[png.index("-o") + 1]).endswith("diagram.png")
+
     def test_mermaid_is_wider_on_a_landscape_page(self):
         portrait = BY_FENCE["mermaid"].commands(self.job())[0]
         landscape = BY_FENCE["mermaid"].commands(self.job(landscape=True))[0]

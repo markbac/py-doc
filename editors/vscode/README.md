@@ -113,6 +113,7 @@ The inside of every fence py-doc draws is highlighted in the language of the fen
 | `dot`, `graphviz`, `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`, `packetdiag`, `rackdiag` | DOT: graph keywords, attributes, edges, strings, comments |
 | `plantuml`, `puml` | PlantUML: `@startuml`, element keywords, arrows, stereotypes, colours, `'` comments |
 | `bpmnt` | bpmn-text: see [BPMN files](#bpmn-files) |
+| `archt` | arch-text: see [Architecture files](#architecture-files) |
 | `vega`, `vega-lite` | JSON, with VS Code's own grammar |
 | `wavedrom` | JavaScript, with VS Code's own grammar |
 | `wireviz` | YAML, with VS Code's own grammar |
@@ -125,6 +126,10 @@ The Mermaid, DOT and PlantUML grammars are the extension's own, so they work wit
 ### BPMN files
 
 `.bpmnt` files and ```` ```bpmnt ```` fences in Markdown are highlighted as the [bpmn-text](https://github.com/markbac/bpmn-text) notation: keywords, event types, flows and their labels, branch labels, `@` IDs, attributes, strings, `doc` text and comments. `Ctrl+/` toggles `#` comments in a `.bpmnt` file. py-doc draws the fences as BPMN diagrams, and `py-doc lint` reports their mistakes.
+
+### Architecture files
+
+`.archt` files and ```` ```archt ```` fences in Markdown are highlighted as the [arch-text](https://github.com/markbac/arch-text) notation: element keywords, `title`, `option`, `use` and `style`, the edge operators `->`, `<->`, `--` and `..>`, edge labels, `@` IDs, attributes, colours, strings and comments. `Ctrl+/` toggles `#` comments in an `.archt` file. py-doc draws the fences as architecture diagrams, and `py-doc lint` reports their mistakes.
 
 ## Folding
 
@@ -202,7 +207,8 @@ editors/vscode/
 │   ├── pydoc.markdown.tmLanguage.json         # directives, rich tables, callouts, divs and attributes
 │   ├── pydoc-fences.markdown.tmLanguage.json  # which grammar each fence takes
 │   ├── mermaid, dot, plantuml, block .tmLanguage.json  # the languages of the fences
-│   └── bpmnt.*                                # bpmn-text files and fences
+│   ├── bpmnt.*                                # bpmn-text files and fences
+│   └── archt.*                                # arch-text files and fences
 ├── snippets/pydoc.code-snippets
 ├── images/icon.png
 ├── examples/              # a document, a deck and a poster to try it on

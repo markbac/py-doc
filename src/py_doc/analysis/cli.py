@@ -218,7 +218,7 @@ def run_check(argv: list[str]) -> int:
         if files:
             linter = DocLinter(
                 config=project.lint, runtime=lambda: connect(project.runtime), engine=args.engine,
-                bpmn_runtime=lambda: connect(project.runtime, build_image=False),
+                diagram_runtime=lambda: connect(project.runtime, build_image=False),
             )  # fmt: skip
             try:
                 report = linter.lint_paths(files)

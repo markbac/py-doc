@@ -349,7 +349,7 @@ def test_the_diagram_modes_are_up_to_date_with_the_vscode_grammars():
     fences = module.fence_names()
     assert fences["mermaid"] == "pydoc-mermaid" and fences["puml"] == "pydoc-plantuml"
     assert fences["vega-lite"] == "application/json" and fences["chart"] == "pydoc-block"
-    assert fences["bpmnt"] == "pydoc-bpmnt"
+    assert fences["bpmnt"] == "pydoc-bpmnt" and fences["archt"] == "pydoc-archt"
 
 
 def test_the_default_port_is_8888(monkeypatch, tmp_path):

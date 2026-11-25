@@ -48,7 +48,7 @@ def bpmn_issues(report):
 
 def test_findings_are_at_their_line_of_the_markdown_file(tmp_path, monkeypatch, runtime, doc):
     stub(tmp_path, monkeypatch, "bpmn-text", REPORT)
-    report = DocLinter(bpmn_runtime=runtime).lint_paths([doc])
+    report = DocLinter(diagram_runtime=runtime).lint_paths([doc])
     assert bpmn_issues(report) == [(7, 13, "BT202", "error"), (7, 13, "BT301", "warning")]
     assert "Nothing is called `Nowhere`." in str(report.issues)
 
@@ -57,13 +57,14 @@ def test_severities_and_disabled_rules_apply_to_bpmn_text_codes(tmp_path, monkey
     stub(tmp_path, monkeypatch, "bpmn-text", REPORT)
     config = LintConfig(disabled_rules=frozenset({"BT301"}))
     config.severities["BT202"] = "info"
-    assert bpmn_issues(DocLinter(config=config, bpmn_runtime=runtime).lint_paths([doc])) == [(7, 13, "BT202", "info")]
+    found = bpmn_issues(DocLinter(config=config, diagram_runtime=runtime).lint_paths([doc]))
+    assert found == [(7, 13, "BT202", "info")]
 
 
 def test_every_fence_of_every_file_is_checked_in_one_run(tmp_path, monkeypatch, runtime, doc):
     stub(tmp_path, monkeypatch, "bpmn-text", REPORT)
     (tmp_path / "b.md").write_text("Text.\n\n```bpmnt\nA\n```\n\n```bpmnt\nB\n```\n", encoding="utf-8")
-    report = DocLinter(bpmn_runtime=runtime).lint_paths([tmp_path])
+    report = DocLinter(diagram_runtime=runtime).lint_paths([tmp_path])
     assert sorted({(i.file.name, i.line) for i in report.issues if i.category == "BPMN"}) == [
         ("a.md", 7), ("b.md", 5), ("b.md", 9),
     ]  # fmt: skip
@@ -75,7 +76,7 @@ def test_a_file_without_fences_does_not_start_the_container(doc, tmp_path):
     def runtime():
         raise AssertionError("the container was asked for")
 
-    DocLinter(bpmn_runtime=runtime).lint_paths([doc])
+    DocLinter(diagram_runtime=runtime).lint_paths([doc])
 
 
 def test_without_the_tool_image_the_fences_are_skipped_with_a_warning(doc, caplog):
@@ -83,17 +84,17 @@ def test_without_the_tool_image_the_fences_are_skipped_with_a_warning(doc, caplo
         raise EnvironmentProblem("The tool image 'py-doc-tools:x' is not built here. Run `py-doc tools build`")
 
     with caplog.at_level(logging.WARNING):
-        report = DocLinter(bpmn_runtime=runtime).lint_paths([doc])
+        report = DocLinter(diagram_runtime=runtime).lint_paths([doc])
     assert bpmn_issues(report) == [] and "bpmnt fences were not checked" in caplog.text
 
 
 def test_a_tool_that_does_not_finish_is_an_error(tmp_path, monkeypatch, runtime, doc):
     stub(tmp_path, monkeypatch, "bpmn-text", "print('Internal error: boom', file=sys.stderr)\nsys.exit(2)")
     with pytest.raises(ToolFailed, match="boom"):
-        DocLinter(bpmn_runtime=runtime).lint_paths([doc])
+        DocLinter(diagram_runtime=runtime).lint_paths([doc])
 
 
 @needs_bpmn_text
 def test_bpmn_text_itself(runtime, doc):
-    found = bpmn_issues(DocLinter(bpmn_runtime=runtime).lint_paths([doc]))
+    found = bpmn_issues(DocLinter(diagram_runtime=runtime).lint_paths([doc]))
     assert (7, 13, "BT202", "error") in found

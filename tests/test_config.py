@@ -294,6 +294,8 @@ def test_site_groups(tmp_path):
         load_config(write(tmp_path, docs + "site: {engine: mkdocs, documents: [a], groups: {X: [b]}}\n"))
 
 
-def test_lint_rules_take_the_codes_of_bpmn_text(tmp_path):
-    lint = load_config(write(tmp_path, "lint:\n  rules: {BT301: off, BT202: info}")).lint
+def test_lint_rules_take_the_codes_of_bpmn_text_and_arch_text(tmp_path):
+    rules = "lint:\n  rules: {BT301: off, BT202: info, AT010: off, AT008: warning}"
+    lint = load_config(write(tmp_path, rules)).lint
     assert "BT301" in lint.disabled_rules and lint.severities["BT202"] == "info"
+    assert "AT010" in lint.disabled_rules and lint.severities["AT008"] == "warning"
