@@ -308,7 +308,7 @@ class TestOptions:
 
         called = []
 
-        def fake_watch(build, errors, port=0, open_browser=True, stop=None, interval=0.5, title=""):
+        def fake_watch(build, errors, port=0, open_browser=True, stop=None, interval=0.5, title="", wave=None):
             pages, sources = build()
             called.append((pages, sources, port, open_browser, title))
             return 0

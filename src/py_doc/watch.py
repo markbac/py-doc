@@ -1,4 +1,5 @@
-"""``--watch`` of ``py-doc poster``, ``docx`` and ``slides``: build again on every save, and reload in the browser.
+"""``--watch`` of ``py-doc poster``, ``docx`` and ``slides``: build again on every save, and reload in the browser
+(or in a Wave Terminal pane, see py_doc.wave).
 
 The pages are served on a local address, each with a small script that asks the server every 0.7 s
 whether a newer build is there, and reloads when it is. A build that fails keeps the last good page and
@@ -15,7 +16,6 @@ import os
 import threading
 import time
 import urllib.parse
-import webbrowser
 from collections.abc import Callable
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -130,6 +130,7 @@ def watch(
     stop: threading.Event | None = None,
     interval: float = INTERVAL,
     title: str = "py-doc preview",
+    wave: bool | None = None,
 ) -> int:
     """Build, serve, and build again on every change, until Ctrl+C or ``stop``. Returns the exit status."""
     state, stop = State(title=title), stop or threading.Event()
@@ -161,8 +162,9 @@ def watch(
     server = serve(state, port)
     address = f"http://127.0.0.1:{server.server_address[1]}/"
     print(f"serving {address}", flush=True)
-    if open_browser:
-        webbrowser.open(address)
+    from .wave import show
+
+    show(address, open_browser=open_browser, wave=wave)  # a Wave pane inside Wave Terminal, else the browser
     try:
         while not stop.wait(interval):
             now = look()

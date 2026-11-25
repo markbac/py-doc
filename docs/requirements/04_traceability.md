@@ -22,6 +22,7 @@ title: Traceability
 | FR-130 to FR-139, FR-150 to FR-160, FR-163 to FR-166 | `poster.py`, `poster_blocks.py`, `poster_svg.py`, `poster_math.py`, `poster_scales.py`, `poster_embedded.py`, `poster_shapes.py`, `poster_space.py`, `poster_elements.py`, `poster_plot.py`, `poster_fonts.py`, `poster_settings.py`, `poster_themes.py`, `poster_cli.py`, `watch.py`, `config.py`, `app.py`, `lint/linter.py`, `diagrams/tools/poster_pdf.js` | `test_poster.py`, `test_poster_svg.py`, `test_poster_math.py`, `test_poster_scales.py`, `test_poster_embedded.py`, `test_poster_shapes.py`, `test_poster_space.py`, `test_poster_plot.py`, `test_poster_browser.py` |
 | FR-161 | `_cli.py`, `convert.py`, `watch.py`, `deck.py`, `pandoc/engine.py`, `pandoc/resources/preview.css` | `test_cli.py`, `test_slides_cli.py`, `test_convert.py`, `test_preview_cases.py` |
 | FR-162 | `editors/vscode/extension.js`, `editors/vscode/src/` | `editors/vscode/test/`, `test_preview_cases.py` |
+| FR-174 to FR-176 | `wave.py`, `watch.py`, `preview_cli.py`, `_cli.py`, `poster_cli.py`, `diagram_cli.py`, `tools_cli.py`, `scripts/install-wave-widget.ps1`, `scripts/update.ps1` | `test_wave.py`, `test_wave_install_script.py` |
 | FR-028 | `diagrams/render.py`, `config.py` | `test_diagrams.py` |
 | FR-029 | `listtable.py`, `directives.py`, `pandoc/resources/listtable.lua`, `pandoc/docx_post.py`, `pandoc/docx_finish.py`, `lint/text.py`, `lint/structure.py`, `report.py` | `test_listtable.py`, `test_structure.py`, `test_examples.py` |
 | FR-167, FR-168 | `diagrams/blocks.py`, `diagrams/render.py`, `diagrams/scan.py`, `diagrams/registry.py`, `diagrams/tools/block_png.js`, `poster_blocks.py`, `config.py`, `runtime/definition/package.json` | `test_document_blocks.py`, `test_poster_diagrams.py`, `test_diagrams.py` |
@@ -72,6 +73,7 @@ The issues of the repository, as reviewed on 18 October 2026, and the requiremen
 | #201 | Icons and illustrations from open-licensed sets | FR-171 | Done: `icon=` from four packs and a project folder, credits, the licence list, and a guide to finding pictures |
 | #207 | An HTML deck output from the same Markdown | FR-173 | Done: `py-doc slides -f html` and `deck: true`, with a presenter view, PDF and sites |
 | #203, #204 | Phase 3 of the plan (P3): reference data and the science backlog | None yet | Open |
+| #224 to #229 | Live preview in Wave Terminal: the pane, the widget, doctor, `update.ps1` and the guide | FR-174 to FR-176 | Done |
 
 ## Closed issues
 

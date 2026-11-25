@@ -32,6 +32,7 @@ The user guide, requirements and architecture are published at **<https://markba
 | `py-doc icons` | Download, list and search the icon packs that poster blocks draw with `icon=` |
 | `py-doc import` | Convert a Word document or a PowerPoint deck to Markdown |
 | `py-doc template` | Check and list the styles of a Word or PowerPoint template |
+| `py-doc wave` | Add the Wave Terminal sidebar widget that starts a live preview; inside Wave, every `--watch` preview opens in a Wave pane |
 | `py-doc tools`, `doctor`, `setup` | Build and check the tool container, and install Docker Engine |
 | `py-doc migrate` | Create `py-doc.yml` from legacy `createdocs` build files |
 | `py-doc web` | Serve py-doc in the browser: a project explorer with drag-and-drop upload, an editor with live preview, and convert, build and lint jobs. See [deploy/web](deploy/web/README.md) for running it on a Docker server of your own |
@@ -51,7 +52,7 @@ py-doc doctor               # check that everything works
 
 A few scientific fences (`molecule`, `smith`, `plasmid` and others) are drawn in an optional second image, the science image. It is built the first time a document uses one, or ahead of time with `py-doc tools build --science`.
 
-On Windows, `.\scripts\update.ps1` does all of that in a virtual environment of py-doc's own (`.venv`). Run `.\scripts\update.ps1` after every pull: it installs any new dependencies, rebuilds the tool image when it changed, and checks that everything works. When VS Code is there, it also installs or updates the [VS Code extension](editors/vscode/README.md).
+On Windows, `.\scripts\update.ps1` does all of that in a virtual environment of py-doc's own (`.venv`). Run `.\scripts\update.ps1` after every pull: it installs any new dependencies, rebuilds the tool image when it changed, and checks that everything works. When VS Code is there, it also installs or updates the [VS Code extension](editors/vscode/README.md). When Wave Terminal is there, it adds py-doc's preview widget to Wave's sidebar (`-NoWave` skips it).
 
 Linux and Windows are supported. See [Installation](docs/guide/01_install.md) for the tool container, proxies and offline machines.
 
@@ -66,7 +67,7 @@ py-doc c4 up architecture/workspace.dsl     # arrange the C4 views in Structuriz
 py-doc site build                           # site/build/index.html
 ```
 
-While writing, `py-doc docx guide.md --watch` (or `slides`, or `poster`) builds on every save and keeps a live preview open in the browser, with every diagram drawn. The [VS Code extension](editors/vscode/README.md) runs it for the open file and shows the preview beside the editor. It also highlights py-doc's directives, rich tables and every diagram fence, folds py-doc's blocks and has snippets for them.
+While writing, `py-doc docx guide.md --watch` (or `slides`, or `poster`) builds on every save and keeps a live preview open in the browser, with every diagram drawn. The [VS Code extension](editors/vscode/README.md) runs it for the open file and shows the preview beside the editor. It also highlights py-doc's directives, rich tables and every diagram fence, folds py-doc's blocks and has snippets for them. In [Wave Terminal](docs/guide/02_projects.md#wave-terminal), the preview opens in a Wave pane beside the terminal (`--no-wave` keeps the browser).
 
 ## Documentation
 
@@ -114,7 +115,8 @@ src/
 │   ├── diagram_cli.py    # py-doc diagram, on diagram_api
 │   ├── icons.py          # the icon packs of poster blocks; icons_cli.py is py-doc icons
 │   ├── deck.py           # an HTML deck: the slides of a deck as one self-contained page
-│   └── watch.py          # the --watch loop and preview server of poster, docx and slides
+│   ├── watch.py          # the --watch loop and preview server of poster, docx and slides
+│   └── wave.py           # Wave Terminal: the preview in a Wave pane, the sidebar widget, doctor's line
 ├── pydoc2docx/           # old import names, kept as aliases
 ├── pydoc2slides/
 └── pydoclint/

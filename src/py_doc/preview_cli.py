@@ -29,7 +29,6 @@ import sys
 import tempfile
 import threading
 import time
-import webbrowser
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -65,7 +64,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="What to preview it as (default: document); docx and slides are the same as document and deck",
     )  # fmt: skip
     parser.add_argument("--port", type=int, default=0, help="The local port to serve on (default: a free one)")
-    parser.add_argument("--no-open", action="store_true", help="Do not open the browser")
+    parser.add_argument("--no-open", action="store_true", help="Do not open the browser (or a Wave pane)")
+    from .wave import add_options
+
+    add_options(parser, with_watch=False)
     parser.add_argument(
         "--stdin", action="store_true",
         help='Read the next file to show from standard input, a JSON line {"file": PATH, "kind": KIND} each, '
@@ -86,7 +88,7 @@ def run_preview(argv: Sequence[str] | None = None) -> int:
     requests: queue.Queue = queue.Queue()
     if args.stdin:
         threading.Thread(target=_read_requests, args=(sys.stdin, requests), daemon=True, name="preview-stdin").start()
-    return preview(source, args.kind, requests, port=args.port, open_browser=not args.no_open)
+    return preview(source, args.kind, requests, port=args.port, open_browser=not args.no_open, wave=args.wave)
 
 
 def _read_requests(stream, requests: queue.Queue) -> None:
@@ -114,6 +116,7 @@ def preview(
     build=None,
     stop: threading.Event | None = None,
     interval: float | None = None,
+    wave: bool | None = None,
 ) -> int:
     """Serve the preview of ``source``, build it again on every change, and move it to each file on
     ``requests``, until STOP comes, ``stop`` is set, or Ctrl+C. ``build(kind, source, output)`` is
@@ -135,8 +138,9 @@ def preview(
     server = serve(state, port)
     address = f"http://127.0.0.1:{server.server_address[1]}/"
     print(f"serving {address}", flush=True)  # at once: the page shows its first build when it is done
-    if open_browser:
-        webbrowser.open(address)
+    from .wave import show
+
+    show(address, open_browser=open_browser, wave=wave)  # once: moving to another file keeps the page and its pane
 
     def watched(target: Path) -> tuple[set[Path], set[Path]]:
         from .config import find_config

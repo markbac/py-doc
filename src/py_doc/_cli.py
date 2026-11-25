@@ -66,8 +66,11 @@ def add_common_options(parser: argparse.ArgumentParser, kind: str, suffix: str) 
     parser.add_argument(
         "--no-open",
         action="store_true",
-        help="With --watch, do not open the browser",
+        help="With --watch, do not open the browser (or a Wave pane)",
     )
+    from .wave import add_options
+
+    add_options(parser)
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -199,6 +202,7 @@ def watch_converter(converter: Converter, args: argparse.Namespace, suffix: str,
         port=args.port,
         open_browser=not args.no_open,
         title=f"{label} Preview",
+        wave=args.wave,
     )
 
 
@@ -225,6 +229,6 @@ def run(
         logger.info(notice)
     if args.watch:
         return watch_converter(make_converter(args), args, suffix, label)
-    if args.port or args.no_open:
-        logger.warning("--port and --no-open only apply with --watch, so they are ignored")
+    if args.port or args.no_open or args.wave is not None:
+        logger.warning("--port, --no-open and --wave only apply with --watch, so they are ignored")
     return convert_all(make_converter(args), args, suffix, label)

@@ -39,6 +39,7 @@ from .preview_cli import run_preview
 from .site.cli import run_site
 from .template_cli import run_template
 from .tools_cli import run_doctor, run_setup, run_tools
+from .wave import run_wave
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ _DELEGATES = {
     "icons": ("Download, list and search the icon packs of poster blocks", run_icons),
     "doctor": ("Check that the tool container works", run_doctor),
     "setup": ("Install Docker Engine for the tool runner", run_setup),
+    "wave": ("Wave Terminal: the sidebar widget that starts a live preview", run_wave),
     "web": (
         "Serve py-doc in the browser: explore, edit, preview, convert, build and lint",
         lambda argv: _run_web(argv),

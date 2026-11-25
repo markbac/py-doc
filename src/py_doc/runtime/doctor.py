@@ -15,7 +15,7 @@ from .engine import Runtime, decode_wsl
 @dataclass
 class Check:
     name: str
-    status: str  # "ok", "info" or "FAIL"
+    status: str  # "ok", "info", "WARN" or "FAIL"; only FAIL fails the doctor
     detail: str
     hint: str = ""
 
