@@ -332,6 +332,28 @@ pool Platform
   end Node live
 ```
 
+## 26. Architecture with arch-text
+
+```archt
+option sketch clean
+option colors types
+
+boundary Site
+  component Sensor node @node
+  component Gateway
+  @node -> Gateway: LoRa
+system Platform
+  component Ingest
+  component Rules
+  Ingest -> Rules
+datastore Readings
+actor Installer
+
+Gateway -> Ingest: MQTT over TLS
+Ingest -> Readings
+Installer ..> @node: Scan the QR code
+```
+
 ## In short {.summary}
 
 Look here first: if a tool in the container draws it, write the diagram, not a new block.

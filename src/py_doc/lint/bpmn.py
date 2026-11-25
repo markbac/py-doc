@@ -18,15 +18,15 @@ from .model import LintIssue
 TIMEOUT = 300
 
 
-def fences(files: list[Path]) -> list[tuple[Path, int, str]]:
-    """``(file, line of the opening fence, body)`` of every ```bpmnt fence of ``files``."""
+def fences(files: list[Path], fence: str = "bpmnt") -> list[tuple[Path, int, str]]:
+    """``(file, line of the opening fence, body)`` of every ``fence`` fence of ``files``."""
     found = []
     for file in files:
         try:
             text = file.read_text(encoding="utf-8-sig")
         except (OSError, UnicodeDecodeError):
             continue  # reported by the file's own result
-        found += [(file, block.line, block.body) for block in find_blocks(text) if block.fence == "bpmnt"]
+        found += [(file, block.line, block.body) for block in find_blocks(text) if block.fence == fence]
     return found
 
 

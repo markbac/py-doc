@@ -384,3 +384,26 @@ pool Platform
   send Confirm the join ~> Joined
   end Node live
 ```
+
+## Architecture
+
+[[CAPTION:Figure]] What a node talks to
+```archt
+option sketch clean
+option colors types
+
+boundary Site
+  component Sensor node @node
+  component Gateway
+  @node -> Gateway: LoRa
+system Platform
+  component Ingest
+  component Rules
+  Ingest -> Rules
+datastore Readings
+actor Installer
+
+Gateway -> Ingest: MQTT over TLS
+Ingest -> Readings
+Installer ..> @node: Scan the QR code
+```

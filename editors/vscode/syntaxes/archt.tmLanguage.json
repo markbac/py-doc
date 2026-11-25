@@ -1,0 +1,128 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "arch-text",
+  "scopeName": "source.archt",
+  "fileTypes": [
+    "archt"
+  ],
+  "patterns": [
+    {
+      "include": "#comment"
+    },
+    {
+      "include": "#element"
+    },
+    {
+      "include": "#directive"
+    },
+    {
+      "include": "#line"
+    }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.number-sign.archt",
+      "match": "(?:^|(?<=\\s))#.*$"
+    },
+    "element": {
+      "comment": "an element keyword at the start of a line",
+      "match": "^\\s*(system|component|actor|datastore|boundary|group)\\b",
+      "captures": {
+        "1": {
+          "name": "keyword.control.archt"
+        }
+      }
+    },
+    "directive": {
+      "comment": "a directive at the top level, with the option or style it names",
+      "match": "^\\s*(title|option|use|style)\\b(?:\\s+((?:\\.)?[\\w-]+))?",
+      "captures": {
+        "1": {
+          "name": "keyword.control.archt"
+        },
+        "2": {
+          "name": "storage.type.option.archt"
+        }
+      }
+    },
+    "line": {
+      "patterns": [
+        {
+          "include": "#comment"
+        },
+        {
+          "include": "#string"
+        },
+        {
+          "name": "keyword.operator.flow.archt",
+          "match": "<->|->|\\.\\.>|--"
+        },
+        {
+          "comment": "an edge label, from the : after an edge to the attributes or the end of the line",
+          "match": "(:)\\s*([^\\[#\"]*?)\\s*(?=\\[|\\s#|$)",
+          "captures": {
+            "1": {
+              "name": "punctuation.separator.archt"
+            },
+            "2": {
+              "name": "entity.name.label.archt"
+            }
+          }
+        },
+        {
+          "name": "variable.other.id.archt",
+          "match": "@[A-Za-z_][\\w-]*"
+        },
+        {
+          "include": "#attributes"
+        }
+      ]
+    },
+    "string": {
+      "name": "string.quoted.double.archt",
+      "begin": "\"",
+      "end": "\"|$",
+      "patterns": [
+        {
+          "name": "constant.character.escape.archt",
+          "match": "\\\\."
+        }
+      ]
+    },
+    "attributes": {
+      "begin": "\\[",
+      "end": "\\]",
+      "beginCaptures": {
+        "0": {
+          "name": "punctuation.definition.attributes.begin.archt"
+        }
+      },
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.definition.attributes.end.archt"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#string"
+        },
+        {
+          "name": "entity.other.attribute-name.archt",
+          "match": "[\\w-]+(?=\\s*:)"
+        },
+        {
+          "name": "entity.other.attribute-name.archt",
+          "match": "\\b(?:icon-only|rounded)\\b"
+        },
+        {
+          "name": "constant.other.color.archt",
+          "match": "#[0-9A-Fa-f]{3,8}\\b"
+        },
+        {
+          "name": "punctuation.separator.archt",
+          "match": "[,:]"
+        }
+      ]
+    }
+  }
+}

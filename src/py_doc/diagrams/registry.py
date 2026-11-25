@@ -106,6 +106,15 @@ def _bpmnt(job: Job) -> list[Command]:
     return [command + ["--scale", str(DPI // 96)] if job.kind == "png" else command]
 
 
+def _archt(job: Job) -> list[Command]:
+    # arch-text compiles to an Excalidraw scene, then exports the scene; both pictures keep the scene inside them
+    scene = job.output.with_suffix(".excalidraw")
+    export = ["arch-text", "export", scene, "-f", job.kind, "-o", job.output]
+    if job.kind == "png":
+        export += ["--scale", str(DPI // 96)]
+    return [["arch-text", "build", job.source, "-o", scene], export]
+
+
 def _blockdiag(tool: str) -> Callable[[Job], list[Command]]:
     return lambda job: [[tool, "-T", "png", "-o", job.output, job.source]]
 
@@ -161,6 +170,7 @@ RENDERERS: tuple[Renderer, ...] = (
         lambda j: [["python3", TOOLS / "railroad_render.py", j.source, j.output]],
     ),  # fmt: skip
     Renderer("bpmnt", ("bpmnt",), ".bpmnt", ("svg", "png"), _bpmnt),
+    Renderer("archt", ("archt",), ".archt", ("svg", "png"), _archt),
     Renderer("wireviz", ("wireviz",), ".yml", ("svg",), lambda j: [["wireviz", "-f", "s", j.source]]),
     Renderer("vega-lite", ("vega-lite",), ".json", ("svg",), _vega("vl2svg")),
     Renderer("vega", ("vega",), ".json", ("svg",), _vega("vg2svg")),

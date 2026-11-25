@@ -22,7 +22,7 @@ const baseName = (path) => path.slice(path.lastIndexOf("/") + 1);
 const projectOf = (path) => path.split("/")[0];
 const isMarkdown = (path) => /\.(md|markdown)$/i.test(path);
 const isImage = (path) => /\.(png|jpe?g|gif|webp|svg|bmp|ico)$/i.test(path);
-const TEXT = /\.(md|markdown|txt|ya?ml|json|csv|tsv|py|puml|iuml|plantuml|dot|gv|mmd|dsl|svg|html?|css|js|lua|toml|ini|cfg|xml|bpmn|d2|pikchr|tex|bib|sh|ps1|rst|adoc)$/i;
+const TEXT = /\.(md|markdown|txt|ya?ml|json|csv|tsv|py|puml|iuml|plantuml|dot|gv|mmd|dsl|svg|html?|css|js|lua|toml|ini|cfg|xml|bpmn|bpmnt|archt|d2|pikchr|tex|bib|sh|ps1|rst|adoc)$/i;
 const isText = (path) => TEXT.test(path) || baseName(path).startsWith(".");
 const urlPath = (path) => path.split("/").map(encodeURIComponent).join("/");
 

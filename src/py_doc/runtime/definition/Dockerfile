@@ -56,6 +56,21 @@ RUN sh /tmp/build/fetch.sh bpmn-text /tmp/bpmn-text.tar.gz \
  && cd / && rm -rf /tmp/bpmn-text /tmp/bpmn-text.tar.gz /root/.npm
 ENV BPMN_TEXT_CHROMIUM=/usr/bin/chromium
 
+# arch-text, for ```archt fences: built from the commit in tools.lock as its own Dockerfile builds it (the compiler,
+# the export page with Excalidraw's fonts, and the tarball a release attaches), and exporting with the image's
+# Chromium. Export makes no network requests.
+RUN sh /tmp/build/fetch.sh arch-text /tmp/arch-text.tar.gz \
+ && mkdir /tmp/arch-text \
+ && tar -xzf /tmp/arch-text.tar.gz -C /tmp/arch-text --strip-components=1 \
+ && cd /tmp/arch-text \
+ && npm ci --no-audit --no-fund \
+ && npm run build \
+ && mkdir /tmp/arch-text-release \
+ && npm pack --pack-destination /tmp/arch-text-release \
+ && npm install -g --no-audit --no-fund /tmp/arch-text-release/arch-text-*.tgz \
+ && cd / && rm -rf /tmp/arch-text /tmp/arch-text-release /tmp/arch-text.tar.gz /root/.npm
+ENV ARCH_TEXT_CHROMIUM=/usr/bin/chromium
+
 # Python and Node diagram and API documentation tools, at the versions pinned beside this file.
 # mermaid-cli 12 needs Node 22.13 or later and puppeteer 25. package.json pins the Mermaid it draws with in
 # "overrides", as mermaid-cli asks for ^12.

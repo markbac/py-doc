@@ -18,7 +18,7 @@ def fences_in_grammar() -> set[str]:
     for key, rule in grammar["repository"].items():
         if key.endswith("-fence"):
             names |= set(re.search(r"\(\?i:\((.*?)\)\(", rule["begin"])[1].replace("\\-", "-").split("|"))
-    return names | {"bpmnt"}  # bpmn-text has its own grammar, bpmnt.markdown.tmLanguage.json
+    return names | {"bpmnt", "archt"}  # bpmn-text and arch-text have grammars of their own, <fence>.markdown.*
 
 
 def test_every_diagram_fence_and_poster_block_is_highlighted():

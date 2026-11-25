@@ -791,7 +791,8 @@ def _parse_lint(data: dict, root: Path) -> LintConfig:
     severities = dict(config.severities)
     disabled: set[str] = set()
     for rule, level in rules.items():
-        if rule not in severities and not re.fullmatch(r"BT\d{3}", str(rule)):  # BTxxx: bpmn-text's codes
+        # BTxxx and ATxxx: the codes of bpmn-text and arch-text
+        if rule not in severities and not re.fullmatch(r"(BT|AT)\d{3}", str(rule)):
             raise ConfigError(f"lint.rules has unknown rule '{rule}'. Rules: {', '.join(sorted(severities))}")
         if level in (False, "off", "none"):  # YAML reads a bare `off` as false
             disabled.add(rule)

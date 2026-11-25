@@ -1,7 +1,7 @@
 """Write src/py_doc/web/static/diagram-modes.js from the VS Code extension's grammars.
 
 The web editor colours py-doc's diagram fences (Mermaid, PlantUML, Graphviz and its family, poster blocks,
-BPMN text) as the VS Code extension does. Rather than keep two sets of patterns by hand, this script reads
+BPMN text, arch-text) as the VS Code extension does. Rather than keep two sets of patterns by hand, this script reads
 the TextMate grammars in editors/vscode/syntaxes and writes them out as rules for a small CodeMirror
 tokenizer, with the table of which fence is written in which language. tests/test_web.py fails when the
 file is not what this script writes, so run it after changing a grammar:
@@ -27,7 +27,10 @@ LANGUAGES = {
     "pydoc-dot": "dot.tmLanguage.json",
     "pydoc-block": "block.tmLanguage.json",
     "pydoc-bpmnt": "bpmnt.tmLanguage.json",
+    "pydoc-archt": "archt.tmLanguage.json",
 }
+# Fences with a grammar of their own, <fence>.markdown.tmLanguage.json, highlighted with mode pydoc-<fence>
+OWN_GRAMMARS = ("bpmnt", "archt")
 # A fence group of pydoc-fences.markdown.tmLanguage.json, and the mode its fences are highlighted with
 GROUPS = {
     "dot": "pydoc-dot",
@@ -130,13 +133,14 @@ def fence_names() -> dict[str, str]:
     sources = [
         (key.removesuffix("-fence"), rule) for key, rule in grammar["repository"].items() if key.endswith("-fence")
     ]
-    bpmnt = json.loads((SYNTAXES / "bpmnt.markdown.tmLanguage.json").read_text(encoding="utf-8"))
-    sources += [("bpmnt", rule) for rule in bpmnt["repository"].values()]
+    for fence in OWN_GRAMMARS:
+        own = json.loads((SYNTAXES / f"{fence}.markdown.tmLanguage.json").read_text(encoding="utf-8"))
+        sources += [(fence, rule) for rule in own["repository"].values()]
     for group, rule in sources:
         found = re.search(r"\(\?i:\(([^)]*)\)", rule["begin"])
         if not found:
             raise ValueError(f"no fence names in {group}")
-        mode = "pydoc-bpmnt" if group == "bpmnt" else GROUPS[group]
+        mode = f"pydoc-{group}" if group in OWN_GRAMMARS else GROUPS[group]
         for name in found.group(1).split("|"):
             names[name.replace("\\", "")] = mode
     return dict(sorted(names.items()))

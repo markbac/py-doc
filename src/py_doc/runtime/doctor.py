@@ -96,10 +96,25 @@ def diagnose(runtime: Runtime) -> list[Check]:
         checks.append(Check("bpmn-text", "ok", "draws a BPMN diagram with the image's Chromium"))
     except (EnvironmentProblem, ToolFailed) as exc:
         checks.append(Check("bpmn-text", "FAIL", str(exc), "bpmnt fences cannot be drawn until this works"))
+
+    # arch-text exports through the image's Chromium too, from the Excalidraw scene it compiles
+    try:
+        svg = runtime.run(["sh", "-c", _ARCHT_SCRIPT]).stdout
+        if "<svg" not in svg:
+            raise ToolFailed("arch-text", 0, svg[:200], "it wrote no SVG")
+        checks.append(Check("arch-text", "ok", "draws an architecture diagram with the image's Chromium"))
+    except (EnvironmentProblem, ToolFailed) as exc:
+        checks.append(Check("arch-text", "FAIL", str(exc), "archt fences cannot be drawn until this works"))
     return checks
 
 
 _BPMNT = r"pool Check\n  start Begin\n  end Done\n"
+_ARCHT = r"system Check\nsystem Done\nCheck -> Done\n"
+_ARCHT_SCRIPT = (
+    f"d=$(mktemp -d) && printf '{_ARCHT}' > \"$d/check.archt\""
+    ' && arch-text build "$d/check.archt" -o "$d/check.excalidraw" >&2'
+    ' && arch-text export "$d/check.excalidraw" -f svg -o "$d/check.svg" >&2 && cat "$d/check.svg"'
+)
 
 
 def _wsl_version(listing: str, distro: str) -> int | None:

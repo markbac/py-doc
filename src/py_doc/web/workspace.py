@@ -21,7 +21,7 @@ MAX_TEXT = 5 * 1024 * 1024  # files larger than this are not opened in the edito
 TEXT_SUFFIXES = {
     ".md", ".markdown", ".txt", ".yml", ".yaml", ".json", ".csv", ".tsv", ".py", ".puml", ".iuml", ".plantuml",
     ".dot", ".gv", ".mmd", ".dsl", ".svg", ".html", ".css", ".js", ".lua", ".toml", ".ini", ".cfg", ".xml",
-    ".bpmn", ".d2", ".pikchr", ".tex", ".bib", ".sh", ".ps1", ".gitignore", ".rst", ".adoc",
+    ".bpmn", ".bpmnt", ".archt", ".d2", ".pikchr", ".tex", ".bib", ".sh", ".ps1", ".gitignore", ".rst", ".adoc",
 }  # fmt: skip
 
 

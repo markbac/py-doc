@@ -27,13 +27,14 @@ def test_doctor_passes_when_the_container_works(engine, capsys, monkeypatch):
     assert main(["doctor"]) == 0
     out = capsys.readouterr().out
     assert "ok    docker" in out and "ok    engine" in out and "a trivial run works: pandoc 3.8.2.1" in out
-    assert "ok    bpmn-text" in out
+    assert "ok    bpmn-text" in out and "ok    arch-text" in out
 
 
 def test_doctor_fails_when_bpmn_text_draws_nothing(engine, monkeypatch):
     engine.configure(stdout="pandoc 3.8.2.1\n")
     checks = {check.name: check for check in diagnose(runtime_for(engine, "tools:test"))}
     assert checks["container"].status == "ok" and checks["bpmn-text"].status == "FAIL"
+    assert checks["arch-text"].status == "FAIL"
 
 
 def test_doctor_reports_an_unbuilt_image_as_information(engine, capsys, monkeypatch):

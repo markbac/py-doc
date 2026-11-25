@@ -30,6 +30,7 @@ VERSION_PROBES = (
     ("graphviz", ["dot", "-V"]),
     ("mermaid", ["mmdc", "--version"]),
     ("bpmn-text", ["bpmn-text", "--version"]),
+    ("arch-text", ["arch-text", "--version"]),
     ("inkscape", ["inkscape", "--version"]),
     ("python", ["python3", "--version"]),
 )

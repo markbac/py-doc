@@ -1,5 +1,9 @@
 # Changes
 
+## 2.4.0
+
+- Highlighting of the [arch-text](https://github.com/markbac/arch-text) notation, in `.archt` files and in ```` ```archt ```` and `:::archt` fences of Markdown files, with `#` comments toggled by `Ctrl+/`.
+
 ## 2.3.1
 
 - Diagrams written in the `:::mermaid` ... `:::` form, which py-doc also draws, are highlighted in their language like a backtick fence, for every diagram language.

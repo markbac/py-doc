@@ -38,6 +38,34 @@ test('the keywords are the statement keywords of the bpmn-text notation', () => 
   assert.doesNotMatch('  Ship parcel', new RegExp(statement));
 });
 
+test('an archt fence in Markdown is highlighted with the arch-text grammar', () => {
+  const fence = manifest.contributes.grammars.find((g) => g.scopeName === 'markdown.archt.codeblock');
+  const block = read(fence.path).repository['archt-code-block'];
+  assert.match('```archt', new RegExp(block.begin.replace('(?i:', '(?:')));
+  assert.match('~~~~ archt title="Metering"', new RegExp(block.begin.replace('(?i:', '(?:')));
+  assert.doesNotMatch('```archtx', new RegExp(block.begin.replace('(?i:', '(?:')));
+  assert.deepStrictEqual(block.patterns[0].patterns, [{ include: 'source.archt' }]);
+  assert.strictEqual(fence.embeddedLanguages[block.patterns[0].contentName], 'archt');
+});
+
+test('the keywords are the element kinds and directives of the arch-text notation', () => {
+  const { element, directive } = read('syntaxes/archt.tmLanguage.json').repository;
+  for (const word of ['system', 'component', 'actor', 'datastore', 'boundary', 'group']) {
+    assert.match(`  ${word} Something`, new RegExp(element.match), word);
+  }
+  for (const word of ['title', 'option', 'use', 'style']) {
+    assert.match(`${word} something`, new RegExp(directive.match), word);
+  }
+  assert.strictEqual('style .external [fill: gray-1]'.match(new RegExp(directive.match))[2], '.external');
+  assert.doesNotMatch('Systems -> Store', new RegExp(element.match));
+});
+
+test('the arch-text edge operators are all highlighted', () => {
+  const { line } = read('syntaxes/archt.tmLanguage.json').repository;
+  const flow = new RegExp(line.patterns.find((p) => p.name === 'keyword.operator.flow.archt').match, 'g');
+  assert.deepStrictEqual('A -> B <-> C -- D ..> E'.match(flow), ['->', '<->', '--', '..>']);
+});
+
 test('py-doc directives and variables are highlighted in Markdown', () => {
   const grammar = read('syntaxes/pydoc.markdown.tmLanguage.json');
   const directive = new RegExp(grammar.repository.directive.match);
