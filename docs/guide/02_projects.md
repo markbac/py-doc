@@ -162,7 +162,8 @@ py-doc docx Technical_Specification.md --watch   # build on every save, with a l
 | `--split-level N` | slides | Start a new slide at each heading up to level N (default 2) |
 | `--watch` | both | Build again on every save, and serve an HTML preview of each file that reloads itself (Ctrl+C stops) |
 | `--port N` | both | With `--watch`, the local port to serve the preview on (default: a free one) |
-| `--no-open` | both | With `--watch`, do not open the browser |
+| `--no-open` | both | With `--watch`, do not open the browser or a Wave pane |
+| `--wave`, `--no-wave` | both | With `--watch`, open the preview in a [Wave Terminal](#wave-terminal) pane, or in the browser even inside Wave |
 | `-q`, `-v` | both | Only warnings and errors, or debug detail |
 | `--version` | both | Print the version |
 
@@ -189,6 +190,58 @@ py-doc preview deck.md --kind deck      # a slide deck
 ```
 
 The [VS Code extension](03_writing.md#vs-code-preview) runs `py-doc preview` for the open file and shows the preview beside it.
+
+### Wave Terminal
+
+[Wave Terminal](https://www.waveterm.dev/) can show a web page in a pane of its own. Inside Wave, the live preview opens in such a pane, beside the terminal, not in the browser. It reloads on every save, as in the browser. This works for `py-doc docx`, `slides`, `poster` and `diagram` with `--watch`, and for `py-doc preview`.
+
+You need:
+
+- Wave Terminal, installed and running.
+- `wsh`, Wave's own command. Wave puts it on the `PATH` of its terminals, and installs it in the WSL and Secure Shell (SSH) connections it manages.
+- py-doc, and Docker for the tool container, as for any build.
+
+Start a preview in a Wave terminal as anywhere else:
+
+```bash
+py-doc docx guide.md --watch            # inside Wave: the preview opens in a Wave pane
+py-doc preview deck.md --kind deck      # the same, without writing the outputs
+py-doc poster sn100 --watch --wave      # a Wave pane, even when py-doc cannot tell it is in Wave
+py-doc docx guide.md --watch --no-wave  # the browser, even inside Wave
+```
+
+py-doc knows it is inside Wave when `TERM_PROGRAM` is `waveterm` or `WAVETERM` is set. Wave sets both. It then runs `wsh web open` with the preview's address. The next preview in the same Wave tab replaces that pane, so a restart does not open a second one. Moving `py-doc preview` to another file keeps the same pane.
+
+To keep the browser, use `--no-wave`, or set `PY_DOC_NO_WAVE=1` to turn the Wave pane off for every command. `--no-open` opens neither.
+
+#### The sidebar widget
+
+The widget is a "preview" button in Wave's sidebar. It opens a terminal pane that runs `py-doc wave pick`. That lists the Markdown files in the folder and below it, and asks which one to preview. You answer with a number, a file, or a folder to look in. It then asks whether the file is a document, slides or a poster, with a guess from the front matter, and starts `py-doc preview`, which opens the preview pane beside it. Wave's widgets cannot pass a file, so `py-doc wave pick FILE` skips the question when run by hand.
+
+On Windows, `.\scripts\update.ps1` adds the widget when Wave is installed, and updates it when it changes. Elsewhere, add it yourself:
+
+```bash
+py-doc wave widget                       # print it, to paste into widgets.json
+py-doc wave widget --install             # add it to ~/.config/waveterm/widgets.json, after asking
+py-doc wave widget --install --folder ~/docs   # its terminal starts in ~/docs
+```
+
+`--install` keeps every other widget, and adding it twice leaves one. Wave reads the file again at once. The terminal starts in your home folder unless `--folder` names another.
+
+#### WSL and SSH
+
+- **Windows.** py-doc and Wave are on the same PC, so the pane shows the address as it is.
+- **WSL.** py-doc in a WSL connection serves on 127.0.0.1 inside WSL. WSL 2 passes that port to Windows by default, so the pane shows it. If `localhostForwarding=false` is set in `.wslconfig`, the pane stays blank. Remove that line, then run `wsl --shutdown`. Add the widget from Windows, as Wave's settings are there, or name the folder with `--config-dir /mnt/c/Users/YOU/.config/waveterm`.
+- **SSH.** The address is on the remote machine, and Wave's window cannot reach it. py-doc opens no pane. It prints the address and the `ssh -L` port forward that shows it, and the preview goes on.
+
+#### Troubleshooting Wave
+
+- **The pane does not open.** py-doc prints `not opened in a Wave pane:` and the reason, then opens the browser. The preview goes on either way.
+- **`wsh` not found.** Open a new terminal in Wave. For a WSL or SSH connection, connect again from Wave, which installs `wsh` there. It asks first unless `conn:askbeforewshinstall` is `false`.
+- **The pane is blank.** Wave cannot reach the address. See WSL and SSH above.
+- **A second pane opens each time.** py-doc remembers the pane for each Wave tab. A preview started in another tab, or after the pane was closed, opens a new one.
+- **The widget is missing after an update.** `update.ps1` prints a note when it cannot add it, such as for a `widgets.json` that is not valid JSON. It leaves such a file as it is. Fix the file, then run `.\scripts\install-wave-widget.ps1`. `-NoWave` skips the step.
+- **What `py-doc doctor` says.** Inside Wave it adds a `wave` line: `ok` with Wave's version when `wsh` answers, or `WARN` with the fix when it does not. A Wave problem never makes `doctor` fail. Outside Wave there is no `wave` line.
 
 The old commands `py-doc2docx`, `py-doc2slides` and `py-doclint` still work and print a one-line note naming their replacement. `-q` hides the note.
 

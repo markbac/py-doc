@@ -77,7 +77,10 @@ def run_diagram(argv: list[str]) -> int:
     parser.add_argument("--caption", default="", help="With --chrome card, the text under the picture")
     parser.add_argument("--watch", action="store_true", help="Draw again on every save, and show it in the browser")
     parser.add_argument("--port", type=int, default=0, help="With --watch, the local port (default: a free one)")
-    parser.add_argument("--no-open", action="store_true", help="With --watch, do not open the browser")
+    parser.add_argument("--no-open", action="store_true", help="With --watch, do not open the browser (or a Wave pane)")
+    from .wave import add_options
+
+    add_options(parser)
     parser.add_argument("--list", action="store_true", help="List every type it draws")
     parser.add_argument("--help-type", metavar="TYPE", help="Show the syntax of one type, with an example")
     parser.add_argument("-c", "--config", help="Configuration file (default: the nearest py-doc.yml)")
@@ -242,7 +245,8 @@ def _watch(args) -> int:
         return {source.stem: preview}, {source}
 
     return watch(
-        build, (ConfigError, ConversionError), port=args.port, open_browser=not args.no_open, title="py-doc diagram"
+        build, (ConfigError, ConversionError), port=args.port, open_browser=not args.no_open, title="py-doc diagram",
+        wave=args.wave,
     )  # fmt: skip
 
 

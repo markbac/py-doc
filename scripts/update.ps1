@@ -18,11 +18,14 @@
       5. VS Code      when VS Code is there, py-doc's extension is installed into it, and installed again
                       when it changed (install-vscode-extension.ps1, which needs Node.js). A failure here
                       is reported but does not stop the update. -NoVSCode skips it
-      6. Docker       the container engine answers (py-doc setup installs it when it does not)
-      7. Tool image   built when its definition changed (every layer again with -Rebuild),
+      6. Wave         when Wave Terminal is installed, py-doc's preview widget is added to its sidebar, and
+                      updated when it changed (install-wave-widget.ps1); your other widgets are kept. A
+                      failure here is reported but does not stop the update. -NoWave skips it
+      7. Docker       the container engine answers (py-doc setup installs it when it does not)
+      8. Tool image   built when its definition changed (every layer again with -Rebuild),
                       and the images of earlier versions removed unless -KeepOldImages
-      8. Doctor       py-doc doctor: the container runs the tools
-      9. Tests        with -Test: the test suite and the documentation lint
+      9. Doctor       py-doc doctor: the container runs the tools
+     10. Tests        with -Test: the test suite and the documentation lint
 
 .PARAMETER NoPull
     Do not pull: use the code as it is.
@@ -63,6 +66,9 @@
     VS Code's command line, when it is not on the PATH or in its usual place, such as
     "C:\Program Files\Microsoft VS Code\bin\code.cmd".
 
+.PARAMETER NoWave
+    Do not add or update py-doc's preview widget in Wave Terminal.
+
 .PARAMETER CaFile
     An extra certificate for image builds behind a TLS-inspecting proxy (passed to py-doc tools build).
 
@@ -73,7 +79,7 @@
 .EXAMPLE
     .\scripts\update.ps1 -NoPull -Rebuild -RecreateVenv
 .EXAMPLE
-    .\scripts\update.ps1 -NoVSCode
+    .\scripts\update.ps1 -NoVSCode -NoWave
 #>
 [CmdletBinding()]
 param(
@@ -89,6 +95,7 @@ param(
     [switch]$AddToPath,
     [switch]$NoVSCode,
     [string]$Code,
+    [switch]$NoWave,
     [string]$CaFile
 )
 
@@ -266,7 +273,18 @@ try {
         }
     }
 
-    # 6. Docker ----------------------------------------------------------------------------------
+    # 6. Wave Terminal -------------------------------------------------------------------------
+    Write-Step "Wave Terminal"
+    if ($NoWave) {
+        Write-Note "not set up or updated (-NoWave)"
+    } else {
+        & (Join-Path $PSScriptRoot 'install-wave-widget.ps1') -Python $script:PythonExe
+        if ($LASTEXITCODE -ne 0) {
+            Write-Note "Wave's widgets are left as they were, and the update goes on. Run scripts\install-wave-widget.ps1 after fixing it"
+        }
+    }
+
+    # 7. Docker ----------------------------------------------------------------------------------
     Write-Step "Docker"
     $status = Invoke-PyDoc @('tools', 'status') 2>&1 | ForEach-Object { "$_" }
     $exit = $LASTEXITCODE
@@ -277,7 +295,7 @@ try {
     }
     Write-Ok "the container engine answers"
 
-    # 7. Tool image ------------------------------------------------------------------------------
+    # 8. Tool image ------------------------------------------------------------------------------
     Write-Step "Tool image"
     $tag = ($imageLine -split '\s+')[1]
     $built = $imageLine -notmatch 'not built'
@@ -300,12 +318,12 @@ try {
         if ($LASTEXITCODE -ne 0) { Write-Note "could not remove older images: $removed" } else { Write-Ok "$removed" }
     }
 
-    # 8. Doctor ----------------------------------------------------------------------------------
+    # 9. Doctor ----------------------------------------------------------------------------------
     Write-Step "Doctor"
     Invoke-Checked "py-doc doctor" "Each failing check above says what to do" $script:PythonExe ($script:PythonArgs + @('-m', 'py_doc', 'doctor'))
     Write-Ok "the tools run in the container"
 
-    # 9. Tests -----------------------------------------------------------------------------------
+    # 10. Tests ----------------------------------------------------------------------------------
     if ($Test) {
         Write-Step "Tests"
         Invoke-Checked "the test suite" "A failing test above names what broke" $script:PythonExe ($script:PythonArgs + @('-m', 'pytest', '-q', '-p', 'no:cacheprovider'))

@@ -149,7 +149,9 @@ def run_doctor(argv: Sequence[str] | None = None) -> int:
     except EnvironmentProblem as exc:
         print(f"FAIL  platform   {exc}")
         return 2
-    checks = diagnose(runtime)
+    from .wave import doctor_checks
+
+    checks = diagnose(runtime) + doctor_checks()  # Wave lines only inside Wave, and never a failure
     print(render(checks))
     return 2 if failed(checks) else 0
 

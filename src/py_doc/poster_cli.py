@@ -76,7 +76,10 @@ def run_poster(argv: list[str]) -> int:
     parser.add_argument(
         "--port", type=int, default=0, help="With --watch, the local port to serve the pages on (default: a free one)"
     )
-    parser.add_argument("--no-open", action="store_true", help="With --watch, do not open the browser")
+    parser.add_argument("--no-open", action="store_true", help="With --watch, do not open the browser (or a Wave pane)")
+    from py_doc.wave import add_options
+
+    add_options(parser)
     noise = parser.add_mutually_exclusive_group()
     noise.add_argument("-q", "--quiet", action="store_true", help="Only show warnings and errors")
     noise.add_argument("-v", "--verbose", action="store_true", help="Show debug detail")
@@ -134,7 +137,7 @@ def run_poster(argv: list[str]) -> int:
     if args.watch:
         from py_doc.watch import watch
 
-        return watch(build_all, errors, port=args.port, open_browser=not args.no_open)
+        return watch(build_all, errors, port=args.port, open_browser=not args.no_open, wave=args.wave)
     try:
         build_all()
     except errors as exc:
